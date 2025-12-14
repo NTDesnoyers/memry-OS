@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Rating } from "@/components/ui/rating";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, ArrowRight, Save, Check, Calendar, User, TrendingUp, Heart, Briefcase, RefreshCw, Upload, Briefcase as BriefcaseIcon, Phone } from "lucide-react";
+import { ArrowLeft, ArrowRight, Save, Check, Calendar, User, TrendingUp, Heart, Briefcase, RefreshCw, Upload, Briefcase as BriefcaseIcon, Phone, PieChart, Clock } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useToast } from "@/hooks/use-toast";
 
@@ -40,6 +40,11 @@ const formSchema = z.object({
   implementingNinja: z.number().min(1).max(10),
   ninjaSystemAttention: z.string().optional(),
   nextGetaway: z.string().optional(),
+
+  // PIE Time Tracker
+  pie_productive: z.string().optional(),
+  pie_indirect: z.string().optional(),
+  pie_educational: z.string().optional(),
 
   // Weekly Habits
   weeklyPlanning: z.number().min(1).max(10),
@@ -96,11 +101,15 @@ const formSchema = z.object({
   newBusinessBuyers: z.string().optional(),
   newBusinessSellers: z.string().optional(),
   
-  // Numbers to Know
-  activeListings: z.string().optional(),
-  pendingContracts: z.string().optional(),
-  closedYTD: z.string().optional(),
-  gciYTD: z.string().optional(),
+  // Numbers to Know - Updated
+  offersWritten: z.string().optional(),
+  contractsMutual: z.string().optional(),
+  dealsUnderContract: z.string().optional(),
+  dealsClosed: z.string().optional(),
+  buyerAppointments: z.string().optional(),
+  listingAppointments: z.string().optional(),
+  newListingsTaken: z.string().optional(),
+  newContactsAdded: z.string().optional(),
   
   messageToCoach: z.string().optional(),
 });
@@ -153,12 +162,22 @@ export default function WeeklyReport() {
       checklist_reviewMeetingNotes: false,
       checklist_reviewBusinessPlan: false,
       
+      pie_productive: "",
+      pie_indirect: "",
+      pie_educational: "",
+
       newBusinessBuyers: "",
       newBusinessSellers: "",
-      activeListings: "",
-      pendingContracts: "",
-      closedYTD: "",
-      gciYTD: "",
+      
+      offersWritten: "",
+      contractsMutual: "",
+      dealsUnderContract: "",
+      dealsClosed: "",
+      buyerAppointments: "",
+      listingAppointments: "",
+      newListingsTaken: "",
+      newContactsAdded: "",
+      
       messageToCoach: "",
     },
   });
@@ -425,96 +444,167 @@ export default function WeeklyReport() {
                 </TabsContent>
 
                 <TabsContent value="pulse" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <Card className="border-none shadow-md">
-                    <CardHeader className="bg-primary/5 pb-4">
-                      <CardTitle className="font-serif">Business Pulse</CardTitle>
-                      <CardDescription>On a scale of 1-10...</CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-6 space-y-8">
-                      <FormField
-                        control={form.control}
-                        name="businessDirection"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-base">How do I feel about the direction of my business?</FormLabel>
-                            <FormControl>
-                              <Rating 
-                                value={field.value} 
-                                onChange={field.onChange} 
-                                labels={{ min: "Not Good", max: "Great" }} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Separator />
-                      <FormField
-                        control={form.control}
-                        name="timeManagement"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-base">How well am I managing my time?</FormLabel>
-                            <FormControl>
-                              <Rating 
-                                value={field.value} 
-                                onChange={field.onChange} 
-                                labels={{ min: "Not Good", max: "Great" }} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Separator />
-                      <FormField
-                        control={form.control}
-                        name="implementingNinja"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-base">How well am I implementing Ninja?</FormLabel>
-                            <FormControl>
-                              <Rating 
-                                value={field.value} 
-                                onChange={field.onChange} 
-                                labels={{ min: "Not Good", max: "Great" }} 
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <div className="grid md:grid-cols-2 gap-6 pt-4">
+                  <div className="grid md:grid-cols-3 gap-6">
+                    <Card className="border-none shadow-md md:col-span-2">
+                      <CardHeader className="bg-primary/5 pb-4">
+                        <CardTitle className="font-serif">Business Pulse</CardTitle>
+                        <CardDescription>On a scale of 1-10...</CardDescription>
+                      </CardHeader>
+                      <CardContent className="pt-6 space-y-8">
                         <FormField
                           control={form.control}
-                          name="ninjaSystemAttention"
+                          name="businessDirection"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Is there a specific Ninja system that needs attention?</FormLabel>
+                              <FormLabel className="text-base">How do I feel about the direction of my business?</FormLabel>
                               <FormControl>
-                                <Input placeholder="e.g., Time blocking..." {...field} />
+                                <Rating 
+                                  value={field.value} 
+                                  onChange={field.onChange} 
+                                  labels={{ min: "Not Good", max: "Great" }} 
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
+                        <Separator />
                         <FormField
                           control={form.control}
-                          name="nextGetaway"
+                          name="timeManagement"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>When is my next scheduled getaway / vacation?</FormLabel>
+                              <FormLabel className="text-base">How well am I managing my time?</FormLabel>
                               <FormControl>
-                                <Input placeholder="Date or Trip..." {...field} />
+                                <Rating 
+                                  value={field.value} 
+                                  onChange={field.onChange} 
+                                  labels={{ min: "Not Good", max: "Great" }} 
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
-                      </div>
-                    </CardContent>
-                  </Card>
+                        <Separator />
+                        <FormField
+                          control={form.control}
+                          name="implementingNinja"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-base">How well am I implementing Ninja?</FormLabel>
+                              <FormControl>
+                                <Rating 
+                                  value={field.value} 
+                                  onChange={field.onChange} 
+                                  labels={{ min: "Not Good", max: "Great" }} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <div className="grid md:grid-cols-2 gap-6 pt-4">
+                          <FormField
+                            control={form.control}
+                            name="ninjaSystemAttention"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Is there a specific Ninja system that needs attention?</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="e.g., Time blocking..." {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="nextGetaway"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>When is my next scheduled getaway / vacation?</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Date or Trip..." {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-none shadow-md bg-secondary/20">
+                      <CardHeader className="bg-primary/5 pb-4">
+                        <CardTitle className="font-serif flex items-center gap-2">
+                          <PieChart className="h-5 w-5 text-primary" />
+                          PIE Time Tracker
+                        </CardTitle>
+                        <CardDescription>Track hours spent this week</CardDescription>
+                      </CardHeader>
+                      <CardContent className="pt-6 space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="pie_productive"
+                          render={({ field }) => (
+                            <FormItem>
+                              <div className="flex justify-between mb-1">
+                                <FormLabel className="font-bold text-green-700">P - Productive</FormLabel>
+                                <span className="text-xs text-muted-foreground">Income Generating</span>
+                              </div>
+                              <FormControl>
+                                <div className="relative">
+                                  <Input type="number" step="0.5" placeholder="0" {...field} className="pl-9 bg-white" />
+                                  <Clock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                </div>
+                              </FormControl>
+                              <FormDescription className="text-xs">Flow, Live Interviews, Appts, Negotations</FormDescription>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="pie_indirect"
+                          render={({ field }) => (
+                            <FormItem>
+                              <div className="flex justify-between mb-1">
+                                <FormLabel className="font-bold text-amber-600">I - Indirect</FormLabel>
+                                <span className="text-xs text-muted-foreground">Income Servicing</span>
+                              </div>
+                              <FormControl>
+                                <div className="relative">
+                                  <Input type="number" step="0.5" placeholder="0" {...field} className="pl-9 bg-white" />
+                                  <Clock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                </div>
+                              </FormControl>
+                              <FormDescription className="text-xs">Prep, Research, Marketing, Paperwork</FormDescription>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="pie_educational"
+                          render={({ field }) => (
+                            <FormItem>
+                              <div className="flex justify-between mb-1">
+                                <FormLabel className="font-bold text-blue-600">E - Everything Else</FormLabel>
+                                <span className="text-xs text-muted-foreground">Education/Admin</span>
+                              </div>
+                              <FormControl>
+                                <div className="relative">
+                                  <Input type="number" step="0.5" placeholder="0" {...field} className="pl-9 bg-white" />
+                                  <Clock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                </div>
+                              </FormControl>
+                              <FormDescription className="text-xs">Classes, Meetings, Admin, Personal</FormDescription>
+                            </FormItem>
+                          )}
+                        />
+                      </CardContent>
+                    </Card>
+                  </div>
                   
                   <div className="flex justify-between">
                     <Button type="button" onClick={() => setActiveTab("overview")} variant="ghost">Previous</Button>
@@ -992,10 +1082,10 @@ export default function WeeklyReport() {
                         <div className="grid grid-cols-2 gap-4">
                           <FormField
                             control={form.control}
-                            name="activeListings"
+                            name="offersWritten"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Active Listings</FormLabel>
+                                <FormLabel>Offers Written</FormLabel>
                                 <FormControl>
                                   <Input type="number" placeholder="0" {...field} className="bg-background/50" />
                                 </FormControl>
@@ -1004,10 +1094,10 @@ export default function WeeklyReport() {
                           />
                           <FormField
                             control={form.control}
-                            name="pendingContracts"
+                            name="contractsMutual"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Pending Contracts</FormLabel>
+                                <FormLabel>Contracts (Mutual)</FormLabel>
                                 <FormControl>
                                   <Input type="number" placeholder="0" {...field} className="bg-background/50" />
                                 </FormControl>
@@ -1016,10 +1106,10 @@ export default function WeeklyReport() {
                           />
                           <FormField
                             control={form.control}
-                            name="closedYTD"
+                            name="dealsUnderContract"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Closed Units YTD</FormLabel>
+                                <FormLabel>Under Contract</FormLabel>
                                 <FormControl>
                                   <Input type="number" placeholder="0" {...field} className="bg-background/50" />
                                 </FormControl>
@@ -1028,12 +1118,60 @@ export default function WeeklyReport() {
                           />
                           <FormField
                             control={form.control}
-                            name="gciYTD"
+                            name="dealsClosed"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>GCI YTD ($)</FormLabel>
+                                <FormLabel>Deals Closed</FormLabel>
                                 <FormControl>
-                                  <Input placeholder="$0.00" {...field} className="bg-background/50" />
+                                  <Input type="number" placeholder="0" {...field} className="bg-background/50" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="buyerAppointments"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Buyer Appts</FormLabel>
+                                <FormControl>
+                                  <Input type="number" placeholder="0" {...field} className="bg-background/50" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="listingAppointments"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Listing Appts</FormLabel>
+                                <FormControl>
+                                  <Input type="number" placeholder="0" {...field} className="bg-background/50" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="newListingsTaken"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>New Listings</FormLabel>
+                                <FormControl>
+                                  <Input type="number" placeholder="0" {...field} className="bg-background/50" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="newContactsAdded"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>New Contacts</FormLabel>
+                                <FormControl>
+                                  <Input type="number" placeholder="0" {...field} className="bg-background/50" />
                                 </FormControl>
                               </FormItem>
                             )}
