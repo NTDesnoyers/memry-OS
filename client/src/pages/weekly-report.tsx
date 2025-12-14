@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Rating } from "@/components/ui/rating";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, ArrowRight, Save, Check, Calendar, User, TrendingUp, Heart, Briefcase, Coffee, Phone } from "lucide-react";
+import { ArrowLeft, ArrowRight, Save, Check, Calendar, User, TrendingUp, Heart, Briefcase, RefreshCw } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useToast } from "@/hooks/use-toast";
 
@@ -58,16 +58,18 @@ const formSchema = z.object({
   dailyGratitudes: z.number().min(1).max(10),
   dailyAffirmations: z.number().min(1).max(10),
 
-  // Review
-  checklist_readMastery: z.boolean().default(false),
-  checklist_dailyAffirmations: z.boolean().default(false),
-  checklist_dailyGratitudes: z.boolean().default(false),
+  // Review - Daily Frequency (0-7)
+  days_readMastery: z.coerce.number().min(0).max(7).default(0),
+  days_dailyAffirmations: z.coerce.number().min(0).max(7).default(0),
+  days_dailyGratitudes: z.coerce.number().min(0).max(7).default(0),
+  days_reviewLists: z.coerce.number().min(0).max(7).default(0),
+
+  // Review - Weekly Check (Yes/No)
   checklist_reviewYearlyGoals: z.boolean().default(false),
   checklist_reviewMonthlyGoals: z.boolean().default(false),
   checklist_reviewWeeklyGoals: z.boolean().default(false),
   checklist_reviewMeetingNotes: z.boolean().default(false),
   checklist_reviewBusinessPlan: z.boolean().default(false),
-  checklist_reviewLists: z.boolean().default(false),
 
   reasonsToCelebrate: z.string().optional(),
   businessLikeBusiness: z.string().optional(),
@@ -82,7 +84,7 @@ const formSchema = z.object({
   completedCoffees: z.string().optional(),
   plannedCoffees: z.string().optional(),
   
-  fordCount: z.string().optional(), // Using string for flexibility
+  fordCount: z.string().optional(),
   recordedFordInfo: z.boolean().default(false),
   peopleToConnect: z.string().optional(),
 });
@@ -95,35 +97,84 @@ export default function WeeklyReport() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "Nathan Desnoyers", // Mock default
+      name: "Nathan Desnoyers",
       date: new Date().toISOString().split('T')[0],
-      wordOfYear: "Consistency",
-      businessDirection: 8,
-      timeManagement: 7,
-      implementingNinja: 8,
-      weeklyPlanning: 8,
-      dailyMovement: 9,
-      agendaSticking: 8,
-      hoursOfPower: 10,
+      wordOfYear: "",
+      affirmation: "",
+      familyMission: "",
+      businessMission: "",
+      quarterlyFocus: "",
+      
+      // Defaults for sliders/ratings
+      businessDirection: 5,
+      timeManagement: 5,
+      implementingNinja: 5,
+      weeklyPlanning: 5,
+      dailyMovement: 5,
+      agendaSticking: 5,
+      hoursOfPower: 5,
       handwrittenNotes: 5,
-      realEstateReviews: 8,
-      customerServiceCalls: 6,
-      lunchesCoffees: 10,
-      fordContacts: 10,
+      realEstateReviews: 5,
+      customerServiceCalls: 5,
+      lunchesCoffees: 5,
+      fordContacts: 5,
       paperworkCleanup: 5,
-      databaseMaintenance: 9,
-      warmListFocus: 8,
-      hotListFocus: 8,
-      dailyGratitudes: 8,
-      dailyAffirmations: 8,
-      checklist_readMastery: false,
-      checklist_dailyAffirmations: true,
-      checklist_dailyGratitudes: true,
+      databaseMaintenance: 5,
+      warmListFocus: 5,
+      hotListFocus: 5,
+      dailyGratitudes: 5,
+      dailyAffirmations: 5,
+      
+      days_readMastery: 0,
+      days_dailyAffirmations: 0,
+      days_dailyGratitudes: 0,
+      days_reviewLists: 0,
+      
+      checklist_reviewYearlyGoals: false,
+      checklist_reviewMonthlyGoals: false,
+      checklist_reviewWeeklyGoals: false,
+      checklist_reviewMeetingNotes: false,
+      checklist_reviewBusinessPlan: false,
     },
   });
 
+  // Load persistent data on mount
+  useEffect(() => {
+    const loadPersistentData = () => {
+      const savedData = {
+        familyMission: localStorage.getItem("ninja_familyMission"),
+        businessMission: localStorage.getItem("ninja_businessMission"),
+        quarterlyFocus: localStorage.getItem("ninja_quarterlyFocus"),
+        wordOfYear: localStorage.getItem("ninja_wordOfYear"),
+        affirmation: localStorage.getItem("ninja_affirmation"),
+      };
+
+      // Only update fields that have saved values
+      if (savedData.familyMission) form.setValue("familyMission", savedData.familyMission);
+      if (savedData.businessMission) form.setValue("businessMission", savedData.businessMission);
+      if (savedData.quarterlyFocus) form.setValue("quarterlyFocus", savedData.quarterlyFocus);
+      if (savedData.wordOfYear) form.setValue("wordOfYear", savedData.wordOfYear);
+      if (savedData.affirmation) form.setValue("affirmation", savedData.affirmation);
+    };
+
+    loadPersistentData();
+  }, [form]);
+
+  // Persist "Static" fields when they change
+  const handleStaticFieldChange = (field: string, value: string) => {
+    localStorage.setItem(`ninja_${field}`, value);
+  };
+
   function onSubmit(values: z.infer<typeof formSchema>) {
     console.log(values);
+    
+    // Explicitly save persistent fields again on submit to be safe
+    if (values.familyMission) localStorage.setItem("ninja_familyMission", values.familyMission);
+    if (values.businessMission) localStorage.setItem("ninja_businessMission", values.businessMission);
+    if (values.quarterlyFocus) localStorage.setItem("ninja_quarterlyFocus", values.quarterlyFocus);
+    if (values.wordOfYear) localStorage.setItem("ninja_wordOfYear", values.wordOfYear);
+    if (values.affirmation) localStorage.setItem("ninja_affirmation", values.affirmation);
+
     toast({
       title: "Report Saved",
       description: "Your weekly agenda has been successfully saved.",
@@ -180,7 +231,15 @@ export default function WeeklyReport() {
                 <TabsContent value="overview" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <Card className="border-none shadow-md">
                     <CardHeader className="bg-primary/5 pb-4">
-                      <CardTitle className="font-serif">Identity & Focus</CardTitle>
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <CardTitle className="font-serif">Identity & Focus</CardTitle>
+                          <CardDescription>These fields persist week over week</CardDescription>
+                        </div>
+                        <div className="flex gap-2 text-xs text-muted-foreground items-center bg-background/50 px-2 py-1 rounded-md border">
+                          <RefreshCw className="h-3 w-3" /> Auto-saved locally
+                        </div>
+                      </div>
                     </CardHeader>
                     <CardContent className="pt-6 grid md:grid-cols-2 gap-6">
                       <FormField
@@ -216,7 +275,15 @@ export default function WeeklyReport() {
                           <FormItem className="md:col-span-2">
                             <FormLabel>Current Affirmation</FormLabel>
                             <FormControl>
-                              <Input placeholder="I consistently receive..." {...field} className="font-serif italic text-lg bg-background/50 border-primary/20 focus:border-primary" />
+                              <Input 
+                                placeholder="I consistently receive..." 
+                                {...field} 
+                                onChange={(e) => {
+                                  field.onChange(e);
+                                  handleStaticFieldChange("affirmation", e.target.value);
+                                }}
+                                className="font-serif italic text-lg bg-background/50 border-primary/20 focus:border-primary" 
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -230,7 +297,15 @@ export default function WeeklyReport() {
                             <FormItem>
                               <FormLabel>Family Mission Statement</FormLabel>
                               <FormControl>
-                                <Textarea placeholder="Mission..." {...field} className="min-h-[100px] bg-background/50" />
+                                <Textarea 
+                                  placeholder="Mission..." 
+                                  {...field} 
+                                  onChange={(e) => {
+                                    field.onChange(e);
+                                    handleStaticFieldChange("familyMission", e.target.value);
+                                  }}
+                                  className="min-h-[100px] bg-background/50" 
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -243,7 +318,15 @@ export default function WeeklyReport() {
                             <FormItem>
                               <FormLabel>Business Mission Statement</FormLabel>
                               <FormControl>
-                                <Textarea placeholder="Mission..." {...field} className="min-h-[100px] bg-background/50" />
+                                <Textarea 
+                                  placeholder="Mission..." 
+                                  {...field} 
+                                  onChange={(e) => {
+                                    field.onChange(e);
+                                    handleStaticFieldChange("businessMission", e.target.value);
+                                  }}
+                                  className="min-h-[100px] bg-background/50" 
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -257,7 +340,15 @@ export default function WeeklyReport() {
                           <FormItem className="md:col-span-2">
                             <FormLabel>Quarterly Focus (Projects, Goals, Habits)</FormLabel>
                             <FormControl>
-                              <Textarea placeholder="• Major Project 1..." {...field} className="min-h-[120px] bg-background/50 font-medium" />
+                              <Textarea 
+                                placeholder="• Major Project 1..." 
+                                {...field} 
+                                onChange={(e) => {
+                                  field.onChange(e);
+                                  handleStaticFieldChange("quarterlyFocus", e.target.value);
+                                }}
+                                className="min-h-[120px] bg-background/50 font-medium" 
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -270,7 +361,14 @@ export default function WeeklyReport() {
                           <FormItem className="md:col-span-2">
                             <FormLabel>Word of the Year</FormLabel>
                             <FormControl>
-                              <Input {...field} className="text-center text-2xl font-serif font-bold uppercase tracking-widest border-2 py-6" />
+                              <Input 
+                                {...field} 
+                                onChange={(e) => {
+                                  field.onChange(e);
+                                  handleStaticFieldChange("wordOfYear", e.target.value);
+                                }}
+                                className="text-center text-2xl font-serif font-bold uppercase tracking-widest border-2 py-6" 
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -443,39 +541,77 @@ export default function WeeklyReport() {
                       <CardHeader className="bg-primary/5 pb-4">
                         <CardTitle className="font-serif">Checklist</CardTitle>
                       </CardHeader>
-                      <CardContent className="pt-6 grid gap-4">
-                        {[
-                          { name: "checklist_readMastery", label: "Read Mastery" },
-                          { name: "checklist_dailyAffirmations", label: "Daily affirmations" },
-                          { name: "checklist_dailyGratitudes", label: "Daily gratitudes" },
-                          { name: "checklist_reviewYearlyGoals", label: "Review yearly goals" },
-                          { name: "checklist_reviewMonthlyGoals", label: "Review monthly goals" },
-                          { name: "checklist_reviewWeeklyGoals", label: "Review weekly goals" },
-                          { name: "checklist_reviewMeetingNotes", label: "Review last week's meeting notes" },
-                          { name: "checklist_reviewBusinessPlan", label: "Review business plan & FLOW calendar" },
-                          { name: "checklist_reviewLists", label: "Review Hot & Warm lists" },
-                        ].map((item) => (
-                          <FormField
-                            key={item.name}
-                            control={form.control}
-                            name={item.name as any}
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 bg-secondary/20">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                  />
-                                </FormControl>
-                                <div className="space-y-1 leading-none">
-                                  <FormLabel className="cursor-pointer">
+                      <CardContent className="pt-6 grid gap-6">
+                        
+                        <div className="space-y-4">
+                           <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Daily Habits (Days / Week)</h3>
+                           {[
+                            { name: "days_readMastery", label: "Read Mastery (Days)" },
+                            { name: "days_dailyAffirmations", label: "Daily Affirmations (Days)" },
+                            { name: "days_dailyGratitudes", label: "Daily Gratitudes (Days)" },
+                            { name: "days_reviewLists", label: "Review Hot & Warm Lists (Days)" },
+                          ].map((item) => (
+                            <FormField
+                              key={item.name}
+                              control={form.control}
+                              name={item.name as any}
+                              render={({ field }) => (
+                                <FormItem className="flex items-center justify-between rounded-md border p-3 bg-secondary/20">
+                                  <FormLabel className="flex-1 cursor-pointer font-normal">
                                     {item.label}
                                   </FormLabel>
-                                </div>
-                              </FormItem>
-                            )}
-                          />
-                        ))}
+                                  <FormControl>
+                                    <div className="flex items-center gap-2">
+                                      <Input 
+                                        type="number" 
+                                        min={0} 
+                                        max={7} 
+                                        {...field} 
+                                        className="w-16 text-center bg-background h-8" 
+                                      />
+                                      <span className="text-xs text-muted-foreground">/7</span>
+                                    </div>
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                          ))}
+                        </div>
+
+                        <Separator />
+
+                        <div className="space-y-4">
+                          <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Weekly Review</h3>
+                          {[
+                            { name: "checklist_reviewYearlyGoals", label: "Review yearly goals" },
+                            { name: "checklist_reviewMonthlyGoals", label: "Review monthly goals" },
+                            { name: "checklist_reviewWeeklyGoals", label: "Review weekly goals" },
+                            { name: "checklist_reviewMeetingNotes", label: "Review last week's meeting notes" },
+                            { name: "checklist_reviewBusinessPlan", label: "Review Business Plan & FLOW Calendar" },
+                          ].map((item) => (
+                            <FormField
+                              key={item.name}
+                              control={form.control}
+                              name={item.name as any}
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 bg-secondary/20">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                  <div className="space-y-1 leading-none">
+                                    <FormLabel className="cursor-pointer font-normal">
+                                      {item.label}
+                                    </FormLabel>
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                          ))}
+                        </div>
+
                       </CardContent>
                     </Card>
 
