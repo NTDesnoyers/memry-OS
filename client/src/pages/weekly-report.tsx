@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Rating } from "@/components/ui/rating";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, ArrowRight, Save, Check, Calendar, User, TrendingUp, Heart, Briefcase, RefreshCw } from "lucide-react";
+import { ArrowLeft, ArrowRight, Save, Check, Calendar, User, TrendingUp, Heart, Briefcase, RefreshCw, Upload, Briefcase as BriefcaseIcon, Phone } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useToast } from "@/hooks/use-toast";
 
@@ -87,12 +87,29 @@ const formSchema = z.object({
   fordCount: z.string().optional(),
   recordedFordInfo: z.boolean().default(false),
   peopleToConnect: z.string().optional(),
+
+  // Personal Notes
+  notesWrittenLastWeek: z.string().optional(),
+  notesPlannedNextWeek: z.string().optional(),
+  
+  // New Business (Pipeline)
+  newBusinessBuyers: z.string().optional(),
+  newBusinessSellers: z.string().optional(),
+  
+  // Numbers to Know
+  activeListings: z.string().optional(),
+  pendingContracts: z.string().optional(),
+  closedYTD: z.string().optional(),
+  gciYTD: z.string().optional(),
+  
+  messageToCoach: z.string().optional(),
 });
 
 export default function WeeklyReport() {
   const [activeTab, setActiveTab] = useState("overview");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [notesPhotoPreview, setNotesPhotoPreview] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -135,6 +152,14 @@ export default function WeeklyReport() {
       checklist_reviewWeeklyGoals: false,
       checklist_reviewMeetingNotes: false,
       checklist_reviewBusinessPlan: false,
+      
+      newBusinessBuyers: "",
+      newBusinessSellers: "",
+      activeListings: "",
+      pendingContracts: "",
+      closedYTD: "",
+      gciYTD: "",
+      messageToCoach: "",
     },
   });
 
@@ -163,6 +188,18 @@ export default function WeeklyReport() {
   // Persist "Static" fields when they change
   const handleStaticFieldChange = (field: string, value: string) => {
     localStorage.setItem(`ninja_${field}`, value);
+  };
+  
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const objectUrl = URL.createObjectURL(file);
+      setNotesPhotoPreview(objectUrl);
+      toast({
+        title: "Photo Added",
+        description: "Your notes photo has been attached to this report.",
+      });
+    }
   };
 
   function onSubmit(values: z.infer<typeof formSchema>) {
@@ -224,6 +261,9 @@ export default function WeeklyReport() {
                 </TabsTrigger>
                 <TabsTrigger value="relationships" className="gap-2 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                   <Heart className="h-4 w-4" /> Relationships
+                </TabsTrigger>
+                <TabsTrigger value="pipeline" className="gap-2 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  <BriefcaseIcon className="h-4 w-4" /> Pipeline & Growth
                 </TabsTrigger>
               </TabsList>
 
@@ -838,9 +878,197 @@ export default function WeeklyReport() {
                       />
                     </CardContent>
                   </Card>
+
+                  <Card className="border-none shadow-md">
+                    <CardHeader className="bg-primary/5 pb-4">
+                      <CardTitle className="font-serif">Personal Notes</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-6 space-y-6">
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <FormField
+                          control={form.control}
+                          name="notesWrittenLastWeek"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Notes Written Last Week</FormLabel>
+                              <FormControl>
+                                <Textarea placeholder="Describe the notes you wrote..." {...field} className="min-h-[100px] bg-background/50" />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <div className="space-y-3">
+                          <label className="text-sm font-medium leading-none">Photo Evidence</label>
+                          <div className="border-2 border-dashed border-input rounded-lg p-6 flex flex-col items-center justify-center bg-background/50 hover:bg-background/80 transition-colors cursor-pointer group relative overflow-hidden">
+                            <Input 
+                              type="file" 
+                              accept="image/*" 
+                              className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                              onChange={handlePhotoUpload}
+                            />
+                            {notesPhotoPreview ? (
+                              <div className="relative w-full h-40">
+                                <img src={notesPhotoPreview} alt="Notes preview" className="w-full h-full object-contain rounded-md" />
+                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white font-medium">
+                                  Change Photo
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <Upload className="h-8 w-8 text-muted-foreground mb-2 group-hover:text-primary transition-colors" />
+                                <p className="text-sm text-muted-foreground text-center">
+                                  <span className="font-semibold text-primary">Click to upload</span> or drag and drop<br />
+                                  photos of your notes
+                                </p>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <FormField
+                        control={form.control}
+                        name="notesPlannedNextWeek"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Notes Planned for Next Week</FormLabel>
+                            <FormControl>
+                              <Textarea placeholder="Who are you writing to?" {...field} className="min-h-[80px] bg-background/50" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
                   
                   <div className="flex justify-between items-center pt-8">
                     <Button type="button" onClick={() => setActiveTab("review")} variant="ghost">Previous</Button>
+                    <Button type="button" onClick={() => setActiveTab("pipeline")} variant="outline" className="gap-2">
+                       Next: Pipeline & Growth <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="pipeline" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <Card className="border-none shadow-md md:col-span-2">
+                      <CardHeader className="bg-primary/5 pb-4">
+                        <CardTitle className="font-serif">New Business Pipeline</CardTitle>
+                        <CardDescription>Potential business identified last week</CardDescription>
+                      </CardHeader>
+                      <CardContent className="pt-6 grid md:grid-cols-2 gap-6">
+                        <FormField
+                          control={form.control}
+                          name="newBusinessBuyers"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Potential Buyers</FormLabel>
+                              <FormControl>
+                                <Textarea placeholder="Names and details..." {...field} className="min-h-[120px] bg-background/50" />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="newBusinessSellers"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Potential Sellers</FormLabel>
+                              <FormControl>
+                                <Textarea placeholder="Names and details..." {...field} className="min-h-[120px] bg-background/50" />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-none shadow-md">
+                      <CardHeader className="bg-primary/5 pb-4">
+                        <CardTitle className="font-serif">Numbers to Know</CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-6 space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="activeListings"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Active Listings</FormLabel>
+                                <FormControl>
+                                  <Input type="number" placeholder="0" {...field} className="bg-background/50" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="pendingContracts"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Pending Contracts</FormLabel>
+                                <FormControl>
+                                  <Input type="number" placeholder="0" {...field} className="bg-background/50" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="closedYTD"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Closed Units YTD</FormLabel>
+                                <FormControl>
+                                  <Input type="number" placeholder="0" {...field} className="bg-background/50" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="gciYTD"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>GCI YTD ($)</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="$0.00" {...field} className="bg-background/50" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="border-none shadow-md">
+                      <CardHeader className="bg-primary/5 pb-4">
+                        <CardTitle className="font-serif">Message to Coach</CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-6">
+                        <FormField
+                          control={form.control}
+                          name="messageToCoach"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Questions, wins, or focus for our next call</FormLabel>
+                              <FormControl>
+                                <Textarea 
+                                  placeholder="Hey Coach..." 
+                                  {...field} 
+                                  className="min-h-[200px] bg-background/50" 
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  <div className="flex justify-between items-center pt-8">
+                    <Button type="button" onClick={() => setActiveTab("relationships")} variant="ghost">Previous</Button>
                     <div className="flex gap-4">
                       <Link href="/">
                         <Button variant="outline">Cancel</Button>
@@ -851,6 +1079,7 @@ export default function WeeklyReport() {
                     </div>
                   </div>
                 </TabsContent>
+
               </div>
             </Tabs>
           </form>
