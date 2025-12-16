@@ -13,12 +13,14 @@ import Reviews from "@/pages/reviews";
 import BusinessTracker from "@/pages/business-tracker";
 import Integrations from "@/pages/integrations";
 import AutomationHub from "@/pages/automation";
+import PhoneDialer from "@/pages/phone";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/business-tracker" component={BusinessTracker} />
+      <Route path="/phone" component={PhoneDialer} />
       <Route path="/weekly-report" component={WeeklyReport} />
       <Route path="/people" component={People} />
       <Route path="/relationships" component={Relationships} />
