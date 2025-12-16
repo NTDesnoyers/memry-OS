@@ -1,0 +1,43 @@
+{
+  "name": "Ninja OS",
+  "short_name": "Ninja OS",
+  "description": "Ninja Selling Operating System - Your personal business command center",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#1a1a2e",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["productivity", "business"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "People",
+      "url": "/people",
+      "description": "View your contacts"
+    },
+    {
+      "name": "Deals",
+      "url": "/deals",
+      "description": "Manage your deals"
+    }
+  ]
+}
