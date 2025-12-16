@@ -40,6 +40,9 @@ interface NoteUpload {
   id: string;
   preview: string;
   taggedPerson: string;
+  file: File;
+  uploadedUrl?: string;
+  uploading?: boolean;
 }
 
 // Schema Definition
@@ -246,19 +249,59 @@ export default function WeeklyReport() {
     localStorage.setItem(`ninja_${field}`, value);
   };
   
-  const handleBatchUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBatchUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    if (files.length > 0) {
-      const newUploads = files.map(file => ({
-        id: Math.random().toString(36).substr(2, 9),
-        preview: URL.createObjectURL(file),
-        taggedPerson: ""
-      }));
-      setNoteUploads(prev => [...prev, ...newUploads]);
-      toast({
-        title: "Notes Added",
-        description: `${files.length} images added. Please tag associated people.`,
+    if (files.length === 0) return;
+    
+    const newUploads: NoteUpload[] = files.map(file => ({
+      id: Math.random().toString(36).substr(2, 9),
+      preview: URL.createObjectURL(file),
+      taggedPerson: "",
+      file,
+      uploading: true,
+    }));
+    setNoteUploads(prev => [...prev, ...newUploads]);
+    
+    toast({
+      title: "Uploading...",
+      description: `Uploading ${files.length} images...`,
+    });
+
+    try {
+      const formData = new FormData();
+      files.forEach(file => formData.append("images", file));
+      
+      const response = await fetch("/api/upload/notes", {
+        method: "POST",
+        body: formData,
       });
+      
+      if (!response.ok) {
+        throw new Error("Upload failed");
+      }
+      
+      const { urls } = await response.json();
+      
+      const newUploadIds = newUploads.map(u => u.id);
+      setNoteUploads(prev => prev.map(upload => {
+        const uploadIndex = newUploadIds.indexOf(upload.id);
+        if (uploadIndex !== -1 && uploadIndex < urls.length) {
+          return { ...upload, uploadedUrl: urls[uploadIndex], uploading: false };
+        }
+        return upload;
+      }));
+      
+      toast({
+        title: "Upload Complete",
+        description: `${files.length} images uploaded. Tag people to associate notes.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload images. Please try again.",
+        variant: "destructive",
+      });
+      setNoteUploads(prev => prev.filter(u => !u.uploading));
     }
   };
 
@@ -293,7 +336,7 @@ export default function WeeklyReport() {
     setEmailTo("");
   };
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     console.log(values);
     
     if (values.familyMission) localStorage.setItem("ninja_familyMission", values.familyMission);
@@ -303,16 +346,52 @@ export default function WeeklyReport() {
     if (values.affirmation) localStorage.setItem("ninja_affirmation", values.affirmation);
 
     if (noteUploads.length > 0) {
-       const taggedCount = noteUploads.filter(n => n.taggedPerson).length;
-       toast({
-         title: "Processing Notes",
-         description: `Logging ${taggedCount} notes to contact records & syncing to Cloze...`,
-       });
-    } else {
+      const taggedNotes = noteUploads.filter(n => n.taggedPerson && n.uploadedUrl);
+      const untaggedNotes = noteUploads.filter(n => !n.taggedPerson && n.uploadedUrl);
+      
+      try {
+        for (const note of taggedNotes) {
+          await fetch("/api/notes/with-images", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              content: `Handwritten note for ${note.taggedPerson}`,
+              type: "handwritten",
+              tags: ["handwritten", "weekly-review"],
+              imageUrls: [note.uploadedUrl],
+            }),
+          });
+        }
+        
+        if (untaggedNotes.length > 0) {
+          await fetch("/api/notes/with-images", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              content: `Handwritten notes from weekly review (${untaggedNotes.length} images)`,
+              type: "handwritten",
+              tags: ["handwritten", "weekly-review", "untagged"],
+              imageUrls: untaggedNotes.map(n => n.uploadedUrl),
+            }),
+          });
+        }
+        
         toast({
-          title: "Report Saved",
-          description: "Your weekly operating review has been successfully saved.",
+          title: "Notes Saved",
+          description: `${taggedNotes.length} tagged notes and ${untaggedNotes.length} untagged notes saved successfully.`,
         });
+      } catch (error) {
+        toast({
+          title: "Error Saving Notes",
+          description: "Some notes may not have been saved. Please check and try again.",
+          variant: "destructive",
+        });
+      }
+    } else {
+      toast({
+        title: "Report Saved",
+        description: "Your weekly operating review has been successfully saved.",
+      });
     }
     setTimeout(() => setLocation("/"), 1500);
   }
@@ -1052,9 +1131,19 @@ export default function WeeklyReport() {
                         {noteUploads.length > 0 && (
                           <div className="space-y-2 max-h-[300px] overflow-y-auto">
                             {noteUploads.map((note) => (
-                              <div key={note.id} className="flex gap-2 p-2 bg-secondary/30 rounded border text-xs">
-                                <div className="h-10 w-10 flex-shrink-0 bg-black/5 rounded overflow-hidden">
-                                  <img src={note.preview} alt="Note" className="h-full w-full object-cover" />
+                              <div key={note.id} className={`flex gap-2 p-2 rounded border text-xs ${note.uploading ? 'bg-yellow-50 border-yellow-200' : note.uploadedUrl ? 'bg-green-50 border-green-200' : 'bg-secondary/30'}`}>
+                                <div className="h-10 w-10 flex-shrink-0 bg-black/5 rounded overflow-hidden relative">
+                                  <img src={note.uploadedUrl || note.preview} alt="Note" className="h-full w-full object-cover" />
+                                  {note.uploading && (
+                                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                                      <RefreshCw className="h-4 w-4 text-white animate-spin" />
+                                    </div>
+                                  )}
+                                  {note.uploadedUrl && !note.uploading && (
+                                    <div className="absolute bottom-0 right-0 bg-green-500 rounded-full p-0.5">
+                                      <Check className="h-2 w-2 text-white" />
+                                    </div>
+                                  )}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <Input 
@@ -1062,9 +1151,10 @@ export default function WeeklyReport() {
                                     className="h-7 text-xs" 
                                     value={note.taggedPerson}
                                     onChange={(e) => updateTaggedPerson(note.id, e.target.value)}
+                                    disabled={note.uploading}
                                   />
                                 </div>
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeUpload(note.id)}>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeUpload(note.id)} disabled={note.uploading}>
                                   <X className="h-3 w-3" />
                                 </Button>
                               </div>

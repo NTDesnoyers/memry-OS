@@ -16,6 +16,39 @@ import {
   insertPieEntrySchema
 } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+
+const uploadDir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage_multer = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+const upload = multer({
+  storage: storage_multer,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = /jpeg|jpg|png|gif|webp|heic/;
+    const ext = allowed.test(path.extname(file.originalname).toLowerCase());
+    const mime = allowed.test(file.mimetype);
+    if (ext && mime) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed"));
+    }
+  },
+});
 
 export async function registerRoutes(
   httpServer: Server,
@@ -30,6 +63,45 @@ export async function registerRoutes(
     }
     return result.data;
   };
+
+  // Serve uploaded files statically
+  const express = await import("express");
+  app.use("/uploads", express.default.static(uploadDir));
+
+  // ==================== FILE UPLOAD ROUTES ====================
+  
+  // Upload handwritten note images
+  app.post("/api/upload/notes", upload.array("images", 20), async (req, res) => {
+    try {
+      const files = req.files as Express.Multer.File[];
+      if (!files || files.length === 0) {
+        return res.status(400).json({ message: "No files uploaded" });
+      }
+      
+      const urls = files.map(file => `/uploads/${file.filename}`);
+      res.json({ urls, count: files.length });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Create note with uploaded images
+  app.post("/api/notes/with-images", async (req, res) => {
+    try {
+      const { personId, content, type, tags, imageUrls } = req.body;
+      const note = await storage.createNote({
+        personId: personId || null,
+        dealId: null,
+        content: content || "Handwritten note",
+        type: type || "handwritten",
+        tags: tags || [],
+        imageUrls: imageUrls || [],
+      });
+      res.status(201).json(note);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
   
   // ==================== PEOPLE ROUTES ====================
   
