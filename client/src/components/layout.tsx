@@ -1,9 +1,3 @@
-import Layout from "@/components/layout";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { useState } from "react";
-import { Link, useLocation } from "wouter";
-import { cn } from "@/lib/utils";
 import {
   Users,
   Calendar,
@@ -14,8 +8,15 @@ import {
   LayoutDashboard,
   Menu,
   PieChart,
-  Share2
+  Share2,
+  Plug
 } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useState } from "react";
+import { Link, useLocation } from "wouter";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { VoiceLogger } from "@/components/voice-logger";
 
 const navItems = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -25,7 +26,7 @@ const navItems = [
   { name: "Weekly Agenda", href: "/weekly-report", icon: Calendar },
   { name: "Deals", href: "/deals", icon: BarChart3 },
   { name: "RE Reviews", href: "/reviews", icon: Home },
-  { name: "Cloze Sync", href: "/cloze-sync", icon: Share2 },
+  { name: "Integrations", href: "/integrations", icon: Plug },
 ];
 
 export default function LayoutComponent({ children }: { children: React.ReactNode }) {
@@ -74,6 +75,9 @@ export default function LayoutComponent({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen bg-background text-foreground font-sans">
+      {/* Voice Logger Floating Button */}
+      <VoiceLogger />
+
       {/* Desktop Sidebar */}
       <aside className="hidden md:block w-64 fixed inset-y-0 z-50">
         <NavContent />
