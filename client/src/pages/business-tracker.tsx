@@ -9,10 +9,82 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { DollarSign, Save, Plus, Trash2, PieChart, TrendingUp } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { PersonProfileDrawer } from "@/components/person-profile-drawer";
+import { type Deal, type Person } from "@shared/schema";
+
+type DealWithPerson = Deal & { person?: Person };
 
 export default function BusinessTracker() {
+  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  const { data: deals = [] } = useQuery<Deal[]>({
+    queryKey: ["/api/deals"],
+  });
+
+  const { data: people = [] } = useQuery<Person[]>({
+    queryKey: ["/api/people"],
+  });
+
+  const dealsWithPeople: DealWithPerson[] = deals.map(deal => ({
+    ...deal,
+    person: people.find(p => p.id === deal.personId)
+  }));
+
+  const warmDeals = dealsWithPeople.filter(d => d.stage === "warm");
+  const hotDeals = dealsWithPeople.filter(d => d.stage === "hot");
+  const activeDeals = dealsWithPeople.filter(d => d.stage === "active" || d.stage === "under_contract");
+  const closedDeals = dealsWithPeople.filter(d => d.stage === "closed");
+
+  const openPersonProfile = (personId: string | null | undefined) => {
+    if (personId) {
+      setSelectedPersonId(personId);
+      setProfileOpen(true);
+    }
+  };
+
+  const formatPrice = (value: number | null | undefined) => {
+    if (!value) return "-";
+    if (value >= 1000000) return `${(value / 1000000).toFixed(2)}M`;
+    if (value >= 1000) return `${Math.round(value / 1000)}k`;
+    return `$${value}`;
+  };
+
+  const formatDate = (date: Date | string | null | undefined) => {
+    if (!date) return "-";
+    const d = new Date(date);
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  };
+
+  const calculateGCI = (value: number | null | undefined, probability: number | null | undefined) => {
+    if (!value) return "$0";
+    const pct = (probability || 3) / 100;
+    const gci = value * pct;
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(gci);
+  };
+
+  const ClickableName = ({ personId, name }: { personId?: string | null; name: string }) => {
+    if (!personId) return <span>{name}</span>;
+    return (
+      <button
+        onClick={() => openPersonProfile(personId)}
+        className="text-primary hover:underline cursor-pointer text-left font-medium"
+        data-testid={`link-person-${personId}`}
+      >
+        {name}
+      </button>
+    );
+  };
+
   return (
     <Layout>
+      <PersonProfileDrawer 
+        personId={selectedPersonId} 
+        open={profileOpen} 
+        onClose={() => setProfileOpen(false)} 
+      />
       <div className="min-h-screen bg-secondary/30 relative">
         <div 
           className="fixed inset-0 opacity-40 mix-blend-multiply pointer-events-none -z-10"
@@ -174,27 +246,34 @@ export default function BusinessTracker() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {[
-                          { date: "6/26", name: "Dennis Grezza", price: "650k", pct: "3%", gci: "$19,500" },
-                          { date: "6/27", name: "Zia Hassanzadeh", price: "700k", pct: "3%", gci: "$21,000" },
-                          { date: "9/29", name: "Kyria", price: "250k", pct: "2.75%", gci: "$6,875" },
-                          { date: "10/1", name: "Amelia Stansell", price: "750k", pct: "3%", gci: "$22,500" },
-                        ].map((row, i) => (
-                          <TableRow key={i} className="hover:bg-orange-50/50">
-                            <TableCell className="font-medium text-xs">{row.date}</TableCell>
-                            <TableCell>{row.name}</TableCell>
-                            <TableCell className="text-xs">{row.price}</TableCell>
-                            <TableCell className="text-xs">{row.pct}</TableCell>
-                            <TableCell className="text-right font-medium text-green-700">{row.gci}</TableCell>
+                        {warmDeals.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                              No warm prospects yet. Add deals with "warm" stage to see them here.
+                            </TableCell>
+                          </TableRow>
+                        ) : warmDeals.map((deal) => (
+                          <TableRow key={deal.id} className="hover:bg-orange-50/50" data-testid={`row-warm-${deal.id}`}>
+                            <TableCell className="font-medium text-xs">{formatDate(deal.expectedCloseDate || deal.createdAt)}</TableCell>
+                            <TableCell>
+                              <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} />
+                            </TableCell>
+                            <TableCell className="text-xs">{formatPrice(deal.value)}</TableCell>
+                            <TableCell className="text-xs">{deal.probability || 3}%</TableCell>
+                            <TableCell className="text-right font-medium text-green-700">{calculateGCI(deal.value, deal.probability)}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>
                     <div className="p-4 bg-orange-50/50 border-t border-orange-100 mt-4 flex justify-between items-center">
-                       <span className="text-sm font-medium text-orange-800">Total Potential Sides: 4</span>
+                       <span className="text-sm font-medium text-orange-800">Total Potential Sides: {warmDeals.length}</span>
                        <div className="text-right">
                          <span className="text-xs text-muted-foreground uppercase">Potential GCI</span>
-                         <p className="text-lg font-bold text-green-700">$69,875</p>
+                         <p className="text-lg font-bold text-green-700">
+                           {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(
+                             warmDeals.reduce((sum, d) => sum + (d.value || 0) * ((d.probability || 3) / 100), 0)
+                           )}
+                         </p>
                        </div>
                     </div>
                   </CardContent>
@@ -205,7 +284,7 @@ export default function BusinessTracker() {
                   <Card className="border-none shadow-md">
                     <CardHeader className="bg-red-50 pb-4 border-b border-red-100">
                       <div className="flex justify-between items-center">
-                        <CardTitle className="font-serif text-red-800">"Hot" and Active Prospects</CardTitle>
+                        <CardTitle className="font-serif text-red-800">"Hot" Prospects</CardTitle>
                         <Button size="sm" variant="outline" className="h-8 text-red-700 border-red-200 hover:bg-red-100"><Plus className="h-3 w-3 mr-1" /> Add</Button>
                       </div>
                     </CardHeader>
@@ -220,47 +299,35 @@ export default function BusinessTracker() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {[
-                            { date: "10/15", name: "Andrew Papantoniou", price: "600k", gci: "$18,000" },
-                            { date: "11/14", name: "Leonard Abreu", price: "500k", gci: "$12,500" },
-                            { date: "12/1", name: "Sarah & Sam Bellet", price: "1.25M", gci: "$37,500" },
-                          ].map((row, i) => (
-                            <TableRow key={i} className="hover:bg-red-50/50">
-                              <TableCell className="font-medium text-xs">{row.date}</TableCell>
-                              <TableCell>{row.name}</TableCell>
-                              <TableCell className="text-xs">{row.price}</TableCell>
-                              <TableCell className="text-right font-medium text-green-700">{row.gci}</TableCell>
+                          {hotDeals.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                                No hot prospects yet. Add deals with "hot" stage to see them here.
+                              </TableCell>
+                            </TableRow>
+                          ) : hotDeals.map((deal) => (
+                            <TableRow key={deal.id} className="hover:bg-red-50/50" data-testid={`row-hot-${deal.id}`}>
+                              <TableCell className="font-medium text-xs">{formatDate(deal.expectedCloseDate || deal.createdAt)}</TableCell>
+                              <TableCell>
+                                <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} />
+                              </TableCell>
+                              <TableCell className="text-xs">{formatPrice(deal.value)}</TableCell>
+                              <TableCell className="text-right font-medium text-green-700">{calculateGCI(deal.value, deal.probability)}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
                       </Table>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-none shadow-md">
-                    <CardHeader className="bg-blue-50 pb-4 border-b border-blue-100">
-                      <div className="flex justify-between items-center">
-                        <CardTitle className="font-serif text-blue-800">"Hot" and Confused Prospects</CardTitle>
-                        <Button size="sm" variant="outline" className="h-8 text-blue-700 border-blue-200 hover:bg-blue-100"><Plus className="h-3 w-3 mr-1" /> Add</Button>
+                      <div className="p-4 bg-red-50/50 border-t border-red-100 flex justify-between items-center">
+                        <span className="text-sm font-medium text-red-800">Total Hot: {hotDeals.length}</span>
+                        <div className="text-right">
+                          <span className="text-xs text-muted-foreground uppercase">Potential GCI</span>
+                          <p className="text-lg font-bold text-green-700">
+                            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(
+                              hotDeals.reduce((sum, d) => sum + (d.value || 0) * ((d.probability || 3) / 100), 0)
+                            )}
+                          </p>
+                        </div>
                       </div>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="hover:bg-transparent">
-                            <TableHead className="w-[100px]">Date</TableHead>
-                            <TableHead>Client Name</TableHead>
-                            <TableHead className="text-right">Potential GCI</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          <TableRow className="hover:bg-blue-50/50">
-                            <TableCell className="font-medium text-xs">12/30</TableCell>
-                            <TableCell>Lucy Pearl</TableCell>
-                            <TableCell className="text-right font-medium text-green-700">$21,000</TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
                     </CardContent>
                   </Card>
                 </div>
@@ -272,7 +339,7 @@ export default function BusinessTracker() {
               <Card className="border-none shadow-md">
                 <CardHeader className="bg-indigo-50 pb-4 border-b border-indigo-100">
                    <div className="flex justify-between items-center">
-                     <CardTitle className="font-serif text-indigo-800">Under Contract</CardTitle>
+                     <CardTitle className="font-serif text-indigo-800">Under Contract / Active</CardTitle>
                      <Button size="sm" variant="outline" className="h-8 text-indigo-700 border-indigo-200 hover:bg-indigo-100"><Plus className="h-3 w-3 mr-1" /> Add</Button>
                    </div>
                 </CardHeader>
@@ -289,60 +356,37 @@ export default function BusinessTracker() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      <TableRow className="hover:bg-indigo-50/50">
-                        <TableCell className="font-medium">Karla & Daniel</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">Buy/Sell, signed agreements...</TableCell>
-                        <TableCell>12/15/25</TableCell>
-                        <TableCell>2.35M</TableCell>
-                        <TableCell>3.00%</TableCell>
-                        <TableCell className="text-right font-bold text-green-700">$70,500</TableCell>
-                      </TableRow>
-                      {/* Empty rows for visual similarity to excel */}
-                      {[1,2,3].map(i => (
-                         <TableRow key={i} className="hover:bg-indigo-50/10 h-10">
-                           <TableCell className="text-muted-foreground/30">-</TableCell>
-                           <TableCell></TableCell>
-                           <TableCell></TableCell>
-                           <TableCell></TableCell>
-                           <TableCell></TableCell>
-                           <TableCell className="text-right text-muted-foreground/30">$0</TableCell>
-                         </TableRow>
+                      {activeDeals.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                            No active deals yet. Add deals with "active" or "under_contract" stage to see them here.
+                          </TableCell>
+                        </TableRow>
+                      ) : activeDeals.map((deal) => (
+                        <TableRow key={deal.id} className="hover:bg-indigo-50/50" data-testid={`row-active-${deal.id}`}>
+                          <TableCell>
+                            <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} />
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{deal.notes || "-"}</TableCell>
+                          <TableCell>{deal.expectedCloseDate ? new Date(deal.expectedCloseDate).toLocaleDateString() : "-"}</TableCell>
+                          <TableCell>{formatPrice(deal.value)}</TableCell>
+                          <TableCell>{deal.probability || 3}%</TableCell>
+                          <TableCell className="text-right font-bold text-green-700">{calculateGCI(deal.value, deal.probability)}</TableCell>
+                        </TableRow>
                       ))}
                     </TableBody>
                   </Table>
-                </CardContent>
-              </Card>
-
-              <Card className="border-none shadow-md">
-                <CardHeader className="bg-cyan-50 pb-4 border-b border-cyan-100">
-                  <div className="flex justify-between items-center">
-                    <CardTitle className="font-serif text-cyan-800">Signed Listing Agreements</CardTitle>
-                    <Button size="sm" variant="outline" className="h-8 text-cyan-700 border-cyan-200 hover:bg-cyan-100"><Plus className="h-3 w-3 mr-1" /> Add</Button>
+                  <div className="p-4 bg-indigo-50/50 border-t border-indigo-100 flex justify-between items-center">
+                    <span className="text-sm font-medium text-indigo-800">Total Active: {activeDeals.length}</span>
+                    <div className="text-right">
+                      <span className="text-xs text-muted-foreground uppercase">Expected GCI</span>
+                      <p className="text-lg font-bold text-green-700">
+                        {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(
+                          activeDeals.reduce((sum, d) => sum + (d.value || 0) * ((d.probability || 3) / 100), 0)
+                        )}
+                      </p>
+                    </div>
                   </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="hover:bg-transparent">
-                        <TableHead>Client Name</TableHead>
-                        <TableHead>Notes</TableHead>
-                        <TableHead>Expires</TableHead>
-                        <TableHead>List Price</TableHead>
-                        <TableHead className="text-right">Est. GCI</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {[1,2,3].map(i => (
-                         <TableRow key={i} className="hover:bg-cyan-50/10 h-10">
-                           <TableCell className="text-muted-foreground/30">-</TableCell>
-                           <TableCell></TableCell>
-                           <TableCell></TableCell>
-                           <TableCell></TableCell>
-                           <TableCell className="text-right text-muted-foreground/30">$0</TableCell>
-                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -354,9 +398,17 @@ export default function BusinessTracker() {
                   <div className="flex justify-between items-center">
                     <CardTitle className="font-serif text-green-800">Closed Transactions</CardTitle>
                     <div className="flex gap-4 items-center">
-                      <div className="text-sm font-medium">Total Closed: <span className="font-bold text-green-700">17</span></div>
-                      <div className="text-sm font-medium">Volume: <span className="font-bold text-green-700">$5.9M</span></div>
-                      <div className="text-sm font-medium">GCI: <span className="font-bold text-green-700">$119k</span></div>
+                      <div className="text-sm font-medium">Total Closed: <span className="font-bold text-green-700">{closedDeals.length}</span></div>
+                      <div className="text-sm font-medium">Volume: <span className="font-bold text-green-700">
+                        {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0, notation: 'compact' }).format(
+                          closedDeals.reduce((sum, d) => sum + (d.value || 0), 0)
+                        )}
+                      </span></div>
+                      <div className="text-sm font-medium">GCI: <span className="font-bold text-green-700">
+                        {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0, notation: 'compact' }).format(
+                          closedDeals.reduce((sum, d) => sum + (d.value || 0) * ((d.probability || 3) / 100), 0)
+                        )}
+                      </span></div>
                     </div>
                   </div>
                 </CardHeader>
@@ -371,27 +423,26 @@ export default function BusinessTracker() {
                         <TableHead>Sale Price</TableHead>
                         <TableHead>Comm %</TableHead>
                         <TableHead className="text-right font-bold text-green-700 bg-green-50">Gross Comm</TableHead>
-                        <TableHead className="text-right">Ref Fee</TableHead>
-                        <TableHead className="text-right font-bold">Agent Net</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {[
-                        { date: "1/10/25", name: "Kevin Zhao", addr: "6316 Medinah Ln", type: "Buy", price: "610,000", pct: "2.5%", gci: "$15,250", ref: "$0", net: "$10,370" },
-                        { date: "2/18/25", name: "Cristina Samaha", addr: "3452 Belleplain Ct", type: "Buy", price: "415,900", pct: "2.4%", gci: "$10,000", ref: "$0", net: "$6,880" },
-                        { date: "3/1/25", name: "Kim & Damon", addr: "3382 Gunston Rd", type: "Buy", price: "2,650", pct: "25%", gci: "$663", ref: "$0", net: "$563" },
-                        { date: "4/10/25", name: "Lindsey Jasper", addr: "1103 Criton St", type: "Buy", price: "750,000", pct: "3.0%", gci: "$22,500", ref: "$0", net: "$19,125" },
-                      ].map((row, i) => (
-                        <TableRow key={i} className="hover:bg-muted/50">
-                          <TableCell className="font-medium text-xs">{row.date}</TableCell>
-                          <TableCell className="font-medium">{row.name}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground truncate max-w-[150px]">{row.addr}</TableCell>
-                          <TableCell className="text-xs">{row.type}</TableCell>
-                          <TableCell className="text-xs">${row.price}</TableCell>
-                          <TableCell className="text-xs">{row.pct}</TableCell>
-                          <TableCell className="text-right font-bold text-green-700 bg-green-50/50">{row.gci}</TableCell>
-                          <TableCell className="text-right text-xs text-red-400">{row.ref}</TableCell>
-                          <TableCell className="text-right font-bold">{row.net}</TableCell>
+                      {closedDeals.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                            No closed deals yet. Add deals with "closed" stage to see them here.
+                          </TableCell>
+                        </TableRow>
+                      ) : closedDeals.map((deal) => (
+                        <TableRow key={deal.id} className="hover:bg-muted/50" data-testid={`row-closed-${deal.id}`}>
+                          <TableCell className="font-medium text-xs">{deal.expectedCloseDate ? new Date(deal.expectedCloseDate).toLocaleDateString() : "-"}</TableCell>
+                          <TableCell>
+                            <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} />
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground truncate max-w-[150px]">{deal.address || "-"}</TableCell>
+                          <TableCell className="text-xs">{deal.type}</TableCell>
+                          <TableCell className="text-xs">{formatPrice(deal.value)}</TableCell>
+                          <TableCell className="text-xs">{deal.probability || 3}%</TableCell>
+                          <TableCell className="text-right font-bold text-green-700 bg-green-50/50">{calculateGCI(deal.value, deal.probability)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
