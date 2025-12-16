@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
-import { RefreshCw, CheckCircle2, AlertCircle, Link as LinkIcon, Settings, Clock, Eye, Share2, ListTodo, Bot, Video, FileText } from "lucide-react";
+import { RefreshCw, CheckCircle2, AlertCircle, Link as LinkIcon, Settings, Clock, Eye, Share2, ListTodo, Bot, Video, FileText, Sparkles, Brain } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useToast } from "@/hooks/use-toast";
 
@@ -26,6 +26,14 @@ export default function Integrations() {
   // OpenAI State
   const [openaiKey, setOpenaiKey] = useState(localStorage.getItem("openai_api_key") || "");
   const [showOpenaiKey, setShowOpenaiKey] = useState(false);
+
+  // Anthropic State
+  const [anthropicKey, setAnthropicKey] = useState(localStorage.getItem("anthropic_api_key") || "");
+  const [showAnthropicKey, setShowAnthropicKey] = useState(false);
+
+  // Google Gemini State
+  const [geminiKey, setGeminiKey] = useState(localStorage.getItem("gemini_api_key") || "");
+  const [showGeminiKey, setShowGeminiKey] = useState(false);
 
   // Fathom State
   const [fathomKey, setFathomKey] = useState(localStorage.getItem("fathom_api_key") || "");
@@ -136,8 +144,8 @@ export default function Integrations() {
                     <Bot className="h-6 w-6" />
                   </div>
                   <div>
-                    <CardTitle className="font-serif">OpenAI (LLM)</CardTitle>
-                    <CardDescription>Powers voice summarization and auto-drafting</CardDescription>
+                    <CardTitle className="font-serif">OpenAI (GPT-4)</CardTitle>
+                    <CardDescription>Powers voice summarization and complex reasoning</CardDescription>
                   </div>
                 </div>
               </CardHeader>
@@ -156,6 +164,72 @@ export default function Integrations() {
                       <Eye className="h-4 w-4" />
                     </Button>
                     <Button onClick={() => saveKey("OpenAI", openaiKey, "openai_api_key")}>Save</Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Anthropic Integration */}
+            <Card className="border-none shadow-md">
+              <CardHeader className="bg-orange-50/50 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-orange-600 flex items-center justify-center text-white font-bold">
+                    <Brain className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <CardTitle className="font-serif">Anthropic (Claude)</CardTitle>
+                    <CardDescription>Excellent for long context analysis and drafting</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                <div className="space-y-2">
+                  <Label>API Key</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      type={showAnthropicKey ? "text" : "password"} 
+                      value={anthropicKey}
+                      onChange={(e) => setAnthropicKey(e.target.value)}
+                      placeholder="sk-ant-..."
+                      className="bg-background/50"
+                    />
+                    <Button variant="outline" size="icon" onClick={() => setShowAnthropicKey(!showAnthropicKey)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button onClick={() => saveKey("Anthropic", anthropicKey, "anthropic_api_key")}>Save</Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Google Gemini Integration */}
+            <Card className="border-none shadow-md">
+              <CardHeader className="bg-blue-50/50 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+                    <Sparkles className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <CardTitle className="font-serif">Google Gemini</CardTitle>
+                    <CardDescription>Multimodal capabilities and fast processing</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                <div className="space-y-2">
+                  <Label>API Key</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      type={showGeminiKey ? "text" : "password"} 
+                      value={geminiKey}
+                      onChange={(e) => setGeminiKey(e.target.value)}
+                      placeholder="AIza..."
+                      className="bg-background/50"
+                    />
+                    <Button variant="outline" size="icon" onClick={() => setShowGeminiKey(!showGeminiKey)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button onClick={() => saveKey("Google Gemini", geminiKey, "gemini_api_key")}>Save</Button>
                   </div>
                 </div>
               </CardContent>
