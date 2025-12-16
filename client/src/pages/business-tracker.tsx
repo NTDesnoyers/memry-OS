@@ -12,7 +12,7 @@ import { DollarSign, Save, Plus, FileText, BarChart3, Clock, Phone, Calculator }
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { PersonProfileDrawer } from "@/components/person-profile-drawer";
+import { Link } from "wouter";
 import { type Deal, type Person, type BusinessSettings } from "@shared/schema";
 import { toast } from "sonner";
 
@@ -21,8 +21,6 @@ type DealWithPerson = Deal & { person?: Person };
 export default function BusinessTracker() {
   const queryClient = useQueryClient();
   const currentYear = new Date().getFullYear();
-  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
-  const [profileOpen, setProfileOpen] = useState(false);
 
   const { data: businessSettings } = useQuery<BusinessSettings>({
     queryKey: [`/api/business-settings/${currentYear}`],
@@ -82,13 +80,6 @@ export default function BusinessTracker() {
   const underContractDeals = dealsWithPeople.filter(d => d.prospectCategory === "under_contract" || d.stage === "under_contract" || d.stage === "active");
   const closedDeals = dealsWithPeople.filter(d => d.stage === "closed");
 
-  const openPersonProfile = (personId: string | null | undefined) => {
-    if (personId) {
-      setSelectedPersonId(personId);
-      setProfileOpen(true);
-    }
-  };
-
   const formatPrice = (value: number | null | undefined) => {
     if (!value) return "";
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
@@ -121,13 +112,13 @@ export default function BusinessTracker() {
   const ClickableName = ({ personId, name }: { personId?: string | null; name: string }) => {
     if (!personId) return <span className="font-medium">{name}</span>;
     return (
-      <button
-        onClick={() => openPersonProfile(personId)}
+      <Link
+        href={`/people/${personId}`}
         className="text-primary hover:underline cursor-pointer text-left font-medium"
         data-testid={`link-person-${personId}`}
       >
         {name}
-      </button>
+      </Link>
     );
   };
 
@@ -141,11 +132,6 @@ export default function BusinessTracker() {
 
   return (
     <Layout>
-      <PersonProfileDrawer 
-        personId={selectedPersonId} 
-        open={profileOpen} 
-        onClose={() => setProfileOpen(false)} 
-      />
       <div className="min-h-screen bg-secondary/30 relative">
         <div 
           className="fixed inset-0 opacity-40 mix-blend-multiply pointer-events-none -z-10"
@@ -155,7 +141,7 @@ export default function BusinessTracker() {
         <div className="container mx-auto px-4 py-6 max-w-[1600px]">
           <header className="flex justify-between items-center mb-6">
             <div>
-              <h1 className="text-3xl font-serif font-bold text-primary">{currentYear} Business Tracker</h1>
+              <h1 className="text-3xl font-serif font-bold text-primary">Business Tracker</h1>
               <p className="text-muted-foreground text-sm">Ninja Selling Pipeline & Transactions</p>
             </div>
           </header>
