@@ -1,3 +1,7 @@
+import Layout from "@/components/layout";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import {
@@ -8,14 +12,13 @@ import {
   FileText,
   Repeat,
   LayoutDashboard,
-  Menu
+  Menu,
+  PieChart
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { useState } from "react";
 
 const navItems = [
-  { name: "Business Tracker", href: "/", icon: LayoutDashboard },
+  { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Business Tracker", href: "/business-tracker", icon: PieChart },
   { name: "People", href: "/people", icon: Users },
   { name: "Relationships (FORD)", href: "/relationships", icon: Repeat },
   { name: "Weekly Agenda", href: "/weekly-report", icon: Calendar },
@@ -23,7 +26,7 @@ const navItems = [
   { name: "RE Reviews", href: "/reviews", icon: Home },
 ];
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+export default function LayoutComponent({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [open, setOpen] = useState(false);
 

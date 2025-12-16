@@ -10,11 +10,13 @@ import People from "@/pages/people";
 import Relationships from "@/pages/relationships";
 import Deals from "@/pages/deals";
 import Reviews from "@/pages/reviews";
+import BusinessTracker from "@/pages/business-tracker";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
+      <Route path="/business-tracker" component={BusinessTracker} />
       <Route path="/weekly-report" component={WeeklyReport} />
       <Route path="/people" component={People} />
       <Route path="/relationships" component={Relationships} />
