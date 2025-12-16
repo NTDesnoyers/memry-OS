@@ -90,7 +90,7 @@ export default function LayoutComponent({ children }: { children: React.ReactNod
       </aside>
 
       {/* Mobile Sidebar */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-background border-b px-4 py-3 flex items-center justify-between">
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-background border-b px-4 py-3 flex items-center justify-between" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
         <span className="font-serif font-bold text-primary">Ninja OS</span>
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
@@ -105,7 +105,7 @@ export default function LayoutComponent({ children }: { children: React.ReactNod
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 md:ml-64 pt-14 md:pt-0">
+      <main className="flex-1 md:ml-64 pt-16 md:pt-0" style={{ paddingTop: 'max(4rem, calc(env(safe-area-inset-top) + 3rem))' }}>
         {children}
       </main>
     </div>
