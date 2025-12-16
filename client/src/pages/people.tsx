@@ -47,8 +47,33 @@ export default function People() {
       }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (person: Person) => {
       queryClient.invalidateQueries({ queryKey: ["/api/people"] });
+      
+      // If category is Hot or Warm, automatically create a deal so they show in Business Tracker
+      const category = formData.category?.toLowerCase() || "";
+      if (category.includes("hot") || category.includes("warm")) {
+        const stage = category.includes("hot") ? "hot" : "warm";
+        fetch("/api/deals", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            personId: person.id,
+            title: person.name,
+            type: "buyer",
+            stage: stage,
+            side: "buyer",
+            painPleasureRating: 3,
+            value: 0,
+            commissionPercent: 3,
+          }),
+        }).then(() => {
+          queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+        }).catch(e => {
+          console.error("Failed to create deal for hot/warm person:", e);
+        });
+      }
+      
       setDialogOpen(false);
       setFormData({
         name: "",
@@ -60,7 +85,9 @@ export default function People() {
       });
       toast({
         title: "Success",
-        description: "Person added successfully",
+        description: category.includes("hot") || category.includes("warm") 
+          ? `${person.name} added and will appear in Business Tracker`
+          : "Person added successfully",
       });
     },
     onError: (error: Error) => {
