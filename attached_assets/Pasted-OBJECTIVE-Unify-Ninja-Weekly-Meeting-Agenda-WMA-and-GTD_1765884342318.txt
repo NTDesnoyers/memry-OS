@@ -1,0 +1,209 @@
+OBJECTIVE
+Unify Ninja Weekly Meeting Agenda (WMA) and GTD Weekly Review into a single weekly ritual called Weekly Operating Review (Ninja + GTD) that preserves Ninja execution integrity and GTD system trust, without duplication or task-level detail.
+
+⸻
+
+HARD CONSTRAINTS
+	•	Weekly review must take ≤10 minutes
+	•	No task management inside this app
+	•	Todoist remains the task system of record
+	•	This app confirms system health, execution, and results
+	•	GTD steps are binary confirmations, not journaling
+	•	Ninja habits remain rated and countable
+	•	One row = one calendar week
+
+⸻
+
+MODULE NAME
+
+Weekly Operating Review (Ninja + GTD)
+
+⸻
+
+SECTION 1 — WEEKLY SNAPSHOT (REQUIRED)
+
+Fields:
+	•	week_ending_date (date)
+	•	business_direction_rating (int 1–10)
+	•	time_energy_rating (int 1–10)
+	•	ninja_implementation_rating (int 1–10)
+
+Purpose:
+High-level clarity and self-honesty
+
+⸻
+
+SECTION 2 — GTD CONTROL CHECK (NEW)
+
+Purpose:
+Confirm trust in GTD system, not manage tasks
+
+Fields (boolean checkboxes):
+	•	inbox_zero_confirmed
+	•	loose_notes_captured
+	•	calendar_reviewed
+	•	waiting_for_reviewed
+	•	next_actions_reviewed
+	•	projects_reviewed
+	•	someday_reviewed
+	•	reference_trusted
+
+Field (short text, optional):
+	•	system_breakdown_note
+
+Rules:
+	•	No counts
+	•	No ratings
+	•	All answers are YES/NO
+	•	Failure indicates system friction, not personal failure
+
+⸻
+
+SECTION 3 — NINJA HABITS (UNCHANGED STRUCTURE)
+
+For each habit, include BOTH fields:
+
+Habit Rating (required):
+	•	Linear scale 1–10
+
+Habit Count (optional numeric):
+
+Habits:
+	•	planning_meeting
+	•	daily_exercise
+	•	agenda_adherence
+	•	hours_of_power
+	•	handwritten_notes
+	•	real_estate_reviews
+	•	customer_service_calls
+	•	coffees_meals
+	•	ford_contacts
+	•	paperwork_cleanup
+	•	database_maintenance
+	•	warm_list_focus
+	•	hot_list_focus
+	•	gratitudes
+	•	affirmations
+
+Naming convention:
+	•	_rating
+	•	_count
+
+⸻
+
+SECTION 4 — EXECUTION OUTPUTS (NUMERIC)
+
+Fields (nullable integers):
+	•	ford_count
+	•	reviews_completed
+	•	coffees_completed
+	•	notes_sent
+	•	new_contacts_added
+
+Purpose:
+Objective execution tracking
+
+⸻
+
+SECTION 5 — RESULTS (NUMERIC)
+
+Fields (nullable integers):
+	•	offers_written
+	•	contracts_ratified
+	•	deals_under_contract
+	•	deals_closed
+	•	buyer_appointments
+	•	listing_appointments
+	•	new_listings_taken
+
+Purpose:
+Outcome tracking only (no YTD math)
+
+⸻
+
+SECTION 6 — PROJECT & PRIORITY ALIGNMENT (NEW)
+
+Fields:
+	•	last_week_top_outcomes (text, short list)
+	•	next_week_top_outcomes (text, short list)
+
+Field (enum):
+	•	week_focus_category
+Values:
+	•	growth
+	•	service
+	•	cleanup
+	•	recovery
+
+Purpose:
+Bridge GTD “Projects” with Ninja execution focus
+
+⸻
+
+SECTION 7 — REFLECTION (SIMPLIFIED)
+
+Fields (paragraph text):
+	•	biggest_win
+	•	biggest_insight
+	•	primary_concern
+	•	improvement_next_week
+
+Purpose:
+Minimal narrative reflection for context
+
+⸻
+
+SECTION 8 — COACH / FUTURE SELF MESSAGE (OPTIONAL)
+
+Field:
+	•	coach_message
+
+Purpose:
+Asynchronous coaching context and long-term memory
+
+⸻
+
+DATABASE CHANGES (weekly_reports TABLE)
+
+Add fields:
+
+GTD control flags (boolean):
+	•	inbox_zero_confirmed
+	•	loose_notes_captured
+	•	calendar_reviewed
+	•	waiting_for_reviewed
+	•	next_actions_reviewed
+	•	projects_reviewed
+	•	someday_reviewed
+	•	reference_trusted
+
+Additional fields:
+	•	system_breakdown_note
+	•	last_week_top_outcomes
+	•	next_week_top_outcomes
+	•	week_focus_category
+
+⸻
+
+PROCESS RULES
+	•	GTD review confirms system trust, not execution detail
+	•	Ninja habits measure execution and integrity
+	•	Tasks, projects, and calendars live outside this app
+	•	This app answers:
+	•	“Did I trust my system?”
+	•	“Did I execute Ninja?”
+	•	“Did inputs create results?”
+
+⸻
+
+FINAL SYSTEM BEHAVIOR
+
+Weekly Operating Review replaces:
+	•	Standalone Ninja WMA
+	•	Standalone GTD Weekly Review
+
+Outputs:
+	•	One structured weekly record
+	•	Longitudinal insight
+	•	Clean analytics
+	•	AI-ready summaries
