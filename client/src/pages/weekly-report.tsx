@@ -12,6 +12,15 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -20,7 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Rating } from "@/components/ui/rating";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, ArrowRight, Save, Check, Calendar, User, TrendingUp, Heart, Briefcase, RefreshCw, Upload, Briefcase as BriefcaseIcon, Phone, PieChart, Clock } from "lucide-react";
+import { ArrowLeft, ArrowRight, Save, Check, Calendar, User, TrendingUp, Heart, Briefcase, RefreshCw, Upload, Briefcase as BriefcaseIcon, Phone, PieChart, Clock, Printer, Mail, Send } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useToast } from "@/hooks/use-toast";
 
@@ -119,6 +128,8 @@ export default function WeeklyReport() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [notesPhotoPreview, setNotesPhotoPreview] = useState<string | null>(null);
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [emailTo, setEmailTo] = useState("");
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -220,6 +231,29 @@ export default function WeeklyReport() {
       });
     }
   };
+  
+  const handlePrint = () => {
+    window.print();
+  };
+  
+  const handleEmail = () => {
+    if (!emailTo) {
+      toast({
+        title: "Error",
+        description: "Please enter an email address.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Simulate email sending
+    toast({
+      title: "Email Sent",
+      description: `Report PDF has been sent to ${emailTo}`,
+    });
+    setEmailOpen(false);
+    setEmailTo("");
+  };
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     console.log(values);
@@ -241,12 +275,12 @@ export default function WeeklyReport() {
   return (
     <div className="min-h-screen bg-secondary/30 relative">
       <div 
-        className="fixed inset-0 opacity-40 mix-blend-multiply pointer-events-none -z-10"
+        className="fixed inset-0 opacity-40 mix-blend-multiply pointer-events-none -z-10 no-print"
         style={{ backgroundImage: `url(${paperBg})`, backgroundSize: 'cover' }}
       />
 
       <div className="container mx-auto px-4 py-8 max-w-5xl">
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center gap-4 mb-8 no-print">
           <Link href="/">
             <Button variant="ghost" size="icon" className="rounded-full">
               <ArrowLeft className="h-5 w-5" />
@@ -256,16 +290,63 @@ export default function WeeklyReport() {
             <h1 className="text-3xl font-serif font-bold text-primary">Weekly Meeting Agenda</h1>
             <p className="text-muted-foreground">"I am a radiant and established real estate professional"</p>
           </div>
-          <Button onClick={form.handleSubmit(onSubmit)} className="gap-2 shadow-md">
-            <Save className="h-4 w-4" /> Save Report
-          </Button>
+          
+          <div className="flex gap-2">
+            <Button onClick={handlePrint} variant="outline" className="gap-2">
+              <Printer className="h-4 w-4" /> Print
+            </Button>
+            
+            <Dialog open={emailOpen} onOpenChange={setEmailOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Mail className="h-4 w-4" /> Email PDF
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Email Report</DialogTitle>
+                  <DialogDescription>
+                    Send a PDF copy of this weekly report to your coach or accountability partner.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                  <FormLabel>Recipient Email</FormLabel>
+                  <Input 
+                    placeholder="coach@example.com" 
+                    value={emailTo}
+                    onChange={(e) => setEmailTo(e.target.value)}
+                    className="mt-2"
+                  />
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Note: This is a prototype. In a real application, this would generate a PDF and email it via a backend service.
+                  </p>
+                </div>
+                <DialogFooter>
+                  <Button onClick={handleEmail} className="gap-2">
+                    <Send className="h-4 w-4" /> Send Report
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Button onClick={form.handleSubmit(onSubmit)} className="gap-2 shadow-md">
+              <Save className="h-4 w-4" /> Save Report
+            </Button>
+          </div>
+        </div>
+
+        {/* Print-only Header */}
+        <div className="hidden print:block mb-8">
+           <h1 className="text-2xl font-bold text-black">Weekly Meeting Agenda</h1>
+           <p className="text-sm text-gray-600">"I am a radiant and established real estate professional"</p>
+           <div className="h-px bg-black mt-4 mb-8"></div>
         </div>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="w-full justify-start h-auto p-1 bg-card/50 backdrop-blur-sm border shadow-sm overflow-x-auto">
+              <TabsList className="w-full justify-start h-auto p-1 bg-card/50 backdrop-blur-sm border shadow-sm overflow-x-auto no-print">
                 <TabsTrigger value="overview" className="gap-2 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                   <User className="h-4 w-4" /> Overview
                 </TabsTrigger>
@@ -295,7 +376,7 @@ export default function WeeklyReport() {
                           <CardTitle className="font-serif">Identity & Focus</CardTitle>
                           <CardDescription>These fields persist week over week</CardDescription>
                         </div>
-                        <div className="flex gap-2 text-xs text-muted-foreground items-center bg-background/50 px-2 py-1 rounded-md border">
+                        <div className="flex gap-2 text-xs text-muted-foreground items-center bg-background/50 px-2 py-1 rounded-md border no-print">
                           <RefreshCw className="h-3 w-3" /> Auto-saved locally
                         </div>
                       </div>
@@ -436,7 +517,7 @@ export default function WeeklyReport() {
                     </CardContent>
                   </Card>
                   
-                  <div className="flex justify-end">
+                  <div className="flex justify-end no-print">
                     <Button type="button" onClick={() => setActiveTab("pulse")} variant="outline" className="gap-2">
                       Next: Pulse Check <ArrowRight className="h-4 w-4" />
                     </Button>
@@ -606,7 +687,7 @@ export default function WeeklyReport() {
                     </Card>
                   </div>
                   
-                  <div className="flex justify-between">
+                  <div className="flex justify-between no-print">
                     <Button type="button" onClick={() => setActiveTab("overview")} variant="ghost">Previous</Button>
                     <Button type="button" onClick={() => setActiveTab("habits")} variant="outline" className="gap-2">
                       Next: Ninja Habits <ArrowRight className="h-4 w-4" />
@@ -657,7 +738,7 @@ export default function WeeklyReport() {
                     </CardContent>
                   </Card>
                   
-                  <div className="flex justify-between">
+                  <div className="flex justify-between no-print">
                     <Button type="button" onClick={() => setActiveTab("pulse")} variant="ghost">Previous</Button>
                     <Button type="button" onClick={() => setActiveTab("review")} variant="outline" className="gap-2">
                       Next: Week in Review <ArrowRight className="h-4 w-4" />
@@ -836,7 +917,7 @@ export default function WeeklyReport() {
                     </CardContent>
                   </Card>
                   
-                  <div className="flex justify-between">
+                  <div className="flex justify-between no-print">
                     <Button type="button" onClick={() => setActiveTab("habits")} variant="ghost">Previous</Button>
                     <Button type="button" onClick={() => setActiveTab("relationships")} variant="outline" className="gap-2">
                       Next: Relationships <ArrowRight className="h-4 w-4" />
@@ -1031,7 +1112,7 @@ export default function WeeklyReport() {
                     </CardContent>
                   </Card>
                   
-                  <div className="flex justify-between items-center pt-8">
+                  <div className="flex justify-between items-center pt-8 no-print">
                     <Button type="button" onClick={() => setActiveTab("review")} variant="ghost">Previous</Button>
                     <Button type="button" onClick={() => setActiveTab("pipeline")} variant="outline" className="gap-2">
                        Next: Pipeline & Growth <ArrowRight className="h-4 w-4" />
@@ -1205,7 +1286,7 @@ export default function WeeklyReport() {
                     </Card>
                   </div>
 
-                  <div className="flex justify-between items-center pt-8">
+                  <div className="flex justify-between items-center pt-8 no-print">
                     <Button type="button" onClick={() => setActiveTab("relationships")} variant="ghost">Previous</Button>
                     <div className="flex gap-4">
                       <Link href="/">
