@@ -13,7 +13,8 @@ import {
   Repeat,
   LayoutDashboard,
   Menu,
-  PieChart
+  PieChart,
+  Share2
 } from "lucide-react";
 
 const navItems = [
@@ -24,6 +25,7 @@ const navItems = [
   { name: "Weekly Agenda", href: "/weekly-report", icon: Calendar },
   { name: "Deals", href: "/deals", icon: BarChart3 },
   { name: "RE Reviews", href: "/reviews", icon: Home },
+  { name: "Cloze Sync", href: "/cloze-sync", icon: Share2 },
 ];
 
 export default function LayoutComponent({ children }: { children: React.ReactNode }) {

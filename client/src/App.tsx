@@ -11,6 +11,7 @@ import Relationships from "@/pages/relationships";
 import Deals from "@/pages/deals";
 import Reviews from "@/pages/reviews";
 import BusinessTracker from "@/pages/business-tracker";
+import ClozeSync from "@/pages/cloze-sync";
 
 function Router() {
   return (
@@ -22,6 +23,7 @@ function Router() {
       <Route path="/relationships" component={Relationships} />
       <Route path="/deals" component={Deals} />
       <Route path="/reviews" component={Reviews} />
+      <Route path="/cloze-sync" component={ClozeSync} />
       <Route component={NotFound} />
     </Switch>
   );
