@@ -11,7 +11,8 @@ import {
   Share2,
   Plug,
   Workflow,
-  Phone
+  Phone,
+  Video
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
@@ -24,6 +25,7 @@ const navItems = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Business Tracker", href: "/business-tracker", icon: PieChart },
   { name: "Phone & Dialer", href: "/phone", icon: Phone },
+  { name: "Meetings", href: "/meetings", icon: Video },
   { name: "People", href: "/people", icon: Users },
   { name: "Relationships (FORD)", href: "/relationships", icon: Repeat },
   { name: "Weekly Agenda", href: "/weekly-report", icon: Calendar },

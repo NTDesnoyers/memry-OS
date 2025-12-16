@@ -14,6 +14,7 @@ import BusinessTracker from "@/pages/business-tracker";
 import Integrations from "@/pages/integrations";
 import AutomationHub from "@/pages/automation";
 import PhoneDialer from "@/pages/phone";
+import Meetings from "@/pages/meetings";
 
 function Router() {
   return (
@@ -21,6 +22,7 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/business-tracker" component={BusinessTracker} />
       <Route path="/phone" component={PhoneDialer} />
+      <Route path="/meetings" component={Meetings} />
       <Route path="/weekly-report" component={WeeklyReport} />
       <Route path="/people" component={People} />
       <Route path="/relationships" component={Relationships} />
