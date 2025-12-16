@@ -1,0 +1,282 @@
+Got it — and this is a serious, coherent product vision, not a toy app.
+
+What you’re asking for now is essentially “define the instructions / spec for Replit (and future AI agents) to build a fully fledged Ninja Selling OS.”
+Below is a clear, opinionated, build-ready instruction set you can paste into Replit or use as your product spec.
+
+I’ll structure this like a founder-level PRD + system instructions, not vague ideas.
+
+⸻
+
+🎯 PRODUCT VISION (ONE SENTENCE)
+
+Build a single-user Ninja Selling Operating System that unifies Weekly Meeting Agenda (WMA), FORD & Record, client intelligence, and business tracking — with automated data sync to Cloze for relationship memory and follow-up intelligence.
+
+⸻
+
+🧠 CORE DESIGN PRINCIPLES (NON-NEGOTIABLE)
+
+These are instructions, not suggestions.
+	1.	Ninja-first, not CRM-first
+The app reflects how Ninja Selling works, not how CRMs think.
+	2.	One source of truth
+All activity is entered once, then reused everywhere.
+	3.	Separation of concerns
+	•	Relationships ≠ Deals ≠ Weekly reflection
+	•	But they must link cleanly
+	4.	Fast weekly entry
+	•	WMA must take <10 minutes
+	•	FORD entries <60 seconds per interaction
+	5.	Data > UI
+	•	Flat, queryable schemas
+	•	Exportable at any time
+	6.	Cloze is downstream
+	•	This app is the thinking layer
+	•	Cloze is the memory + reminder layer
+
+⸻
+
+🏗️ APP MODULES (WHAT EXISTS)
+
+1️⃣ Weekly Meeting Agenda (WMA Module)
+
+Purpose
+
+Capture weekly execution, self-honesty, and results.
+
+Core entity
+
+weekly_report
+
+Required features
+	•	One report per week
+	•	Editable after submission
+	•	Historical trend views
+
+Data captured
+	•	Weekly snapshot ratings (business, time/energy, Ninja)
+	•	Full Ninja habit ratings (1–10)
+	•	Habit counts where applicable
+	•	Weekly results (offers, contracts, closings, appointments)
+	•	Reflection text (wins, a-has, concerns, improvements)
+	•	Coach message
+
+Critical behavior
+	•	Pre-fill last week’s values
+	•	Warn if a week is skipped
+	•	Allow backdating
+
+⸻
+
+2️⃣ FORD & Record Module (Relationship Intelligence)
+
+Purpose
+
+Capture relationship signal, not just contact history.
+
+Core entities
+	•	person
+	•	interaction
+	•	ford_record
+
+FORD entry rules
+
+Each interaction:
+	•	Person (or household)
+	•	Date
+	•	Context (call, voicemail, in-person, event)
+	•	FORD notes:
+	•	Family
+	•	Occupation
+	•	Recreation
+	•	Dreams
+	•	Follow-up ideas
+	•	Emotional tone (optional)
+
+Critical behaviors
+	•	Multiple interactions per person
+	•	Weekly FORD count auto-rolls into WMA
+	•	One-click “log voicemail” counts as interaction
+
+⸻
+
+3️⃣ Client Intelligence Layer (The Glue)
+
+Purpose
+
+Create a single living profile per person.
+
+Each person aggregates:
+	•	All FORD records
+	•	All deals
+	•	All reviews
+	•	Last contact date
+	•	Hot / warm / nurture status
+	•	Tags (investor, buyer, seller, Rotary, BNI, etc.)
+
+This is not a CRM pipeline — it’s relationship context.
+
+⸻
+
+4️⃣ Business Tracker Module (Execution OS)
+
+Submodules (all linked to people)
+
+🔥 Hot / Warm Lists
+	•	Status per person
+	•	Reason they’re hot/warm
+	•	Last meaningful contact
+	•	Next action
+
+📊 PIE Tracker
+	•	Income-producing activity logged weekly
+	•	Links to WMA habit counts
+	•	Tracks $/hour over time
+
+🗓️ Planner
+	•	Weekly priorities
+	•	Links to people + deals
+	•	Does NOT replace Todoist — complements it
+
+⸻
+
+5️⃣ Real Estate Review Planner
+
+Purpose
+
+Make reviews intentional and trackable.
+
+For each review:
+	•	Person
+	•	Property address
+	•	Review date
+	•	Prep notes
+	•	Outcome notes
+	•	Follow-up scheduled
+
+Auto-links to:
+	•	FORD
+	•	Post-closing follow-up
+	•	Future touches
+
+⸻
+
+6️⃣ Post-Closing Follow-Up Engine
+
+Purpose
+
+Protect long-term relationship equity.
+
+For each closed deal:
+	•	Auto-generate follow-up timeline:
+	•	1 week
+	•	30 days
+	•	90 days
+	•	6 months
+	•	Annual
+
+Each follow-up:
+	•	Creates a task
+	•	Syncs to Cloze
+	•	Logs interaction when completed
+
+⸻
+
+🔄 CLOZE INTEGRATION (DOWNSTREAM SYNC)
+
+Cloze is used for:
+	•	Contact memory
+	•	Reminders
+	•	Email/calendar context
+
+Data sent to Cloze
+
+For each person:
+	•	Name
+	•	Email / phone
+	•	Tags
+	•	Last interaction date
+	•	Notes (summarized, not raw dumps)
+
+Sync rules
+	•	App is source of truth
+	•	Cloze receives:
+	•	Interaction summaries
+	•	Relationship tags
+	•	Follow-up tasks
+	•	No editing in Cloze feeds back upstream (read-only mirror)
+
+⸻
+
+🗄️ DATABASE PHILOSOPHY (IMPORTANT)
+	•	Flat tables
+	•	Explicit foreign keys
+	•	No polymorphic magic
+	•	Every record time-stamped
+
+Core tables
+	•	people
+	•	interactions
+	•	ford_records
+	•	weekly_reports
+	•	deals
+	•	reviews
+	•	followups
+
+⸻
+
+🤖 AI / ANALYTICS LAYER (PHASE 2)
+
+The app must support these questions:
+	•	“Which habits predict closings for me?”
+	•	“Where do my ratings diverge from reality?”
+	•	“Who haven’t I meaningfully connected with in 90 days?”
+	•	“What happened before my best quarter?”
+
+AI does analysis and synthesis, not data entry.
+
+⸻
+
+🚧 WHAT NOT TO BUILD (VERY IMPORTANT)
+
+❌ No multi-user permissions (yet)
+❌ No public-facing UI
+❌ No mobile-first polish
+❌ No gamification
+❌ No pipeline drag-and-drop
+❌ No notifications explosion
+
+If it doesn’t:
+	•	Improve self-honesty
+	•	Improve relationships
+	•	Improve decision quality
+
+…it doesn’t ship.
+
+⸻
+
+🧭 BUILD ORDER (DO NOT DEVIATE)
+	1.	People + FORD interactions
+	2.	Weekly Meeting Agenda
+	3.	Hot/Warm lists
+	4.	Deal & Review tracking
+	5.	Cloze sync
+	6.	Analytics / AI summaries
+
+⸻
+
+🧩 FINAL INSTRUCTION YOU CAN PASTE INTO REPLIT
+
+“Build a single-user Ninja Selling Operating System that unifies weekly execution (WMA), relationship intelligence (FORD & Record), client context, and business tracking.
+Prioritize clean data models, fast weekly entry, and long-term pattern recognition.
+This is a thinking tool, not a CRM.
+Cloze is downstream for memory and reminders; this app is the source of truth.”
+
+⸻
+
+If you want next, I can:
+	•	Design the exact database schema
+	•	Help you write AI prompts for weekly/monthly synthesis
+	•	Help you define v1 vs v2 scope
+	•	Or help you decide where this should stop so it doesn’t eat your life
+
+This is the right ambition — now it’s about disciplined execution.

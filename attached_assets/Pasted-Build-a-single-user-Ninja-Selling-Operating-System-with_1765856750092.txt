@@ -1,0 +1,238 @@
+Build a single-user Ninja Selling Operating System with the following exact requirements and constraints.
+
+⸻
+
+PRODUCT GOAL
+Create a personal Ninja Selling app that unifies Weekly Meeting Agenda (WMA), FORD & Record relationship tracking, business execution tracking, and client intelligence. The app is the source of truth. Cloze is a downstream mirror for relationship memory, reminders, and follow-ups.
+
+⸻
+
+CORE PRINCIPLES (HARD CONSTRAINTS)
+	•	Ninja Selling workflows take priority over CRM conventions
+	•	One data entry → many uses
+	•	Flat, queryable database schema
+	•	Optimized for weekly use over many years
+	•	<10 minutes to complete Weekly Meeting Agenda
+	•	<60 seconds to log a FORD interaction
+	•	No multi-user features
+	•	No public access
+	•	No gamification
+	•	No notification spam
+	•	No pipeline UI
+
+⸻
+
+APP MODULES (MUST EXIST)
+	1.	PEOPLE (CLIENT INTELLIGENCE CORE)
+	2.	FORD & RECORD (RELATIONSHIP LOGGING)
+	3.	WEEKLY MEETING AGENDA (WMA)
+	4.	BUSINESS TRACKER
+	5.	REAL ESTATE REVIEW PLANNER
+	6.	DEALS & POST-CLOSING FOLLOW-UP
+	7.	CLOZE SYNC (DOWNSTREAM)
+
+⸻
+
+DATABASE TABLES (REQUIRED)
+
+people
+interactions
+ford_records
+weekly_reports
+deals
+real_estate_reviews
+followups
+
+All tables must include:
+	•	id
+	•	created_at
+	•	updated_at
+
+⸻
+
+TABLE DEFINITIONS
+
+people
+	•	id
+	•	first_name
+	•	last_name
+	•	email
+	•	phone
+	•	tags (array or string)
+	•	relationship_type (buyer, seller, investor, referral, personal)
+	•	status (hot, warm, nurture)
+	•	last_interaction_date (auto-calculated)
+	•	notes
+
+interactions
+	•	id
+	•	person_id (foreign key)
+	•	date
+	•	interaction_type (call, voicemail, text, email, in-person, event)
+	•	context
+	•	summary
+	•	counts_for_ford (boolean)
+
+ford_records
+	•	id
+	•	interaction_id (foreign key)
+	•	family_notes
+	•	occupation_notes
+	•	recreation_notes
+	•	dreams_notes
+	•	follow_up_ideas
+
+weekly_reports
+	•	id
+	•	week_ending_date
+	•	business_direction_rating (1–10)
+	•	time_energy_rating (1–10)
+	•	ninja_implementation_rating (1–10)
+
+Habit ratings (1–10):
+	•	planning_meeting_rating
+	•	exercise_rating
+	•	agenda_rating
+	•	hours_of_power_rating
+	•	notes_rating
+	•	reviews_rating
+	•	service_calls_rating
+	•	coffees_rating
+	•	ford_rating
+	•	paperwork_rating
+	•	database_rating
+	•	warm_list_rating
+	•	hot_list_rating
+	•	gratitudes_rating
+	•	affirmations_rating
+
+Habit counts (nullable):
+	•	hours_of_power_count
+	•	notes_count
+	•	reviews_count
+	•	service_calls_count
+	•	coffees_count
+	•	ford_count
+	•	paperwork_hours
+	•	new_contacts_count
+
+Weekly results:
+	•	offers_written
+	•	contracts_ratified
+	•	under_contract
+	•	closings
+	•	buyer_appointments
+	•	listing_appointments
+	•	new_listings
+
+Reflection:
+	•	win
+	•	aha
+	•	concern
+	•	improvement
+	•	coach_message
+
+deals
+	•	id
+	•	person_id
+	•	deal_type (buy, sell, invest, referral)
+	•	status (active, under_contract, closed, dead)
+	•	address
+	•	close_date
+	•	source
+	•	notes
+
+real_estate_reviews
+	•	id
+	•	person_id
+	•	property_address
+	•	review_date
+	•	prep_notes
+	•	outcome_notes
+	•	follow_up_created (boolean)
+
+followups
+	•	id
+	•	person_id
+	•	related_deal_id (nullable)
+	•	due_date
+	•	follow_up_type (call, note, review, check-in)
+	•	completed (boolean)
+	•	completion_notes
+
+⸻
+
+MODULE BEHAVIOR REQUIREMENTS
+
+WEEKLY MEETING AGENDA
+	•	One report per calendar week
+	•	Allow backdated entries
+	•	Pre-fill last week’s values by default
+	•	Auto-calculate weekly FORD count from interactions
+	•	Display historical trends
+
+FORD & RECORD
+	•	One interaction can optionally create a FORD record
+	•	Voicemail counts as an interaction
+	•	Multiple interactions per person per week allowed
+	•	FORD interactions auto-roll up into WMA ford_count
+
+HOT / WARM LIST
+	•	Derived from people.status
+	•	Display last interaction date
+	•	Require a reason for hot/warm status
+	•	Require a next action field
+
+REAL ESTATE REVIEWS
+	•	Must link to a person
+	•	Must support prep + outcome notes
+	•	Can auto-generate follow-ups
+
+POST-CLOSING FOLLOW-UP
+When a deal status changes to “closed”, auto-create followups at:
+	•	7 days
+	•	30 days
+	•	90 days
+	•	6 months
+	•	12 months
+
+⸻
+
+CLOZE INTEGRATION (DOWNSTREAM ONLY)
+	•	App is source of truth
+	•	Cloze receives:
+	•	Contact info
+	•	Tags
+	•	Interaction summaries
+	•	Follow-up tasks
+	•	No data flows from Cloze back into app
+	•	Sync should be idempotent
+
+⸻
+
+ANALYTICS REQUIREMENTS (PHASE 2 READY)
+
+System must support queries such as:
+	•	Habit ratings vs closings over time
+	•	FORD count vs production
+	•	Time/energy rating vs output
+	•	People with no interaction in X days
+	•	Best performing weeks by activity mix
+
+⸻
+
+BUILD ORDER (STRICT)
+	1.	People + interactions
+	2.	FORD records
+	3.	Weekly Meeting Agenda
+	4.	Hot/Warm lists
+	5.	Deals + reviews
+	6.	Follow-ups
+	7.	Cloze sync
+	8.	Analytics / AI summaries
+
+⸻
+
+FINAL SYSTEM INSTRUCTION
+
+This application is a personal Ninja Selling Operating System focused on self-honesty, relationship intelligence, and execution clarity. Optimize for long-term insight, not short-term convenience.
