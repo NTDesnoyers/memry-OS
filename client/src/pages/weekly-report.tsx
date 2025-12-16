@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Rating } from "@/components/ui/rating";
+import { RatingSelect } from "@/components/ui/rating-select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, ArrowRight, Save, Check, Calendar, User, TrendingUp, Heart, Briefcase, RefreshCw, Upload, Briefcase as BriefcaseIcon, Phone, PieChart, Clock, Printer, Mail, Send, X, CloudUpload, Link as LinkIcon, Users, ListTodo, Activity } from "lucide-react";
@@ -452,10 +453,13 @@ export default function WeeklyReport() {
                           name="businessDirection"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-sm font-medium">Business Direction (1-10)</FormLabel>
-                              <FormControl>
-                                <Rating value={field.value} onChange={field.onChange} />
-                              </FormControl>
+                              <FormLabel className="text-sm font-medium">Business Direction</FormLabel>
+                              <div className="flex items-center gap-3">
+                                <FormControl>
+                                  <RatingSelect value={field.value} onChange={field.onChange} />
+                                </FormControl>
+                                <span className="text-xs text-muted-foreground">/ 10</span>
+                              </div>
                             </FormItem>
                           )}
                         />
@@ -464,10 +468,13 @@ export default function WeeklyReport() {
                           name="timeManagement"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-sm font-medium">Time & Energy (1-10)</FormLabel>
-                              <FormControl>
-                                <Rating value={field.value} onChange={field.onChange} />
-                              </FormControl>
+                              <FormLabel className="text-sm font-medium">Time & Energy</FormLabel>
+                              <div className="flex items-center gap-3">
+                                <FormControl>
+                                  <RatingSelect value={field.value} onChange={field.onChange} />
+                                </FormControl>
+                                <span className="text-xs text-muted-foreground">/ 10</span>
+                              </div>
                             </FormItem>
                           )}
                         />
@@ -476,10 +483,13 @@ export default function WeeklyReport() {
                           name="implementingNinja"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-sm font-medium">Ninja Implementation (1-10)</FormLabel>
-                              <FormControl>
-                                <Rating value={field.value} onChange={field.onChange} />
-                              </FormControl>
+                              <FormLabel className="text-sm font-medium">Ninja Implementation</FormLabel>
+                              <div className="flex items-center gap-3">
+                                <FormControl>
+                                  <RatingSelect value={field.value} onChange={field.onChange} />
+                                </FormControl>
+                                <span className="text-xs text-muted-foreground">/ 10</span>
+                              </div>
                             </FormItem>
                           )}
                         />
@@ -505,6 +515,122 @@ export default function WeeklyReport() {
                           </FormItem>
                         )}
                       />
+                    </CardContent>
+                  </Card>
+                  
+                  {/* Week in Review Section */}
+                  <Card className="border-none shadow-md">
+                    <CardHeader className="bg-amber-50 pb-4">
+                      <CardTitle className="font-serif text-amber-900">Week in Review</CardTitle>
+                      <CardDescription>Check the activities completed last week</CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                      <div className="grid md:grid-cols-3 gap-4 mb-6">
+                        {[
+                          { name: "checklist_reviewMeetingNotes", label: "Review last week's meeting notes" },
+                          { name: "checklist_reviewYearlyGoals", label: "Review yearly goals" },
+                          { name: "checklist_reviewMonthlyGoals", label: "Review monthly goals" },
+                          { name: "checklist_reviewWeeklyGoals", label: "Review weekly goals" },
+                          { name: "checklist_reviewBusinessPlan", label: "Review business plan & FLOW calendar" },
+                        ].map((item) => (
+                          <FormField
+                            key={item.name}
+                            control={form.control}
+                            name={item.name as any}
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                                <FormLabel className="text-sm font-normal cursor-pointer">
+                                  {item.label}
+                                </FormLabel>
+                              </FormItem>
+                            )}
+                          />
+                        ))}
+                      </div>
+                      
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <FormField
+                          control={form.control}
+                          name="reasonsToCelebrate"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="font-semibold text-amber-800">Reasons to Celebrate</FormLabel>
+                              <FormControl>
+                                <Textarea placeholder="What went well? What are you proud of?" {...field} className="min-h-[80px] bg-amber-50/50" />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="businessLikeBusiness"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="font-semibold text-amber-800">How I Ran My Business Like a Business</FormLabel>
+                              <FormControl>
+                                <Textarea placeholder="Professional practices, discipline, consistency..." {...field} className="min-h-[80px] bg-amber-50/50" />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="ahas"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="font-semibold text-amber-800">A-Has From Last Week</FormLabel>
+                              <FormDescription>Insights, sudden realizations, "lightbulb" moments</FormDescription>
+                              <FormControl>
+                                <Textarea placeholder="What did you learn? Any breakthroughs?" {...field} className="min-h-[80px] bg-amber-50/50" />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="improvements"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="font-semibold text-amber-800">How I Can Improve This Week</FormLabel>
+                              <FormControl>
+                                <Textarea placeholder="What will you do differently?" {...field} className="min-h-[80px] bg-amber-50/50" />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="readingListening"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="font-semibold text-amber-800">Podcasts/Books I Am Reading/Listening To</FormLabel>
+                              <FormDescription>Noteworthy ideas, thoughts, or quotes</FormDescription>
+                              <FormControl>
+                                <Textarea placeholder="Books, podcasts, ideas that resonated..." {...field} className="min-h-[80px] bg-amber-50/50" />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="awakeAtNight"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="font-semibold text-amber-800">Things Keeping Me Awake at Night</FormLabel>
+                              <FormDescription>Note a 5-minute action to take this week for each</FormDescription>
+                              <FormControl>
+                                <Textarea placeholder="Worries, concerns, and 5-min actions to address them..." {...field} className="min-h-[80px] bg-amber-50/50" />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                     </CardContent>
                   </Card>
                   
@@ -604,7 +730,7 @@ export default function WeeklyReport() {
                           { name: "handwrittenNotes", label: "Handwritten notes", hasCount: true, countName: "count_handwrittenNotes", countLabel: "Count" },
                           { name: "realEstateReviews", label: "Real estate reviews", hasCount: true, countName: "count_realEstateReviews", countLabel: "Count" },
                           { name: "customerServiceCalls", label: "Customer service calls", hasCount: true, countName: "count_customerServiceCalls", countLabel: "Hours" },
-                          { name: "lunchesCoffees", label: "Lunches, coffees, breakfasts", hasCount: true, countName: "count_lunchesCoffees", countLabel: "Count" },
+                          { name: "lunchesCoffees", label: "1-2-1s (coffees, lunches, Zoom)", hasCount: true, countName: "count_lunchesCoffees", countLabel: "Count" },
                           { name: "fordContacts", label: "FORD contacts 'live interviews'", hasCount: true, countName: "count_fordContacts", countLabel: "Count" },
                           { name: "paperworkCleanup", label: "Paperwork cleanup", hasCount: true, countName: "count_paperworkCleanup", countLabel: "Hours" },
                           { name: "databaseMaintenance", label: "Maintaining database", hasCount: true, countName: "count_newContacts", countLabel: "New Contacts" },
@@ -619,10 +745,13 @@ export default function WeeklyReport() {
                               name={habit.name as any}
                               render={({ field }) => (
                                 <FormItem className="flex-1">
-                                  <FormLabel className="text-sm font-normal">{habit.label}</FormLabel>
-                                  <FormControl>
-                                    <Rating value={field.value} onChange={field.onChange} className="justify-start" />
-                                  </FormControl>
+                                  <div className="flex items-center gap-3">
+                                    <FormLabel className="text-sm font-normal flex-1">{habit.label}</FormLabel>
+                                    <FormControl>
+                                      <RatingSelect value={field.value} onChange={field.onChange} />
+                                    </FormControl>
+                                    <span className="text-xs text-muted-foreground w-8">/ 10</span>
+                                  </div>
                                 </FormItem>
                               )}
                             />
@@ -656,11 +785,220 @@ export default function WeeklyReport() {
 
                 {/* --- RESULTS TAB --- */}
                 <TabsContent value="results" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  {/* Real Estate Reviews Section */}
+                  <Card className="border-none shadow-md">
+                    <CardHeader className="bg-blue-50 pb-4">
+                      <CardTitle className="font-serif text-blue-900">Real Estate Reviews</CardTitle>
+                      <CardDescription>Track your completed and planned reviews</CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <FormField
+                          control={form.control}
+                          name="completedRealEstateReviews"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="font-semibold">Real Estate Reviews Completed Last Week</FormLabel>
+                              <FormDescription>Names/details of reviews</FormDescription>
+                              <FormControl>
+                                <Textarea placeholder="John & Mary Smith - 123 Main St review&#10;Tom Jones - investment portfolio review" {...field} className="min-h-[100px] bg-blue-50/50" />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="plannedRealEstateReviews"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="font-semibold">Real Estate Reviews Planned This Week</FormLabel>
+                              <FormDescription>Who are you meeting with?</FormDescription>
+                              <FormControl>
+                                <Textarea placeholder="Sarah Williams - annual review&#10;Mark Johnson - market update" {...field} className="min-h-[100px] bg-blue-50/50" />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* 1-2-1s Section */}
+                  <Card className="border-none shadow-md">
+                    <CardHeader className="bg-green-50 pb-4">
+                      <CardTitle className="font-serif text-green-900">1-2-1s (Coffees, Lunches, Zooms)</CardTitle>
+                      <CardDescription>Track your personal meetings - both in-person and virtual</CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <FormField
+                          control={form.control}
+                          name="completedCoffees"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="font-semibold">1-2-1s Completed Last Week</FormLabel>
+                              <FormDescription>Names and meeting types</FormDescription>
+                              <FormControl>
+                                <Textarea placeholder="Coffee with Mike - referral partner&#10;Zoom with Linda - past client&#10;Lunch with Dave - sphere" {...field} className="min-h-[100px] bg-green-50/50" />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="plannedCoffees"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="font-semibold">1-2-1s Planned This Week</FormLabel>
+                              <FormDescription>Who are you meeting with?</FormDescription>
+                              <FormControl>
+                                <Textarea placeholder="Breakfast with Tom - lender&#10;Zoom with Jennifer - title rep&#10;Coffee with Chris - past buyer" {...field} className="min-h-[100px] bg-green-50/50" />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Connecting & Database Section */}
+                  <Card className="border-none shadow-md">
+                    <CardHeader className="bg-purple-50 pb-4">
+                      <CardTitle className="font-serif text-purple-900">Connecting & Database</CardTitle>
+                      <CardDescription>FORD contacts, notes, and relationship building (Goal: 50 contacts/week)</CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                      <div className="grid md:grid-cols-3 gap-6 mb-6">
+                        <FormField
+                          control={form.control}
+                          name="fordCount"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="font-semibold">FORD Contacts Made</FormLabel>
+                              <div className="flex items-center gap-2">
+                                <FormControl>
+                                  <Input type="number" placeholder="0" {...field} className="w-24 text-right bg-purple-50/50" />
+                                </FormControl>
+                                <span className="text-sm text-muted-foreground">/ 50 goal</span>
+                              </div>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="recordedFordInfo"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 pt-6">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal cursor-pointer">Recorded new FORD info in database</FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="newContactsAdded"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="font-semibold">New Contacts Added</FormLabel>
+                              <FormControl>
+                                <Input type="number" placeholder="0" {...field} className="w-24 text-right bg-purple-50/50" />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <FormField
+                          control={form.control}
+                          name="peopleToConnect"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="font-semibold">People I Should Connect This Week</FormLabel>
+                              <FormDescription>Who needs a call, text, or visit?</FormDescription>
+                              <FormControl>
+                                <Textarea placeholder="Bob - birthday coming up&#10;Lisa - just moved, follow up&#10;Steve - mentioned selling" {...field} className="min-h-[100px] bg-purple-50/50" />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <div>
+                          <FormField
+                            control={form.control}
+                            name="notesWrittenLastWeek"
+                            render={({ field }) => (
+                              <FormItem className="mb-4">
+                                <FormLabel className="font-semibold">Handwritten Notes Last Week</FormLabel>
+                                <FormControl>
+                                  <Input type="number" placeholder="0" {...field} className="w-24 bg-purple-50/50" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="notesPlannedNextWeek"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="font-semibold">Notes Planned This Week</FormLabel>
+                                <FormControl>
+                                  <Input type="number" placeholder="0" {...field} className="w-24 bg-purple-50/50" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Potential New Business Section */}
+                  <Card className="border-none shadow-md">
+                    <CardHeader className="bg-orange-50 pb-4">
+                      <CardTitle className="font-serif text-orange-900">Potential New Business</CardTitle>
+                      <CardDescription>Track buyer and seller opportunities</CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <FormField
+                          control={form.control}
+                          name="newBusinessBuyers"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="font-semibold">New Buyers</FormLabel>
+                              <FormDescription>Names, timeframes, price ranges</FormDescription>
+                              <FormControl>
+                                <Textarea placeholder="John Doe - 3 months, $400-500k&#10;Jane Smith - 6 months, $300k" {...field} className="min-h-[120px] bg-orange-50/50" />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="newBusinessSellers"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="font-semibold">New Sellers</FormLabel>
+                              <FormDescription>Names, addresses, timeframes</FormDescription>
+                              <FormControl>
+                                <Textarea placeholder="Mike Wilson - 123 Oak St, Spring listing&#10;Susan Brown - downsizing in 6 months" {...field} className="min-h-[120px] bg-orange-50/50" />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
                   <div className="grid md:grid-cols-2 gap-6">
                     <Card className="border-none shadow-md">
                       <CardHeader className="bg-primary/5 pb-4">
-                        <CardTitle className="font-serif">Results (Numeric)</CardTitle>
-                        <CardDescription>Outcome tracking only (no YTD math)</CardDescription>
+                        <CardTitle className="font-serif">Numbers to Know</CardTitle>
+                        <CardDescription>This week's transaction metrics</CardDescription>
                       </CardHeader>
                       <CardContent className="pt-6 space-y-4">
                         {[
