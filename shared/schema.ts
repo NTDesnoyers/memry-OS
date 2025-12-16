@@ -254,6 +254,57 @@ export const insertEmailCampaignSchema = createInsertSchema(emailCampaigns).omit
 export type InsertEmailCampaign = z.infer<typeof insertEmailCampaignSchema>;
 export type EmailCampaign = typeof emailCampaigns.$inferSelect;
 
+// Pricing Reviews (Visual Pricing / Focus1st style analysis)
+export const pricingReviews = pgTable("pricing_reviews", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  personId: varchar("person_id").references(() => people.id),
+  title: text("title").notNull(),
+  neighborhood: text("neighborhood"),
+  city: text("city"),
+  subjectAddress: text("subject_address"),
+  subjectDescription: text("subject_description"),
+  mlsData: jsonb("mls_data"),
+  calculatedMetrics: jsonb("calculated_metrics"),
+  positioningRatings: jsonb("positioning_ratings"),
+  notes: text("notes"),
+  status: text("status").default("draft"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertPricingReviewSchema = createInsertSchema(pricingReviews).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPricingReview = z.infer<typeof insertPricingReviewSchema>;
+export type PricingReview = typeof pricingReviews.$inferSelect;
+
+// MLS Property type for the imported data
+export type MLSProperty = {
+  mlsNumber: string;
+  status: string;
+  address: string;
+  city?: string;
+  subdivision?: string;
+  acres?: number;
+  aboveGradeSqft?: number;
+  totalSqft?: number;
+  beds?: number;
+  baths?: number;
+  yearBuilt?: number;
+  style?: string;
+  listPrice?: number;
+  originalListPrice?: number;
+  closePrice?: number;
+  dom?: number;
+  listDate?: string;
+  closeDate?: string;
+  statusChangeDate?: string;
+  pricePerSqft?: number;
+};
+
 // Relations
 export const peopleRelations = relations(people, ({ many }) => ({
   deals: many(deals),

@@ -10,7 +10,8 @@ import {
   insertWeeklyReviewSchema,
   insertNoteSchema,
   insertListingSchema,
-  insertEmailCampaignSchema
+  insertEmailCampaignSchema,
+  insertPricingReviewSchema
 } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 
@@ -586,6 +587,65 @@ export async function registerRoutes(
     try {
       const realtors = await storage.getRealtorsForNewsletter();
       res.json(realtors);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // ==================== PRICING REVIEWS ROUTES ====================
+  
+  // Get all pricing reviews
+  app.get("/api/pricing-reviews", async (req, res) => {
+    try {
+      const reviews = await storage.getAllPricingReviews();
+      res.json(reviews);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get pricing review by ID
+  app.get("/api/pricing-reviews/:id", async (req, res) => {
+    try {
+      const review = await storage.getPricingReview(req.params.id);
+      if (!review) {
+        return res.status(404).json({ message: "Pricing review not found" });
+      }
+      res.json(review);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Create pricing review
+  app.post("/api/pricing-reviews", async (req, res) => {
+    try {
+      const data = validate(insertPricingReviewSchema, req.body);
+      const review = await storage.createPricingReview(data);
+      res.status(201).json(review);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Update pricing review
+  app.patch("/api/pricing-reviews/:id", async (req, res) => {
+    try {
+      const review = await storage.updatePricingReview(req.params.id, req.body);
+      if (!review) {
+        return res.status(404).json({ message: "Pricing review not found" });
+      }
+      res.json(review);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Delete pricing review
+  app.delete("/api/pricing-reviews/:id", async (req, res) => {
+    try {
+      await storage.deletePricingReview(req.params.id);
+      res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

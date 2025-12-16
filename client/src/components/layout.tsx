@@ -31,6 +31,7 @@ const navItems = [
   { name: "Relationships (FORD)", href: "/relationships", icon: Repeat },
   { name: "Weekly Agenda", href: "/weekly-report", icon: Calendar },
   { name: "Deals", href: "/deals", icon: BarChart3 },
+  { name: "Visual Pricing", href: "/visual-pricing", icon: BarChart3 },
   { name: "Haves & Wants", href: "/haves-wants", icon: Mail },
   { name: "RE Reviews", href: "/reviews", icon: Home },
   { name: "Automation Hub", href: "/automation", icon: Workflow },

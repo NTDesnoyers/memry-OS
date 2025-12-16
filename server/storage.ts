@@ -9,7 +9,8 @@ import {
   type Note, type InsertNote,
   type Listing, type InsertListing,
   type EmailCampaign, type InsertEmailCampaign,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns
+  type PricingReview, type InsertPricingReview,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, pricingReviews
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, or } from "drizzle-orm";
@@ -87,6 +88,13 @@ export interface IStorage {
   // Buyer queries
   getBuyers(): Promise<Person[]>;
   getRealtorsForNewsletter(): Promise<Person[]>;
+  
+  // Pricing Reviews
+  getAllPricingReviews(): Promise<PricingReview[]>;
+  getPricingReview(id: string): Promise<PricingReview | undefined>;
+  createPricingReview(review: InsertPricingReview): Promise<PricingReview>;
+  updatePricingReview(id: string, review: Partial<InsertPricingReview>): Promise<PricingReview | undefined>;
+  deletePricingReview(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -399,6 +407,37 @@ export class DatabaseStorage implements IStorage {
   
   async getRealtorsForNewsletter(): Promise<Person[]> {
     return await db.select().from(people).where(and(eq(people.isRealtor, true), eq(people.receiveNewsletter, true))).orderBy(people.name);
+  }
+  
+  // Pricing Reviews
+  async getAllPricingReviews(): Promise<PricingReview[]> {
+    return await db.select().from(pricingReviews).orderBy(desc(pricingReviews.createdAt));
+  }
+  
+  async getPricingReview(id: string): Promise<PricingReview | undefined> {
+    const [review] = await db.select().from(pricingReviews).where(eq(pricingReviews.id, id));
+    return review || undefined;
+  }
+  
+  async createPricingReview(insertReview: InsertPricingReview): Promise<PricingReview> {
+    const [review] = await db
+      .insert(pricingReviews)
+      .values({ ...insertReview, updatedAt: new Date() })
+      .returning();
+    return review;
+  }
+  
+  async updatePricingReview(id: string, review: Partial<InsertPricingReview>): Promise<PricingReview | undefined> {
+    const [updated] = await db
+      .update(pricingReviews)
+      .set({ ...review, updatedAt: new Date() })
+      .where(eq(pricingReviews.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async deletePricingReview(id: string): Promise<void> {
+    await db.delete(pricingReviews).where(eq(pricingReviews.id, id));
   }
 }
 
