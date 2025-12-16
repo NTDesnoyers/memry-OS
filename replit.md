@@ -30,7 +30,7 @@ Preferred communication style: Simple, everyday language.
 - **Database**: PostgreSQL
 - **ORM**: Drizzle ORM with drizzle-kit for migrations
 - **Schema Location**: `shared/schema.ts` (shared between client and server)
-- **Core Tables**: users, people, deals, tasks, meetings, calls, weeklyReviews, notes
+- **Core Tables**: users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns
 
 ### Project Structure
 ```
@@ -67,6 +67,7 @@ Preferred communication style: Simple, everyday language.
 - **connect-pg-simple**: Session storage (available but not currently implemented)
 
 ### Planned Integrations (UI exists, not yet connected)
+- **SendGrid**: Email delivery for Haves & Wants newsletter (user dismissed integration setup - will configure later)
 - **Cloze CRM**: Downstream sync for relationship data
 - **Todoist**: Task management (GTD system of record)
 - **Plaud Note**: Voice conversation transcription
