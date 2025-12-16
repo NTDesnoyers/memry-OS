@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
-import { RefreshCw, CheckCircle2, AlertCircle, Link as LinkIcon, Settings, Clock, Eye, Share2, ListTodo, Bot, Video, FileText, Sparkles, Brain } from "lucide-react";
+import { RefreshCw, CheckCircle2, AlertCircle, Link as LinkIcon, Settings, Clock, Eye, Share2, ListTodo, Bot, Video, FileText, Sparkles, Brain, Mic } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useToast } from "@/hooks/use-toast";
 
@@ -42,6 +42,10 @@ export default function Integrations() {
   // Granola State
   const [granolaKey, setGranolaKey] = useState(localStorage.getItem("granola_api_key") || "");
   const [showGranolaKey, setShowGranolaKey] = useState(false);
+
+  // Plaud State
+  const [plaudKey, setPlaudKey] = useState(localStorage.getItem("plaud_api_key") || "");
+  const [showPlaudKey, setShowPlaudKey] = useState(false);
 
   const saveKey = (service: string, key: string, storageKey: string) => {
     if (!key.trim()) return;
@@ -300,6 +304,40 @@ export default function Integrations() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Plaud Integration */}
+            <Card className="border-none shadow-md">
+              <CardHeader className="bg-slate-50/50 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-slate-800 flex items-center justify-center text-white font-bold">
+                    <Mic className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <CardTitle className="font-serif">Plaud Note</CardTitle>
+                    <CardDescription>Sync voice recordings from Plaud AI hardware</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                <div className="space-y-2">
+                  <Label>API Key</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      type={showPlaudKey ? "text" : "password"} 
+                      value={plaudKey}
+                      onChange={(e) => setPlaudKey(e.target.value)}
+                      placeholder="plaud_..."
+                      className="bg-background/50"
+                    />
+                    <Button variant="outline" size="icon" onClick={() => setShowPlaudKey(!showPlaudKey)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button onClick={() => saveKey("Plaud", plaudKey, "plaud_api_key")}>Save</Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
 
           </div>
         </div>
