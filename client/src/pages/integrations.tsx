@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
-import { RefreshCw, CheckCircle2, AlertCircle, Link as LinkIcon, Settings, Clock, Eye, Share2, ListTodo, Bot } from "lucide-react";
+import { RefreshCw, CheckCircle2, AlertCircle, Link as LinkIcon, Settings, Clock, Eye, Share2, ListTodo, Bot, Video, FileText } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useToast } from "@/hooks/use-toast";
 
@@ -26,6 +26,14 @@ export default function Integrations() {
   // OpenAI State
   const [openaiKey, setOpenaiKey] = useState(localStorage.getItem("openai_api_key") || "");
   const [showOpenaiKey, setShowOpenaiKey] = useState(false);
+
+  // Fathom State
+  const [fathomKey, setFathomKey] = useState(localStorage.getItem("fathom_api_key") || "");
+  const [showFathomKey, setShowFathomKey] = useState(false);
+
+  // Granola State
+  const [granolaKey, setGranolaKey] = useState(localStorage.getItem("granola_api_key") || "");
+  const [showGranolaKey, setShowGranolaKey] = useState(false);
 
   const saveKey = (service: string, key: string, storageKey: string) => {
     if (!key.trim()) return;
@@ -152,6 +160,73 @@ export default function Integrations() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Fathom.video Integration */}
+            <Card className="border-none shadow-md">
+              <CardHeader className="bg-emerald-50/50 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold">
+                    <Video className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <CardTitle className="font-serif">Fathom.video</CardTitle>
+                    <CardDescription>Import meeting recordings and transcripts</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                <div className="space-y-2">
+                  <Label>API Key</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      type={showFathomKey ? "text" : "password"} 
+                      value={fathomKey}
+                      onChange={(e) => setFathomKey(e.target.value)}
+                      placeholder="fathom_..."
+                      className="bg-background/50"
+                    />
+                    <Button variant="outline" size="icon" onClick={() => setShowFathomKey(!showFathomKey)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button onClick={() => saveKey("Fathom", fathomKey, "fathom_api_key")}>Save</Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Granola Integration */}
+            <Card className="border-none shadow-md">
+              <CardHeader className="bg-amber-50/50 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-amber-600 flex items-center justify-center text-white font-bold">
+                    <FileText className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <CardTitle className="font-serif">Granola</CardTitle>
+                    <CardDescription>Enhanced meeting notes and summarization</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                <div className="space-y-2">
+                  <Label>API Key</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      type={showGranolaKey ? "text" : "password"} 
+                      value={granolaKey}
+                      onChange={(e) => setGranolaKey(e.target.value)}
+                      placeholder="gn_..."
+                      className="bg-background/50"
+                    />
+                    <Button variant="outline" size="icon" onClick={() => setShowGranolaKey(!showGranolaKey)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button onClick={() => saveKey("Granola", granolaKey, "granola_api_key")}>Save</Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
           </div>
         </div>
       </div>
