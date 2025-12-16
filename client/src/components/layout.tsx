@@ -12,7 +12,8 @@ import {
   Plug,
   Workflow,
   Phone,
-  Video
+  Video,
+  Mail
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
@@ -30,6 +31,7 @@ const navItems = [
   { name: "Relationships (FORD)", href: "/relationships", icon: Repeat },
   { name: "Weekly Agenda", href: "/weekly-report", icon: Calendar },
   { name: "Deals", href: "/deals", icon: BarChart3 },
+  { name: "Haves & Wants", href: "/haves-wants", icon: Mail },
   { name: "RE Reviews", href: "/reviews", icon: Home },
   { name: "Automation Hub", href: "/automation", icon: Workflow },
   { name: "Integrations", href: "/integrations", icon: Plug },

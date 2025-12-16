@@ -15,6 +15,7 @@ import Integrations from "@/pages/integrations";
 import AutomationHub from "@/pages/automation";
 import PhoneDialer from "@/pages/phone";
 import Meetings from "@/pages/meetings";
+import HavesWants from "@/pages/haves-wants";
 
 function Router() {
   return (
@@ -28,6 +29,7 @@ function Router() {
       <Route path="/relationships" component={Relationships} />
       <Route path="/deals" component={Deals} />
       <Route path="/reviews" component={Reviews} />
+      <Route path="/haves-wants" component={HavesWants} />
       <Route path="/automation" component={AutomationHub} />
       <Route path="/integrations" component={Integrations} />
       <Route component={NotFound} />
