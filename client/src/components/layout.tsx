@@ -9,7 +9,8 @@ import {
   Menu,
   PieChart,
   Share2,
-  Plug
+  Plug,
+  Workflow
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
@@ -26,6 +27,7 @@ const navItems = [
   { name: "Weekly Agenda", href: "/weekly-report", icon: Calendar },
   { name: "Deals", href: "/deals", icon: BarChart3 },
   { name: "RE Reviews", href: "/reviews", icon: Home },
+  { name: "Automation Hub", href: "/automation", icon: Workflow },
   { name: "Integrations", href: "/integrations", icon: Plug },
 ];
 

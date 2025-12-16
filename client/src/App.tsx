@@ -12,6 +12,7 @@ import Deals from "@/pages/deals";
 import Reviews from "@/pages/reviews";
 import BusinessTracker from "@/pages/business-tracker";
 import Integrations from "@/pages/integrations";
+import AutomationHub from "@/pages/automation";
 
 function Router() {
   return (
@@ -23,6 +24,7 @@ function Router() {
       <Route path="/relationships" component={Relationships} />
       <Route path="/deals" component={Deals} />
       <Route path="/reviews" component={Reviews} />
+      <Route path="/automation" component={AutomationHub} />
       <Route path="/integrations" component={Integrations} />
       <Route component={NotFound} />
     </Switch>

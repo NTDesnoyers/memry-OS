@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight, Calendar, CheckCircle2, Layout, Plus, PieChart, TrendingUp, Users, DollarSign } from "lucide-react";
+import { ArrowRight, Calendar, CheckCircle2, Layout, Plus, PieChart, TrendingUp, Users, DollarSign, Workflow } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import LayoutComponent from "@/components/layout";
 
@@ -28,6 +28,23 @@ export default function Dashboard() {
               </Button>
             </Link>
           </header>
+
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-lg p-4 mb-8 flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-bottom-5 duration-700">
+            <div className="flex items-center gap-4">
+              <div className="p-2 bg-blue-100 rounded-full text-primary">
+                <Workflow className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-primary">New: Automation Hub</h3>
+                <p className="text-sm text-muted-foreground">Sync Plaud, Fathom & Granola conversations automatically</p>
+              </div>
+            </div>
+            <Link href="/automation">
+              <Button variant="outline" className="gap-2">
+                Configure Workflow <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
 
           <div className="grid md:grid-cols-4 gap-6 mb-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
             <Card className="border-none shadow-sm bg-card/60 backdrop-blur-sm">
