@@ -29,9 +29,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Rating } from "@/components/ui/rating";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, ArrowRight, Save, Check, Calendar, User, TrendingUp, Heart, Briefcase, RefreshCw, Upload, Briefcase as BriefcaseIcon, Phone, PieChart, Clock, Printer, Mail, Send } from "lucide-react";
+import { ArrowLeft, ArrowRight, Save, Check, Calendar, User, TrendingUp, Heart, Briefcase, RefreshCw, Upload, Briefcase as BriefcaseIcon, Phone, PieChart, Clock, Printer, Mail, Send, X, CloudUpload, Link as LinkIcon, Users } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
+
+interface NoteUpload {
+  id: string;
+  preview: string;
+  taggedPerson: string;
+}
 
 // Schema Definition
 const formSchema = z.object({
@@ -127,9 +134,11 @@ export default function WeeklyReport() {
   const [activeTab, setActiveTab] = useState("overview");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [notesPhotoPreview, setNotesPhotoPreview] = useState<string | null>(null);
   const [emailOpen, setEmailOpen] = useState(false);
   const [emailTo, setEmailTo] = useState("");
+  
+  // New state for batch uploads
+  const [noteUploads, setNoteUploads] = useState<NoteUpload[]>([]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -220,16 +229,30 @@ export default function WeeklyReport() {
     localStorage.setItem(`ninja_${field}`, value);
   };
   
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const objectUrl = URL.createObjectURL(file);
-      setNotesPhotoPreview(objectUrl);
+  const handleBatchUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      const newUploads = files.map(file => ({
+        id: Math.random().toString(36).substr(2, 9),
+        preview: URL.createObjectURL(file),
+        taggedPerson: ""
+      }));
+      setNoteUploads(prev => [...prev, ...newUploads]);
       toast({
-        title: "Photo Added",
-        description: "Your notes photo has been attached to this report.",
+        title: "Notes Added",
+        description: `${files.length} images added. Please tag associated people.`,
       });
     }
+  };
+
+  const updateTaggedPerson = (id: string, name: string) => {
+    setNoteUploads(prev => prev.map(note => 
+      note.id === id ? { ...note, taggedPerson: name } : note
+    ));
+  };
+
+  const removeUpload = (id: string) => {
+    setNoteUploads(prev => prev.filter(note => note.id !== id));
   };
   
   const handlePrint = () => {
@@ -265,11 +288,20 @@ export default function WeeklyReport() {
     if (values.wordOfYear) localStorage.setItem("ninja_wordOfYear", values.wordOfYear);
     if (values.affirmation) localStorage.setItem("ninja_affirmation", values.affirmation);
 
-    toast({
-      title: "Report Saved",
-      description: "Your weekly agenda has been successfully saved.",
-    });
-    setTimeout(() => setLocation("/"), 1000);
+    // Mock processing tagged uploads
+    if (noteUploads.length > 0) {
+       const taggedCount = noteUploads.filter(n => n.taggedPerson).length;
+       toast({
+         title: "Processing Notes",
+         description: `Logging ${taggedCount} notes to contact records & syncing to Cloze...`,
+       });
+    } else {
+        toast({
+          title: "Report Saved",
+          description: "Your weekly agenda has been successfully saved.",
+        });
+    }
+    setTimeout(() => setLocation("/"), 1500);
   }
 
   return (
@@ -524,6 +556,10 @@ export default function WeeklyReport() {
                   </div>
                 </TabsContent>
 
+                {/* ... (Other Tabs remain similar, skipping to Personal Notes section for brevity in this full file write, but I must write the WHOLE file to be safe) ... */}
+                {/* Actually, I need to include all tabs content to avoid deleting them. Since I can't "skip", I will paste the content of other tabs from my memory/previous reads, 
+                    but specifically focusing on changing the "Personal Notes" section inside "Relationships" tab. */}
+                
                 <TabsContent value="pulse" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <div className="grid md:grid-cols-3 gap-6">
                     <Card className="border-none shadow-md md:col-span-2">
@@ -1050,6 +1086,7 @@ export default function WeeklyReport() {
                     </CardContent>
                   </Card>
 
+                  {/* UPDATED PERSONAL NOTES SECTION FOR BATCH UPLOAD */}
                   <Card className="border-none shadow-md">
                     <CardHeader className="bg-primary/5 pb-4">
                       <CardTitle className="font-serif">Personal Notes</CardTitle>
@@ -1061,7 +1098,7 @@ export default function WeeklyReport() {
                           name="notesWrittenLastWeek"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Notes Written Last Week</FormLabel>
+                              <FormLabel>Notes Written Last Week (Summary)</FormLabel>
                               <FormControl>
                                 <Textarea placeholder="Describe the notes you wrote..." {...field} className="min-h-[100px] bg-background/50" />
                               </FormControl>
@@ -1069,33 +1106,77 @@ export default function WeeklyReport() {
                           )}
                         />
                         <div className="space-y-3">
-                          <label className="text-sm font-medium leading-none">Photo Evidence</label>
-                          <div className="border-2 border-dashed border-input rounded-lg p-6 flex flex-col items-center justify-center bg-background/50 hover:bg-background/80 transition-colors cursor-pointer group relative overflow-hidden">
+                          <label className="text-sm font-medium leading-none flex justify-between items-center">
+                            <span>Upload Note Photos</span>
+                            <Badge variant="outline" className="text-[10px] font-normal gap-1">
+                              <RefreshCw className="h-3 w-3" /> Auto-sync to Cloze
+                            </Badge>
+                          </label>
+                          
+                          {/* Batch Upload Area */}
+                          <div className="border-2 border-dashed border-input rounded-lg p-6 bg-background/50 transition-colors cursor-pointer group relative">
                             <Input 
                               type="file" 
-                              accept="image/*" 
+                              multiple 
+                              accept="image/*"
                               className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                              onChange={handlePhotoUpload}
+                              onChange={handleBatchUpload}
                             />
-                            {notesPhotoPreview ? (
-                              <div className="relative w-full h-40">
-                                <img src={notesPhotoPreview} alt="Notes preview" className="w-full h-full object-contain rounded-md" />
-                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white font-medium">
-                                  Change Photo
-                                </div>
-                              </div>
-                            ) : (
-                              <>
-                                <Upload className="h-8 w-8 text-muted-foreground mb-2 group-hover:text-primary transition-colors" />
-                                <p className="text-sm text-muted-foreground text-center">
-                                  <span className="font-semibold text-primary">Click to upload</span> or drag and drop<br />
-                                  photos of your notes
-                                </p>
-                              </>
-                            )}
+                            <div className="flex flex-col items-center justify-center text-center">
+                              <CloudUpload className="h-8 w-8 text-muted-foreground mb-2 group-hover:text-primary transition-colors" />
+                              <p className="text-sm text-muted-foreground">
+                                <span className="font-semibold text-primary">Click to upload batch</span> or drag photos here
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">Upload multiple note pictures at once</p>
+                            </div>
                           </div>
                         </div>
                       </div>
+
+                      {/* Display Uploaded Notes & Tagging */}
+                      {noteUploads.length > 0 && (
+                        <div className="space-y-4 pt-4 border-t">
+                          <h4 className="font-medium text-sm text-muted-foreground uppercase">Tag Notes for Logging</h4>
+                          <div className="grid md:grid-cols-2 gap-4">
+                            {noteUploads.map((note) => (
+                              <div key={note.id} className="flex gap-3 p-3 bg-secondary/30 rounded-lg border group/note">
+                                <div className="h-20 w-20 flex-shrink-0 bg-black/5 rounded overflow-hidden">
+                                  <img src={note.preview} alt="Note" className="h-full w-full object-cover" />
+                                </div>
+                                <div className="flex-1 space-y-2">
+                                  <div className="space-y-1">
+                                    <FormLabel className="text-xs">Tag Person (logs to their record)</FormLabel>
+                                    <div className="flex gap-2">
+                                      <div className="relative flex-1">
+                                        <Users className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
+                                        <Input 
+                                          placeholder="Type contact name..." 
+                                          className="h-8 pl-7 text-sm bg-background" 
+                                          value={note.taggedPerson}
+                                          onChange={(e) => updateTaggedPerson(note.id, e.target.value)}
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                  {note.taggedPerson && (
+                                    <div className="flex items-center gap-1 text-[10px] text-green-600">
+                                      <LinkIcon className="h-3 w-3" /> Linked to {note.taggedPerson}
+                                    </div>
+                                  )}
+                                </div>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                  onClick={() => removeUpload(note.id)}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       
                       <FormField
                         control={form.control}
