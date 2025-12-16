@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Upload, BarChart3, PieChart, TrendingUp, FileText, Printer, Home, ArrowRight, ChevronRight } from "lucide-react";
+import { Plus, Upload, BarChart3, PieChart, TrendingUp, FileText, Printer, Home, ArrowRight, ChevronRight, DollarSign, Calculator, Target } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ScatterChart, Scatter, Cell, ReferenceLine } from "recharts";
@@ -135,6 +136,8 @@ export default function VisualPricing() {
   const [neighborhood, setNeighborhood] = useState("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [activeReviewId, setActiveReviewId] = useState<string | null>(null);
+  const [subjectPrice, setSubjectPrice] = useState<number>(500000);
+  const [subjectSqft, setSubjectSqft] = useState<number>(2000);
   
   const { data: reviews = [], isLoading } = useQuery<PricingReview[]>({
     queryKey: ["/api/pricing-reviews"],
@@ -199,6 +202,49 @@ export default function VisualPricing() {
   
   const currentMonth = new Date().getMonth();
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  
+  const priceBands = useMemo(() => {
+    const closedProps = metrics.closedProperties || [];
+    if (closedProps.length === 0) return [];
+    
+    const prices = closedProps.map(p => p.closePrice || 0).filter(p => p > 0).sort((a, b) => a - b);
+    if (prices.length === 0) return [];
+    
+    const minPrice = Math.floor(prices[0] / 50000) * 50000;
+    const maxPrice = Math.ceil(prices[prices.length - 1] / 50000) * 50000;
+    
+    const bands: { range: string; min: number; max: number; count: number; avgDOM: number; successRate: number }[] = [];
+    
+    for (let start = minPrice; start < maxPrice; start += 50000) {
+      const end = start + 50000;
+      const inBand = closedProps.filter(p => (p.closePrice || 0) >= start && (p.closePrice || 0) < end);
+      const avgDOM = inBand.length > 0 
+        ? Math.round(inBand.reduce((sum, p) => sum + (p.dom || 0), 0) / inBand.length) 
+        : 0;
+      
+      bands.push({
+        range: `$${(start/1000).toFixed(0)}k - $${(end/1000).toFixed(0)}k`,
+        min: start,
+        max: end,
+        count: inBand.length,
+        avgDOM,
+        successRate: inBand.length > 0 ? Math.round((inBand.length / closedProps.length) * 100) : 0
+      });
+    }
+    
+    return bands.filter(b => b.count > 0);
+  }, [metrics.closedProperties]);
+  
+  const subjectPricePerSqft = subjectSqft > 0 ? Math.round(subjectPrice / subjectSqft) : 0;
+  const marketAvgPricePerSqft = useMemo(() => {
+    const closedProps = metrics.closedProperties || [];
+    const withSqft = closedProps.filter(p => p.pricePerSqft && p.pricePerSqft > 0);
+    if (withSqft.length === 0) return 0;
+    return Math.round(withSqft.reduce((sum, p) => sum + (p.pricePerSqft || 0), 0) / withSqft.length);
+  }, [metrics.closedProperties]);
+  
+  const subjectBand = priceBands.find(b => subjectPrice >= b.min && subjectPrice < b.max);
+  const estimatedDOM = subjectBand?.avgDOM || metrics.avgDOM;
 
   return (
     <Layout>
@@ -313,12 +359,14 @@ export default function VisualPricing() {
                 </Card>
               ) : (
                 <Tabs defaultValue="overview" className="w-full">
-                  <TabsList className="bg-card/50 backdrop-blur-sm">
+                  <TabsList className="bg-card/50 backdrop-blur-sm flex-wrap">
                     <TabsTrigger value="overview">Overview</TabsTrigger>
                     <TabsTrigger value="odds">Odds of Selling</TabsTrigger>
                     <TabsTrigger value="time">Time to Close</TabsTrigger>
                     <TabsTrigger value="pattern">Buying Pattern</TabsTrigger>
                     <TabsTrigger value="pond">Real Estate Pond</TabsTrigger>
+                    <TabsTrigger value="worksheet">Value Worksheet</TabsTrigger>
+                    <TabsTrigger value="report">Client Report</TabsTrigger>
                     <TabsTrigger value="data">Raw Data</TabsTrigger>
                   </TabsList>
                   
@@ -573,6 +621,253 @@ export default function VisualPricing() {
                             </div>
                           </div>
                         </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                  
+                  <TabsContent value="worksheet" className="mt-6">
+                    <Card className="border-none shadow-md">
+                      <CardHeader className="text-center">
+                        <CardTitle className="font-serif text-2xl">Value Positioning Worksheet</CardTitle>
+                        <CardDescription>Calculate optimal pricing based on market data</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        <div className="grid md:grid-cols-2 gap-8">
+                          <div className="space-y-6">
+                            <div className="space-y-4">
+                              <Label className="text-base font-medium">Subject Property Price</Label>
+                              <div className="flex items-center gap-4">
+                                <DollarSign className="h-5 w-5 text-muted-foreground" />
+                                <Input 
+                                  type="number"
+                                  value={subjectPrice}
+                                  onChange={(e) => setSubjectPrice(parseInt(e.target.value) || 0)}
+                                  className="text-lg font-mono"
+                                  data-testid="input-subject-price"
+                                />
+                              </div>
+                              <Slider
+                                value={[subjectPrice]}
+                                onValueChange={(v) => setSubjectPrice(v[0])}
+                                min={100000}
+                                max={2000000}
+                                step={10000}
+                                className="py-4"
+                              />
+                            </div>
+                            
+                            <div className="space-y-4">
+                              <Label className="text-base font-medium">Subject Property Square Feet</Label>
+                              <div className="flex items-center gap-4">
+                                <Home className="h-5 w-5 text-muted-foreground" />
+                                <Input 
+                                  type="number"
+                                  value={subjectSqft}
+                                  onChange={(e) => setSubjectSqft(parseInt(e.target.value) || 0)}
+                                  className="text-lg font-mono"
+                                  data-testid="input-subject-sqft"
+                                />
+                              </div>
+                            </div>
+                            
+                            <Separator />
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="bg-muted/50 rounded-lg p-4 text-center">
+                                <p className="text-2xl font-bold text-primary">${subjectPricePerSqft}</p>
+                                <p className="text-sm text-muted-foreground">Your $/SqFt</p>
+                              </div>
+                              <div className="bg-muted/50 rounded-lg p-4 text-center">
+                                <p className="text-2xl font-bold text-primary">${marketAvgPricePerSqft}</p>
+                                <p className="text-sm text-muted-foreground">Market Avg $/SqFt</p>
+                              </div>
+                            </div>
+                            
+                            <div className={`rounded-lg p-4 text-center ${
+                              subjectPricePerSqft > marketAvgPricePerSqft * 1.1 ? 'bg-red-50 border border-red-200' :
+                              subjectPricePerSqft < marketAvgPricePerSqft * 0.9 ? 'bg-green-50 border border-green-200' :
+                              'bg-blue-50 border border-blue-200'
+                            }`}>
+                              <p className={`text-lg font-medium ${
+                                subjectPricePerSqft > marketAvgPricePerSqft * 1.1 ? 'text-red-700' :
+                                subjectPricePerSqft < marketAvgPricePerSqft * 0.9 ? 'text-green-700' :
+                                'text-blue-700'
+                              }`}>
+                                {subjectPricePerSqft > marketAvgPricePerSqft * 1.1 ? 'Above Market - Expect Longer DOM' :
+                                 subjectPricePerSqft < marketAvgPricePerSqft * 0.9 ? 'Below Market - Quick Sale Expected' :
+                                 'At Market Value'}
+                              </p>
+                              <p className="text-sm mt-1">
+                                {Math.abs(Math.round(((subjectPricePerSqft - marketAvgPricePerSqft) / marketAvgPricePerSqft) * 100))}% 
+                                {subjectPricePerSqft > marketAvgPricePerSqft ? ' above' : ' below'} market average
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-4">
+                            <h3 className="text-base font-medium flex items-center gap-2">
+                              <Target className="h-5 w-5" /> Price Band Analysis
+                            </h3>
+                            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                              {priceBands.map((band, i) => (
+                                <div 
+                                  key={i} 
+                                  className={`flex items-center justify-between p-3 rounded-lg ${
+                                    subjectPrice >= band.min && subjectPrice < band.max 
+                                      ? 'bg-primary text-white' 
+                                      : 'bg-muted/30 hover:bg-muted/50'
+                                  }`}
+                                >
+                                  <div>
+                                    <p className="font-medium">{band.range}</p>
+                                    <p className={`text-xs ${subjectPrice >= band.min && subjectPrice < band.max ? 'text-white/80' : 'text-muted-foreground'}`}>
+                                      {band.count} sold
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="font-bold">{band.avgDOM} days</p>
+                                    <p className={`text-xs ${subjectPrice >= band.min && subjectPrice < band.max ? 'text-white/80' : 'text-muted-foreground'}`}>
+                                      avg DOM
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            
+                            {subjectBand && (
+                              <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 mt-4">
+                                <p className="text-center">
+                                  At <strong>${subjectPrice.toLocaleString()}</strong>, expect approximately 
+                                  <strong className="text-primary"> {estimatedDOM} days</strong> on market
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                  
+                  <TabsContent value="report" className="mt-6">
+                    <Card className="border-none shadow-md print:shadow-none">
+                      <CardHeader className="text-center border-b pb-6">
+                        <div className="flex justify-end mb-4 print:hidden">
+                          <Button onClick={() => window.print()} variant="outline" className="gap-2">
+                            <Printer className="h-4 w-4" /> Print Report
+                          </Button>
+                        </div>
+                        <CardTitle className="font-serif text-3xl">Market Analysis Report</CardTitle>
+                        <CardDescription className="text-lg">{activeReview.neighborhood || activeReview.title}</CardDescription>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Prepared on {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                        </p>
+                      </CardHeader>
+                      <CardContent className="space-y-8 pt-8">
+                        <section>
+                          <h2 className="font-serif text-xl font-bold mb-4 border-b pb-2">Market Overview</h2>
+                          <div className="grid grid-cols-4 gap-4 text-center">
+                            <div className="bg-green-50 rounded-lg p-4">
+                              <p className="text-3xl font-bold text-green-700">{metrics.closed}</p>
+                              <p className="text-sm text-green-600">Closed</p>
+                            </div>
+                            <div className="bg-blue-50 rounded-lg p-4">
+                              <p className="text-3xl font-bold text-blue-700">{metrics.underContract}</p>
+                              <p className="text-sm text-blue-600">Under Contract</p>
+                            </div>
+                            <div className="bg-orange-50 rounded-lg p-4">
+                              <p className="text-3xl font-bold text-orange-700">{metrics.forSale}</p>
+                              <p className="text-sm text-orange-600">For Sale</p>
+                            </div>
+                            <div className="bg-red-50 rounded-lg p-4">
+                              <p className="text-3xl font-bold text-red-700">{metrics.expired}</p>
+                              <p className="text-sm text-red-600">Did Not Sell</p>
+                            </div>
+                          </div>
+                        </section>
+                        
+                        <section>
+                          <h2 className="font-serif text-xl font-bold mb-4 border-b pb-2">Key Metrics</h2>
+                          <div className="grid grid-cols-3 gap-6">
+                            <div className="text-center">
+                              <p className="text-4xl font-bold text-primary">{metrics.oddsOfSelling}%</p>
+                              <p className="text-muted-foreground">Odds of Selling</p>
+                              <p className="text-xs text-muted-foreground mt-1">Based on closed vs expired</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-4xl font-bold text-primary">{metrics.avgDOM}</p>
+                              <p className="text-muted-foreground">Average Days on Market</p>
+                              <p className="text-xs text-muted-foreground mt-1">For closed properties</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-4xl font-bold text-primary">{metrics.inventoryMonths}</p>
+                              <p className="text-muted-foreground">Months of Inventory</p>
+                              <p className="text-xs text-muted-foreground mt-1">{metrics.inventoryMonths < 3 ? 'Seller\'s Market' : metrics.inventoryMonths > 6 ? 'Buyer\'s Market' : 'Balanced Market'}</p>
+                            </div>
+                          </div>
+                        </section>
+                        
+                        <section>
+                          <h2 className="font-serif text-xl font-bold mb-4 border-b pb-2">Price Analysis</h2>
+                          <div className="grid grid-cols-2 gap-6">
+                            <div>
+                              <p className="text-sm text-muted-foreground uppercase mb-2">Average Sale Price</p>
+                              <p className="text-3xl font-bold">${metrics.avgClosePrice?.toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-muted-foreground uppercase mb-2">Average Price per SqFt</p>
+                              <p className="text-3xl font-bold">${marketAvgPricePerSqft}</p>
+                            </div>
+                          </div>
+                        </section>
+                        
+                        <section>
+                          <h2 className="font-serif text-xl font-bold mb-4 border-b pb-2">Market Absorption</h2>
+                          <p className="text-lg">
+                            Properties in this area are selling at a rate of <strong>{metrics.monthlyRate} per month</strong>. 
+                            With <strong>{metrics.forSale} active listings</strong>, the current inventory represents 
+                            <strong> {metrics.inventoryMonths} months</strong> of supply.
+                          </p>
+                          <div className="mt-4 bg-muted/30 rounded-lg p-4">
+                            <p className="font-medium">
+                              {metrics.inventoryMonths < 3 
+                                ? 'This is a strong seller\'s market. Properly priced homes should sell quickly with potential for multiple offers.'
+                                : metrics.inventoryMonths > 6 
+                                ? 'This is a buyer\'s market. Sellers should price competitively and be prepared for longer marketing times.'
+                                : 'This is a balanced market. Both buyers and sellers have reasonable negotiating positions.'}
+                            </p>
+                          </div>
+                        </section>
+                        
+                        <section className="print:break-before-page">
+                          <h2 className="font-serif text-xl font-bold mb-4 border-b pb-2">Price Band Performance</h2>
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Price Range</TableHead>
+                                <TableHead className="text-center">Properties Sold</TableHead>
+                                <TableHead className="text-center">Avg Days on Market</TableHead>
+                                <TableHead className="text-center">% of Sales</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {priceBands.map((band, i) => (
+                                <TableRow key={i}>
+                                  <TableCell className="font-medium">{band.range}</TableCell>
+                                  <TableCell className="text-center">{band.count}</TableCell>
+                                  <TableCell className="text-center">{band.avgDOM} days</TableCell>
+                                  <TableCell className="text-center">{band.successRate}%</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </section>
+                        
+                        <section className="bg-muted/20 rounded-lg p-6 text-center">
+                          <p className="text-sm text-muted-foreground">
+                            This analysis is based on {mlsData.length} properties in {activeReview.neighborhood || 'the selected area'}. 
+                            Data sourced from MLS records. Past performance does not guarantee future results.
+                          </p>
+                        </section>
                       </CardContent>
                     </Card>
                   </TabsContent>
