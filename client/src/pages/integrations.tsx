@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
-import { RefreshCw, CheckCircle2, AlertCircle, Link as LinkIcon, Settings, Clock, Eye, Share2, ListTodo, Bot, Video, FileText, Sparkles, Brain, Mic } from "lucide-react";
+import { RefreshCw, CheckCircle2, AlertCircle, Link as LinkIcon, Settings, Clock, Eye, Share2, ListTodo, Bot, Video, FileText, Sparkles, Brain, Mic, Mail, Zap } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useToast } from "@/hooks/use-toast";
 
@@ -46,6 +46,18 @@ export default function Integrations() {
   // Plaud State
   const [plaudKey, setPlaudKey] = useState(localStorage.getItem("plaud_api_key") || "");
   const [showPlaudKey, setShowPlaudKey] = useState(false);
+
+  // Gmail State
+  const [gmailKey, setGmailKey] = useState(localStorage.getItem("gmail_api_key") || "");
+  const [showGmailKey, setShowGmailKey] = useState(false);
+
+  // Superhuman State
+  const [superhumanKey, setSuperhumanKey] = useState(localStorage.getItem("superhuman_api_key") || "");
+  const [showSuperhumanKey, setShowSuperhumanKey] = useState(false);
+
+  // Generic Email State
+  const [genericEmailKey, setGenericEmailKey] = useState(localStorage.getItem("generic_email_api_key") || "");
+  const [showGenericEmailKey, setShowGenericEmailKey] = useState(false);
 
   const saveKey = (service: string, key: string, storageKey: string) => {
     if (!key.trim()) return;
@@ -337,6 +349,106 @@ export default function Integrations() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Gmail Integration */}
+            <Card className="border-none shadow-md">
+              <CardHeader className="bg-red-50/50 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-red-600 flex items-center justify-center text-white font-bold">
+                    <Mail className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <CardTitle className="font-serif">Gmail</CardTitle>
+                    <CardDescription>Read, draft, and send emails directly</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                <div className="space-y-2">
+                  <Label>OAuth Client ID / API Key</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      type={showGmailKey ? "text" : "password"} 
+                      value={gmailKey}
+                      onChange={(e) => setGmailKey(e.target.value)}
+                      placeholder="google_client_id..."
+                      className="bg-background/50"
+                    />
+                    <Button variant="outline" size="icon" onClick={() => setShowGmailKey(!showGmailKey)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button onClick={() => saveKey("Gmail", gmailKey, "gmail_api_key")}>Save</Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Superhuman Integration */}
+            <Card className="border-none shadow-md">
+              <CardHeader className="bg-indigo-50/50 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold">
+                    <Zap className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <CardTitle className="font-serif">Superhuman</CardTitle>
+                    <CardDescription>High-performance email integration</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                <div className="space-y-2">
+                  <Label>API Key</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      type={showSuperhumanKey ? "text" : "password"} 
+                      value={superhumanKey}
+                      onChange={(e) => setSuperhumanKey(e.target.value)}
+                      placeholder="super_..."
+                      className="bg-background/50"
+                    />
+                    <Button variant="outline" size="icon" onClick={() => setShowSuperhumanKey(!showSuperhumanKey)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button onClick={() => saveKey("Superhuman", superhumanKey, "superhuman_api_key")}>Save</Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Generic Email Integration */}
+            <Card className="border-none shadow-md">
+              <CardHeader className="bg-gray-50/50 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-gray-600 flex items-center justify-center text-white font-bold">
+                    <Mail className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <CardTitle className="font-serif">Other Email Providers</CardTitle>
+                    <CardDescription>IMAP/SMTP settings for Outlook, Yahoo, etc.</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                <div className="space-y-2">
+                  <Label>Connection String / API Key</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      type={showGenericEmailKey ? "text" : "password"} 
+                      value={genericEmailKey}
+                      onChange={(e) => setGenericEmailKey(e.target.value)}
+                      placeholder="imap://user:pass@host..."
+                      className="bg-background/50"
+                    />
+                    <Button variant="outline" size="icon" onClick={() => setShowGenericEmailKey(!showGenericEmailKey)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button onClick={() => saveKey("Email Provider", genericEmailKey, "generic_email_api_key")}>Save</Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
 
 
           </div>
