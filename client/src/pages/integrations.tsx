@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
-import { RefreshCw, CheckCircle2, AlertCircle, Link as LinkIcon, Settings, Clock, Eye, Share2, ListTodo, Bot, Video, FileText, Sparkles, Brain, Mic, Mail, Zap } from "lucide-react";
+import { RefreshCw, CheckCircle2, AlertCircle, Link as LinkIcon, Settings, Clock, Eye, Share2, ListTodo, Bot, Video, FileText, Sparkles, Brain, Mic, Mail, Zap, Calendar } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useToast } from "@/hooks/use-toast";
 
@@ -58,6 +58,18 @@ export default function Integrations() {
   // Generic Email State
   const [genericEmailKey, setGenericEmailKey] = useState(localStorage.getItem("generic_email_api_key") || "");
   const [showGenericEmailKey, setShowGenericEmailKey] = useState(false);
+
+  // iCal State
+  const [icalKey, setIcalKey] = useState(localStorage.getItem("ical_api_key") || "");
+  const [showIcalKey, setShowIcalKey] = useState(false);
+
+  // Google Calendar State
+  const [googleCalendarKey, setGoogleCalendarKey] = useState(localStorage.getItem("google_calendar_api_key") || "");
+  const [showGoogleCalendarKey, setShowGoogleCalendarKey] = useState(false);
+
+  // Outlook Calendar State
+  const [outlookCalendarKey, setOutlookCalendarKey] = useState(localStorage.getItem("outlook_calendar_api_key") || "");
+  const [showOutlookCalendarKey, setShowOutlookCalendarKey] = useState(false);
 
   const saveKey = (service: string, key: string, storageKey: string) => {
     if (!key.trim()) return;
@@ -444,6 +456,105 @@ export default function Integrations() {
                       <Eye className="h-4 w-4" />
                     </Button>
                     <Button onClick={() => saveKey("Email Provider", genericEmailKey, "generic_email_api_key")}>Save</Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* iCal Integration */}
+            <Card className="border-none shadow-md">
+              <CardHeader className="bg-orange-50/50 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-orange-600 flex items-center justify-center text-white font-bold">
+                    <Calendar className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <CardTitle className="font-serif">Apple Calendar (iCal)</CardTitle>
+                    <CardDescription>Sync your iCloud calendar events</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                <div className="space-y-2">
+                  <Label>App-Specific Password / CalDAV URL</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      type={showIcalKey ? "text" : "password"} 
+                      value={icalKey}
+                      onChange={(e) => setIcalKey(e.target.value)}
+                      placeholder="https://caldav.icloud.com/..."
+                      className="bg-background/50"
+                    />
+                    <Button variant="outline" size="icon" onClick={() => setShowIcalKey(!showIcalKey)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button onClick={() => saveKey("iCal", icalKey, "ical_api_key")}>Save</Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Google Calendar Integration */}
+            <Card className="border-none shadow-md">
+              <CardHeader className="bg-blue-50/50 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+                    <Calendar className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <CardTitle className="font-serif">Google Calendar</CardTitle>
+                    <CardDescription>Sync events, meetings, and time blocks</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                <div className="space-y-2">
+                  <Label>OAuth Client ID / API Key</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      type={showGoogleCalendarKey ? "text" : "password"} 
+                      value={googleCalendarKey}
+                      onChange={(e) => setGoogleCalendarKey(e.target.value)}
+                      placeholder="google_calendar_client_id..."
+                      className="bg-background/50"
+                    />
+                    <Button variant="outline" size="icon" onClick={() => setShowGoogleCalendarKey(!showGoogleCalendarKey)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button onClick={() => saveKey("Google Calendar", googleCalendarKey, "google_calendar_api_key")}>Save</Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Outlook Calendar Integration */}
+            <Card className="border-none shadow-md">
+              <CardHeader className="bg-cyan-50/50 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-cyan-600 flex items-center justify-center text-white font-bold">
+                    <Calendar className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <CardTitle className="font-serif">Outlook Calendar</CardTitle>
+                    <CardDescription>Sync Office 365 / Outlook events</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                <div className="space-y-2">
+                  <Label>Client ID / API Key</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      type={showOutlookCalendarKey ? "text" : "password"} 
+                      value={outlookCalendarKey}
+                      onChange={(e) => setOutlookCalendarKey(e.target.value)}
+                      placeholder="outlook_client_id..."
+                      className="bg-background/50"
+                    />
+                    <Button variant="outline" size="icon" onClick={() => setShowOutlookCalendarKey(!showOutlookCalendarKey)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button onClick={() => saveKey("Outlook Calendar", outlookCalendarKey, "outlook_calendar_api_key")}>Save</Button>
                   </div>
                 </div>
               </CardContent>
