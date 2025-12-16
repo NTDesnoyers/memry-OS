@@ -13,7 +13,8 @@ import {
   insertEmailCampaignSchema,
   insertPricingReviewSchema,
   insertBusinessSettingsSchema,
-  insertPieEntrySchema
+  insertPieEntrySchema,
+  insertAgentProfileSchema
 } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import multer from "multer";
@@ -805,6 +806,110 @@ export async function registerRoutes(
     try {
       await storage.deletePieEntry(req.params.id);
       res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ==================== AGENT PROFILE ROUTES ====================
+  
+  // Get agent profile
+  app.get("/api/profile", async (req, res) => {
+    try {
+      const profile = await storage.getAgentProfile();
+      res.json(profile || null);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Update/create agent profile
+  app.put("/api/profile", async (req, res) => {
+    try {
+      const data = validate(insertAgentProfileSchema, req.body);
+      const profile = await storage.upsertAgentProfile(data);
+      res.json(profile);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Get brokerage branding info (auto-lookup)
+  app.get("/api/brokerage-branding/:name", async (req, res) => {
+    try {
+      const name = req.params.name.toLowerCase();
+      
+      // Known brokerage branding data
+      const brokerages: Record<string, { logo: string; color: string; fullName: string }> = {
+        "exp": {
+          logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f1/EXp_Realty_logo.svg/1200px-EXp_Realty_logo.svg.png",
+          color: "#00A0DC",
+          fullName: "eXp Realty"
+        },
+        "kw": {
+          logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Keller_Williams_Realty_logo.svg/1200px-Keller_Williams_Realty_logo.svg.png",
+          color: "#B40101",
+          fullName: "Keller Williams"
+        },
+        "kellerwilliams": {
+          logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Keller_Williams_Realty_logo.svg/1200px-Keller_Williams_Realty_logo.svg.png",
+          color: "#B40101",
+          fullName: "Keller Williams"
+        },
+        "remax": {
+          logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/RE-MAX%2C_LLC_logo.svg/1200px-RE-MAX%2C_LLC_logo.svg.png",
+          color: "#003DA6",
+          fullName: "RE/MAX"
+        },
+        "coldwellbanker": {
+          logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Coldwell_Banker_logo.svg/1200px-Coldwell_Banker_logo.svg.png",
+          color: "#012169",
+          fullName: "Coldwell Banker"
+        },
+        "cb": {
+          logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Coldwell_Banker_logo.svg/1200px-Coldwell_Banker_logo.svg.png",
+          color: "#012169",
+          fullName: "Coldwell Banker"
+        },
+        "century21": {
+          logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Century_21_Real_Estate_logo.svg/1200px-Century_21_Real_Estate_logo.svg.png",
+          color: "#866831",
+          fullName: "Century 21"
+        },
+        "berkshirehathaway": {
+          logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Berkshire_Hathaway_HomeServices_logo.svg/1200px-Berkshire_Hathaway_HomeServices_logo.svg.png",
+          color: "#522D6D",
+          fullName: "Berkshire Hathaway HomeServices"
+        },
+        "bhhs": {
+          logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Berkshire_Hathaway_HomeServices_logo.svg/1200px-Berkshire_Hathaway_HomeServices_logo.svg.png",
+          color: "#522D6D",
+          fullName: "Berkshire Hathaway HomeServices"
+        },
+        "compass": {
+          logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fb/Compass%2C_Inc._logo.svg/1200px-Compass%2C_Inc._logo.svg.png",
+          color: "#000000",
+          fullName: "Compass"
+        },
+        "sothebys": {
+          logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Sotheby%27s_International_Realty_logo.svg/1200px-Sotheby%27s_International_Realty_logo.svg.png",
+          color: "#041E42",
+          fullName: "Sotheby's International Realty"
+        },
+        "exitrealty": {
+          logo: "https://upload.wikimedia.org/wikipedia/en/thumb/e/e7/Exit_Realty_logo.svg/1200px-Exit_Realty_logo.svg.png",
+          color: "#C00000",
+          fullName: "EXIT Realty"
+        },
+        "exit": {
+          logo: "https://upload.wikimedia.org/wikipedia/en/thumb/e/e7/Exit_Realty_logo.svg/1200px-Exit_Realty_logo.svg.png",
+          color: "#C00000",
+          fullName: "EXIT Realty"
+        }
+      };
+      
+      const branding = brokerages[name.replace(/\s+/g, '').replace("realty", "")] || null;
+      res.json(branding);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

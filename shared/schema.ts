@@ -87,6 +87,45 @@ export const insertBusinessSettingsSchema = createInsertSchema(businessSettings)
 export type InsertBusinessSettings = z.infer<typeof insertBusinessSettingsSchema>;
 export type BusinessSettings = typeof businessSettings.$inferSelect;
 
+// Agent Profile (user's personal/business info)
+export const agentProfile = pgTable("agent_profile", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().default("Agent Name"),
+  email: text("email"),
+  phone: text("phone"),
+  agentId: text("agent_id"),
+  licenseNumber: text("license_number"),
+  licenseState: text("license_state"),
+  brokerage: text("brokerage"),
+  brokerageLogoUrl: text("brokerage_logo_url"),
+  brokeragePrimaryColor: text("brokerage_primary_color"),
+  teamName: text("team_name"),
+  personalLogoUrl: text("personal_logo_url"),
+  headshotUrl: text("headshot_url"),
+  website: text("website"),
+  socialLinkedIn: text("social_linkedin"),
+  socialFacebook: text("social_facebook"),
+  socialInstagram: text("social_instagram"),
+  annualTransactionGoal: integer("annual_transaction_goal").default(24),
+  annualGCIGoal: integer("annual_gci_goal").default(200000),
+  wordOfYear: text("word_of_year"),
+  affirmation: text("affirmation"),
+  familyMission: text("family_mission"),
+  businessMission: text("business_mission"),
+  quarterlyFocus: text("quarterly_focus"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertAgentProfileSchema = createInsertSchema(agentProfile).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAgentProfile = z.infer<typeof insertAgentProfileSchema>;
+export type AgentProfile = typeof agentProfile.$inferSelect;
+
 // Deals
 export const deals = pgTable("deals", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

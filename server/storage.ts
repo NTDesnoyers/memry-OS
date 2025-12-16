@@ -12,7 +12,8 @@ import {
   type PricingReview, type InsertPricingReview,
   type BusinessSettings, type InsertBusinessSettings,
   type PieEntry, type InsertPieEntry,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, pricingReviews, businessSettings, pieEntries
+  type AgentProfile, type InsertAgentProfile,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, or, sql, gte, lte } from "drizzle-orm";
@@ -108,6 +109,10 @@ export interface IStorage {
   createPieEntry(entry: InsertPieEntry): Promise<PieEntry>;
   updatePieEntry(id: string, entry: Partial<InsertPieEntry>): Promise<PieEntry | undefined>;
   deletePieEntry(id: string): Promise<void>;
+  
+  // Agent Profile
+  getAgentProfile(): Promise<AgentProfile | undefined>;
+  upsertAgentProfile(profile: InsertAgentProfile): Promise<AgentProfile>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -509,6 +514,29 @@ export class DatabaseStorage implements IStorage {
   
   async deletePieEntry(id: string): Promise<void> {
     await db.delete(pieEntries).where(eq(pieEntries.id, id));
+  }
+  
+  // Agent Profile
+  async getAgentProfile(): Promise<AgentProfile | undefined> {
+    const [profile] = await db.select().from(agentProfile).limit(1);
+    return profile || undefined;
+  }
+  
+  async upsertAgentProfile(insertProfile: InsertAgentProfile): Promise<AgentProfile> {
+    const existing = await this.getAgentProfile();
+    if (existing) {
+      const [updated] = await db
+        .update(agentProfile)
+        .set({ ...insertProfile, updatedAt: new Date() })
+        .where(eq(agentProfile.id, existing.id))
+        .returning();
+      return updated;
+    }
+    const [profile] = await db
+      .insert(agentProfile)
+      .values({ ...insertProfile, updatedAt: new Date() })
+      .returning();
+    return profile;
   }
 }
 
