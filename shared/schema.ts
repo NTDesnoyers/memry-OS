@@ -59,6 +59,34 @@ export const insertPersonSchema = createInsertSchema(people).omit({
 export type InsertPerson = z.infer<typeof insertPersonSchema>;
 export type Person = typeof people.$inferSelect;
 
+// Business Settings (Goals & Fees)
+export const businessSettings = pgTable("business_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  year: integer("year").notNull().default(2025),
+  annualGCIGoal: integer("annual_gci_goal").default(200000),
+  franchiseFeeFlat: integer("franchise_fee_flat").default(0),
+  franchiseFeePercent: integer("franchise_fee_percent").default(0),
+  franchiseFeeCap: integer("franchise_fee_cap").default(0),
+  marketingFeeFlat: integer("marketing_fee_flat").default(0),
+  marketingFeePercent: integer("marketing_fee_percent").default(0),
+  marketingFeeCap: integer("marketing_fee_cap").default(0),
+  officeCap: integer("office_cap").default(0),
+  startingSplit: integer("starting_split").default(70),
+  secondarySplit: integer("secondary_split").default(85),
+  progressiveTiers: jsonb("progressive_tiers"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertBusinessSettingsSchema = createInsertSchema(businessSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertBusinessSettings = z.infer<typeof insertBusinessSettingsSchema>;
+export type BusinessSettings = typeof businessSettings.$inferSelect;
+
 // Deals
 export const deals = pgTable("deals", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -67,9 +95,14 @@ export const deals = pgTable("deals", {
   address: text("address"),
   type: text("type").notNull(),
   stage: text("stage").notNull(),
+  side: text("side").default("buyer"),
+  isReferral: boolean("is_referral").default(false),
+  painPleasureRating: integer("pain_pleasure_rating").default(3),
   value: integer("value"),
-  probability: integer("probability"),
+  commissionPercent: integer("commission_percent").default(3),
   expectedCloseDate: timestamp("expected_close_date"),
+  actualCloseDate: timestamp("actual_close_date"),
+  actualGCI: integer("actual_gci"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -83,6 +116,25 @@ export const insertDealSchema = createInsertSchema(deals).omit({
 
 export type InsertDeal = z.infer<typeof insertDealSchema>;
 export type Deal = typeof deals.$inferSelect;
+
+// PIE Time Entries
+export const pieEntries = pgTable("pie_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  date: timestamp("date").notNull(),
+  pTime: integer("p_time").default(0),
+  iTime: integer("i_time").default(0),
+  eTime: integer("e_time").default(0),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertPieEntrySchema = createInsertSchema(pieEntries).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertPieEntry = z.infer<typeof insertPieEntrySchema>;
+export type PieEntry = typeof pieEntries.$inferSelect;
 
 // Tasks
 export const tasks = pgTable("tasks", {

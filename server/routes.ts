@@ -11,7 +11,9 @@ import {
   insertNoteSchema,
   insertListingSchema,
   insertEmailCampaignSchema,
-  insertPricingReviewSchema
+  insertPricingReviewSchema,
+  insertBusinessSettingsSchema,
+  insertPieEntrySchema
 } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 
@@ -645,6 +647,91 @@ export async function registerRoutes(
   app.delete("/api/pricing-reviews/:id", async (req, res) => {
     try {
       await storage.deletePricingReview(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // ==================== BUSINESS SETTINGS ROUTES ====================
+  
+  // Get business settings for a year
+  app.get("/api/business-settings/:year", async (req, res) => {
+    try {
+      const year = parseInt(req.params.year);
+      let settings = await storage.getBusinessSettings(year);
+      if (!settings) {
+        settings = await storage.upsertBusinessSettings({ year });
+      }
+      res.json(settings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Update business settings
+  app.put("/api/business-settings", async (req, res) => {
+    try {
+      const data = validate(insertBusinessSettingsSchema, req.body);
+      const settings = await storage.upsertBusinessSettings(data);
+      res.json(settings);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // ==================== PIE ENTRIES ROUTES ====================
+  
+  // Get all PIE entries
+  app.get("/api/pie-entries", async (req, res) => {
+    try {
+      const entries = await storage.getAllPieEntries();
+      res.json(entries);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get PIE entries by date range
+  app.get("/api/pie-entries/range", async (req, res) => {
+    try {
+      const startDate = new Date(req.query.start as string);
+      const endDate = new Date(req.query.end as string);
+      const entries = await storage.getPieEntriesByDateRange(startDate, endDate);
+      res.json(entries);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Create PIE entry
+  app.post("/api/pie-entries", async (req, res) => {
+    try {
+      const data = validate(insertPieEntrySchema, req.body);
+      const entry = await storage.createPieEntry(data);
+      res.status(201).json(entry);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Update PIE entry
+  app.patch("/api/pie-entries/:id", async (req, res) => {
+    try {
+      const entry = await storage.updatePieEntry(req.params.id, req.body);
+      if (!entry) {
+        return res.status(404).json({ message: "PIE entry not found" });
+      }
+      res.json(entry);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Delete PIE entry
+  app.delete("/api/pie-entries/:id", async (req, res) => {
+    try {
+      await storage.deletePieEntry(req.params.id);
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });

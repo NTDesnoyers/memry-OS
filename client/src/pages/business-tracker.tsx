@@ -58,9 +58,9 @@ export default function BusinessTracker() {
     return `${d.getMonth() + 1}/${d.getDate()}`;
   };
 
-  const calculateGCI = (value: number | null | undefined, probability: number | null | undefined) => {
+  const calculateGCI = (value: number | null | undefined, commissionPercent: number | null | undefined) => {
     if (!value) return "$0";
-    const pct = (probability || 3) / 100;
+    const pct = (commissionPercent || 3) / 100;
     const gci = value * pct;
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(gci);
   };
@@ -259,8 +259,8 @@ export default function BusinessTracker() {
                               <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} />
                             </TableCell>
                             <TableCell className="text-xs">{formatPrice(deal.value)}</TableCell>
-                            <TableCell className="text-xs">{deal.probability || 3}%</TableCell>
-                            <TableCell className="text-right font-medium text-green-700">{calculateGCI(deal.value, deal.probability)}</TableCell>
+                            <TableCell className="text-xs">{deal.commissionPercent || 3}%</TableCell>
+                            <TableCell className="text-right font-medium text-green-700">{calculateGCI(deal.value, deal.commissionPercent)}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -271,7 +271,7 @@ export default function BusinessTracker() {
                          <span className="text-xs text-muted-foreground uppercase">Potential GCI</span>
                          <p className="text-lg font-bold text-green-700">
                            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(
-                             warmDeals.reduce((sum, d) => sum + (d.value || 0) * ((d.probability || 3) / 100), 0)
+                             warmDeals.reduce((sum, d) => sum + (d.value || 0) * ((d.commissionPercent || 3) / 100), 0)
                            )}
                          </p>
                        </div>
@@ -312,7 +312,7 @@ export default function BusinessTracker() {
                                 <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} />
                               </TableCell>
                               <TableCell className="text-xs">{formatPrice(deal.value)}</TableCell>
-                              <TableCell className="text-right font-medium text-green-700">{calculateGCI(deal.value, deal.probability)}</TableCell>
+                              <TableCell className="text-right font-medium text-green-700">{calculateGCI(deal.value, deal.commissionPercent)}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -323,7 +323,7 @@ export default function BusinessTracker() {
                           <span className="text-xs text-muted-foreground uppercase">Potential GCI</span>
                           <p className="text-lg font-bold text-green-700">
                             {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(
-                              hotDeals.reduce((sum, d) => sum + (d.value || 0) * ((d.probability || 3) / 100), 0)
+                              hotDeals.reduce((sum, d) => sum + (d.value || 0) * ((d.commissionPercent || 3) / 100), 0)
                             )}
                           </p>
                         </div>
@@ -370,8 +370,8 @@ export default function BusinessTracker() {
                           <TableCell className="text-xs text-muted-foreground">{deal.notes || "-"}</TableCell>
                           <TableCell>{deal.expectedCloseDate ? new Date(deal.expectedCloseDate).toLocaleDateString() : "-"}</TableCell>
                           <TableCell>{formatPrice(deal.value)}</TableCell>
-                          <TableCell>{deal.probability || 3}%</TableCell>
-                          <TableCell className="text-right font-bold text-green-700">{calculateGCI(deal.value, deal.probability)}</TableCell>
+                          <TableCell>{deal.commissionPercent || 3}%</TableCell>
+                          <TableCell className="text-right font-bold text-green-700">{calculateGCI(deal.value, deal.commissionPercent)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -382,7 +382,7 @@ export default function BusinessTracker() {
                       <span className="text-xs text-muted-foreground uppercase">Expected GCI</span>
                       <p className="text-lg font-bold text-green-700">
                         {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(
-                          activeDeals.reduce((sum, d) => sum + (d.value || 0) * ((d.probability || 3) / 100), 0)
+                          activeDeals.reduce((sum, d) => sum + (d.value || 0) * ((d.commissionPercent || 3) / 100), 0)
                         )}
                       </p>
                     </div>
@@ -406,7 +406,7 @@ export default function BusinessTracker() {
                       </span></div>
                       <div className="text-sm font-medium">GCI: <span className="font-bold text-green-700">
                         {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0, notation: 'compact' }).format(
-                          closedDeals.reduce((sum, d) => sum + (d.value || 0) * ((d.probability || 3) / 100), 0)
+                          closedDeals.reduce((sum, d) => sum + (d.value || 0) * ((d.commissionPercent || 3) / 100), 0)
                         )}
                       </span></div>
                     </div>
@@ -441,8 +441,8 @@ export default function BusinessTracker() {
                           <TableCell className="text-xs text-muted-foreground truncate max-w-[150px]">{deal.address || "-"}</TableCell>
                           <TableCell className="text-xs">{deal.type}</TableCell>
                           <TableCell className="text-xs">{formatPrice(deal.value)}</TableCell>
-                          <TableCell className="text-xs">{deal.probability || 3}%</TableCell>
-                          <TableCell className="text-right font-bold text-green-700 bg-green-50/50">{calculateGCI(deal.value, deal.probability)}</TableCell>
+                          <TableCell className="text-xs">{deal.commissionPercent || 3}%</TableCell>
+                          <TableCell className="text-right font-bold text-green-700 bg-green-50/50">{calculateGCI(deal.value, deal.commissionPercent)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

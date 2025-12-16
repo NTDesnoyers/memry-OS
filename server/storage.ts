@@ -10,10 +10,12 @@ import {
   type Listing, type InsertListing,
   type EmailCampaign, type InsertEmailCampaign,
   type PricingReview, type InsertPricingReview,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, pricingReviews
+  type BusinessSettings, type InsertBusinessSettings,
+  type PieEntry, type InsertPieEntry,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, pricingReviews, businessSettings, pieEntries
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, isNull, or } from "drizzle-orm";
+import { eq, desc, and, isNull, or, sql, gte, lte } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -95,6 +97,17 @@ export interface IStorage {
   createPricingReview(review: InsertPricingReview): Promise<PricingReview>;
   updatePricingReview(id: string, review: Partial<InsertPricingReview>): Promise<PricingReview | undefined>;
   deletePricingReview(id: string): Promise<void>;
+  
+  // Business Settings
+  getBusinessSettings(year: number): Promise<BusinessSettings | undefined>;
+  upsertBusinessSettings(settings: InsertBusinessSettings): Promise<BusinessSettings>;
+  
+  // PIE Entries
+  getAllPieEntries(): Promise<PieEntry[]>;
+  getPieEntriesByDateRange(startDate: Date, endDate: Date): Promise<PieEntry[]>;
+  createPieEntry(entry: InsertPieEntry): Promise<PieEntry>;
+  updatePieEntry(id: string, entry: Partial<InsertPieEntry>): Promise<PieEntry | undefined>;
+  deletePieEntry(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -438,6 +451,64 @@ export class DatabaseStorage implements IStorage {
   
   async deletePricingReview(id: string): Promise<void> {
     await db.delete(pricingReviews).where(eq(pricingReviews.id, id));
+  }
+  
+  // Business Settings
+  async getBusinessSettings(year: number): Promise<BusinessSettings | undefined> {
+    const [settings] = await db.select().from(businessSettings).where(eq(businessSettings.year, year));
+    return settings || undefined;
+  }
+  
+  async upsertBusinessSettings(insertSettings: InsertBusinessSettings): Promise<BusinessSettings> {
+    const existing = await this.getBusinessSettings(insertSettings.year || 2025);
+    if (existing) {
+      const [updated] = await db
+        .update(businessSettings)
+        .set({ ...insertSettings, updatedAt: new Date() })
+        .where(eq(businessSettings.id, existing.id))
+        .returning();
+      return updated;
+    }
+    const [settings] = await db
+      .insert(businessSettings)
+      .values({ ...insertSettings, updatedAt: new Date() })
+      .returning();
+    return settings;
+  }
+  
+  // PIE Entries
+  async getAllPieEntries(): Promise<PieEntry[]> {
+    return await db.select().from(pieEntries).orderBy(desc(pieEntries.date));
+  }
+  
+  async getPieEntriesByDateRange(startDate: Date, endDate: Date): Promise<PieEntry[]> {
+    return await db.select().from(pieEntries)
+      .where(and(
+        gte(pieEntries.date, startDate),
+        lte(pieEntries.date, endDate)
+      ))
+      .orderBy(pieEntries.date);
+  }
+  
+  async createPieEntry(insertEntry: InsertPieEntry): Promise<PieEntry> {
+    const [entry] = await db
+      .insert(pieEntries)
+      .values(insertEntry)
+      .returning();
+    return entry;
+  }
+  
+  async updatePieEntry(id: string, entry: Partial<InsertPieEntry>): Promise<PieEntry | undefined> {
+    const [updated] = await db
+      .update(pieEntries)
+      .set(entry)
+      .where(eq(pieEntries.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async deletePieEntry(id: string): Promise<void> {
+    await db.delete(pieEntries).where(eq(pieEntries.id, id));
   }
 }
 
