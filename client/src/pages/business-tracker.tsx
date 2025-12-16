@@ -109,13 +109,23 @@ export default function BusinessTracker() {
     return isNaN(num) ? null : num;
   };
 
-  const ClickableName = ({ personId, name }: { personId?: string | null; name: string }) => {
-    if (!personId) return <span className="font-medium">{name}</span>;
+  const ClickableName = ({ personId, name, dealId }: { personId?: string | null; name: string; dealId?: string }) => {
+    if (personId) {
+      return (
+        <Link
+          href={`/people/${personId}`}
+          className="text-primary hover:underline cursor-pointer text-left font-medium"
+          data-testid={`link-person-${personId}`}
+        >
+          {name}
+        </Link>
+      );
+    }
     return (
       <Link
-        href={`/people/${personId}`}
+        href={`/people/new?name=${encodeURIComponent(name)}${dealId ? `&dealId=${dealId}` : ''}`}
         className="text-primary hover:underline cursor-pointer text-left font-medium"
-        data-testid={`link-person-${personId}`}
+        data-testid={`link-create-person-${dealId || name}`}
       >
         {name}
       </Link>
@@ -411,7 +421,7 @@ export default function BusinessTracker() {
                           <TableRow key={deal.id} className="text-xs hover:bg-blue-200/50" data-testid={`row-warm-${deal.id}`}>
                             <TableCell className="py-1 px-1 font-bold text-primary">{deal.painPleasureRating || ""}</TableCell>
                             <TableCell className="py-1 px-1">
-                              <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} />
+                              <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} dealId={deal.id} />
                             </TableCell>
                             <TableCell className="py-1 px-1 text-right">{formatCompact(deal.value)}</TableCell>
                             <TableCell className="py-1 px-1">{deal.commissionPercent || 3}%</TableCell>
@@ -461,7 +471,7 @@ export default function BusinessTracker() {
                             <TableRow key={deal.id} className="text-xs hover:bg-blue-200/50" data-testid={`row-hot-${deal.id}`}>
                               <TableCell className="py-1 px-1 font-bold text-primary">{deal.painPleasureRating || ""}</TableCell>
                               <TableCell className="py-1 px-1">
-                                <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} />
+                                <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} dealId={deal.id} />
                               </TableCell>
                               <TableCell className="py-1 px-1 text-right">{formatCompact(deal.value)}</TableCell>
                               <TableCell className="py-1 px-1">{deal.commissionPercent || 3}%</TableCell>
@@ -509,7 +519,7 @@ export default function BusinessTracker() {
                             <TableRow key={deal.id} className="text-xs hover:bg-amber-200/50">
                               <TableCell className="py-1 px-1">{deal.createdAt ? new Date(deal.createdAt).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' }) : ""}</TableCell>
                               <TableCell className="py-1 px-1">
-                                <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} />
+                                <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} dealId={deal.id} />
                               </TableCell>
                               <TableCell className="py-1 px-1 font-bold">{deal.painPleasureRating || ""}</TableCell>
                               <TableCell className="py-1 px-1 text-right text-green-700">{formatCompact(calculateGCI(deal.value, deal.commissionPercent))}</TableCell>
@@ -547,7 +557,7 @@ export default function BusinessTracker() {
                         ) : underContractDeals.map((deal) => (
                           <TableRow key={deal.id} className="text-xs hover:bg-slate-200/50" data-testid={`row-uc-${deal.id}`}>
                             <TableCell className="py-1 px-1">
-                              <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} />
+                              <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} dealId={deal.id} />
                             </TableCell>
                             <TableCell className="py-1 px-1 text-muted-foreground truncate max-w-[80px]">
                               {deal.side === "buyer" ? "Buy" : deal.side === "seller" ? "Sell" : ""}{deal.notes ? `, ${deal.notes}` : ""}
@@ -606,7 +616,7 @@ export default function BusinessTracker() {
                           <TableRow key={deal.id} className="text-xs hover:bg-slate-200/50" data-testid={`row-closed-${deal.id}`}>
                             <TableCell className="py-1 px-1">{(deal.actualCloseDate || deal.expectedCloseDate) ? new Date(deal.actualCloseDate || deal.expectedCloseDate!).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit' }) : ""}</TableCell>
                             <TableCell className="py-1 px-1">
-                              <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} />
+                              <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} dealId={deal.id} />
                             </TableCell>
                             <TableCell className="py-1 px-1">{deal.side === "buyer" ? "Buy" : deal.side === "seller" ? "Sell" : ""}</TableCell>
                             <TableCell className="py-1 px-1 text-right">{formatCompact(deal.value)}</TableCell>
@@ -704,7 +714,7 @@ export default function BusinessTracker() {
                         <TableCell>{deal.isReferral ? "Referral" : ""}</TableCell>
                         <TableCell></TableCell>
                         <TableCell className="font-medium">
-                          <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} />
+                          <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} dealId={deal.id} />
                         </TableCell>
                         <TableCell className="text-muted-foreground max-w-[150px] truncate">{deal.address || ""}</TableCell>
                         <TableCell></TableCell>
@@ -981,7 +991,7 @@ export default function BusinessTracker() {
                     ) : closedDeals.map((deal) => (
                       <TableRow key={deal.id} className="text-sm">
                         <TableCell className="font-medium">
-                          <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} />
+                          <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} dealId={deal.id} />
                         </TableCell>
                         <TableCell>{(deal.actualCloseDate || deal.expectedCloseDate) ? new Date(deal.actualCloseDate || deal.expectedCloseDate!).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit' }) : ""}</TableCell>
                         {[...Array(12)].map((_, i) => (
