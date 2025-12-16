@@ -3,21 +3,37 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Plus, Filter, Phone, Mail, MessageSquare, MapPin, Loader2 } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Search, Plus, Filter, Phone, Mail, MessageSquare, MapPin, Loader2, Upload, FileSpreadsheet, Check } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { Person, InsertPerson } from "@shared/schema";
+import Papa from "papaparse";
+
+interface ParsedPerson {
+  firstName: string;
+  lastName: string;
+  householdName: string;
+  phone: string;
+  email: string;
+  address: string;
+}
 
 export default function People() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [parsedData, setParsedData] = useState<ParsedPerson[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState<Partial<InsertPerson>>({
     name: "",
@@ -27,6 +43,86 @@ export default function People() {
     category: "",
     notes: "",
   });
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const mapped: ParsedPerson[] = results.data.map((row: any) => {
+          const firstName = row["First Name"] || row["first name"] || row["FirstName"] || row["first_name"] || "";
+          const lastName = row["Last Name"] || row["last name"] || row["LastName"] || row["last_name"] || "";
+          const householdName = row["Household Name"] || row["household name"] || row["HouseholdName"] || row["household_name"] || "";
+          const phone = row["Cell Phone"] || row["cell phone"] || row["Phone"] || row["phone"] || row["Cell Phone Number"] || "";
+          const email = row["Email"] || row["email"] || row["Email Address"] || row["email address"] || "";
+          const address = row["Home Address"] || row["home address"] || row["Address"] || row["address"] || "";
+          
+          return { firstName, lastName, householdName, phone, email, address };
+        }).filter((p: ParsedPerson) => p.firstName || p.lastName || p.householdName);
+        
+        setParsedData(mapped);
+        if (mapped.length === 0) {
+          toast({
+            title: "No data found",
+            description: "Please check your spreadsheet has the correct column headers",
+            variant: "destructive"
+          });
+        }
+      },
+      error: () => {
+        toast({
+          title: "Error parsing file",
+          description: "Please upload a valid CSV or Excel file",
+          variant: "destructive"
+        });
+      }
+    });
+  };
+
+  const handleImportPeople = async () => {
+    if (parsedData.length === 0) return;
+    
+    setIsUploading(true);
+    setUploadProgress(0);
+    let imported = 0;
+    
+    for (let i = 0; i < parsedData.length; i++) {
+      const person = parsedData[i];
+      const fullName = person.householdName || `${person.firstName} ${person.lastName}`.trim();
+      
+      if (!fullName) continue;
+      
+      try {
+        await fetch("/api/people", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: fullName,
+            email: person.email || null,
+            phone: person.phone || null,
+            notes: person.address ? `Address: ${person.address}` : null,
+          }),
+        });
+        imported++;
+      } catch (e) {
+        console.error("Failed to import:", person);
+      }
+      
+      setUploadProgress(Math.round(((i + 1) / parsedData.length) * 100));
+    }
+    
+    setIsUploading(false);
+    queryClient.invalidateQueries({ queryKey: ["/api/people"] });
+    setUploadDialogOpen(false);
+    setParsedData([]);
+    toast({
+      title: "Import Complete",
+      description: `Successfully imported ${imported} people`,
+    });
+  };
 
   // Fetch all people
   const { data: people = [], isLoading } = useQuery<Person[]>({
@@ -133,12 +229,107 @@ export default function People() {
               <p className="text-muted-foreground">Client Intelligence Core</p>
             </div>
             
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="gap-2 shadow-md" data-testid="button-add-person">
-                  <Plus className="h-4 w-4" /> Add Person
-                </Button>
-              </DialogTrigger>
+            <div className="flex gap-2">
+              <Dialog open={uploadDialogOpen} onOpenChange={(open) => { setUploadDialogOpen(open); if (!open) setParsedData([]); }}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="gap-2 shadow-md" data-testid="button-upload-spreadsheet">
+                    <Upload className="h-4 w-4" /> Upload Spreadsheet
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <FileSpreadsheet className="h-5 w-5" /> Import People from Spreadsheet
+                    </DialogTitle>
+                    <DialogDescription>
+                      Upload a CSV with columns: First Name, Last Name, Household Name, Cell Phone, Email, Home Address
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="space-y-4">
+                    <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".csv,.xlsx,.xls"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                        data-testid="input-file-upload"
+                      />
+                      <Button 
+                        variant="outline" 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="gap-2"
+                        data-testid="button-select-file"
+                      >
+                        <Upload className="h-4 w-4" /> Select File
+                      </Button>
+                      <p className="text-sm text-muted-foreground mt-2">CSV files supported</p>
+                    </div>
+
+                    {parsedData.length > 0 && (
+                      <>
+                        <div className="border rounded-lg overflow-hidden">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Phone</TableHead>
+                                <TableHead>Email</TableHead>
+                                <TableHead>Address</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {parsedData.slice(0, 10).map((person, idx) => (
+                                <TableRow key={idx}>
+                                  <TableCell className="font-medium">
+                                    {person.householdName || `${person.firstName} ${person.lastName}`.trim()}
+                                  </TableCell>
+                                  <TableCell>{person.phone}</TableCell>
+                                  <TableCell>{person.email}</TableCell>
+                                  <TableCell className="text-sm text-muted-foreground truncate max-w-[200px]">{person.address}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                        {parsedData.length > 10 && (
+                          <p className="text-sm text-muted-foreground text-center">
+                            ...and {parsedData.length - 10} more
+                          </p>
+                        )}
+                        <div className="flex justify-between items-center">
+                          <p className="text-sm font-medium">{parsedData.length} people ready to import</p>
+                          <Button 
+                            onClick={handleImportPeople} 
+                            disabled={isUploading}
+                            className="gap-2"
+                            data-testid="button-import"
+                          >
+                            {isUploading ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                Importing... {uploadProgress}%
+                              </>
+                            ) : (
+                              <>
+                                <Check className="h-4 w-4" /> Import All
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="gap-2 shadow-md" data-testid="button-add-person">
+                    <Plus className="h-4 w-4" /> Add Person
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle>Add New Person</DialogTitle>
@@ -220,6 +411,7 @@ export default function People() {
                 </form>
               </DialogContent>
             </Dialog>
+            </div>
           </header>
 
           <div className="flex gap-4 mb-6">
