@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, Save, Plus, Trash2, PieChart, TrendingUp, Flame, ThermometerSun, HelpCircle, FileCheck } from "lucide-react";
+import { DollarSign, Save, Plus, FileText, BarChart3, Clock, Phone, Calculator } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
@@ -24,7 +24,7 @@ export default function BusinessTracker() {
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
 
-  const { data: businessSettings, isLoading: settingsLoading } = useQuery<BusinessSettings>({
+  const { data: businessSettings } = useQuery<BusinessSettings>({
     queryKey: [`/api/business-settings/${currentYear}`],
   });
 
@@ -48,7 +48,7 @@ export default function BusinessTracker() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/business-settings/${currentYear}`] });
-      toast.success("Settings saved successfully");
+      toast.success("Settings saved");
     },
     onError: () => {
       toast.error("Failed to save settings");
@@ -76,10 +76,10 @@ export default function BusinessTracker() {
     person: people.find(p => p.id === deal.personId)
   }));
 
-  const warmDeals = dealsWithPeople.filter(d => d.prospectCategory === "warm" || d.stage === "warm");
+  const warmDeals = dealsWithPeople.filter(d => d.prospectCategory === "warm" || (d.stage === "warm" && !d.prospectCategory));
   const hotActiveDeals = dealsWithPeople.filter(d => d.prospectCategory === "hot_active" || (d.stage === "hot" && d.prospectCategory !== "hot_confused"));
   const hotConfusedDeals = dealsWithPeople.filter(d => d.prospectCategory === "hot_confused");
-  const underContractDeals = dealsWithPeople.filter(d => d.prospectCategory === "under_contract" || d.stage === "under_contract");
+  const underContractDeals = dealsWithPeople.filter(d => d.prospectCategory === "under_contract" || d.stage === "under_contract" || d.stage === "active");
   const closedDeals = dealsWithPeople.filter(d => d.stage === "closed");
 
   const openPersonProfile = (personId: string | null | undefined) => {
@@ -90,23 +90,21 @@ export default function BusinessTracker() {
   };
 
   const formatPrice = (value: number | null | undefined) => {
-    if (!value) return "-";
-    if (value >= 1000000) return `${(value / 1000000).toFixed(2)}M`;
-    if (value >= 1000) return `${Math.round(value / 1000)}k`;
+    if (!value) return "";
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
+  };
+
+  const formatCompact = (value: number | null | undefined) => {
+    if (!value) return "";
+    if (value >= 1000000) return `$${(value / 1000000).toFixed(2)}M`;
+    if (value >= 1000) return `$${Math.round(value / 1000)}k`;
     return `$${value}`;
   };
 
-  const formatDate = (date: Date | string | null | undefined) => {
-    if (!date) return "-";
-    const d = new Date(date);
-    return `${d.getMonth() + 1}/${d.getDate()}`;
-  };
-
   const calculateGCI = (value: number | null | undefined, commissionPercent: number | null | undefined) => {
-    if (!value) return "$0";
+    if (!value) return 0;
     const pct = (commissionPercent || 3) / 100;
-    const gci = value * pct;
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(gci);
+    return value * pct;
   };
 
   const formatCurrency = (value: number | null | undefined) => {
@@ -120,20 +118,8 @@ export default function BusinessTracker() {
     return isNaN(num) ? null : num;
   };
 
-  const PainPleasureBadge = ({ rating }: { rating: number | null | undefined }) => {
-    if (!rating) return <span className="text-muted-foreground text-xs">-</span>;
-    const colors: Record<number, string> = {
-      1: "bg-gray-100 text-gray-700",
-      2: "bg-yellow-100 text-yellow-700",
-      3: "bg-orange-100 text-orange-700",
-      4: "bg-red-100 text-red-700",
-      5: "bg-red-200 text-red-800 font-bold",
-    };
-    return <Badge className={`${colors[rating] || colors[1]} text-xs`}>{rating}</Badge>;
-  };
-
   const ClickableName = ({ personId, name }: { personId?: string | null; name: string }) => {
-    if (!personId) return <span>{name}</span>;
+    if (!personId) return <span className="font-medium">{name}</span>;
     return (
       <button
         onClick={() => openPersonProfile(personId)}
@@ -145,22 +131,13 @@ export default function BusinessTracker() {
     );
   };
 
-  const SideBadge = ({ side }: { side: string | null | undefined }) => {
-    if (!side) return null;
-    const isListing = side === "seller" || side === "listing";
-    return (
-      <Badge variant="outline" className={`text-xs ${isListing ? "border-purple-300 text-purple-700" : "border-blue-300 text-blue-700"}`}>
-        {isListing ? "L" : "B"}
-      </Badge>
-    );
-  };
-
-  const totalPotentialGCI = [...warmDeals, ...hotActiveDeals, ...hotConfusedDeals, ...underContractDeals]
-    .reduce((sum, d) => sum + (d.value || 0) * ((d.commissionPercent || 3) / 100), 0);
-  
-  const closedGCI = closedDeals.reduce((sum, d) => sum + (d.actualGCI || (d.value || 0) * ((d.commissionPercent || 3) / 100)), 0);
+  const warmGCI = warmDeals.reduce((sum, d) => sum + calculateGCI(d.value, d.commissionPercent), 0);
+  const hotGCI = hotActiveDeals.reduce((sum, d) => sum + calculateGCI(d.value, d.commissionPercent), 0);
+  const confusedGCI = hotConfusedDeals.reduce((sum, d) => sum + calculateGCI(d.value, d.commissionPercent), 0);
+  const underContractGCI = underContractDeals.reduce((sum, d) => sum + calculateGCI(d.value, d.commissionPercent), 0);
+  const closedGCI = closedDeals.reduce((sum, d) => sum + (d.actualGCI || calculateGCI(d.value, d.commissionPercent)), 0);
+  const closedVolume = closedDeals.reduce((sum, d) => sum + (d.value || 0), 0);
   const goalGCI = settings.annualGciGoal || 200000;
-  const progressPercent = Math.min(100, (closedGCI / goalGCI) * 100);
 
   return (
     <Layout>
@@ -175,195 +152,231 @@ export default function BusinessTracker() {
           style={{ backgroundImage: `url(${paperBg})`, backgroundSize: 'cover' }}
         />
         
-        <div className="container mx-auto px-4 py-8 max-w-[1400px]">
-          <header className="flex justify-between items-center mb-8">
+        <div className="container mx-auto px-4 py-6 max-w-[1600px]">
+          <header className="flex justify-between items-center mb-6">
             <div>
               <h1 className="text-3xl font-serif font-bold text-primary">{currentYear} Business Tracker</h1>
-              <p className="text-muted-foreground">Goals, Pipeline, Transactions & PIE Tracking</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-xs text-muted-foreground uppercase">YTD Progress</p>
-                <p className="text-lg font-bold text-green-700">{formatCurrency(closedGCI)} / {formatCurrency(goalGCI)}</p>
-                <div className="w-32 bg-secondary h-2 rounded-full overflow-hidden mt-1">
-                  <div className="bg-green-600 h-full transition-all" style={{ width: `${progressPercent}%` }}></div>
-                </div>
-              </div>
+              <p className="text-muted-foreground text-sm">Ninja Selling Pipeline & Transactions</p>
             </div>
           </header>
 
-          <Tabs defaultValue="prospects" className="w-full">
-            <TabsList className="bg-card/50 backdrop-blur-sm w-full justify-start overflow-x-auto">
-              <TabsTrigger value="goals">Goals & Fees</TabsTrigger>
-              <TabsTrigger value="prospects">Prospects</TabsTrigger>
-              <TabsTrigger value="undercontract">Under Contract</TabsTrigger>
-              <TabsTrigger value="closed">Closed Transactions</TabsTrigger>
-              <TabsTrigger value="pie">PIE Tracker</TabsTrigger>
+          <Tabs defaultValue="tracker" className="w-full">
+            <TabsList className="bg-card/50 backdrop-blur-sm w-full justify-start overflow-x-auto mb-4">
+              <TabsTrigger value="goals" className="gap-1"><DollarSign className="h-3 w-3" /> Goals & Fees</TabsTrigger>
+              <TabsTrigger value="tracker" className="gap-1"><FileText className="h-3 w-3" /> Business Tracker</TabsTrigger>
+              <TabsTrigger value="closed" className="gap-1"><BarChart3 className="h-3 w-3" /> Closed Transactions</TabsTrigger>
+              <TabsTrigger value="ytd" className="gap-1"><BarChart3 className="h-3 w-3" /> YTD Summary</TabsTrigger>
+              <TabsTrigger value="pie" className="gap-1"><Clock className="h-3 w-3" /> PIE Tracker</TabsTrigger>
+              <TabsTrigger value="postclosing" className="gap-1"><Phone className="h-3 w-3" /> Post Closing Calls</TabsTrigger>
             </TabsList>
 
-            {/* --- GOALS & FEES TAB --- */}
-            <TabsContent value="goals" className="space-y-6 mt-6">
-              <div className="grid md:grid-cols-2 gap-6">
-                <Card className="border-none shadow-md">
-                  <CardHeader className="bg-primary/5 pb-4">
-                    <CardTitle className="font-serif">Yearly Goals</CardTitle>
-                  </CardHeader>
+            {/* === GOALS & FEES TAB === */}
+            <TabsContent value="goals" className="space-y-6">
+              <div className="text-center mb-6">
+                <h2 className="text-2xl font-serif">Yearly Goals and Fees</h2>
+                <p className="text-sm text-muted-foreground">This sheet is protected, input details in the blue outlined cells.</p>
+              </div>
+              
+              <div className="max-w-4xl mx-auto space-y-8">
+                {/* Annual GCI Goal */}
+                <Card className="border-2 border-primary/20">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-lg">1. Enter Your Gross Commissions Income Goal</Label>
+                        <p className="text-sm text-muted-foreground">Do not leave blank. Calculations depend on this number.</p>
+                      </div>
+                      <div className="bg-slate-700 text-white px-6 py-3 rounded">
+                        <p className="text-xs text-slate-300 text-center">Annual Gross Commission GOAL</p>
+                        <div className="relative">
+                          <DollarSign className="absolute left-2 top-2 h-4 w-4" />
+                          <Input 
+                            className="pl-7 text-lg font-bold bg-transparent border-slate-500 text-white w-40 text-center" 
+                            value={settings.annualGciGoal ? settings.annualGciGoal.toLocaleString() : ""}
+                            onChange={(e) => updateField("annualGciGoal", parseCurrencyInput(e.target.value))}
+                            placeholder="200,000"
+                            data-testid="input-annual-gci-goal"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Franchise Fee */}
+                <Card>
                   <CardContent className="pt-6 space-y-4">
-                    <div className="space-y-2">
-                      <Label className="text-lg font-bold text-primary">Annual Gross Commission GOAL</Label>
-                      <div className="relative">
-                        <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                          className="pl-9 text-lg font-bold bg-background/50" 
-                          value={settings.annualGciGoal ? settings.annualGciGoal.toLocaleString() : ""}
-                          onChange={(e) => updateField("annualGciGoal", parseCurrencyInput(e.target.value))}
-                          placeholder="200,000"
-                          data-testid="input-annual-gci-goal"
-                        />
+                    <Label className="text-lg">2. Do you pay a franchise fee on each transaction?</Label>
+                    <p className="text-sm text-muted-foreground">If yes, fill in the flat fee to be deducted from each transaction or % deducted from each transaction. Leave blank if no franchise fee.</p>
+                    
+                    <div className="flex gap-8 items-start">
+                      <div className="flex-1 space-y-4">
+                        <p className="text-sm text-muted-foreground italic">Is there a franchise fees cap? If you contribute franchise fees from each transaction until you have reached a specific threshold, the answer is yes. Enter your "franchise fee cap" here. Leave blank if no franchise fee and/or no franchise fee cap.</p>
                       </div>
-                      <p className="text-xs text-muted-foreground">Do not leave blank. Calculations depend on this number.</p>
+                      <div className="space-y-3">
+                        <div className="bg-slate-600 text-white px-4 py-2 rounded text-center">
+                          <p className="text-xs text-slate-300">Franchise Fee</p>
+                          <div className="flex gap-2">
+                            <Input 
+                              className="w-20 bg-transparent border-slate-500 text-white text-center text-sm"
+                              value={settings.franchiseFeeFlat || ""} 
+                              onChange={(e) => updateField("franchiseFeeFlat", parseCurrencyInput(e.target.value))}
+                              placeholder="Flat Fee"
+                            />
+                            <Input 
+                              className="w-20 bg-transparent border-slate-500 text-white text-center text-sm"
+                              value={settings.franchiseFeePercent || ""} 
+                              onChange={(e) => updateField("franchiseFeePercent", parseFloat(e.target.value) || null)}
+                              placeholder="as a %"
+                            />
+                          </div>
+                        </div>
+                        <div className="bg-slate-600 text-white px-4 py-2 rounded text-center">
+                          <p className="text-xs text-slate-300">Franchise Fee Cap</p>
+                          <Input 
+                            className="w-full bg-transparent border-slate-500 text-white text-center text-sm"
+                            value={settings.franchiseFeeCap || ""} 
+                            onChange={(e) => updateField("franchiseFeeCap", parseCurrencyInput(e.target.value))}
+                            placeholder="$0"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="border-none shadow-md">
-                  <CardHeader className="bg-primary/5 pb-4">
-                    <CardTitle className="font-serif">Fees Structure</CardTitle>
-                  </CardHeader>
+                {/* Marketing Fee */}
+                <Card>
+                  <CardContent className="pt-6 space-y-4">
+                    <Label className="text-lg">3. Do you pay a marketing fee on each transaction?</Label>
+                    <p className="text-sm text-muted-foreground">If yes, fill in the flat fee to be deducted from each transaction or % deducted from each transaction. Leave blank if no per transaction marketing fee.</p>
+                    
+                    <div className="flex gap-8 items-start">
+                      <div className="flex-1 space-y-4">
+                        <p className="text-sm text-muted-foreground italic">Is there a "marketing fee cap"? If you contribute marketing fees from each transaction until you have reached a specific threshold, the answer is yes. Enter your "marketing fee cap" here. Leave blank if no marketing fee and/or no marketing fee cap.</p>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="bg-slate-600 text-white px-4 py-2 rounded text-center">
+                          <p className="text-xs text-slate-300">Marketing Fee</p>
+                          <div className="flex gap-2">
+                            <Input 
+                              className="w-20 bg-transparent border-slate-500 text-white text-center text-sm"
+                              value={settings.marketingFeeFlat || ""} 
+                              onChange={(e) => updateField("marketingFeeFlat", parseCurrencyInput(e.target.value))}
+                              placeholder="Flat Fee"
+                            />
+                            <Input 
+                              className="w-20 bg-transparent border-slate-500 text-white text-center text-sm"
+                              value={settings.marketingFeePercent || ""} 
+                              onChange={(e) => updateField("marketingFeePercent", parseFloat(e.target.value) || null)}
+                              placeholder="as a %"
+                            />
+                          </div>
+                        </div>
+                        <div className="bg-slate-600 text-white px-4 py-2 rounded text-center">
+                          <p className="text-xs text-slate-300">Marketing Fee Cap</p>
+                          <Input 
+                            className="w-full bg-transparent border-slate-500 text-white text-center text-sm"
+                            value={settings.marketingFeeCap || ""} 
+                            onChange={(e) => updateField("marketingFeeCap", parseCurrencyInput(e.target.value))}
+                            placeholder="$0"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Commission Structure */}
+                <Card>
                   <CardContent className="pt-6 space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                       <div className="space-y-2">
-                         <Label>Franchise Fee (Flat)</Label>
-                         <Input 
-                           value={settings.franchiseFeeFlat ? settings.franchiseFeeFlat.toLocaleString() : ""} 
-                           onChange={(e) => updateField("franchiseFeeFlat", parseCurrencyInput(e.target.value))}
-                           placeholder="$0"
-                           data-testid="input-franchise-fee-flat"
-                         />
-                       </div>
-                       <div className="space-y-2">
-                         <Label>Franchise Fee (%)</Label>
-                         <Input 
-                           value={settings.franchiseFeePercent || ""} 
-                           onChange={(e) => updateField("franchiseFeePercent", parseFloat(e.target.value) || null)}
-                           placeholder="0%"
-                           data-testid="input-franchise-fee-percent"
-                         />
-                       </div>
-                       <div className="col-span-2 space-y-2">
-                         <Label>Franchise Fee Cap</Label>
-                         <Input 
-                           value={settings.franchiseFeeCap ? settings.franchiseFeeCap.toLocaleString() : ""} 
-                           onChange={(e) => updateField("franchiseFeeCap", parseCurrencyInput(e.target.value))}
-                           placeholder="$0"
-                           data-testid="input-franchise-fee-cap"
-                         />
-                       </div>
-                    </div>
-                    <Separator />
-                    <div className="grid grid-cols-2 gap-4">
-                       <div className="space-y-2">
-                         <Label>Marketing Fee (Flat)</Label>
-                         <Input 
-                           value={settings.marketingFeeFlat ? settings.marketingFeeFlat.toLocaleString() : ""} 
-                           onChange={(e) => updateField("marketingFeeFlat", parseCurrencyInput(e.target.value))}
-                           placeholder="$0"
-                           data-testid="input-marketing-fee-flat"
-                         />
-                       </div>
-                       <div className="space-y-2">
-                         <Label>Marketing Fee (%)</Label>
-                         <Input 
-                           value={settings.marketingFeePercent || ""} 
-                           onChange={(e) => updateField("marketingFeePercent", parseFloat(e.target.value) || null)}
-                           placeholder="0%"
-                           data-testid="input-marketing-fee-percent"
-                         />
-                       </div>
-                       <div className="col-span-2 space-y-2">
-                         <Label>Marketing Fee Cap</Label>
-                         <Input 
-                           value={settings.marketingFeeCap ? settings.marketingFeeCap.toLocaleString() : ""} 
-                           onChange={(e) => updateField("marketingFeeCap", parseCurrencyInput(e.target.value))}
-                           placeholder="$0"
-                           data-testid="input-marketing-fee-cap"
-                         />
-                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-none shadow-md md:col-span-2">
-                  <CardHeader className="bg-primary/5 pb-4">
-                    <CardTitle className="font-serif">Commission Structure</CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-6 grid md:grid-cols-2 gap-8">
-                    <div className="space-y-6">
-                      <div className="p-4 bg-secondary/30 rounded-lg space-y-4">
-                        <Label className="font-semibold">Office Cap / Fair Share Split</Label>
-                        <div className="space-y-2">
-                          <Label>Office Cap Amount</Label>
-                          <Input 
-                            value={settings.officeCap ? settings.officeCap.toLocaleString() : ""} 
-                            onChange={(e) => updateField("officeCap", parseCurrencyInput(e.target.value))}
-                            placeholder="$18,000"
-                            className="bg-white"
-                            data-testid="input-office-cap"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Starting Split (%)</Label>
-                          <Input 
-                            value={settings.startingSplit || ""} 
-                            onChange={(e) => updateField("startingSplit", parseFloat(e.target.value) || null)}
-                            placeholder="68"
-                            className="bg-white"
-                            data-testid="input-starting-split"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>After-Cap Split (%)</Label>
-                          <Input 
-                            value={settings.afterCapSplit || ""} 
-                            onChange={(e) => updateField("afterCapSplit", parseFloat(e.target.value) || null)}
-                            placeholder="85"
-                            className="bg-white"
-                            data-testid="input-after-cap-split"
-                          />
+                    <Label className="text-lg">4. Commission Structure</Label>
+                    
+                    <div className="grid md:grid-cols-2 gap-8">
+                      {/* Option 1 */}
+                      <div className="space-y-4 p-4 border rounded-lg bg-secondary/30">
+                        <h3 className="font-serif text-lg italic text-primary">Option 1</h3>
+                        <p className="text-sm text-muted-foreground">Is your split dependent on an Office Cap or Fair Share?</p>
+                        
+                        <div className="space-y-3">
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Enter office cap or fair share here.</Label>
+                            <p className="text-xs text-muted-foreground mb-1">For example, if you have a fair share or office cap of $40,000. You may start the year with a 50/50 split until you have paid the office $40,000. Once you have met your fair share/office cap, your split would change.</p>
+                            <div className="bg-slate-600 text-white px-3 py-2 rounded text-center">
+                              <p className="text-xs text-slate-300">Office Cap / Fair Share</p>
+                              <Input 
+                                className="bg-transparent border-slate-500 text-white text-center"
+                                value={settings.officeCap || ""} 
+                                onChange={(e) => updateField("officeCap", parseCurrencyInput(e.target.value))}
+                                placeholder="$8,000"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <Label className="text-xs text-muted-foreground">What is your starting split at the beginning of each year? Enter this as your percentage.</Label>
+                            <div className="bg-slate-600 text-white px-3 py-2 rounded text-center">
+                              <p className="text-xs text-slate-300">Starting Split as a %</p>
+                              <Input 
+                                className="bg-transparent border-slate-500 text-white text-center"
+                                value={settings.startingSplit || ""} 
+                                onChange={(e) => updateField("startingSplit", parseFloat(e.target.value) || null)}
+                                placeholder="68.00%"
+                              />
+                              <p className="text-xs text-red-300 mt-1">Must enter a value.</p>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <Label className="text-xs text-muted-foreground">What is your split after office cap/fair share has been met? Enter this as your percentage.</Label>
+                            <div className="bg-slate-600 text-white px-3 py-2 rounded text-center">
+                              <p className="text-xs text-slate-300">Secondary Split as a %</p>
+                              <Input 
+                                className="bg-transparent border-slate-500 text-white text-center"
+                                value={settings.afterCapSplit || ""} 
+                                onChange={(e) => updateField("afterCapSplit", parseFloat(e.target.value) || null)}
+                                placeholder="85.00%"
+                              />
+                              <p className="text-xs text-slate-400 mt-1">Note: If you go to 100% commission once you meet your cap/fair share, enter 100%.</p>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <Label className="font-semibold">Progressive Split Tiers (Optional)</Label>
-                      <p className="text-xs text-muted-foreground">Configure if your brokerage uses a tiered commission structure based on income levels.</p>
-                      <div className="border rounded-md overflow-hidden">
+                      
+                      {/* Option 2 */}
+                      <div className="space-y-4 p-4 border rounded-lg bg-secondary/30">
+                        <h3 className="font-serif text-lg italic text-primary">Option 2</h3>
+                        <p className="text-sm text-muted-foreground">Do you have a progressive split structure? If your split is on a sliding scale, sometimes referred to as a progressive split, based on total earned income year to date, enter the upper end of each of the tiers below along with the corresponding split as a %.</p>
+                        
                         <Table>
                           <TableHeader>
-                            <TableRow className="bg-secondary/50">
-                              <TableHead>Tier</TableHead>
-                              <TableHead>Split %</TableHead>
-                              <TableHead>From ($)</TableHead>
-                              <TableHead>To ($)</TableHead>
+                            <TableRow>
+                              <TableHead className="w-20">% of gross</TableHead>
+                              <TableHead>Fill-In Earned Income Tiers</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {[1, 2, 3].map((i) => (
+                            {[1, 2, 3, 4, 5].map((i) => (
                               <TableRow key={i}>
-                                <TableCell className="font-medium text-muted-foreground">{i}</TableCell>
-                                <TableCell><Input className="h-8 w-16" placeholder="%" data-testid={`input-tier-${i}-split`} /></TableCell>
-                                <TableCell><Input className="h-8" placeholder="$0" data-testid={`input-tier-${i}-from`} /></TableCell>
-                                <TableCell><Input className="h-8" placeholder="$" data-testid={`input-tier-${i}-to`} /></TableCell>
+                                <TableCell>
+                                  <Input className="h-8 w-16 text-center" placeholder="%" />
+                                </TableCell>
+                                <TableCell className="flex gap-2 items-center">
+                                  <span className="text-xs text-muted-foreground">$0</span>
+                                  <span>to</span>
+                                  <Input className="h-8 flex-1" placeholder={i === 5 ? "Leave blank if last tier" : ""} />
+                                </TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
                         </Table>
+                        <p className="text-xs text-primary">*Blue outlined boxes indicate a value is needed.</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <div className="md:col-span-2 flex justify-end">
+                <div className="flex justify-end">
                   <Button 
                     onClick={handleSaveSettings} 
                     disabled={updateSettingsMutation.isPending}
@@ -377,426 +390,626 @@ export default function BusinessTracker() {
               </div>
             </TabsContent>
 
-            {/* --- PROSPECTS TAB --- */}
-            <TabsContent value="prospects" className="space-y-6 mt-6">
-              <div className="grid lg:grid-cols-3 gap-6">
-                {/* Warm Prospects */}
-                <Card className="border-none shadow-md">
-                  <CardHeader className="bg-orange-50 pb-3 border-b border-orange-100">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <ThermometerSun className="h-5 w-5 text-orange-600" />
-                        <CardTitle className="font-serif text-orange-800 text-lg">Warm</CardTitle>
-                      </div>
-                      <Badge className="bg-orange-100 text-orange-700">{warmDeals.length}</Badge>
-                    </div>
-                    <CardDescription className="text-orange-700 text-xs mt-1">Building relationship, not yet active</CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="max-h-[350px] overflow-y-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="hover:bg-transparent text-xs">
-                            <TableHead className="w-[40px]">P/P</TableHead>
-                            <TableHead>Name</TableHead>
-                            <TableHead className="w-[40px]">Side</TableHead>
-                            <TableHead className="text-right">GCI</TableHead>
+            {/* === BUSINESS TRACKER TAB === */}
+            <TabsContent value="tracker" className="space-y-4">
+              <div className="text-center mb-4">
+                <h2 className="text-2xl font-serif font-bold">{currentYear} Business Tracker</h2>
+              </div>
+              
+              {/* 4-Column Layout */}
+              <div className="grid grid-cols-4 gap-3">
+                {/* WARM PROSPECTS */}
+                <div className="bg-blue-100/80 rounded-lg overflow-hidden">
+                  <div className="bg-slate-600 text-white p-2 text-center font-serif">
+                    "Warm" Prospects
+                  </div>
+                  <div className="p-2">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="text-xs">
+                          <TableHead className="py-1 px-1 w-8">P/P</TableHead>
+                          <TableHead className="py-1 px-1">Client Name</TableHead>
+                          <TableHead className="py-1 px-1 text-right w-20">Est. Price</TableHead>
+                          <TableHead className="py-1 px-1 w-8">%</TableHead>
+                          <TableHead className="py-1 px-1 text-right w-20">GCI</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {warmDeals.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center text-muted-foreground py-4 text-xs">
+                              No warm prospects
+                            </TableCell>
                           </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {warmDeals.length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={4} className="text-center text-muted-foreground py-6 text-sm">
-                                No warm prospects
-                              </TableCell>
-                            </TableRow>
-                          ) : warmDeals.map((deal) => (
-                            <TableRow key={deal.id} className="hover:bg-orange-50/50" data-testid={`row-warm-${deal.id}`}>
-                              <TableCell><PainPleasureBadge rating={deal.painPleasureRating} /></TableCell>
-                              <TableCell>
-                                <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} />
-                              </TableCell>
-                              <TableCell><SideBadge side={deal.side} /></TableCell>
-                              <TableCell className="text-right text-xs font-medium text-green-700">{calculateGCI(deal.value, deal.commissionPercent)}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                        ) : warmDeals.slice(0, 30).map((deal) => (
+                          <TableRow key={deal.id} className="text-xs hover:bg-blue-200/50" data-testid={`row-warm-${deal.id}`}>
+                            <TableCell className="py-1 px-1 font-bold text-primary">{deal.painPleasureRating || ""}</TableCell>
+                            <TableCell className="py-1 px-1">
+                              <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} />
+                            </TableCell>
+                            <TableCell className="py-1 px-1 text-right">{formatCompact(deal.value)}</TableCell>
+                            <TableCell className="py-1 px-1">{deal.commissionPercent || 3}%</TableCell>
+                            <TableCell className="py-1 px-1 text-right text-green-700 font-medium">{formatCompact(calculateGCI(deal.value, deal.commissionPercent))}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <div className="bg-slate-200 p-2 text-xs">
+                    <div className="flex justify-between">
+                      <span>Total Potential Sides in Warm List: <strong>{warmDeals.length}</strong></span>
                     </div>
-                    <div className="p-3 bg-orange-50/50 border-t border-orange-100 flex justify-between items-center">
-                       <span className="text-xs font-medium text-orange-800">Potential GCI</span>
-                       <span className="font-bold text-green-700">
-                         {formatCurrency(warmDeals.reduce((sum, d) => sum + (d.value || 0) * ((d.commissionPercent || 3) / 100), 0))}
-                       </span>
+                    <div className="flex justify-between mt-1">
+                      <span>Total Potential GCI in Warm List:</span>
+                      <strong className="text-green-700">{formatCurrency(warmGCI)}</strong>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
 
-                {/* Hot/Active Prospects */}
-                <Card className="border-none shadow-md">
-                  <CardHeader className="bg-red-50 pb-3 border-b border-red-100">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <Flame className="h-5 w-5 text-red-600" />
-                        <CardTitle className="font-serif text-red-800 text-lg">Hot / Active</CardTitle>
-                      </div>
-                      <Badge className="bg-red-100 text-red-700">{hotActiveDeals.length}</Badge>
+                {/* HOT AND ACTIVE + HOT AND CONFUSED */}
+                <div className="space-y-3">
+                  {/* Hot and Active */}
+                  <div className="bg-blue-100/80 rounded-lg overflow-hidden">
+                    <div className="bg-slate-600 text-white p-2 text-center font-serif">
+                      "Hot" and Active Prospects
                     </div>
-                    <CardDescription className="text-red-700 text-xs mt-1">Actively looking, engaged in process</CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="max-h-[350px] overflow-y-auto">
+                    <div className="p-2">
                       <Table>
                         <TableHeader>
-                          <TableRow className="hover:bg-transparent text-xs">
-                            <TableHead className="w-[40px]">P/P</TableHead>
-                            <TableHead>Name</TableHead>
-                            <TableHead className="w-[40px]">Side</TableHead>
-                            <TableHead className="text-right">GCI</TableHead>
+                          <TableRow className="text-xs">
+                            <TableHead className="py-1 px-1 w-8">P/P</TableHead>
+                            <TableHead className="py-1 px-1">Client Name</TableHead>
+                            <TableHead className="py-1 px-1 text-right w-20">Est. Price</TableHead>
+                            <TableHead className="py-1 px-1 w-8">%</TableHead>
+                            <TableHead className="py-1 px-1 text-right w-20">GCI</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {hotActiveDeals.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={4} className="text-center text-muted-foreground py-6 text-sm">
+                              <TableCell colSpan={5} className="text-center text-muted-foreground py-4 text-xs">
                                 No hot prospects
                               </TableCell>
                             </TableRow>
-                          ) : hotActiveDeals.map((deal) => (
-                            <TableRow key={deal.id} className="hover:bg-red-50/50" data-testid={`row-hot-${deal.id}`}>
-                              <TableCell><PainPleasureBadge rating={deal.painPleasureRating} /></TableCell>
-                              <TableCell>
+                          ) : hotActiveDeals.slice(0, 15).map((deal) => (
+                            <TableRow key={deal.id} className="text-xs hover:bg-blue-200/50" data-testid={`row-hot-${deal.id}`}>
+                              <TableCell className="py-1 px-1 font-bold text-primary">{deal.painPleasureRating || ""}</TableCell>
+                              <TableCell className="py-1 px-1">
                                 <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} />
                               </TableCell>
-                              <TableCell><SideBadge side={deal.side} /></TableCell>
-                              <TableCell className="text-right text-xs font-medium text-green-700">{calculateGCI(deal.value, deal.commissionPercent)}</TableCell>
+                              <TableCell className="py-1 px-1 text-right">{formatCompact(deal.value)}</TableCell>
+                              <TableCell className="py-1 px-1">{deal.commissionPercent || 3}%</TableCell>
+                              <TableCell className="py-1 px-1 text-right text-green-700 font-medium">{formatCompact(calculateGCI(deal.value, deal.commissionPercent))}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
                       </Table>
                     </div>
-                    <div className="p-3 bg-red-50/50 border-t border-red-100 flex justify-between items-center">
-                       <span className="text-xs font-medium text-red-800">Potential GCI</span>
-                       <span className="font-bold text-green-700">
-                         {formatCurrency(hotActiveDeals.reduce((sum, d) => sum + (d.value || 0) * ((d.commissionPercent || 3) / 100), 0))}
-                       </span>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Hot/Confused Prospects */}
-                <Card className="border-none shadow-md">
-                  <CardHeader className="bg-amber-50 pb-3 border-b border-amber-100">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <HelpCircle className="h-5 w-5 text-amber-600" />
-                        <CardTitle className="font-serif text-amber-800 text-lg">Hot / Confused</CardTitle>
+                    <div className="bg-slate-200 p-2 text-xs">
+                      <div className="flex justify-between">
+                        <span>Potential Sides: <strong>{hotActiveDeals.length}</strong></span>
+                        <span className="text-green-700 font-bold">{formatCurrency(hotGCI)}</span>
                       </div>
-                      <Badge className="bg-amber-100 text-amber-700">{hotConfusedDeals.length}</Badge>
+                      <div className="flex justify-between">
+                        <span>Total Potential GCI in Hot List:</span>
+                        <strong className="text-green-700">{formatCurrency(hotGCI)}</strong>
+                      </div>
                     </div>
-                    <CardDescription className="text-amber-700 text-xs mt-1">Motivated but unsure, needs guidance</CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <div className="max-h-[350px] overflow-y-auto">
+                  </div>
+                  
+                  {/* Hot and Confused */}
+                  <div className="bg-amber-100/80 rounded-lg overflow-hidden">
+                    <div className="bg-amber-700 text-white p-2 text-center font-serif text-sm">
+                      "Hot" and Confused Prospects
+                    </div>
+                    <div className="p-2">
                       <Table>
                         <TableHeader>
-                          <TableRow className="hover:bg-transparent text-xs">
-                            <TableHead className="w-[40px]">P/P</TableHead>
-                            <TableHead>Name</TableHead>
-                            <TableHead className="w-[40px]">Side</TableHead>
-                            <TableHead className="text-right">GCI</TableHead>
+                          <TableRow className="text-xs">
+                            <TableHead className="py-1 px-1">Date</TableHead>
+                            <TableHead className="py-1 px-1">Client Name</TableHead>
+                            <TableHead className="py-1 px-1 w-8">P/P</TableHead>
+                            <TableHead className="py-1 px-1 text-right">GCI</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {hotConfusedDeals.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={4} className="text-center text-muted-foreground py-6 text-sm">
-                                No confused prospects
+                              <TableCell colSpan={4} className="text-center text-muted-foreground py-3 text-xs">
+                                None
                               </TableCell>
                             </TableRow>
-                          ) : hotConfusedDeals.map((deal) => (
-                            <TableRow key={deal.id} className="hover:bg-amber-50/50" data-testid={`row-confused-${deal.id}`}>
-                              <TableCell><PainPleasureBadge rating={deal.painPleasureRating} /></TableCell>
-                              <TableCell>
+                          ) : hotConfusedDeals.slice(0, 5).map((deal) => (
+                            <TableRow key={deal.id} className="text-xs hover:bg-amber-200/50">
+                              <TableCell className="py-1 px-1">{deal.createdAt ? new Date(deal.createdAt).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' }) : ""}</TableCell>
+                              <TableCell className="py-1 px-1">
                                 <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} />
                               </TableCell>
-                              <TableCell><SideBadge side={deal.side} /></TableCell>
-                              <TableCell className="text-right text-xs font-medium text-green-700">{calculateGCI(deal.value, deal.commissionPercent)}</TableCell>
+                              <TableCell className="py-1 px-1 font-bold">{deal.painPleasureRating || ""}</TableCell>
+                              <TableCell className="py-1 px-1 text-right text-green-700">{formatCompact(calculateGCI(deal.value, deal.commissionPercent))}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
                       </Table>
                     </div>
-                    <div className="p-3 bg-amber-50/50 border-t border-amber-100 flex justify-between items-center">
-                       <span className="text-xs font-medium text-amber-800">Potential GCI</span>
-                       <span className="font-bold text-green-700">
-                         {formatCurrency(hotConfusedDeals.reduce((sum, d) => sum + (d.value || 0) * ((d.commissionPercent || 3) / 100), 0))}
-                       </span>
+                  </div>
+                </div>
+
+                {/* UNDER CONTRACT */}
+                <div className="bg-slate-100/80 rounded-lg overflow-hidden">
+                  <div className="bg-slate-600 text-white p-2 text-center font-serif">
+                    Under Contract
+                  </div>
+                  <div className="p-2">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="text-xs">
+                          <TableHead className="py-1 px-1">Client Name</TableHead>
+                          <TableHead className="py-1 px-1">Notes</TableHead>
+                          <TableHead className="py-1 px-1 w-20">Close Date</TableHead>
+                          <TableHead className="py-1 px-1 text-right w-20">Price</TableHead>
+                          <TableHead className="py-1 px-1 text-right w-20">GCI</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {underContractDeals.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center text-muted-foreground py-4 text-xs">
+                              None under contract
+                            </TableCell>
+                          </TableRow>
+                        ) : underContractDeals.map((deal) => (
+                          <TableRow key={deal.id} className="text-xs hover:bg-slate-200/50" data-testid={`row-uc-${deal.id}`}>
+                            <TableCell className="py-1 px-1">
+                              <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} />
+                            </TableCell>
+                            <TableCell className="py-1 px-1 text-muted-foreground truncate max-w-[80px]">
+                              {deal.side === "buyer" ? "Buy" : deal.side === "seller" ? "Sell" : ""}{deal.notes ? `, ${deal.notes}` : ""}
+                            </TableCell>
+                            <TableCell className="py-1 px-1">{deal.expectedCloseDate ? new Date(deal.expectedCloseDate).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit' }) : ""}</TableCell>
+                            <TableCell className="py-1 px-1 text-right">{formatCompact(deal.value)}</TableCell>
+                            <TableCell className="py-1 px-1 text-right text-green-700 font-medium">{formatCompact(calculateGCI(deal.value, deal.commissionPercent))}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <div className="bg-slate-300 p-2 text-xs">
+                    <div className="flex justify-between">
+                      <span>Total Under Contract:</span>
+                      <strong className="text-green-700">{formatCurrency(underContractGCI)}</strong>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+
+                  {/* Signed Listing Agreements */}
+                  <div className="mt-2 p-2 bg-slate-200/50 rounded">
+                    <p className="text-xs font-medium text-center mb-2">Signed Listing Agreements</p>
+                    <p className="text-xs text-muted-foreground text-center italic">Enter any full signed listing agreements here.</p>
+                    <div className="mt-2 text-xs text-center">
+                      <span>Total Signed Listing Agreements: </span>
+                      <strong>0</strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* CLOSED TRANSACTIONS */}
+                <div className="bg-slate-100/80 rounded-lg overflow-hidden">
+                  <div className="bg-slate-700 text-white p-2 text-center font-serif">
+                    Closed Transactions
+                  </div>
+                  <div className="p-2">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="text-xs">
+                          <TableHead className="py-1 px-1 w-16">Date</TableHead>
+                          <TableHead className="py-1 px-1">Client Name</TableHead>
+                          <TableHead className="py-1 px-1 w-8">B/S</TableHead>
+                          <TableHead className="py-1 px-1 text-right w-20">Price</TableHead>
+                          <TableHead className="py-1 px-1 w-8">%</TableHead>
+                          <TableHead className="py-1 px-1 text-right w-20">GCI</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {closedDeals.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center text-muted-foreground py-4 text-xs">
+                              No closed deals
+                            </TableCell>
+                          </TableRow>
+                        ) : closedDeals.slice(0, 20).map((deal) => (
+                          <TableRow key={deal.id} className="text-xs hover:bg-slate-200/50" data-testid={`row-closed-${deal.id}`}>
+                            <TableCell className="py-1 px-1">{(deal.actualCloseDate || deal.expectedCloseDate) ? new Date(deal.actualCloseDate || deal.expectedCloseDate!).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit' }) : ""}</TableCell>
+                            <TableCell className="py-1 px-1">
+                              <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} />
+                            </TableCell>
+                            <TableCell className="py-1 px-1">{deal.side === "buyer" ? "Buy" : deal.side === "seller" ? "Sell" : ""}</TableCell>
+                            <TableCell className="py-1 px-1 text-right">{formatCompact(deal.value)}</TableCell>
+                            <TableCell className="py-1 px-1">{deal.commissionPercent || 3}%</TableCell>
+                            <TableCell className="py-1 px-1 text-right text-green-700 font-bold">{formatCompact(deal.actualGCI || calculateGCI(deal.value, deal.commissionPercent))}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <div className="bg-slate-300 p-2 text-xs space-y-1">
+                    <div className="flex justify-between">
+                      <span>Total Sides Closed:</span>
+                      <strong>{closedDeals.length}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Total GCI:</span>
+                      <strong className="text-green-700">{formatCurrency(closedGCI)}</strong>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Summary Row */}
-              <Card className="border-none shadow-md bg-gradient-to-r from-primary/5 to-green-50">
-                <CardContent className="py-4">
-                  <div className="flex justify-between items-center">
-                    <div className="flex gap-8">
-                      <div>
-                        <p className="text-xs text-muted-foreground uppercase">Total Prospects</p>
-                        <p className="text-2xl font-bold">{warmDeals.length + hotActiveDeals.length + hotConfusedDeals.length}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground uppercase">Buyer Sides</p>
-                        <p className="text-2xl font-bold text-blue-700">
-                          {[...warmDeals, ...hotActiveDeals, ...hotConfusedDeals].filter(d => d.side === "buyer").length}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground uppercase">Listing Sides</p>
-                        <p className="text-2xl font-bold text-purple-700">
-                          {[...warmDeals, ...hotActiveDeals, ...hotConfusedDeals].filter(d => d.side === "seller" || d.side === "listing").length}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground uppercase">Total Pipeline GCI</p>
-                      <p className="text-3xl font-bold text-green-700">{formatCurrency(totalPotentialGCI)}</p>
-                    </div>
+              <div className="bg-slate-200/80 rounded-lg p-4 mt-4">
+                <div className="grid grid-cols-6 gap-4 text-center text-sm">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Warm Sides</p>
+                    <p className="font-bold text-lg">{warmDeals.length}</p>
+                    <p className="text-xs text-green-700">{formatCurrency(warmGCI)}</p>
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* --- UNDER CONTRACT TAB --- */}
-            <TabsContent value="undercontract" className="space-y-6 mt-6">
-              <Card className="border-none shadow-md">
-                <CardHeader className="bg-indigo-50 pb-4 border-b border-indigo-100">
-                   <div className="flex justify-between items-center">
-                     <div className="flex items-center gap-2">
-                       <FileCheck className="h-5 w-5 text-indigo-600" />
-                       <CardTitle className="font-serif text-indigo-800">Under Contract</CardTitle>
-                     </div>
-                     <Badge className="bg-indigo-100 text-indigo-700">{underContractDeals.length} deals</Badge>
-                   </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="hover:bg-transparent">
-                        <TableHead className="w-[50px]">P/P</TableHead>
-                        <TableHead>Client Name</TableHead>
-                        <TableHead>Address</TableHead>
-                        <TableHead className="w-[60px]">Side</TableHead>
-                        <TableHead>Closing Date</TableHead>
-                        <TableHead>Sales Price</TableHead>
-                        <TableHead>Comm %</TableHead>
-                        <TableHead className="text-right">Est. GCI</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {underContractDeals.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                            No deals under contract yet
-                          </TableCell>
-                        </TableRow>
-                      ) : underContractDeals.map((deal) => (
-                        <TableRow key={deal.id} className="hover:bg-indigo-50/50" data-testid={`row-undercontract-${deal.id}`}>
-                          <TableCell><PainPleasureBadge rating={deal.painPleasureRating} /></TableCell>
-                          <TableCell>
-                            <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} />
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground truncate max-w-[150px]">{deal.address || "-"}</TableCell>
-                          <TableCell><SideBadge side={deal.side} /></TableCell>
-                          <TableCell>{deal.expectedCloseDate ? new Date(deal.expectedCloseDate).toLocaleDateString() : "-"}</TableCell>
-                          <TableCell>{formatPrice(deal.value)}</TableCell>
-                          <TableCell>{deal.commissionPercent || 3}%</TableCell>
-                          <TableCell className="text-right font-bold text-green-700">{calculateGCI(deal.value, deal.commissionPercent)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  <div className="p-4 bg-indigo-50/50 border-t border-indigo-100 flex justify-between items-center">
-                    <span className="text-sm font-medium text-indigo-800">Total Under Contract: {underContractDeals.length}</span>
-                    <div className="text-right">
-                      <span className="text-xs text-muted-foreground uppercase">Expected GCI</span>
-                      <p className="text-lg font-bold text-green-700">
-                        {formatCurrency(underContractDeals.reduce((sum, d) => sum + (d.value || 0) * ((d.commissionPercent || 3) / 100), 0))}
-                      </p>
-                    </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Hot Sides</p>
+                    <p className="font-bold text-lg">{hotActiveDeals.length}</p>
+                    <p className="text-xs text-green-700">{formatCurrency(hotGCI)}</p>
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* --- CLOSED TAB --- */}
-            <TabsContent value="closed" className="space-y-6 mt-6">
-              <Card className="border-none shadow-md overflow-hidden">
-                <CardHeader className="bg-green-50 pb-4 border-b border-green-100">
-                  <div className="flex justify-between items-center">
-                    <CardTitle className="font-serif text-green-800">Closed Transactions</CardTitle>
-                    <div className="flex gap-4 items-center">
-                      <div className="text-sm font-medium">Sides: <span className="font-bold text-green-700">{closedDeals.length}</span></div>
-                      <div className="text-sm font-medium">Volume: <span className="font-bold text-green-700">
-                        {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0, notation: 'compact' }).format(
-                          closedDeals.reduce((sum, d) => sum + (d.value || 0), 0)
-                        )}
-                      </span></div>
-                      <div className="text-sm font-medium">GCI: <span className="font-bold text-green-700">
-                        {formatCurrency(closedGCI)}
-                      </span></div>
-                    </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Total Potential GCI (Hot List)</p>
+                    <p className="font-bold text-lg text-green-700">{formatCurrency(hotGCI + underContractGCI)}</p>
                   </div>
-                </CardHeader>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/50">
-                        <TableHead className="w-[100px]">Closed Date</TableHead>
-                        <TableHead>Client Name</TableHead>
-                        <TableHead>Address</TableHead>
-                        <TableHead className="w-[60px]">Side</TableHead>
-                        <TableHead className="w-[60px]">Ref?</TableHead>
-                        <TableHead>Sale Price</TableHead>
-                        <TableHead>Comm %</TableHead>
-                        <TableHead className="text-right font-bold text-green-700 bg-green-50">Actual GCI</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {closedDeals.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                            No closed deals yet
-                          </TableCell>
-                        </TableRow>
-                      ) : closedDeals.map((deal) => (
-                        <TableRow key={deal.id} className="hover:bg-muted/50" data-testid={`row-closed-${deal.id}`}>
-                          <TableCell className="font-medium text-xs">
-                            {deal.actualCloseDate ? new Date(deal.actualCloseDate).toLocaleDateString() : 
-                             deal.expectedCloseDate ? new Date(deal.expectedCloseDate).toLocaleDateString() : "-"}
-                          </TableCell>
-                          <TableCell>
-                            <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} />
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground truncate max-w-[150px]">{deal.address || "-"}</TableCell>
-                          <TableCell><SideBadge side={deal.side} /></TableCell>
-                          <TableCell>
-                            {deal.isReferral && <Badge variant="outline" className="text-xs border-yellow-300 text-yellow-700">REF</Badge>}
-                          </TableCell>
-                          <TableCell className="text-xs">{formatPrice(deal.value)}</TableCell>
-                          <TableCell className="text-xs">{deal.commissionPercent || 3}%</TableCell>
-                          <TableCell className="text-right font-bold text-green-700 bg-green-50/50">
-                            {deal.actualGCI ? formatCurrency(deal.actualGCI) : calculateGCI(deal.value, deal.commissionPercent)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Total Under Contract</p>
+                    <p className="font-bold text-lg">{underContractDeals.length}</p>
+                    <p className="text-xs text-green-700">{formatCurrency(underContractGCI)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Closed Sides</p>
+                    <p className="font-bold text-lg">{closedDeals.length}</p>
+                    <p className="text-xs text-green-700">{formatCurrency(closedGCI)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Total Volume</p>
+                    <p className="font-bold text-lg">{formatCurrency(closedVolume)}</p>
+                  </div>
                 </div>
-              </Card>
+              </div>
             </TabsContent>
 
-            {/* --- PIE TRACKER TAB --- */}
-            <TabsContent value="pie" className="space-y-6 mt-6">
+            {/* === CLOSED TRANSACTIONS TAB === */}
+            <TabsContent value="closed" className="space-y-4">
+              <div className="text-center mb-4">
+                <p className="text-sm text-muted-foreground">A transaction has closed! Enter closing details in tan cells.</p>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-200 text-xs">
+                      <TableHead className="py-2">COE</TableHead>
+                      <TableHead>Buy/Sell</TableHead>
+                      <TableHead>Source</TableHead>
+                      <TableHead>Referral Past Client</TableHead>
+                      <TableHead>Client Name</TableHead>
+                      <TableHead>Prop Address</TableHead>
+                      <TableHead>LP</TableHead>
+                      <TableHead>SP</TableHead>
+                      <TableHead>Comm %</TableHead>
+                      <TableHead>Gross Commission</TableHead>
+                      <TableHead>Referral Fee</TableHead>
+                      <TableHead>Agent Net Income</TableHead>
+                      <TableHead>Brokerage Income</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {closedDeals.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={13} className="text-center text-muted-foreground py-8">
+                          No closed transactions yet
+                        </TableCell>
+                      </TableRow>
+                    ) : closedDeals.map((deal) => (
+                      <TableRow key={deal.id} className="text-xs hover:bg-muted/50">
+                        <TableCell>{(deal.actualCloseDate || deal.expectedCloseDate) ? new Date(deal.actualCloseDate || deal.expectedCloseDate!).toLocaleDateString() : ""}</TableCell>
+                        <TableCell>{deal.side === "buyer" ? "BNI" : deal.side === "seller" ? "SEL" : ""}</TableCell>
+                        <TableCell>{deal.isReferral ? "Referral" : ""}</TableCell>
+                        <TableCell></TableCell>
+                        <TableCell className="font-medium">
+                          <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} />
+                        </TableCell>
+                        <TableCell className="text-muted-foreground max-w-[150px] truncate">{deal.address || ""}</TableCell>
+                        <TableCell></TableCell>
+                        <TableCell>{formatPrice(deal.value)}</TableCell>
+                        <TableCell>{deal.commissionPercent || 3}%</TableCell>
+                        <TableCell className="font-medium text-green-700">{formatPrice(calculateGCI(deal.value, deal.commissionPercent))}</TableCell>
+                        <TableCell></TableCell>
+                        <TableCell className="font-bold">{formatPrice(deal.actualGCI || calculateGCI(deal.value, deal.commissionPercent))}</TableCell>
+                        <TableCell></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div className="bg-slate-200 p-4 rounded-lg mt-4">
+                <div className="grid grid-cols-4 gap-4 text-sm">
+                  <div className="text-center">
+                    <p className="text-muted-foreground">B/S Ratio</p>
+                    <p className="font-bold text-lg">
+                      {closedDeals.filter(d => d.side === "buyer").length}:{closedDeals.filter(d => d.side === "seller").length}
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-muted-foreground">Total Volume</p>
+                    <p className="font-bold text-lg">{formatCurrency(closedVolume)}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-muted-foreground">Total Gross Commission</p>
+                    <p className="font-bold text-lg text-green-700">{formatCurrency(closedGCI)}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-muted-foreground">Referral Count</p>
+                    <p className="font-bold text-lg">{closedDeals.filter(d => d.isReferral).length}</p>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* === YTD SUMMARY TAB === */}
+            <TabsContent value="ytd" className="space-y-6">
+              <p className="text-sm text-muted-foreground text-center">This sheet is a visual of your year to date.</p>
+              
+              <div className="grid md:grid-cols-2 gap-8">
+                <div className="space-y-4">
+                  <div className="bg-slate-200 p-4 rounded-lg space-y-3">
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <span className="font-medium">Gross Commission Goal</span>
+                      <span className="font-bold">{formatCurrency(goalGCI)}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <span className="font-medium">GCI YTD</span>
+                      <span className="font-bold text-green-700">{formatCurrency(closedGCI)}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <span>Agent Net Income To Date</span>
+                      <span className="font-bold">{formatCurrency(closedGCI * (settings.startingSplit || 70) / 100)}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <span>Total Number of Sides Year To Date</span>
+                      <span className="font-bold">{closedDeals.length}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <span>Total Sales Volume To Date</span>
+                      <span className="font-bold">{formatCurrency(closedVolume)}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b bg-primary/5">
+                      <span>Estimated Potential Gross Commission Income<br /><span className="text-xs text-muted-foreground">Business Tracker: (U/C + Hot List)</span></span>
+                      <span className="font-bold text-green-700">{formatCurrency(underContractGCI + hotGCI)}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <span>Closed Transactions from Agent Referrals</span>
+                      <span className="font-bold">{closedDeals.filter(d => d.isReferral).length}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2">
+                      <span>Number of Buying Sides to Listing Sides</span>
+                      <span className="font-bold">{closedDeals.filter(d => d.side === "buyer").length}:{closedDeals.filter(d => d.side === "seller").length}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <h3 className="text-xl font-serif mb-4">Percent of Gross Commission Achieved</h3>
+                    <div className="relative w-48 h-48 mx-auto">
+                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" strokeWidth="12" />
+                        <circle 
+                          cx="50" cy="50" r="40" 
+                          fill="none" 
+                          stroke="#4ade80" 
+                          strokeWidth="12" 
+                          strokeDasharray={`${Math.min(100, (closedGCI / goalGCI) * 100) * 2.51} 251`}
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-2xl font-bold">{Math.round((closedGCI / goalGCI) * 100)}%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <p className="text-xs text-muted-foreground">% of Marketing Fees Paid</p>
+                      <div className="w-16 h-16 mx-auto relative">
+                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                          <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" strokeWidth="8" />
+                        </svg>
+                      </div>
+                      <p className="text-xs mt-1">Marketing paid to date: <strong>$0</strong></p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">% of Franchise Fees Paid</p>
+                      <div className="w-16 h-16 mx-auto relative">
+                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                          <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" strokeWidth="8" />
+                        </svg>
+                      </div>
+                      <p className="text-xs mt-1">Franchise fee paid to date: <strong>$0</strong></p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">% of Office Fees Paid</p>
+                      <div className="w-16 h-16 mx-auto relative">
+                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                          <circle cx="50" cy="50" r="40" fill="none" stroke="#e5e7eb" strokeWidth="8" />
+                        </svg>
+                      </div>
+                      <p className="text-xs mt-1">Office fee paid to date: <strong>{formatCurrency(closedGCI * (100 - (settings.startingSplit || 70)) / 100)}</strong></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* === PIE TRACKER TAB === */}
+            <TabsContent value="pie" className="space-y-4">
+              <p className="text-sm text-muted-foreground text-center">Enter T, I, P time spent for each day that you work. E is auto-calculated.</p>
+              
               <div className="grid md:grid-cols-4 gap-6">
-                 <Card className="border-none shadow-md md:col-span-3">
-                   <CardHeader className="bg-primary/5 pb-4">
-                     <CardTitle className="font-serif">Daily PIE Log</CardTitle>
-                     <CardDescription>Track your Productive, Indirectly Productive, and Everything Else time</CardDescription>
-                   </CardHeader>
-                   <CardContent className="p-0">
-                     <div className="grid grid-cols-3 divide-x border-b">
-                        <div className="p-4 bg-green-50/50 text-center">
-                          <p className="font-bold text-green-700">P (Productive)</p>
-                          <p className="text-xs text-green-600">Prospecting, Presenting, Negotiating</p>
-                        </div>
-                        <div className="p-4 bg-amber-50/50 text-center">
-                          <p className="font-bold text-amber-700">I (Indirect)</p>
-                          <p className="text-xs text-amber-600">Admin, Training, Marketing</p>
-                        </div>
-                        <div className="p-4 bg-blue-50/50 text-center">
-                          <p className="font-bold text-blue-700">E (Everything Else)</p>
-                          <p className="text-xs text-blue-600">Personal, Breaks, Non-work</p>
-                        </div>
-                     </div>
-                     <div className="max-h-[400px] overflow-y-auto">
-                        <Table>
-                          <TableHeader className="sticky top-0 bg-background z-10">
-                            <TableRow>
-                              <TableHead>Date</TableHead>
-                              <TableHead className="text-center">P Hrs</TableHead>
-                              <TableHead className="text-center">I Hrs</TableHead>
-                              <TableHead className="text-center">E Hrs</TableHead>
-                              <TableHead className="text-right">Total</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            <TableRow>
-                              <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                                PIE tracking coming soon. Log your daily time allocation here.
-                              </TableCell>
-                            </TableRow>
-                          </TableBody>
-                        </Table>
-                     </div>
-                   </CardContent>
-                 </Card>
+                <div className="md:col-span-3 space-y-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    {["January", "February", "March"].map((month) => (
+                      <Card key={month} className="border">
+                        <CardHeader className="py-2 bg-slate-600 text-white">
+                          <CardTitle className="text-sm font-medium text-center">{month}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="text-xs bg-blue-100">
+                                <TableHead className="py-1 w-12">Date</TableHead>
+                                <TableHead className="py-1 w-8">Day</TableHead>
+                                <TableHead className="py-1 w-8 text-center">T</TableHead>
+                                <TableHead className="py-1 w-8 text-center">I</TableHead>
+                                <TableHead className="py-1 w-8 text-center">P</TableHead>
+                                <TableHead className="py-1 w-8 text-center bg-slate-200">E</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              <TableRow>
+                                <TableCell colSpan={6} className="text-center text-muted-foreground py-8 text-xs">
+                                  PIE time logging coming soon
+                                </TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
 
-                 <div className="space-y-6">
-                    <Card className="border-none shadow-md bg-card/80">
-                       <CardHeader>
-                         <CardTitle className="font-serif">YTD Overview</CardTitle>
-                       </CardHeader>
-                       <CardContent className="space-y-6">
-                          <div>
-                            <div className="flex justify-between mb-1">
-                              <span className="text-sm font-medium">Productive (P)</span>
-                              <span className="text-sm font-bold text-green-700">--</span>
-                            </div>
-                            <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
-                              <div className="bg-green-600 h-full w-0"></div>
-                            </div>
+                <div className="space-y-4">
+                  <Card className="bg-slate-100">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Monthly Summary</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm">
+                      <div className="bg-blue-100 p-2 rounded">
+                        <p className="text-xs text-muted-foreground">Month:</p>
+                        <Select defaultValue="january">
+                          <SelectTrigger className="h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map(m => (
+                              <SelectItem key={m} value={m.toLowerCase()}>{m}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div>
+                          <p className="text-xs text-muted-foreground">"I" Hrs %</p>
+                          <p className="font-bold">--</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">"P" Hrs %</p>
+                          <p className="font-bold">--</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">"E" Hrs %</p>
+                          <p className="font-bold">--</p>
+                        </div>
+                      </div>
+                      
+                      <Separator />
+                      
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Avg. "I" Hrs/Day</p>
+                          <p className="font-bold">--</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Avg. "P" Hrs/Day</p>
+                          <p className="font-bold">--</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Avg. "E" Hrs/Day</p>
+                          <p className="font-bold">--</p>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-slate-200 p-2 rounded text-center">
+                        <p className="text-xs text-muted-foreground">Hourly Yield Ratio</p>
+                        <p className="font-bold">-- to 1</p>
+                      </div>
+                      
+                      <div className="bg-blue-50 p-2 rounded">
+                        <p className="text-xs text-muted-foreground text-center">Under Contract for Next Month</p>
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          <div className="text-center">
+                            <p className="text-xs">Gross Income:</p>
+                            <p className="font-bold">{formatCurrency(underContractGCI)}</p>
                           </div>
-                          
-                          <div>
-                            <div className="flex justify-between mb-1">
-                              <span className="text-sm font-medium">Indirect (I)</span>
-                              <span className="text-sm font-bold text-amber-700">--</span>
-                            </div>
-                            <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
-                              <div className="bg-amber-500 h-full w-0"></div>
-                            </div>
+                          <div className="text-center">
+                            <p className="text-xs">"P" time/hour:</p>
+                            <p className="font-bold">--</p>
                           </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </TabsContent>
 
-                          <div>
-                            <div className="flex justify-between mb-1">
-                              <span className="text-sm font-medium">Everything Else (E)</span>
-                              <span className="text-sm font-bold text-blue-700">--</span>
-                            </div>
-                            <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
-                              <div className="bg-blue-500 h-full w-0"></div>
-                            </div>
-                          </div>
-
-                          <Separator />
-                          
-                          <div className="pt-2">
-                             <p className="text-sm font-medium text-center mb-2">P Time Hourly Value</p>
-                             <div className="bg-green-50 p-3 rounded-lg text-center">
-                                <span className="text-2xl font-bold text-green-700">
-                                  {closedGCI > 0 ? `$${Math.round(closedGCI / 100)}/hr` : "--"}
-                                </span>
-                             </div>
-                             <p className="text-xs text-center text-muted-foreground mt-2">Based on logged P hours and closed GCI</p>
-                          </div>
-                       </CardContent>
-                    </Card>
-                 </div>
+            {/* === POST CLOSING CALLS TAB === */}
+            <TabsContent value="postclosing" className="space-y-4">
+              <div className="text-center">
+                <h2 className="text-2xl font-serif font-bold">POST CLOSING CALLS</h2>
+                <p className="text-sm text-muted-foreground">Current Year clients and COE will autofill from your Closed Transactions, once you overwrite a cell, manual entry is required.<br />Just insert date (tan cells) of the last contact with your client.</p>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-200">
+                      <TableHead className="py-2">Current Year Clients</TableHead>
+                      <TableHead>COE</TableHead>
+                      {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map(m => (
+                        <TableHead key={m} className="text-center w-12">{m}</TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {closedDeals.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={14} className="text-center text-muted-foreground py-8">
+                          No closed deals to track
+                        </TableCell>
+                      </TableRow>
+                    ) : closedDeals.map((deal) => (
+                      <TableRow key={deal.id} className="text-sm">
+                        <TableCell className="font-medium">
+                          <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} />
+                        </TableCell>
+                        <TableCell>{(deal.actualCloseDate || deal.expectedCloseDate) ? new Date(deal.actualCloseDate || deal.expectedCloseDate!).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit' }) : ""}</TableCell>
+                        {[...Array(12)].map((_, i) => (
+                          <TableCell key={i} className="p-1">
+                            <Input className="h-6 w-full text-xs text-center" placeholder="" />
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             </TabsContent>
           </Tabs>
-
         </div>
       </div>
     </Layout>
