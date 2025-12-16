@@ -7,7 +7,9 @@ import {
   type Call, type InsertCall,
   type WeeklyReview, type InsertWeeklyReview,
   type Note, type InsertNote,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes
+  type Listing, type InsertListing,
+  type EmailCampaign, type InsertEmailCampaign,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, or } from "drizzle-orm";
@@ -66,6 +68,25 @@ export interface IStorage {
   createNote(note: InsertNote): Promise<Note>;
   updateNote(id: string, note: Partial<InsertNote>): Promise<Note | undefined>;
   deleteNote(id: string): Promise<void>;
+  
+  // Listings (Haves)
+  getAllListings(): Promise<Listing[]>;
+  getActiveListings(): Promise<Listing[]>;
+  getListing(id: string): Promise<Listing | undefined>;
+  createListing(listing: InsertListing): Promise<Listing>;
+  updateListing(id: string, listing: Partial<InsertListing>): Promise<Listing | undefined>;
+  deleteListing(id: string): Promise<void>;
+  
+  // Email Campaigns
+  getAllEmailCampaigns(): Promise<EmailCampaign[]>;
+  getEmailCampaign(id: string): Promise<EmailCampaign | undefined>;
+  createEmailCampaign(campaign: InsertEmailCampaign): Promise<EmailCampaign>;
+  updateEmailCampaign(id: string, campaign: Partial<InsertEmailCampaign>): Promise<EmailCampaign | undefined>;
+  deleteEmailCampaign(id: string): Promise<void>;
+  
+  // Buyer queries
+  getBuyers(): Promise<Person[]>;
+  getRealtorsForNewsletter(): Promise<Person[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -303,6 +324,81 @@ export class DatabaseStorage implements IStorage {
   
   async deleteNote(id: string): Promise<void> {
     await db.delete(notes).where(eq(notes.id, id));
+  }
+  
+  // Listings (Haves)
+  async getAllListings(): Promise<Listing[]> {
+    return await db.select().from(listings).orderBy(desc(listings.createdAt));
+  }
+  
+  async getActiveListings(): Promise<Listing[]> {
+    return await db.select().from(listings).where(eq(listings.isActive, true)).orderBy(desc(listings.createdAt));
+  }
+  
+  async getListing(id: string): Promise<Listing | undefined> {
+    const [listing] = await db.select().from(listings).where(eq(listings.id, id));
+    return listing || undefined;
+  }
+  
+  async createListing(insertListing: InsertListing): Promise<Listing> {
+    const [listing] = await db
+      .insert(listings)
+      .values({ ...insertListing, updatedAt: new Date() })
+      .returning();
+    return listing;
+  }
+  
+  async updateListing(id: string, listing: Partial<InsertListing>): Promise<Listing | undefined> {
+    const [updated] = await db
+      .update(listings)
+      .set({ ...listing, updatedAt: new Date() })
+      .where(eq(listings.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async deleteListing(id: string): Promise<void> {
+    await db.delete(listings).where(eq(listings.id, id));
+  }
+  
+  // Email Campaigns
+  async getAllEmailCampaigns(): Promise<EmailCampaign[]> {
+    return await db.select().from(emailCampaigns).orderBy(desc(emailCampaigns.createdAt));
+  }
+  
+  async getEmailCampaign(id: string): Promise<EmailCampaign | undefined> {
+    const [campaign] = await db.select().from(emailCampaigns).where(eq(emailCampaigns.id, id));
+    return campaign || undefined;
+  }
+  
+  async createEmailCampaign(insertCampaign: InsertEmailCampaign): Promise<EmailCampaign> {
+    const [campaign] = await db
+      .insert(emailCampaigns)
+      .values({ ...insertCampaign, updatedAt: new Date() })
+      .returning();
+    return campaign;
+  }
+  
+  async updateEmailCampaign(id: string, campaign: Partial<InsertEmailCampaign>): Promise<EmailCampaign | undefined> {
+    const [updated] = await db
+      .update(emailCampaigns)
+      .set({ ...campaign, updatedAt: new Date() })
+      .where(eq(emailCampaigns.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async deleteEmailCampaign(id: string): Promise<void> {
+    await db.delete(emailCampaigns).where(eq(emailCampaigns.id, id));
+  }
+  
+  // Buyer queries
+  async getBuyers(): Promise<Person[]> {
+    return await db.select().from(people).where(eq(people.isBuyer, true)).orderBy(desc(people.createdAt));
+  }
+  
+  async getRealtorsForNewsletter(): Promise<Person[]> {
+    return await db.select().from(people).where(and(eq(people.isRealtor, true), eq(people.receiveNewsletter, true))).orderBy(people.name);
   }
 }
 

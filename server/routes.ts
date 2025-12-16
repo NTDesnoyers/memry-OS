@@ -8,7 +8,9 @@ import {
   insertMeetingSchema, 
   insertCallSchema, 
   insertWeeklyReviewSchema,
-  insertNoteSchema 
+  insertNoteSchema,
+  insertListingSchema,
+  insertEmailCampaignSchema
 } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 
@@ -434,6 +436,156 @@ export async function registerRoutes(
     try {
       await storage.deleteNote(req.params.id);
       res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // ==================== LISTINGS ROUTES ====================
+  
+  // Get all listings
+  app.get("/api/listings", async (req, res) => {
+    try {
+      const listings = await storage.getAllListings();
+      res.json(listings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get active listings only
+  app.get("/api/listings/active", async (req, res) => {
+    try {
+      const listings = await storage.getActiveListings();
+      res.json(listings);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get listing by ID
+  app.get("/api/listings/:id", async (req, res) => {
+    try {
+      const listing = await storage.getListing(req.params.id);
+      if (!listing) {
+        return res.status(404).json({ message: "Listing not found" });
+      }
+      res.json(listing);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Create listing
+  app.post("/api/listings", async (req, res) => {
+    try {
+      const data = validate(insertListingSchema, req.body);
+      const listing = await storage.createListing(data);
+      res.status(201).json(listing);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Update listing
+  app.patch("/api/listings/:id", async (req, res) => {
+    try {
+      const listing = await storage.updateListing(req.params.id, req.body);
+      if (!listing) {
+        return res.status(404).json({ message: "Listing not found" });
+      }
+      res.json(listing);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Delete listing
+  app.delete("/api/listings/:id", async (req, res) => {
+    try {
+      await storage.deleteListing(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // ==================== EMAIL CAMPAIGNS ROUTES ====================
+  
+  // Get all email campaigns
+  app.get("/api/email-campaigns", async (req, res) => {
+    try {
+      const campaigns = await storage.getAllEmailCampaigns();
+      res.json(campaigns);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get email campaign by ID
+  app.get("/api/email-campaigns/:id", async (req, res) => {
+    try {
+      const campaign = await storage.getEmailCampaign(req.params.id);
+      if (!campaign) {
+        return res.status(404).json({ message: "Email campaign not found" });
+      }
+      res.json(campaign);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Create email campaign
+  app.post("/api/email-campaigns", async (req, res) => {
+    try {
+      const data = validate(insertEmailCampaignSchema, req.body);
+      const campaign = await storage.createEmailCampaign(data);
+      res.status(201).json(campaign);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Update email campaign
+  app.patch("/api/email-campaigns/:id", async (req, res) => {
+    try {
+      const campaign = await storage.updateEmailCampaign(req.params.id, req.body);
+      if (!campaign) {
+        return res.status(404).json({ message: "Email campaign not found" });
+      }
+      res.json(campaign);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Delete email campaign
+  app.delete("/api/email-campaigns/:id", async (req, res) => {
+    try {
+      await storage.deleteEmailCampaign(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // ==================== SPECIAL QUERIES ====================
+  
+  // Get all buyers
+  app.get("/api/buyers", async (req, res) => {
+    try {
+      const buyers = await storage.getBuyers();
+      res.json(buyers);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get realtors for newsletter
+  app.get("/api/realtors/newsletter", async (req, res) => {
+    try {
+      const realtors = await storage.getRealtorsForNewsletter();
+      res.json(realtors);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

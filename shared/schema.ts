@@ -33,6 +33,19 @@ export const people = pgTable("people", {
   fordRecreation: text("ford_recreation"),
   fordDreams: text("ford_dreams"),
   lastContact: timestamp("last_contact"),
+  isBuyer: boolean("is_buyer").default(false),
+  buyerStatus: text("buyer_status"),
+  buyerPriceMin: integer("buyer_price_min"),
+  buyerPriceMax: integer("buyer_price_max"),
+  buyerBeds: integer("buyer_beds"),
+  buyerBaths: integer("buyer_baths"),
+  buyerAreas: text("buyer_areas").array(),
+  buyerPropertyTypes: text("buyer_property_types").array(),
+  buyerMustHaves: text("buyer_must_haves").array(),
+  buyerNotes: text("buyer_notes"),
+  isRealtor: boolean("is_realtor").default(false),
+  realtorBrokerage: text("realtor_brokerage"),
+  receiveNewsletter: boolean("receive_newsletter").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -188,6 +201,58 @@ export const insertNoteSchema = createInsertSchema(notes).omit({
 
 export type InsertNote = z.infer<typeof insertNoteSchema>;
 export type Note = typeof notes.$inferSelect;
+
+// Listings (Haves - properties you have available)
+export const listings = pgTable("listings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  address: text("address").notNull(),
+  price: integer("price"),
+  beds: integer("beds"),
+  baths: integer("baths"),
+  sqft: integer("sqft"),
+  propertyType: text("property_type"),
+  areas: text("areas").array(),
+  features: text("features").array(),
+  description: text("description"),
+  status: text("status").default("active"),
+  listingType: text("listing_type"),
+  mlsNumber: text("mls_number"),
+  photoUrl: text("photo_url"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertListingSchema = createInsertSchema(listings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertListing = z.infer<typeof insertListingSchema>;
+export type Listing = typeof listings.$inferSelect;
+
+// Email Campaigns (for tracking Haves & Wants newsletters)
+export const emailCampaigns = pgTable("email_campaigns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  subject: text("subject").notNull(),
+  htmlContent: text("html_content"),
+  recipientCount: integer("recipient_count"),
+  sentAt: timestamp("sent_at"),
+  status: text("status").default("draft"),
+  campaignType: text("campaign_type"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertEmailCampaignSchema = createInsertSchema(emailCampaigns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertEmailCampaign = z.infer<typeof insertEmailCampaignSchema>;
+export type EmailCampaign = typeof emailCampaigns.$inferSelect;
 
 // Relations
 export const peopleRelations = relations(people, ({ many }) => ({
