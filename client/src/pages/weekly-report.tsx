@@ -518,7 +518,7 @@ export default function WeeklyReport() {
                         name="date"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Week Ending</FormLabel>
+                            <FormLabel>Date</FormLabel>
                             <FormControl>
                               <Input type="date" {...field} className="bg-background/50" />
                             </FormControl>
