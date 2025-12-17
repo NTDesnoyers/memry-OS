@@ -3,6 +3,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
 import {
   Form,
   FormControl,
@@ -157,6 +159,12 @@ const formSchema = z.object({
   messageToCoach: z.string().optional(),
 });
 
+interface WeeklyReviewSummary {
+  id: string;
+  weekStartDate: string;
+  createdAt: string;
+}
+
 export default function WeeklyReport() {
   const [activeTab, setActiveTab] = useState("overview");
   const [, setLocation] = useLocation();
@@ -164,6 +172,16 @@ export default function WeeklyReport() {
   const [emailOpen, setEmailOpen] = useState(false);
   const [emailTo, setEmailTo] = useState("");
   const [noteUploads, setNoteUploads] = useState<NoteUpload[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  const { data: pastReviews = [] } = useQuery<WeeklyReviewSummary[]>({
+    queryKey: ["/api/weekly-reviews"],
+    queryFn: async () => {
+      const res = await fetch("/api/weekly-reviews");
+      if (!res.ok) throw new Error("Failed to fetch reviews");
+      return res.json();
+    },
+  });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -453,6 +471,52 @@ export default function WeeklyReport() {
             <Button onClick={form.handleSubmit(onSubmit)} className="gap-2 shadow-md">
               <Save className="h-4 w-4" /> Save Review
             </Button>
+
+            <Dialog open={historyOpen} onOpenChange={setHistoryOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Clock className="h-4 w-4" /> History
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Past Weekly Reviews</DialogTitle>
+                  <DialogDescription>
+                    View your previous weekly operating reviews
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-4 max-h-[400px] overflow-y-auto">
+                  {pastReviews.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      No past reviews yet. Save your first review to see it here.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {pastReviews.map((review) => (
+                        <div
+                          key={review.id}
+                          className="flex items-center justify-between p-3 rounded-lg border hover:bg-secondary/50 cursor-pointer transition-colors"
+                          onClick={() => {
+                            setHistoryOpen(false);
+                            setLocation(`/weekly-report/${review.id}`);
+                          }}
+                        >
+                          <div>
+                            <p className="font-medium">
+                              Week of {format(new Date(review.weekStartDate), "MMM d, yyyy")}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Created {format(new Date(review.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                            </p>
+                          </div>
+                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
