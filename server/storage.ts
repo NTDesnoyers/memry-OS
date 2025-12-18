@@ -13,7 +13,8 @@ import {
   type BusinessSettings, type InsertBusinessSettings,
   type PieEntry, type InsertPieEntry,
   type AgentProfile, type InsertAgentProfile,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile
+  type RealEstateReview, type InsertRealEstateReview,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, or, sql, gte, lte } from "drizzle-orm";
@@ -113,6 +114,15 @@ export interface IStorage {
   // Agent Profile
   getAgentProfile(): Promise<AgentProfile | undefined>;
   upsertAgentProfile(profile: InsertAgentProfile): Promise<AgentProfile>;
+  
+  // Real Estate Reviews
+  getAllRealEstateReviews(): Promise<RealEstateReview[]>;
+  getRealEstateReviewsByStatus(status: string): Promise<RealEstateReview[]>;
+  getRealEstateReview(id: string): Promise<RealEstateReview | undefined>;
+  createRealEstateReview(review: InsertRealEstateReview): Promise<RealEstateReview>;
+  updateRealEstateReview(id: string, review: Partial<InsertRealEstateReview>): Promise<RealEstateReview | undefined>;
+  deleteRealEstateReview(id: string): Promise<void>;
+  getTasksByReviewId(reviewId: string): Promise<Task[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -537,6 +547,49 @@ export class DatabaseStorage implements IStorage {
       .values({ ...insertProfile, updatedAt: new Date() })
       .returning();
     return profile;
+  }
+  
+  // Real Estate Reviews
+  async getAllRealEstateReviews(): Promise<RealEstateReview[]> {
+    return await db.select().from(realEstateReviews).orderBy(desc(realEstateReviews.createdAt));
+  }
+  
+  async getRealEstateReviewsByStatus(status: string): Promise<RealEstateReview[]> {
+    return await db.select().from(realEstateReviews)
+      .where(eq(realEstateReviews.status, status))
+      .orderBy(desc(realEstateReviews.createdAt));
+  }
+  
+  async getRealEstateReview(id: string): Promise<RealEstateReview | undefined> {
+    const [review] = await db.select().from(realEstateReviews).where(eq(realEstateReviews.id, id));
+    return review || undefined;
+  }
+  
+  async createRealEstateReview(insertReview: InsertRealEstateReview): Promise<RealEstateReview> {
+    const [review] = await db
+      .insert(realEstateReviews)
+      .values(insertReview)
+      .returning();
+    return review;
+  }
+  
+  async updateRealEstateReview(id: string, review: Partial<InsertRealEstateReview>): Promise<RealEstateReview | undefined> {
+    const [updated] = await db
+      .update(realEstateReviews)
+      .set({ ...review, updatedAt: new Date() })
+      .where(eq(realEstateReviews.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async deleteRealEstateReview(id: string): Promise<void> {
+    await db.delete(realEstateReviews).where(eq(realEstateReviews.id, id));
+  }
+  
+  async getTasksByReviewId(reviewId: string): Promise<Task[]> {
+    return await db.select().from(tasks)
+      .where(eq(tasks.reviewId, reviewId))
+      .orderBy(tasks.createdAt);
   }
 }
 

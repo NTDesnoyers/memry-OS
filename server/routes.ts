@@ -14,7 +14,8 @@ import {
   insertPricingReviewSchema,
   insertBusinessSettingsSchema,
   insertPieEntrySchema,
-  insertAgentProfileSchema
+  insertAgentProfileSchema,
+  insertRealEstateReviewSchema
 } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import multer from "multer";
@@ -910,6 +911,112 @@ export async function registerRoutes(
       
       const branding = brokerages[name.replace(/\s+/g, '').replace("realty", "")] || null;
       res.json(branding);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ==================== REAL ESTATE REVIEWS ROUTES ====================
+  
+  // Get all real estate reviews
+  app.get("/api/real-estate-reviews", async (req, res) => {
+    try {
+      const status = req.query.status as string | undefined;
+      let reviews;
+      if (status) {
+        reviews = await storage.getRealEstateReviewsByStatus(status);
+      } else {
+        reviews = await storage.getAllRealEstateReviews();
+      }
+      res.json(reviews);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get single real estate review
+  app.get("/api/real-estate-reviews/:id", async (req, res) => {
+    try {
+      const review = await storage.getRealEstateReview(req.params.id);
+      if (!review) {
+        return res.status(404).json({ message: "Review not found" });
+      }
+      res.json(review);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Create real estate review with auto-generated tasks
+  app.post("/api/real-estate-reviews", async (req, res) => {
+    try {
+      const validated = validate(insertRealEstateReviewSchema, req.body);
+      const review = await storage.createRealEstateReview(validated);
+      
+      // Auto-generate task bundle for the review
+      const taskBundle = [
+        { title: "Populate property data", priority: "high" },
+        { title: "Add financial checklist", priority: "medium" },
+        { title: "Update component tracker", priority: "medium" },
+        { title: "Import public records", priority: "medium" },
+        { title: "Link Visual Pricing analysis", priority: "high" },
+        { title: "Generate Gamma page", priority: "high" },
+        { title: "Record Loom walkthrough", priority: "medium" },
+        { title: "Send review to client", priority: "high" },
+        { title: "Follow-up call", priority: "medium" },
+      ];
+      
+      // Add print task if output type includes print
+      if (validated.outputType === "digital_and_print") {
+        taskBundle.push({ title: "Print and deliver physical copy", priority: "low" });
+      }
+      
+      // Create all tasks for this review
+      for (const task of taskBundle) {
+        await storage.createTask({
+          reviewId: review.id,
+          personId: validated.personId || null,
+          title: task.title,
+          priority: task.priority,
+          status: "pending",
+          completed: false,
+        });
+      }
+      
+      res.status(201).json(review);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Update real estate review
+  app.patch("/api/real-estate-reviews/:id", async (req, res) => {
+    try {
+      const review = await storage.updateRealEstateReview(req.params.id, req.body);
+      if (!review) {
+        return res.status(404).json({ message: "Review not found" });
+      }
+      res.json(review);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Delete real estate review
+  app.delete("/api/real-estate-reviews/:id", async (req, res) => {
+    try {
+      await storage.deleteRealEstateReview(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get tasks for a specific review
+  app.get("/api/real-estate-reviews/:id/tasks", async (req, res) => {
+    try {
+      const tasks = await storage.getTasksByReviewId(req.params.id);
+      res.json(tasks);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
