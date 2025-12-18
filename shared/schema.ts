@@ -180,6 +180,7 @@ export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   personId: varchar("person_id").references(() => people.id),
   dealId: varchar("deal_id").references(() => deals.id),
+  reviewId: varchar("review_id"),
   title: text("title").notNull(),
   description: text("description"),
   dueDate: timestamp("due_date"),
@@ -447,5 +448,91 @@ export const notesRelations = relations(notes, ({ one }) => ({
   deal: one(deals, {
     fields: [notes.dealId],
     references: [deals.id],
+  }),
+}));
+
+// Real Estate Reviews (Annual Home Reviews)
+export const realEstateReviews = pgTable("real_estate_reviews", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  propertyAddress: text("property_address").notNull(),
+  neighborhood: text("neighborhood"),
+  personId: varchar("person_id").references(() => people.id),
+  clientType: text("client_type").default("past_client"),
+  outputType: text("output_type").default("digital"),
+  status: text("status").default("draft"),
+  scheduledDate: timestamp("scheduled_date"),
+  gammaLink: text("gamma_link"),
+  loomLink: text("loom_link"),
+  propertyData: jsonb("property_data"),
+  financialData: jsonb("financial_data"),
+  components: jsonb("components"),
+  publicRecords: jsonb("public_records"),
+  visualPricingId: varchar("visual_pricing_id").references(() => pricingReviews.id),
+  marketData: jsonb("market_data"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertRealEstateReviewSchema = createInsertSchema(realEstateReviews).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertRealEstateReview = z.infer<typeof insertRealEstateReviewSchema>;
+export type RealEstateReview = typeof realEstateReviews.$inferSelect;
+
+// Types for the JSONB fields
+export type PropertyData = {
+  beds?: number;
+  baths?: number;
+  sqft?: number;
+  basement?: string;
+  garage?: string;
+  condition?: string;
+  amenities?: string[];
+  yearBuilt?: number;
+};
+
+export type FinancialData = {
+  mortgageBalance?: number;
+  interestRate?: number;
+  purchasePrice?: number;
+  estimatedValue?: number;
+};
+
+export type ComponentItem = {
+  name: string;
+  installationDate?: string;
+  expectedLifespan?: number;
+  estimatedReplacementCost?: number;
+};
+
+export type PublicRecordsData = {
+  taxId?: string;
+  assessedValueHistory?: { year: number; value: number }[];
+  ownerOfRecord?: string;
+  zoning?: string;
+  lotSize?: string;
+};
+
+export type MarketDataSnapshot = {
+  localTwoYearSnapshot?: string;
+  countyStats?: string;
+  regionalStats?: string;
+  nationalStats?: string;
+  notes?: string;
+};
+
+// Relations for Real Estate Reviews
+export const realEstateReviewsRelations = relations(realEstateReviews, ({ one }) => ({
+  person: one(people, {
+    fields: [realEstateReviews.personId],
+    references: [people.id],
+  }),
+  visualPricing: one(pricingReviews, {
+    fields: [realEstateReviews.visualPricingId],
+    references: [pricingReviews.id],
   }),
 }));
