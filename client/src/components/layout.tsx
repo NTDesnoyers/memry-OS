@@ -13,7 +13,8 @@ import {
   Video,
   Mail,
   Settings,
-  Palette
+  Palette,
+  Sparkles
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState, useEffect } from "react";
@@ -28,6 +29,7 @@ const navItems = [
   { name: "Phone & Dialer", href: "/phone", icon: Phone },
   { name: "Meetings", href: "/meetings", icon: Video },
   { name: "People", href: "/people", icon: Users },
+  { name: "Know Your People", href: "/know-your-people", icon: Sparkles },
   { name: "Relationships (FORD)", href: "/relationships", icon: Repeat },
   { name: "Weekly Agenda", href: "/weekly-report", icon: Calendar },
   { name: "Deals", href: "/deals", icon: BarChart3 },

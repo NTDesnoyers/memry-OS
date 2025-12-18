@@ -21,6 +21,7 @@ import Meetings from "@/pages/meetings";
 import HavesWants from "@/pages/haves-wants";
 import VisualPricing from "@/pages/visual-pricing";
 import BrandCenter from "@/pages/brand-center";
+import KnowYourPeople from "@/pages/know-your-people";
 
 function Router() {
   return (
@@ -40,6 +41,7 @@ function Router() {
       <Route path="/visual-pricing" component={VisualPricing} />
       <Route path="/haves-wants" component={HavesWants} />
       <Route path="/brand-center" component={BrandCenter} />
+      <Route path="/know-your-people" component={KnowYourPeople} />
       <Route path="/automation" component={AutomationHub} />
       <Route path="/integrations" component={Integrations} />
       <Route component={NotFound} />
