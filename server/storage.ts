@@ -14,7 +14,8 @@ import {
   type PieEntry, type InsertPieEntry,
   type AgentProfile, type InsertAgentProfile,
   type RealEstateReview, type InsertRealEstateReview,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews
+  type Interaction, type InsertInteraction,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, or, sql, gte, lte } from "drizzle-orm";
@@ -123,6 +124,14 @@ export interface IStorage {
   updateRealEstateReview(id: string, review: Partial<InsertRealEstateReview>): Promise<RealEstateReview | undefined>;
   deleteRealEstateReview(id: string): Promise<void>;
   getTasksByReviewId(reviewId: string): Promise<Task[]>;
+  
+  // Interactions
+  getAllInteractions(): Promise<Interaction[]>;
+  getInteractionsByPerson(personId: string): Promise<Interaction[]>;
+  getInteraction(id: string): Promise<Interaction | undefined>;
+  createInteraction(interaction: InsertInteraction): Promise<Interaction>;
+  updateInteraction(id: string, interaction: Partial<InsertInteraction>): Promise<Interaction | undefined>;
+  deleteInteraction(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -593,6 +602,43 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(tasks)
       .where(eq(tasks.reviewId, reviewId))
       .orderBy(tasks.createdAt);
+  }
+  
+  // Interactions
+  async getAllInteractions(): Promise<Interaction[]> {
+    return await db.select().from(interactions).orderBy(desc(interactions.occurredAt));
+  }
+  
+  async getInteractionsByPerson(personId: string): Promise<Interaction[]> {
+    return await db.select().from(interactions)
+      .where(eq(interactions.personId, personId))
+      .orderBy(desc(interactions.occurredAt));
+  }
+  
+  async getInteraction(id: string): Promise<Interaction | undefined> {
+    const [interaction] = await db.select().from(interactions).where(eq(interactions.id, id));
+    return interaction || undefined;
+  }
+  
+  async createInteraction(insertInteraction: InsertInteraction): Promise<Interaction> {
+    const [interaction] = await db
+      .insert(interactions)
+      .values({ ...insertInteraction, updatedAt: new Date() })
+      .returning();
+    return interaction;
+  }
+  
+  async updateInteraction(id: string, interaction: Partial<InsertInteraction>): Promise<Interaction | undefined> {
+    const [updated] = await db
+      .update(interactions)
+      .set({ ...interaction, updatedAt: new Date() })
+      .where(eq(interactions.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async deleteInteraction(id: string): Promise<void> {
+    await db.delete(interactions).where(eq(interactions.id, id));
   }
 }
 

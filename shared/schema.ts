@@ -541,6 +541,43 @@ export const realEstateReviewsRelations = relations(realEstateReviews, ({ one })
   }),
 }));
 
+// Interactions - Calls, Meetings, Texts, Emails with People
+export const interactions = pgTable("interactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  personId: varchar("person_id").references(() => people.id),
+  type: text("type").notNull(), // call, meeting, text, email, note
+  source: text("source"), // fathom, granola, plaud, manual, phone, email
+  title: text("title"),
+  summary: text("summary"),
+  transcript: text("transcript"),
+  externalLink: text("external_link"), // Fathom link, etc.
+  externalId: text("external_id"), // ID from external system for deduplication
+  duration: integer("duration"), // minutes
+  occurredAt: timestamp("occurred_at").notNull(),
+  participants: text("participants").array(), // names of other people in the conversation
+  tags: text("tags").array(),
+  aiExtractedData: jsonb("ai_extracted_data"), // FORD notes, action items, etc.
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertInteractionSchema = createInsertSchema(interactions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertInteraction = z.infer<typeof insertInteractionSchema>;
+export type Interaction = typeof interactions.$inferSelect;
+
+// Relations for Interactions
+export const interactionsRelations = relations(interactions, ({ one }) => ({
+  person: one(people, {
+    fields: [interactions.personId],
+    references: [people.id],
+  }),
+}));
+
 // Chat Conversations for AI Assistant
 export const conversations = pgTable("conversations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

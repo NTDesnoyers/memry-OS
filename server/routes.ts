@@ -15,7 +15,8 @@ import {
   insertBusinessSettingsSchema,
   insertPieEntrySchema,
   insertAgentProfileSchema,
-  insertRealEstateReviewSchema
+  insertRealEstateReviewSchema,
+  insertInteractionSchema
 } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import multer from "multer";
@@ -1453,6 +1454,81 @@ Be helpful, knowledgeable, and supportive. Keep responses concise but valuable.`
     try {
       const tasks = await storage.getTasksByReviewId(req.params.id);
       res.json(tasks);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ==================== INTERACTIONS ROUTES ====================
+  
+  // Get all interactions
+  app.get("/api/interactions", async (req, res) => {
+    try {
+      const interactions = await storage.getAllInteractions();
+      res.json(interactions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get interactions for a specific person
+  app.get("/api/people/:personId/interactions", async (req, res) => {
+    try {
+      const interactions = await storage.getInteractionsByPerson(req.params.personId);
+      res.json(interactions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get interaction by ID
+  app.get("/api/interactions/:id", async (req, res) => {
+    try {
+      const interaction = await storage.getInteraction(req.params.id);
+      if (!interaction) {
+        return res.status(404).json({ message: "Interaction not found" });
+      }
+      res.json(interaction);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Create interaction
+  app.post("/api/interactions", async (req, res) => {
+    try {
+      const data = validate(insertInteractionSchema, req.body);
+      const interaction = await storage.createInteraction(data);
+      
+      // Update person's lastContact if personId is provided
+      if (data.personId) {
+        await storage.updatePerson(data.personId, { lastContact: new Date(data.occurredAt) });
+      }
+      
+      res.status(201).json(interaction);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Update interaction
+  app.patch("/api/interactions/:id", async (req, res) => {
+    try {
+      const interaction = await storage.updateInteraction(req.params.id, req.body);
+      if (!interaction) {
+        return res.status(404).json({ message: "Interaction not found" });
+      }
+      res.json(interaction);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Delete interaction
+  app.delete("/api/interactions/:id", async (req, res) => {
+    try {
+      await storage.deleteInteraction(req.params.id);
+      res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
