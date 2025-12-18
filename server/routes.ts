@@ -441,11 +441,11 @@ Respond with valid JSON only, no other text.`;
           if (company) noteParts.push(`Company: ${company}`);
         }
         
-        // Handle address - combine all address parts
+        // Handle address - combine all address parts into address field
         if (mapping.address) {
           const addressParts = getAllValues(mapping.address, row);
           if (addressParts.length > 0) {
-            noteParts.push(`Address: ${addressParts.join(", ")}`);
+            person.address = addressParts.join(", ");
           }
         }
         
