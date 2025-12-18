@@ -16,7 +16,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { Link, useParams } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import type { Person, Call, Meeting, Note, Deal, RealEstateReview } from "@shared/schema";
+import type { Person, Call, Meeting, Note, Deal, RealEstateReview, Interaction } from "@shared/schema";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { format } from "date-fns";
 
@@ -54,6 +54,11 @@ export default function PersonProfile() {
 
   const { data: reviews = [] } = useQuery<RealEstateReview[]>({
     queryKey: ["/api/real-estate-reviews"],
+    enabled: !!id,
+  });
+
+  const { data: interactions = [] } = useQuery<Interaction[]>({
+    queryKey: [`/api/people/${id}/interactions`],
     enabled: !!id,
   });
 
@@ -520,16 +525,67 @@ export default function PersonProfile() {
 
             <TabsContent value="activity" className="space-y-6">
               <div className="grid gap-4">
-                {personCalls.length === 0 && personMeetings.length === 0 && personNotes.length === 0 ? (
+                {personCalls.length === 0 && personMeetings.length === 0 && personNotes.length === 0 && interactions.length === 0 ? (
                   <Card className="border-dashed">
                     <CardContent className="py-12 text-center">
                       <Clock className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
                       <p className="text-muted-foreground">No activity recorded yet</p>
-                      <p className="text-sm text-muted-foreground mt-1">Calls, meetings, and notes will appear here</p>
+                      <p className="text-sm text-muted-foreground mt-1">Conversations, calls, and meetings will appear here</p>
                     </CardContent>
                   </Card>
                 ) : (
                   <>
+                    {interactions.length > 0 && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2 text-lg">
+                            <MessageSquare className="h-5 w-5" /> Conversations ({interactions.length})
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          {interactions.map((interaction) => (
+                            <div key={interaction.id} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                              <div className={`p-2 rounded-full ${
+                                interaction.type === 'call' ? 'bg-green-100' :
+                                interaction.type === 'meeting' ? 'bg-blue-100' :
+                                interaction.type === 'email' ? 'bg-orange-100' : 'bg-purple-100'
+                              }`}>
+                                {interaction.type === 'call' ? (
+                                  <PhoneCall className="h-4 w-4 text-green-600" />
+                                ) : interaction.type === 'meeting' ? (
+                                  <Video className="h-4 w-4 text-blue-600" />
+                                ) : interaction.type === 'email' ? (
+                                  <Mail className="h-4 w-4 text-orange-600" />
+                                ) : (
+                                  <MessageSquare className="h-4 w-4 text-purple-600" />
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium capitalize">{interaction.type}</span>
+                                  {interaction.source && (
+                                    <Badge variant="outline" className="text-xs">{interaction.source}</Badge>
+                                  )}
+                                  {interaction.externalLink && (
+                                    <a 
+                                      href={interaction.externalLink} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="text-blue-600 hover:underline text-xs"
+                                    >
+                                      View Recording
+                                    </a>
+                                  )}
+                                </div>
+                                {interaction.summary && <p className="text-sm text-muted-foreground mt-1">{interaction.summary}</p>}
+                                <p className="text-xs text-muted-foreground mt-1">{formatDateTime(interaction.occurredAt)}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    )}
+
                     {personCalls.length > 0 && (
                       <Card>
                         <CardHeader>
