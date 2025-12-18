@@ -27,6 +27,7 @@ export const people = pgTable("people", {
   phone: text("phone"),
   role: text("role"),
   segment: text("segment"),
+  address: text("address"),
   notes: text("notes"),
   fordFamily: text("ford_family"),
   fordOccupation: text("ford_occupation"),
