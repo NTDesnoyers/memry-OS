@@ -1,0 +1,181 @@
+Ninja Selling is a relationship‑first, process‑driven sales system built to help agents increase income per hour by focusing on people they know, delivering value, and following a consistent set of daily and weekly habits rather than chasing leads with pressure tactics.[1][2]
+
+## Core philosophy
+
+- **Serve, don’t sell**: Focus on solving problems and adding value so business is attracted to you instead of pushed by you.[1]
+- Abundance mindset: Assume there is plenty of business; your job is to stay in flow with people and listen for life changes that create housing needs.[3][1]
+- Process over personality: Use simple, repeatable routines (Ninja Nine, Hot/Warm Lists, real estate reviews) so results are driven by **systems**, not motivation spikes.[4][5]
+
+## Mindset, Skillset, Actions
+
+- Mindset: Gratitude, affirmations, positive focus, and clarity about life goals and ideal week; this underpins how you show up with clients.[6][7]
+- Skillset: Ninja Consultation, Ten‑Step Buyer Process, FORD conversations, personality styles (Power/Party/Peace/Perfection) and the “Platinum Rule” of treating people how they prefer to be treated.[1]
+- Actions: The Ninja Nine habits and weekly planning routine that turn mindset and skills into consistent contact, follow‑up, and transaction flow.[4][5][8]
+
+## Relationship structure: categories & stages
+
+In a CRM, Ninja maps very cleanly to “who are they to me?” (segment) vs. “where are they in a transaction?” (stage).[9]
+
+- Relationship **segments** (sphere / non‑transacting):  
+  - A – Advocates: Raving fans who refer consistently.  
+  - B – Fans: Like and trust you, refer occasionally.  
+  - C – Network: Acquaintances, light relationship; keep in flow.  
+  - D – 8×8: New or target relationships you want to develop using an 8‑touch, 8‑week campaign.[9]
+- Transaction **stages** (for active pipeline):  
+  - Warm: Likely to buy/sell within about a year; life change brewing.  
+  - Hot: Likely to buy/sell in ~90 days; clear motivation and timeline.  
+  - In Contract: Under contract / pending.  
+  - Closed: Closed buyer or seller.  
+  - Lost: They transacted with someone else or timing canceled.[9]
+
+A design-friendly rule: A/B/C/D describes long‑term relationship value; Warm/Hot/In Contract/Closed describes current transaction status.[9]
+
+## Key relationship concepts
+
+- **FORD** notes:  
+  - Family, Occupation, Recreation, Dreams are the four primary areas you ask about to build rapport and discover change.[1][5]
+  - FORD notes belong on the contact record and are the core of “relationship fields” you view before calls and handwritten notes.[1]
+- “Change drives real estate”: Watch FORD for changes (new baby, job change, retirement, marriage/divorce, relocation, lifestyle goals) as triggers for Warm/Hot.[3]
+- Personality types: Power, Party, Peace, Perfection; adjust communication style and presentation to match how each type makes decisions (fast vs. detailed, social vs. reserved).[1]
+
+## Ninja Nine: daily & weekly habits
+
+These are the central operational backbone for your app.[4][5][7]
+
+**Daily (5)**[4][6][7]
+1. Gratitudes / affirmations / positive reading.  
+2. Show up and stay on your agenda (time block; work “on” business before email).[5]
+3. Write 2 personal, handwritten notes.  
+4. Focus on your Hot List.  
+5. Focus on your Warm List.  
+
+**Weekly (4)**[4][10][5]
+6. Make weekly customer service calls (to all active and recent clients).  
+7. Schedule/conduct two real estate reviews (annual “financial check‑up” on their home value).  
+8. Have 50 live interviews (voice or face‑to‑face conversations using FORD).[11][5]
+9. Update and clean your database (contact info, tags, stages, FORD notes, property matches).[4][10]
+
+For software, the Ninja Nine are ideal as a trackable habit dashboard with counts, streaks, and links directly to contacts and lists.[12]
+
+## Hot List, Warm List, and Your 50
+
+These are the core target lists that should be fast to access, filter, and work from within your UI.[13][3][4][5]
+
+- **Hot List**  
+  - People likely to buy or sell in the next ~90 days.[4][6][5]
+  - Frequently driven by high “pain or pleasure” (strong negative or positive motivation).[14]
+  - Daily focus question: “Who can I write a contract with this week?”[5]
+  - Needs: quick access, clear reason on list, next actions, and last touch date.[13][15]
+
+- **Warm List**  
+  - People likely to buy/sell within roughly 12 months; something in their FORD is changing but timing is softer.[3][4][5]
+  - Daily/weekly review for check‑ins, sending items of value, and advancing to Hot as clarity increases.[3][4]
+  - Warm entries should be tagged with the change (e.g., “expecting baby,” “job hunt,” “downsizing in 2025”).[3]
+
+- **Your 50**  
+  - A top‑50 group of relationships (usually A/B advocates and high lifetime value people) you are intentionally in frequent flow with.  
+  - Goal is to deepen relationship, earn referrals, and ensure they never feel neglected; most Ninja implementations encourage prioritizing these for notes, invites, and personal touches.[9][2]
+
+These lists are not static reports; they are working queues that tie to tasks, notes, and communication history.[13][9]
+
+## Typical Ninja workflows to support
+
+### Weekly planning meeting
+
+Ninja teaches a one‑hour weekly planning meeting to look back, then look forward.[8]
+
+Key components your software can support:  
+- Review prior week Ninja Nine metrics (gratitudes, notes, Hot/Warm touches, 50 live interviews, customer calls, reviews, database updates).[7][12]
+- Scan Hot List and Warm List for:  
+  - Who needs a conversation this week?  
+  - Who is ready to move from Warm → Hot or Hot → In Contract?[13][4]
+- Choose the two people to invite for real estate reviews.  
+- Plan 50 live interviews (who, which day/time blocks) and Hour of Power blocks.[11][5][8]
+
+### Daily start‑up routine
+
+A simple morning flow that your UI can make one click away:  
+- Capture/write gratitudes/affirmations.  
+- Open Today view:  
+  - Hour of Power block indicator.  
+  - Quick links to Hot List, Warm List, and Your 50.[4][5]
+- Suggest 2 contacts for handwritten notes (e.g., from Your 50, recent conversations, birthdays or lifecycle events).[4][7]
+
+### Live interviews and FORD tracking
+
+When having 50 live interviews per week, Ninja agents are asking FORD questions and logging notes.[11][5]
+
+Helpful software behaviors:  
+- “Start conversation” button that opens a lightweight panel with:  
+  - FORD fields.  
+  - Call outcome and next step.  
+- Quick tags for changes (new baby, job promotion, moving parents nearby, etc.) to auto‑suggest Warm/Hot classification.[3]
+
+### 8×8 for D contacts
+
+Ninja describes a structured “8 in 8” campaign to move Ds into relationship.[9]
+
+- Eight consecutive weeks, one touch per week (mix of phone, text, email, mail / item of value, in‑person if possible).[9]
+- Software should maintain:  
+  - Current step (1–8).  
+  - Suggested next touch type and template.  
+  - Clear success outcome: book an in‑person meeting and move them to Warm or A/B.[9]
+
+## CRM design: what should be fast vs. deep
+
+### Fast access / one‑click surfaces
+
+These are high‑frequency views you’ll touch multiple times per day:  
+- Today (Ninja Nine dashboard + action cards).  
+- Hot List and Warm List (Kanban or table).  
+- Your 50 (with next touch indicators).  
+- Live interviews counter with “start call” flow and a filtered list of people to talk to.[4][5][12]
+
+### More comprehensive / modal or secondary
+
+These can be deeper views or separate screens:  
+- Full contact profile (history, FORD notes, properties, deals, referrals, personality type).[1][9]
+- Detailed pipeline by stage (Warm, Hot, In Contract, Closed, Lost) with checklists per stage.[9][2]
+- Real estate review builder (property data, CMA imports, PDF/email export).  
+- Campaign builders (8×8, event invites, annual client appreciation events).[9][2]
+
+## Terminology mapping table
+
+| Concept                  | Meaning / Use                                                                 | Typical Implementation Hint                                              |
+|--------------------------|-------------------------------------------------------------------------------|--------------------------------------------------------------------------|
+| Ninja Nine               | 5 daily + 4 weekly habits for success.[4][10][7]               | Habit tracker with counts, streaks, and links to contacts/tasks.        |
+| Hot List                 | People likely to buy/sell in ~90 days.[4][6][5]              | Pipeline view + tasks, sorted by urgency and “why now.”                 |
+| Warm List                | Likely within ~12 months; life change emerging.[3][4]             | Nurture list with reminders, content, and status‑change suggestions.    |
+| Your 50                  | Top 50 relationships to stay in close flow with.[9][2]            | Special segment with increased touch cadence and note prompts.          |
+| A / B / C / D            | Relationship categories: advocates, fans, network, 8×8 targets.[9]     | Segment fields with tailored cadence and campaigns.                     |
+| D – 8×8                  | People you want to meet; 8‑week intro campaign.[9]                      | Step‑based campaign engine with weekly touch tasks.                     |
+| FORD                     | Family, Occupation, Recreation, Dreams rapport framework.[1][5]   | Structured note fields + quick prompts on call / note screens.          |
+| Live interviews (50/wk)  | Weekly conversations asking FORD questions.[11][5]                 | Counter + contact suggestions, “log interview” panel.                   |
+| Customer service calls   | Weekly follow‑up to current and closed clients.[4][5]             | Auto‑generated call list by stage + simple scripts.                     |
+| Real estate review       | Annual home‑equity/value check‑in.[4][5]                          | Wizard/CMA‑helper with scheduling and template output.                  |
+| Stages: Warm/Hot/…       | Transaction urgency and status.[9]                                     | Stage field with Kanban and stage‑specific checklists.                  |
+| 8 in 8 / 8×8             | 8 touches in 8 weeks to build a new relationship.[9]                   | Campaign template with touch type per week and completion tracking.     |
+
+If you want, a next step can be a concrete data model (tables/collections for Contacts, Relationships, Stages, Habits, Lists, and Campaigns) and a suggested “Today” screen layout tuned to Ninja workflows.
+
+Sources
+[1] Ninja Selling by Larry Kendall | Summary, Quotes, FAQ, Audio https://sobrief.com/books/ninja-selling
+[2] The Best CRM for Ninja Selling REALTORS® - RealOffice360 https://realoffice360.com/article/best-crm-for-ninja
+[3] Action Tip #282: Build Your Warm List Now - Ninja You https://you.ninjaselling.com/programs/build-your-warm-list-now
+[4] The Ninja Nine: Daily Habits for Success https://closetohome.longandfoster.com/2019/04/29/the-ninja-nine-daily-habits-for-success/
+[5] [PDF] Nine Habits for Success in “Getting the Business” - Peak Training https://peaktraining.org/Ninja%209%20Outline%20Notes.pdf
+[6] 9 Ninja Success Habits for Real Estate Agents https://www.realtrends.com/blog/2020/02/04/9-ninja-success-habits-for-real-estate-agents/
+[7] Your best lead measures: "Ninja Nine" 5 Daily & 4 Weekly Habits https://store.ninjaselling.com/blogs/news/your-best-lead-measures-ninja-nine-5-daily-4-weekly-habits
+[8] Ninja Weekly Routine Broken Down by Don Tennessen - YouTube https://www.youtube.com/watch?v=nWYXgyrNupE
+[9] CRM for Ninja Selling - Cloze https://ai.cloze.com/resource-center/crm-for-ninja-selling-realtors/
+[10] [PDF] Ninja Nine - Rackcdn.com https://b386363e680359b5cc19-97ec1140354919029c7985d2568f0e82.ssl.cf1.rackcdn.com/ckeditor_assets/attachments/root/261128/Ninja_Path_-_Ninja_9.pdf
+[11] Real Estate Training: Ninja Nine & Call Scripts - Studylib https://studylib.net/doc/25612630/ninja-9
+[12] Action Tip #502: Track Your Ninja Nine - YouTube https://www.youtube.com/watch?v=ar5xPA6PlKg
+[13] Your Hot and Warm List | Ninja You https://you.ninjaselling.com/programs/hot-and-warm-listmp4-2f31e2
+[14] Action Tip #182: Rating Hot & Warm List - YouTube https://www.youtube.com/watch?v=0rJTBitYQ3Y
+[15] All of the Ninja Nine are important for your business. Success habits ... https://www.facebook.com/NinjaSelling/videos/hot-and-warm-list/296727688068569/
+[16] Focus on your HOT list and WARM list - Facebook https://www.facebook.com/NinjaSelling/videos/focus-on-your-hot-list-and-warm-list/1493703364146450/
+[17] Summary of “Ninja Selling” by Larry Kendall - LinkedIn https://www.linkedin.com/pulse/summary-ninja-selling-larry-kendall-reda-essahli-tz2he
+[18] Elevate your Sales Game with Ninja Selling & a CRM! - YouTube https://www.youtube.com/watch?v=nOn9wsJUFRM
+[19] Customer Relationship Management Systems - YouTube https://www.youtube.com/watch?v=ZdDXXRleW58
+[20] Ninja Selling - Fieldnotes.ai https://fieldnotes.ai/ninja-selling/

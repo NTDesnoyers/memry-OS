@@ -10,6 +10,111 @@ The app serves as the source of truth for Ninja Selling workflows, prioritizing 
 
 Preferred communication style: Simple, everyday language.
 
+## Ninja Selling Methodology
+
+Ninja Selling is a relationship-first, process-driven sales system. Agents increase income per hour by focusing on people they know, delivering value, and following consistent daily/weekly habits rather than chasing leads with pressure tactics.
+
+### Core Philosophy
+- **Serve, don't sell**: Focus on solving problems and adding value so business is attracted, not pushed
+- **Abundance mindset**: Plenty of business exists; stay in flow with people and listen for life changes that create housing needs
+- **Process over personality**: Simple, repeatable routines (Ninja Nine, Hot/Warm Lists, real estate reviews) drive results via systems, not motivation spikes
+
+### Mindset, Skillset, Actions
+- **Mindset**: Gratitude, affirmations, positive focus, clarity about life goals and ideal week
+- **Skillset**: Ninja Consultation, Ten-Step Buyer Process, FORD conversations, personality styles (Power/Party/Peace/Perfection)
+- **Actions**: Ninja Nine habits and weekly planning that turn mindset and skills into consistent contact and transaction flow
+
+### Relationship Segments (A/B/C/D) - "Who are they to me?"
+- **A – Advocates**: Raving fans who refer consistently
+- **B – Fans**: Like and trust you, refer occasionally
+- **C – Network**: Acquaintances, light relationship; keep in flow
+- **D – 8×8**: New or target relationships; develop using 8-touch, 8-week campaign
+
+### Transaction Stages - "Where are they in a transaction?"
+- **Warm**: Likely to buy/sell within ~12 months; life change brewing
+- **Hot**: Likely to buy/sell in ~90 days; clear motivation and timeline
+- **In Contract**: Under contract / pending
+- **Closed**: Closed buyer or seller
+- **Lost**: Transacted with someone else or timing canceled
+
+**Design rule**: A/B/C/D = long-term relationship value; Warm/Hot/In Contract/Closed = current transaction status
+
+### FORD Notes (Core Relationship Fields)
+- **Family**: Spouse, children, parents, pets, family dynamics
+- **Occupation**: Job, career, company, work situation
+- **Recreation**: Hobbies, interests, sports, travel, activities
+- **Dreams**: Goals, aspirations, future plans, bucket list items
+
+FORD notes are viewed before calls and handwritten notes. Watch for **changes** in FORD as triggers for Warm/Hot status (new baby, job change, retirement, marriage/divorce, relocation).
+
+### Ninja Nine: Daily & Weekly Habits
+
+**Daily (5)**
+1. Gratitudes / affirmations / positive reading
+2. Show up and stay on agenda (time block; work "on" business before email)
+3. Write 2 personal, handwritten notes
+4. Focus on your Hot List
+5. Focus on your Warm List
+
+**Weekly (4)**
+6. Make weekly customer service calls (to active and recent clients)
+7. Schedule/conduct two real estate reviews (annual home value check-up)
+8. Have 50 live interviews (voice or face-to-face FORD conversations)
+9. Update and clean database (contact info, tags, stages, FORD notes)
+
+### Core Working Lists
+
+**Hot List**
+- People likely to buy/sell in ~90 days
+- Driven by high "pain or pleasure" (strong motivation)
+- Daily focus: "Who can I write a contract with this week?"
+- Needs: quick access, clear reason on list, next actions, last touch date
+
+**Warm List**
+- People likely to buy/sell within ~12 months
+- Something in FORD is changing but timing is softer
+- Tag with the change (e.g., "expecting baby," "job hunt," "downsizing in 2025")
+
+**Your 50**
+- Top 50 relationships (A/B advocates, high lifetime value)
+- Intentional frequent flow; ensure they never feel neglected
+- Priority for notes, invites, and personal touches
+
+### Key Workflows to Support
+
+**Weekly Planning Meeting** (1 hour, look back then forward)
+- Review prior week Ninja Nine metrics
+- Scan Hot/Warm Lists: who needs conversation? Who moves stages?
+- Choose 2 people for real estate reviews
+- Plan 50 live interviews and Hour of Power blocks
+
+**Daily Start-Up Routine**
+- Capture gratitudes/affirmations
+- Open Today view: Hot List, Warm List, Your 50
+- Suggest 2 contacts for handwritten notes
+
+**8×8 Campaign for D Contacts**
+- 8 consecutive weeks, 1 touch per week (mix of phone, text, email, mail, in-person)
+- Track current step (1-8), suggested next touch type
+- Success outcome: book in-person meeting, move to Warm or A/B
+
+### Speed Priorities
+- **Fast (one-click, multiple times daily)**: Today dashboard, Hot List, Warm List, Your 50, Live interview counter
+- **Comprehensive (deeper views)**: Full contact profile, detailed pipeline, real estate review builder, campaign builders
+
+### Terminology Quick Reference
+| Term | Meaning |
+|------|---------|
+| Ninja Nine | 5 daily + 4 weekly success habits |
+| Hot List | Buy/sell in ~90 days |
+| Warm List | Buy/sell in ~12 months |
+| Your 50 | Top 50 relationships for frequent contact |
+| A/B/C/D | Relationship categories (Advocates → 8×8 targets) |
+| FORD | Family, Occupation, Recreation, Dreams |
+| Live Interviews | 50 weekly FORD conversations |
+| 8×8 | 8 touches in 8 weeks for new relationships |
+| Real Estate Review | Annual home equity/value check-in |
+
 ## System Architecture
 
 ### Frontend Architecture
