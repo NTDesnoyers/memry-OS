@@ -81,7 +81,7 @@ export default function People() {
 
   const detectColumnMapping = (headers: string[]) => {
     const mapping: Record<string, string | string[]> = {};
-    const lowerHeaders = headers.map(h => h.toLowerCase().trim());
+    const lowerHeaders = headers.map(h => h.toLowerCase().trim().replace(/[_\-]/g, ' '));
     
     const findHeader = (patterns: string[]) => {
       for (const pattern of patterns) {
@@ -92,71 +92,85 @@ export default function People() {
     };
     
     // Name detection - check for First Name + Last Name or Full Name
-    const firstNameCol = findHeader(['first name', 'firstname', 'first']);
-    const lastNameCol = findHeader(['last name', 'lastname', 'last']);
-    const fullNameCol = findHeader(['full name', 'fullname', 'contact name', 'name']);
+    // Extended patterns for various CRM exports
+    const firstNameCol = findHeader(['first name', 'firstname', 'first', 'given name', 'given', 'fname', 'contact first']);
+    const lastNameCol = findHeader(['last name', 'lastname', 'last', 'family name', 'surname', 'lname', 'contact last']);
+    const fullNameCol = findHeader(['full name', 'fullname', 'contact name', 'name', 'client name', 'customer name', 'display name', 'person name']);
     
     if (firstNameCol && lastNameCol) {
       mapping.name = [firstNameCol, lastNameCol];
     } else if (fullNameCol) {
       mapping.name = fullNameCol;
+    } else if (firstNameCol) {
+      // Sometimes only first name is available
+      mapping.name = firstNameCol;
     }
     
-    // Email detection - prefer primary email
-    const emailCol = findHeader(['email', 'e-mail', 'email address', 'primary email']);
+    // Email detection - prefer primary email, handle various CRM patterns
+    const emailCol = findHeader(['email', 'e mail', 'email address', 'primary email', 'email1', 'email 1', 'contact email', 'personal email', 'work email', 'main email']);
     if (emailCol) mapping.email = emailCol;
     
     // Phone detection - priority: Mobile > Cell > Home > Work > Phone
-    const mobileCol = findHeader(['mobile phone', 'mobile', 'cell phone', 'cell', 'mobile number']);
-    const homePhoneCol = findHeader(['home phone', 'home']);
-    const workPhoneCol = findHeader(['work phone', 'work', 'business phone', 'office phone']);
-    const phoneCol = findHeader(['phone', 'phone number', 'telephone']);
+    // Extended for CRM exports like Cloze, Follow Up Boss, etc.
+    const mobileCol = findHeader(['mobile phone', 'mobile', 'cell phone', 'cell', 'mobile number', 'cellphone', 'mobile1', 'phone mobile', 'primary phone']);
+    const homePhoneCol = findHeader(['home phone', 'home', 'phone home', 'personal phone', 'home number']);
+    const workPhoneCol = findHeader(['work phone', 'work', 'business phone', 'office phone', 'phone work', 'office', 'phone business']);
+    const phoneCol = findHeader(['phone', 'phone number', 'telephone', 'tel', 'phone1', 'phone 1', 'main phone', 'contact phone']);
     const primaryPhone = mobileCol || phoneCol || homePhoneCol || workPhoneCol;
     if (primaryPhone) mapping.phone = primaryPhone;
     
     // Secondary phone for notes
-    if (primaryPhone && (homePhoneCol || workPhoneCol)) {
-      const secondaryPhone = homePhoneCol || workPhoneCol;
+    const allPhones = [mobileCol, phoneCol, homePhoneCol, workPhoneCol].filter(Boolean);
+    if (allPhones.length > 1) {
+      const secondaryPhone = allPhones.find(p => p !== primaryPhone);
       if (secondaryPhone) mapping.secondaryPhone = secondaryPhone;
     }
     
-    // Address detection
-    const addressCol = findHeader(['address', 'street address', 'street', 'address 1', 'mailing address']);
-    const cityCol = findHeader(['city', 'town']);
-    const stateCol = findHeader(['state', 'province', 'st']);
-    const zipCol = findHeader(['zip', 'zip code', 'postal code', 'postal', 'zipcode']);
+    // Address detection - extended patterns
+    const addressCol = findHeader(['address', 'street address', 'street', 'address 1', 'mailing address', 'home address', 'address line 1', 'street1', 'primary address']);
+    const address2Col = findHeader(['address 2', 'address line 2', 'street2', 'apt', 'unit', 'suite']);
+    const cityCol = findHeader(['city', 'town', 'locality']);
+    const stateCol = findHeader(['state', 'province', 'st', 'region']);
+    const zipCol = findHeader(['zip', 'zip code', 'postal code', 'postal', 'zipcode', 'postcode']);
+    const countryCol = findHeader(['country', 'nation']);
     
     if (addressCol || cityCol || stateCol || zipCol) {
       mapping.address = [];
       if (addressCol) (mapping.address as string[]).push(addressCol);
+      if (address2Col) (mapping.address as string[]).push(address2Col);
       if (cityCol) (mapping.address as string[]).push(cityCol);
       if (stateCol) (mapping.address as string[]).push(stateCol);
       if (zipCol) (mapping.address as string[]).push(zipCol);
+      if (countryCol) (mapping.address as string[]).push(countryCol);
     }
     
-    // Company detection
-    const companyCol = findHeader(['company', 'organization', 'business', 'employer', 'company name']);
+    // Company detection - extended
+    const companyCol = findHeader(['company', 'organization', 'business', 'employer', 'company name', 'business name', 'org', 'firm', 'workplace']);
     if (companyCol) mapping.company = companyCol;
     
-    // Category/Type detection
-    const categoryCol = findHeader(['category', 'type', 'contact type', 'tag', 'tags', 'group', 'status']);
+    // Category/Type detection - extended for CRM systems
+    const categoryCol = findHeader(['category', 'type', 'contact type', 'tag', 'tags', 'group', 'status', 'lead status', 'client type', 'segment', 'pipeline', 'stage', 'label', 'labels']);
     if (categoryCol) mapping.category = categoryCol;
     
-    // Role detection
-    const roleCol = findHeader(['role', 'title', 'job title', 'position']);
+    // Role/Title detection - extended
+    const roleCol = findHeader(['role', 'title', 'job title', 'position', 'job', 'occupation', 'profession']);
     if (roleCol) mapping.role = roleCol;
     
-    // Notes detection
-    const notesCol = findHeader(['notes', 'note', 'comments', 'comment', 'description', 'bio']);
+    // Notes detection - extended
+    const notesCol = findHeader(['notes', 'note', 'comments', 'comment', 'description', 'bio', 'memo', 'details', 'additional info', 'information']);
     if (notesCol) mapping.notes = notesCol;
     
-    // Birthday detection
-    const birthdayCol = findHeader(['birthday', 'birth date', 'birthdate', 'dob', 'date of birth']);
+    // Birthday detection - extended
+    const birthdayCol = findHeader(['birthday', 'birth date', 'birthdate', 'dob', 'date of birth', 'bday']);
     if (birthdayCol) mapping.birthday = birthdayCol;
     
-    // Spouse/Partner detection
-    const spouseCol = findHeader(['spouse', 'partner', 'spouse name', 'partner name']);
+    // Spouse/Partner detection - extended
+    const spouseCol = findHeader(['spouse', 'partner', 'spouse name', 'partner name', 'significant other', 'so', 'husband', 'wife']);
     if (spouseCol) mapping.spouse = spouseCol;
+    
+    // Source/Lead source detection
+    const sourceCol = findHeader(['source', 'lead source', 'referral', 'how found', 'origin', 'campaign']);
+    if (sourceCol) mapping.source = sourceCol;
     
     return mapping;
   };
@@ -201,6 +215,9 @@ export default function People() {
       }
       if (mapping.spouse && row[mapping.spouse as string]) {
         notesParts.push(`Spouse: ${row[mapping.spouse as string]}`);
+      }
+      if (mapping.source && row[mapping.source as string]) {
+        notesParts.push(`Source: ${row[mapping.source as string]}`);
       }
       
       if (notesParts.length > 0) {
