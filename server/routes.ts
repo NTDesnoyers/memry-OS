@@ -131,6 +131,21 @@ export async function registerRoutes(
     }
   });
 
+  // Image upload (for headshots, logos, etc.)
+  app.post("/api/upload/image", upload.single("file"), async (req, res) => {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      
+      const url = `/uploads/${file.filename}`;
+      res.json({ url, filename: file.originalname });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Parse MLS spreadsheet file (CSV, Excel) and return structured data
   app.get("/api/parse-mls-csv", async (req, res) => {
     try {

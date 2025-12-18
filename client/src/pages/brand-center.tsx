@@ -52,7 +52,7 @@ export default function BrandCenter() {
     formDataUpload.append("file", file);
     
     try {
-      const res = await fetch("/api/upload", {
+      const res = await fetch("/api/upload/image", {
         method: "POST",
         body: formDataUpload,
       });
