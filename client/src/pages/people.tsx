@@ -57,34 +57,80 @@ export default function People() {
 
   const detectColumnMapping = (headers: string[]) => {
     const mapping: Record<string, string | string[]> = {};
-    const lowerHeaders = headers.map(h => h.toLowerCase());
+    const lowerHeaders = headers.map(h => h.toLowerCase().trim());
     
-    // Name detection
-    const firstNameIdx = lowerHeaders.findIndex(h => h.includes('first') && h.includes('name') || h === 'firstname' || h === 'first');
-    const lastNameIdx = lowerHeaders.findIndex(h => h.includes('last') && h.includes('name') || h === 'lastname' || h === 'last');
-    const fullNameIdx = lowerHeaders.findIndex(h => h === 'name' || h === 'full name' || h === 'fullname' || h === 'contact name');
+    const findHeader = (patterns: string[]) => {
+      for (const pattern of patterns) {
+        const idx = lowerHeaders.findIndex(h => h === pattern || h.includes(pattern));
+        if (idx >= 0) return headers[idx];
+      }
+      return null;
+    };
     
-    if (firstNameIdx >= 0 && lastNameIdx >= 0) {
-      mapping.name = [headers[firstNameIdx], headers[lastNameIdx]];
-    } else if (fullNameIdx >= 0) {
-      mapping.name = headers[fullNameIdx];
+    // Name detection - check for First Name + Last Name or Full Name
+    const firstNameCol = findHeader(['first name', 'firstname', 'first']);
+    const lastNameCol = findHeader(['last name', 'lastname', 'last']);
+    const fullNameCol = findHeader(['full name', 'fullname', 'contact name', 'name']);
+    
+    if (firstNameCol && lastNameCol) {
+      mapping.name = [firstNameCol, lastNameCol];
+    } else if (fullNameCol) {
+      mapping.name = fullNameCol;
     }
     
-    // Email detection
-    const emailIdx = lowerHeaders.findIndex(h => h.includes('email') || h.includes('e-mail'));
-    if (emailIdx >= 0) mapping.email = headers[emailIdx];
+    // Email detection - prefer primary email
+    const emailCol = findHeader(['email', 'e-mail', 'email address', 'primary email']);
+    if (emailCol) mapping.email = emailCol;
     
-    // Phone detection
-    const phoneIdx = lowerHeaders.findIndex(h => h.includes('phone') || h.includes('mobile') || h.includes('cell') || h.includes('tel'));
-    if (phoneIdx >= 0) mapping.phone = headers[phoneIdx];
+    // Phone detection - priority: Mobile > Cell > Home > Work > Phone
+    const mobileCol = findHeader(['mobile phone', 'mobile', 'cell phone', 'cell', 'mobile number']);
+    const homePhoneCol = findHeader(['home phone', 'home']);
+    const workPhoneCol = findHeader(['work phone', 'work', 'business phone', 'office phone']);
+    const phoneCol = findHeader(['phone', 'phone number', 'telephone']);
+    mapping.phone = mobileCol || phoneCol || homePhoneCol || workPhoneCol || null;
+    
+    // Secondary phone for notes
+    if (mapping.phone && (homePhoneCol || workPhoneCol)) {
+      mapping.secondaryPhone = homePhoneCol || workPhoneCol;
+    }
+    
+    // Address detection
+    const addressCol = findHeader(['address', 'street address', 'street', 'address 1', 'mailing address']);
+    const cityCol = findHeader(['city', 'town']);
+    const stateCol = findHeader(['state', 'province', 'st']);
+    const zipCol = findHeader(['zip', 'zip code', 'postal code', 'postal', 'zipcode']);
+    
+    if (addressCol || cityCol || stateCol || zipCol) {
+      mapping.address = [];
+      if (addressCol) (mapping.address as string[]).push(addressCol);
+      if (cityCol) (mapping.address as string[]).push(cityCol);
+      if (stateCol) (mapping.address as string[]).push(stateCol);
+      if (zipCol) (mapping.address as string[]).push(zipCol);
+    }
     
     // Company detection
-    const companyIdx = lowerHeaders.findIndex(h => h.includes('company') || h.includes('organization') || h.includes('business'));
-    if (companyIdx >= 0) mapping.company = headers[companyIdx];
+    const companyCol = findHeader(['company', 'organization', 'business', 'employer', 'company name']);
+    if (companyCol) mapping.company = companyCol;
+    
+    // Category/Type detection
+    const categoryCol = findHeader(['category', 'type', 'contact type', 'tag', 'tags', 'group', 'status']);
+    if (categoryCol) mapping.category = categoryCol;
+    
+    // Role detection
+    const roleCol = findHeader(['role', 'title', 'job title', 'position']);
+    if (roleCol) mapping.role = roleCol;
     
     // Notes detection
-    const notesIdx = lowerHeaders.findIndex(h => h.includes('note') || h.includes('comment') || h.includes('description'));
-    if (notesIdx >= 0) mapping.notes = headers[notesIdx];
+    const notesCol = findHeader(['notes', 'note', 'comments', 'comment', 'description', 'bio']);
+    if (notesCol) mapping.notes = notesCol;
+    
+    // Birthday detection
+    const birthdayCol = findHeader(['birthday', 'birth date', 'birthdate', 'dob', 'date of birth']);
+    if (birthdayCol) mapping.birthday = birthdayCol;
+    
+    // Spouse/Partner detection
+    const spouseCol = findHeader(['spouse', 'partner', 'spouse name', 'partner name']);
+    if (spouseCol) mapping.spouse = spouseCol;
     
     return mapping;
   };
@@ -93,6 +139,7 @@ export default function People() {
     return rows.map((row: any) => {
       const person: any = {};
       
+      // Build name from first+last or full name
       if (mapping.name) {
         if (Array.isArray(mapping.name)) {
           person.name = mapping.name.map((h: string) => row[h] || "").join(" ").trim();
@@ -103,8 +150,36 @@ export default function People() {
       
       if (mapping.email) person.email = row[mapping.email as string] || null;
       if (mapping.phone) person.phone = row[mapping.phone as string] || null;
-      if (mapping.company) person.company = row[mapping.company as string] || null;
-      if (mapping.notes) person.notes = row[mapping.notes as string] || null;
+      if (mapping.category) person.category = row[mapping.category as string] || null;
+      if (mapping.role) person.role = row[mapping.role as string] || null;
+      
+      // Build notes from multiple sources
+      const notesParts: string[] = [];
+      if (mapping.notes && row[mapping.notes as string]) {
+        notesParts.push(row[mapping.notes as string]);
+      }
+      if (mapping.company && row[mapping.company as string]) {
+        notesParts.push(`Company: ${row[mapping.company as string]}`);
+      }
+      if (mapping.address && Array.isArray(mapping.address)) {
+        const addressParts = mapping.address.map((h: string) => row[h] || "").filter(Boolean);
+        if (addressParts.length > 0) {
+          notesParts.push(`Address: ${addressParts.join(", ")}`);
+        }
+      }
+      if (mapping.secondaryPhone && row[mapping.secondaryPhone as string]) {
+        notesParts.push(`Alt Phone: ${row[mapping.secondaryPhone as string]}`);
+      }
+      if (mapping.birthday && row[mapping.birthday as string]) {
+        notesParts.push(`Birthday: ${row[mapping.birthday as string]}`);
+      }
+      if (mapping.spouse && row[mapping.spouse as string]) {
+        notesParts.push(`Spouse: ${row[mapping.spouse as string]}`);
+      }
+      
+      if (notesParts.length > 0) {
+        person.notes = notesParts.join("\n");
+      }
       
       return person;
     }).filter((p: any) => p.name && p.name.trim());
