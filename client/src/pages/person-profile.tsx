@@ -291,6 +291,20 @@ export default function PersonProfile() {
                       <p>{person.role || "—"}</p>
                     )}
                   </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    {isEditing ? (
+                      <Input 
+                        value={formData.address || ""} 
+                        onChange={(e) => handleChange("address", e.target.value)}
+                        placeholder="Home address"
+                        className="flex-1"
+                        data-testid="input-address"
+                      />
+                    ) : (
+                      <span>{person.address || "No address"}</span>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
 
