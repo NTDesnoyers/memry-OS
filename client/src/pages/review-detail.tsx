@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import Layout from "@/components/layout";
@@ -11,178 +11,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Home, FileText, Database, BarChart3, TrendingUp, Save, ExternalLink, Send, CheckCircle2, Sparkles, FileCheck, Map, Plus, Trash2, Building } from "lucide-react";
+import { ArrowLeft, Home, FileText, Database, BarChart3, TrendingUp, Save, ExternalLink, Send, CheckCircle2, FileCheck, Map, Plus, Trash2, Building, Upload, File, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import type { RealEstateReview, Task } from "@shared/schema";
-
-interface ParsedProperty {
-  address?: string;
-  beds?: number;
-  baths?: number;
-  sqft?: number;
-  totalSqft?: number;
-  yearBuilt?: number;
-  lotSize?: string;
-  zoning?: string;
-  taxId?: string;
-  owner?: string;
-  basement?: string;
-  garage?: string;
-  style?: string;
-  stories?: number;
-  exterior?: string;
-}
-
-interface ComparableSale {
-  mlsNumber: string;
-  status: string;
-  address: string;
-  acres?: number;
-  aboveGradeSqft: number;
-  totalSqft: number;
-  beds: number;
-  baths: number;
-  yearBuilt: number;
-  listPrice: number;
-  dom: number;
-  closeDate?: string;
-  soldPrice?: number;
-  priceDiff?: number;
-  pricePerSqft?: number;
-}
 
 interface PropertyData {
   id: string;
   name: string;
   address: string;
-  publicRecordsRaw: string;
-  mlsDataRaw: string;
-  parsedProperty: ParsedProperty | null;
-  comparables: ComparableSale[];
-}
-
-function parsePublicRecords(text: string): ParsedProperty {
-  const result: ParsedProperty = {};
-  
-  const addressMatch = text.match(/(\d+\s+[\w\s]+(?:Pl|Dr|Ct|St|Ave|Rd|Ln|Way|Cir|Sq)[,\s]+[\w\s]+,\s*[A-Z]{2})/i);
-  if (addressMatch) result.address = addressMatch[1].trim();
-  
-  const bedsMatch = text.match(/Bed\s*Rooms?:?\s*(\d+)/i);
-  if (bedsMatch) result.beds = parseInt(bedsMatch[1]);
-  
-  const bathsMatch = text.match(/Total\s*Baths?:?\s*([\d.]+)/i);
-  if (bathsMatch) result.baths = parseFloat(bathsMatch[1]);
-  
-  const sqftMatch = text.match(/Abv\s*Grd\s*(?:Fin\s*)?SQFT:?\s*([\d,]+)/i);
-  if (sqftMatch) result.sqft = parseInt(sqftMatch[1].replace(/,/g, ''));
-  
-  const belowMatch = text.match(/Below\s*Grade\s*(?:Fin\s*)?[\s\S]*?SQFT:?\s*([\d,]+)/i);
-  if (belowMatch && result.sqft) {
-    result.totalSqft = result.sqft + parseInt(belowMatch[1].replace(/,/g, ''));
-  }
-  
-  const yearMatch = text.match(/Year\s*Built:?\s*(\d{4})/i);
-  if (yearMatch) result.yearBuilt = parseInt(yearMatch[1]);
-  
-  const lotMatch = text.match(/Acres:?\s*([\d.]+)/i);
-  if (lotMatch) result.lotSize = `${lotMatch[1]} acres`;
-  
-  const zoningMatch = text.match(/Zoning:?\s*(\w+)/i);
-  if (zoningMatch) result.zoning = zoningMatch[1];
-  
-  const taxIdMatch = text.match(/Tax\s*ID:?\s*([\w-]+)/i);
-  if (taxIdMatch) result.taxId = taxIdMatch[1];
-  
-  const ownerMatch = text.match(/Owner:?\s*([\w\s&]+?)(?:\s+Owner|$)/i);
-  if (ownerMatch) result.owner = ownerMatch[1].trim();
-  
-  const basementMatch = text.match(/Basement\s*Type:?\s*(\w+)/i);
-  if (basementMatch) result.basement = basementMatch[1];
-  
-  const garageMatch = text.match(/Garage\s*Type:?\s*([^\n]+)/i);
-  if (garageMatch) result.garage = garageMatch[1].trim();
-  
-  const styleMatch = text.match(/Residential\s*Style:?\s*(\w+)/i);
-  if (styleMatch) result.style = styleMatch[1];
-  
-  const storiesMatch = text.match(/Stories:?\s*([\d.]+)/i);
-  if (storiesMatch) result.stories = parseFloat(storiesMatch[1]);
-  
-  const exteriorMatch = text.match(/Exterior:?\s*(\w+)/i);
-  if (exteriorMatch) result.exterior = exteriorMatch[1];
-  
-  return result;
-}
-
-function parseMLSData(text: string): ComparableSale[] {
-  const comparables: ComparableSale[] = [];
-  const lines = text.split('\n');
-  
-  for (const line of lines) {
-    const match = line.match(/^\s*(\d+)\s+(VALO\d+)\s+(Closed|For Sale|U\/C|With\/Exp)\s+(.+?)\s+([\d.]+)?\s+([\d,]+)\s+([\d,]+)\s+(\d+)\s+(\d+)\s+(\d{4})\s+\$([\d,]+)\s+(\d+)?\s*([\d\/]+)?\s*\$?([\d,]+)?\s*\(?\$?([\d,]+)?\)?/i);
-    
-    if (match) {
-      const soldPrice = match[14] ? parseInt(match[14].replace(/,/g, '')) : undefined;
-      const totalSqft = parseInt(match[7].replace(/,/g, ''));
-      
-      comparables.push({
-        mlsNumber: match[2],
-        status: match[3],
-        address: match[4].trim(),
-        acres: match[5] ? parseFloat(match[5]) : undefined,
-        aboveGradeSqft: parseInt(match[6].replace(/,/g, '')),
-        totalSqft,
-        beds: parseInt(match[8]),
-        baths: parseInt(match[9]),
-        yearBuilt: parseInt(match[10]),
-        listPrice: parseInt(match[11].replace(/,/g, '')),
-        dom: match[12] ? parseInt(match[12]) : 0,
-        closeDate: match[13],
-        soldPrice,
-        priceDiff: match[15] ? parseInt(match[15].replace(/,/g, '')) * (line.includes('($') ? -1 : 1) : undefined,
-        pricePerSqft: soldPrice && totalSqft ? Math.round(soldPrice / totalSqft) : undefined,
-      });
-    }
-  }
-  
-  return comparables;
-}
-
-function calculateMarketStats(comparables: ComparableSale[]) {
-  const closed = comparables.filter(c => c.status === "Closed" && c.soldPrice);
-  const underContract = comparables.filter(c => c.status === "U/C");
-  const forSale = comparables.filter(c => c.status === "For Sale");
-  const expired = comparables.filter(c => c.status === "With/Exp");
-  
-  const avgDom = closed.length > 0 
-    ? Math.round(closed.reduce((sum, c) => sum + c.dom, 0) / closed.length)
-    : 0;
-  
-  const avgPrice = closed.length > 0
-    ? Math.round(closed.reduce((sum, c) => sum + (c.soldPrice || 0), 0) / closed.length)
-    : 0;
-  
-  const oddsOfSelling = closed.length + underContract.length > 0
-    ? Math.round(((closed.length + underContract.length) / comparables.length) * 100)
-    : 0;
-  
-  const monthlySales = closed.length / 12;
-  const inventory = forSale.length / (monthlySales || 1);
-  
-  return {
-    closed: closed.length,
-    underContract: underContract.length,
-    forSale: forSale.length,
-    expired: expired.length,
-    avgDom,
-    avgPrice,
-    oddsOfSelling,
-    monthlySales: monthlySales.toFixed(1),
-    inventory: inventory.toFixed(1),
-  };
+  publicRecordsFile: { name: string; url: string } | null;
+  mlsExportFile: { name: string; url: string } | null;
 }
 
 function generatePropertyId() {
@@ -201,6 +41,9 @@ export default function ReviewDetail() {
   
   const [properties, setProperties] = useState<PropertyData[]>([]);
   const [marketStatsRaw, setMarketStatsRaw] = useState("");
+  
+  const publicRecordsInputRef = useRef<HTMLInputElement>(null);
+  const mlsExportInputRef = useRef<HTMLInputElement>(null);
 
   const { data: review, isLoading } = useQuery<RealEstateReview>({
     queryKey: [`/api/real-estate-reviews/${id}`],
@@ -251,18 +94,6 @@ export default function ReviewDetail() {
         if (rawData.properties.length > 0 && !selectedPropertyId) {
           setSelectedPropertyId(rawData.properties[0].id);
         }
-      } else if (rawData?.publicRecordsRaw || rawData?.mlsDataRaw) {
-        const legacyProperty: PropertyData = {
-          id: generatePropertyId(),
-          name: "Property 1",
-          address: review.propertyAddress || "",
-          publicRecordsRaw: rawData.publicRecordsRaw || "",
-          mlsDataRaw: rawData.mlsDataRaw || "",
-          parsedProperty: rawData.parsedProperty || null,
-          comparables: rawData.comparables || [],
-        };
-        setProperties([legacyProperty]);
-        setSelectedPropertyId(legacyProperty.id);
       }
       if (rawData?.marketStatsRaw) setMarketStatsRaw(rawData.marketStatsRaw);
     }
@@ -277,10 +108,8 @@ export default function ReviewDetail() {
       id: generatePropertyId(),
       name: newPropertyName,
       address: newPropertyAddress,
-      publicRecordsRaw: "",
-      mlsDataRaw: "",
-      parsedProperty: null,
-      comparables: [],
+      publicRecordsFile: null,
+      mlsExportFile: null,
     };
     
     setProperties([...properties, newProperty]);
@@ -304,25 +133,30 @@ export default function ReviewDetail() {
     setProperties(properties.map(p => p.id === propId ? { ...p, ...updates } : p));
   };
 
-  const handleParsePublicRecords = (propId: string) => {
-    const prop = properties.find(p => p.id === propId);
-    if (!prop) return;
-    
-    const parsed = parsePublicRecords(prop.publicRecordsRaw);
-    updateProperty(propId, { 
-      parsedProperty: parsed,
-      address: parsed.address || prop.address,
-    });
-    toast({ title: "Parsed!", description: "Public records data extracted." });
-  };
+  const handleFileUpload = async (file: File, type: 'publicRecords' | 'mlsExport', propId: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
 
-  const handleParseMLSData = (propId: string) => {
-    const prop = properties.find(p => p.id === propId);
-    if (!prop) return;
-    
-    const parsed = parseMLSData(prop.mlsDataRaw);
-    updateProperty(propId, { comparables: parsed });
-    toast({ title: "Parsed!", description: `Found ${parsed.length} comparable properties.` });
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!res.ok) throw new Error('Upload failed');
+      
+      const data = await res.json();
+      
+      if (type === 'publicRecords') {
+        updateProperty(propId, { publicRecordsFile: { name: file.name, url: data.url } });
+      } else {
+        updateProperty(propId, { mlsExportFile: { name: file.name, url: data.url } });
+      }
+      
+      toast({ title: "File Uploaded", description: file.name });
+    } catch (error) {
+      toast({ title: "Upload Failed", description: "Could not upload file", variant: "destructive" });
+    }
   };
 
   const handleSaveAll = () => {
@@ -368,32 +202,6 @@ export default function ReviewDetail() {
 
   const completedTasks = tasks.filter(t => t.completed).length;
   const totalTasks = tasks.length;
-  
-  const allComparables = properties.flatMap(p => p.comparables);
-  const allClosedComps = allComparables.filter(c => c.status === "Closed" && c.soldPrice);
-  const aggregateStats = allComparables.length > 0 ? calculateMarketStats(allComparables) : null;
-  
-  const chartData = allClosedComps.map(c => ({
-    sqft: c.totalSqft,
-    price: c.soldPrice,
-    address: c.address,
-    dom: c.dom,
-  }));
-  
-  const buyingPattern = allClosedComps.reduce((acc, c) => {
-    if (c.closeDate) {
-      const month = c.closeDate.split('/')[0];
-      const monthNames = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
-      const monthName = monthNames[parseInt(month) - 1] || month;
-      acc[monthName] = (acc[monthName] || 0) + 1;
-    }
-    return acc;
-  }, {} as Record<string, number>);
-  
-  const buyingPatternData = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'].map(m => ({
-    month: m,
-    count: buyingPattern[m] || 0,
-  }));
 
   return (
     <Layout>
@@ -439,9 +247,6 @@ export default function ReviewDetail() {
                 <TabsList className="mb-4 flex-wrap h-auto gap-1">
                   <TabsTrigger value="properties" className="gap-2">
                     <Building className="h-4 w-4" /> Properties ({properties.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="charts" className="gap-2">
-                    <BarChart3 className="h-4 w-4" /> Visual Pricing
                   </TabsTrigger>
                   <TabsTrigger value="market" className="gap-2">
                     <TrendingUp className="h-4 w-4" /> Market Stats
@@ -527,34 +332,51 @@ export default function ReviewDetail() {
                             <CardTitle className="font-serif flex items-center gap-2 text-lg">
                               <FileCheck className="h-5 w-5" /> Public Records / Appraiser One Page
                             </CardTitle>
+                            <CardDescription>Upload PDF or Excel file from BrightMLS</CardDescription>
                           </CardHeader>
                           <CardContent>
-                            <Textarea 
-                              value={selectedProperty.publicRecordsRaw}
-                              onChange={(e) => updateProperty(selectedProperty.id, { publicRecordsRaw: e.target.value })}
-                              placeholder="Paste the public records / appraiser one page text here..."
-                              className="min-h-[150px] font-mono text-sm"
+                            <input
+                              ref={publicRecordsInputRef}
+                              type="file"
+                              accept=".pdf,.xlsx,.xls,.csv"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleFileUpload(file, 'publicRecords', selectedProperty.id);
+                              }}
                             />
-                            <div className="flex gap-2 mt-4">
-                              <Button className="gap-2" onClick={() => handleParsePublicRecords(selectedProperty.id)}>
-                                <Sparkles className="h-4 w-4" /> Parse Property Data
-                              </Button>
-                            </div>
                             
-                            {selectedProperty.parsedProperty && (
-                              <div className="mt-6 pt-6 border-t">
-                                <h4 className="font-semibold mb-4">Extracted Data</h4>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                  <div><span className="text-muted-foreground">Beds:</span> {selectedProperty.parsedProperty.beds || '-'}</div>
-                                  <div><span className="text-muted-foreground">Baths:</span> {selectedProperty.parsedProperty.baths || '-'}</div>
-                                  <div><span className="text-muted-foreground">SF:</span> {selectedProperty.parsedProperty.sqft?.toLocaleString() || '-'}</div>
-                                  <div><span className="text-muted-foreground">Year:</span> {selectedProperty.parsedProperty.yearBuilt || '-'}</div>
-                                  <div><span className="text-muted-foreground">Style:</span> {selectedProperty.parsedProperty.style || '-'}</div>
-                                  <div><span className="text-muted-foreground">Basement:</span> {selectedProperty.parsedProperty.basement || '-'}</div>
-                                  <div><span className="text-muted-foreground">Lot:</span> {selectedProperty.parsedProperty.lotSize || '-'}</div>
-                                  <div><span className="text-muted-foreground">Zoning:</span> {selectedProperty.parsedProperty.zoning || '-'}</div>
+                            {selectedProperty.publicRecordsFile ? (
+                              <div className="flex items-center gap-3 p-4 bg-secondary/30 rounded-lg">
+                                <File className="h-8 w-8 text-primary" />
+                                <div className="flex-1">
+                                  <p className="font-medium">{selectedProperty.publicRecordsFile.name}</p>
+                                  <a 
+                                    href={selectedProperty.publicRecordsFile.url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-sm text-primary hover:underline"
+                                  >
+                                    View file
+                                  </a>
                                 </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => updateProperty(selectedProperty.id, { publicRecordsFile: null })}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
                               </div>
+                            ) : (
+                              <label 
+                                className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg cursor-pointer hover:bg-secondary/30 transition-colors"
+                                onClick={() => publicRecordsInputRef.current?.click()}
+                              >
+                                <Upload className="h-10 w-10 text-muted-foreground mb-3" />
+                                <p className="font-medium">Click to upload</p>
+                                <p className="text-sm text-muted-foreground">PDF, Excel, or CSV</p>
+                              </label>
                             )}
                           </CardContent>
                         </Card>
@@ -564,23 +386,51 @@ export default function ReviewDetail() {
                             <CardTitle className="font-serif flex items-center gap-2 text-lg">
                               <Database className="h-5 w-5" /> MLS Export Data
                             </CardTitle>
+                            <CardDescription>Upload spreadsheet with comparable sales data</CardDescription>
                           </CardHeader>
                           <CardContent>
-                            <Textarea 
-                              value={selectedProperty.mlsDataRaw}
-                              onChange={(e) => updateProperty(selectedProperty.id, { mlsDataRaw: e.target.value })}
-                              placeholder="Paste the MLS export data (comparable sales table) here..."
-                              className="min-h-[200px] font-mono text-sm"
+                            <input
+                              ref={mlsExportInputRef}
+                              type="file"
+                              accept=".xlsx,.xls,.csv"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleFileUpload(file, 'mlsExport', selectedProperty.id);
+                              }}
                             />
-                            <div className="flex gap-2 mt-4">
-                              <Button className="gap-2" onClick={() => handleParseMLSData(selectedProperty.id)}>
-                                <Sparkles className="h-4 w-4" /> Parse Comparables
-                              </Button>
-                            </div>
-                            {selectedProperty.comparables.length > 0 && (
-                              <p className="mt-2 text-sm text-muted-foreground">
-                                {selectedProperty.comparables.length} properties ({selectedProperty.comparables.filter(c => c.status === "Closed").length} closed)
-                              </p>
+                            
+                            {selectedProperty.mlsExportFile ? (
+                              <div className="flex items-center gap-3 p-4 bg-secondary/30 rounded-lg">
+                                <File className="h-8 w-8 text-primary" />
+                                <div className="flex-1">
+                                  <p className="font-medium">{selectedProperty.mlsExportFile.name}</p>
+                                  <a 
+                                    href={selectedProperty.mlsExportFile.url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-sm text-primary hover:underline"
+                                  >
+                                    View file
+                                  </a>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => updateProperty(selectedProperty.id, { mlsExportFile: null })}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <label 
+                                className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg cursor-pointer hover:bg-secondary/30 transition-colors"
+                                onClick={() => mlsExportInputRef.current?.click()}
+                              >
+                                <Upload className="h-10 w-10 text-muted-foreground mb-3" />
+                                <p className="font-medium">Click to upload</p>
+                                <p className="text-sm text-muted-foreground">Excel or CSV spreadsheet</p>
+                              </label>
                             )}
                           </CardContent>
                         </Card>
@@ -594,149 +444,6 @@ export default function ReviewDetail() {
                         </CardContent>
                       </Card>
                     )}
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="charts">
-                  <div className="space-y-6">
-                    {aggregateStats && (
-                      <div className="grid md:grid-cols-5 gap-4">
-                        <Card className="border-none shadow-sm text-center">
-                          <CardContent className="pt-6">
-                            <div className="text-3xl font-bold text-primary">{aggregateStats.closed}</div>
-                            <p className="text-xs text-muted-foreground uppercase">Closed</p>
-                          </CardContent>
-                        </Card>
-                        <Card className="border-none shadow-sm text-center">
-                          <CardContent className="pt-6">
-                            <div className="text-3xl font-bold text-blue-600">{aggregateStats.underContract}</div>
-                            <p className="text-xs text-muted-foreground uppercase">Under Contract</p>
-                          </CardContent>
-                        </Card>
-                        <Card className="border-none shadow-sm text-center">
-                          <CardContent className="pt-6">
-                            <div className="text-3xl font-bold text-yellow-600">{aggregateStats.forSale}</div>
-                            <p className="text-xs text-muted-foreground uppercase">For Sale</p>
-                          </CardContent>
-                        </Card>
-                        <Card className="border-none shadow-sm text-center">
-                          <CardContent className="pt-6">
-                            <div className="text-3xl font-bold text-red-600">{aggregateStats.expired}</div>
-                            <p className="text-xs text-muted-foreground uppercase">Expired</p>
-                          </CardContent>
-                        </Card>
-                        <Card className="border-none shadow-sm text-center bg-primary text-primary-foreground">
-                          <CardContent className="pt-6">
-                            <div className="text-3xl font-bold">{aggregateStats.oddsOfSelling}%</div>
-                            <p className="text-xs uppercase opacity-80">Odds of Selling</p>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    )}
-
-                    <Card className="border-none shadow-md">
-                      <CardHeader>
-                        <CardTitle className="font-serif">Price vs. Total Square Feet</CardTitle>
-                        <CardDescription>Fair Market Value Analysis - All Properties Combined</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        {chartData.length > 0 ? (
-                          <div className="h-[400px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                              <ScatterChart margin={{ top: 20, right: 20, bottom: 60, left: 60 }}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis 
-                                  type="number" 
-                                  dataKey="sqft" 
-                                  name="Total SF" 
-                                  label={{ value: 'Total Square Feet', position: 'bottom', offset: 40 }}
-                                  tickFormatter={(v) => v.toLocaleString()}
-                                />
-                                <YAxis 
-                                  type="number" 
-                                  dataKey="price" 
-                                  name="Price" 
-                                  label={{ value: 'Property Price', angle: -90, position: 'left', offset: 40 }}
-                                  tickFormatter={(v) => `$${(v / 1000).toFixed(0)}K`}
-                                />
-                                <Tooltip 
-                                  formatter={(value: number, name: string) => {
-                                    if (name === "Price") return [`$${value.toLocaleString()}`, name];
-                                    return [value.toLocaleString(), name];
-                                  }}
-                                  labelFormatter={(label) => `${label} SF`}
-                                />
-                                <Scatter name="Closed Sales" data={chartData} fill="#2563eb" />
-                              </ScatterChart>
-                            </ResponsiveContainer>
-                          </div>
-                        ) : (
-                          <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                            <p>Parse MLS data from properties to generate chart</p>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <Card className="border-none shadow-md">
-                        <CardHeader>
-                          <CardTitle className="font-serif">Buying Pattern</CardTitle>
-                          <CardDescription>When homes sold in the last year</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          {buyingPatternData.some(d => d.count > 0) ? (
-                            <div className="h-[200px]">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={buyingPatternData}>
-                                  <XAxis dataKey="month" />
-                                  <YAxis allowDecimals={false} />
-                                  <Tooltip />
-                                  <Bar dataKey="count" fill="#2563eb" />
-                                </BarChart>
-                              </ResponsiveContainer>
-                            </div>
-                          ) : (
-                            <div className="h-[200px] flex items-center justify-center text-muted-foreground">
-                              <p>No data yet</p>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-
-                      <Card className="border-none shadow-md">
-                        <CardHeader>
-                          <CardTitle className="font-serif">Market Summary</CardTitle>
-                          <CardDescription>Key metrics for the area</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          {aggregateStats ? (
-                            <div className="space-y-4">
-                              <div className="flex justify-between items-center py-2 border-b">
-                                <span>Average Days to Close</span>
-                                <span className="text-2xl font-bold text-primary">{aggregateStats.avgDom} Days</span>
-                              </div>
-                              <div className="flex justify-between items-center py-2 border-b">
-                                <span>Average Sold Price</span>
-                                <span className="text-2xl font-bold text-primary">${aggregateStats.avgPrice.toLocaleString()}</span>
-                              </div>
-                              <div className="flex justify-between items-center py-2 border-b">
-                                <span>Monthly Sales Rate</span>
-                                <span className="font-medium">{aggregateStats.monthlySales} per month</span>
-                              </div>
-                              <div className="flex justify-between items-center py-2">
-                                <span>Months of Inventory</span>
-                                <span className="font-medium">{aggregateStats.inventory} months</span>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="text-center py-8 text-muted-foreground">
-                              <p>Parse MLS data for metrics</p>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </div>
                   </div>
                 </TabsContent>
 
@@ -789,13 +496,14 @@ export default function ReviewDetail() {
                       <div className="font-medium text-sm">{prop.name}</div>
                       <div className="text-xs text-muted-foreground truncate">{prop.address || "No address"}</div>
                       <div className="flex gap-2 mt-1">
-                        {prop.parsedProperty && <Badge variant="outline" className="text-xs">Parsed</Badge>}
-                        {prop.comparables.length > 0 && (
-                          <Badge variant="outline" className="text-xs">{prop.comparables.length} comps</Badge>
-                        )}
+                        {prop.publicRecordsFile && <Badge variant="outline" className="text-xs">Records</Badge>}
+                        {prop.mlsExportFile && <Badge variant="outline" className="text-xs">MLS Data</Badge>}
                       </div>
                     </div>
                   ))}
+                  {properties.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">No properties added yet</p>
+                  )}
                 </CardContent>
               </Card>
 
