@@ -6,6 +6,14 @@ Ninja OS is a single-user personal business operating system built for real esta
 
 The app serves as the source of truth for Ninja Selling workflows, prioritizing speed and efficiency: Weekly Meeting Agenda completion in under 10 minutes, FORD interaction logging in under 60 seconds. This is a personal productivity tool with no multi-user features, public access, gamification, or pipeline UI.
 
+### Design Philosophy: GTD + Intelligent Reference Material
+Following Getting Things Done (GTD) principles, Ninja OS is **intelligent reference material**, NOT a task manager. The system:
+- Stores relationship data, FORD notes, transaction history, and contact frequency rules
+- Calculates when contacts are due based on segment (A=monthly, B=every 2 months, C=quarterly)
+- Generates tasks for "contact this person" based on rules
+- **Exports tasks to Todoist** where all life tasks are managed in one place
+- Keeps the user's attention in Todoist for execution, returns here for reference and intelligence
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
@@ -24,11 +32,13 @@ Ninja Selling is a relationship-first, process-driven sales system. Agents incre
 - **Skillset**: Ninja Consultation, Ten-Step Buyer Process, FORD conversations, personality styles (Power/Party/Peace/Perfection)
 - **Actions**: Ninja Nine habits and weekly planning that turn mindset and skills into consistent contact and transaction flow
 
-### Relationship Segments (A/B/C/D) - "Who are they to me?"
-- **A – Advocates**: Raving fans who refer consistently
-- **B – Fans**: Like and trust you, refer occasionally
-- **C – Network**: Acquaintances, light relationship; keep in flow
-- **D – 8×8**: New or target relationships; develop using 8-touch, 8-week campaign
+### Relationship Segments (A/B/C/D) - Contact Frequency Categories
+Segments define required contact frequency, not permanent relationship status. People can move between segments.
+
+- **A – Raving Fans**: Contact once per month (call or text)
+- **B – Strong Relationships**: Contact every 2 months
+- **C – Network**: Contact quarterly (once every 3 months)
+- **D – Develop or Delete**: Fresh contacts in database; nurture via 8×8 campaign or remove
 
 ### Transaction Stages - "Where are they in a transaction?"
 - **Warm**: Likely to buy/sell within ~12 months; life change brewing
