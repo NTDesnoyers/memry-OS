@@ -11,6 +11,7 @@ import { Search, Plus, Filter, Phone, Mail, MessageSquare, MapPin, Loader2, Uplo
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useRef } from "react";
+import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import type { Person, InsertPerson } from "@shared/schema";
 import Papa from "papaparse";
@@ -673,44 +674,46 @@ export default function People() {
           ) : (
             <div className="grid gap-4">
               {filteredPeople.map((person) => (
-                <Card key={person.id} className="border-none shadow-sm hover:shadow-md transition-all bg-card/80 backdrop-blur-sm group cursor-pointer" data-testid={`card-person-${person.id}`}>
-                  <CardContent className="p-4 flex flex-col md:flex-row items-start md:items-center gap-4 justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                        {person.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-lg" data-testid={`text-name-${person.id}`}>{person.name}</h3>
-                        <div className="flex gap-2 items-center text-sm text-muted-foreground">
-                          {person.role && <Badge variant="secondary" className="font-normal">{person.role}</Badge>}
-                          {person.email && (
-                            <><span>•</span>
-                            <span className="flex items-center gap-1"><Mail className="h-3 w-3" /> {person.email}</span></>
-                          )}
+                <Link key={person.id} href={`/people/${person.id}`}>
+                  <Card className="border-none shadow-sm hover:shadow-md transition-all bg-card/80 backdrop-blur-sm group cursor-pointer" data-testid={`card-person-${person.id}`}>
+                    <CardContent className="p-4 flex flex-col md:flex-row items-start md:items-center gap-4 justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                          {person.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-lg hover:text-primary transition-colors" data-testid={`text-name-${person.id}`}>{person.name}</h3>
+                          <div className="flex gap-2 items-center text-sm text-muted-foreground">
+                            {person.role && <Badge variant="secondary" className="font-normal">{person.role}</Badge>}
+                            {person.email && (
+                              <><span>•</span>
+                              <span className="flex items-center gap-1"><Mail className="h-3 w-3" /> {person.email}</span></>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex flex-col md:flex-row items-start md:items-center gap-4 w-full md:w-auto mt-4 md:mt-0">
-                      {person.category && (
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Category</p>
-                          <Badge className={
-                            person.category.toLowerCase().includes("hot") ? "bg-red-100 text-red-700 hover:bg-red-200 border-none" :
-                            person.category.toLowerCase().includes("warm") ? "bg-orange-100 text-orange-700 hover:bg-orange-200 border-none" :
-                            "bg-blue-100 text-blue-700 hover:bg-blue-200 border-none"
-                          }>{person.category}</Badge>
-                        </div>
-                      )}
                       
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {person.phone && <Button size="icon" variant="ghost" className="h-8 w-8"><Phone className="h-4 w-4" /></Button>}
-                        {person.email && <Button size="icon" variant="ghost" className="h-8 w-8"><Mail className="h-4 w-4" /></Button>}
-                        <Button size="icon" variant="ghost" className="h-8 w-8"><MessageSquare className="h-4 w-4" /></Button>
+                      <div className="flex flex-col md:flex-row items-start md:items-center gap-4 w-full md:w-auto mt-4 md:mt-0">
+                        {person.category && (
+                          <div className="text-right">
+                            <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Category</p>
+                            <Badge className={
+                              person.category.toLowerCase().includes("hot") ? "bg-red-100 text-red-700 hover:bg-red-200 border-none" :
+                              person.category.toLowerCase().includes("warm") ? "bg-orange-100 text-orange-700 hover:bg-orange-200 border-none" :
+                              "bg-blue-100 text-blue-700 hover:bg-blue-200 border-none"
+                            }>{person.category}</Badge>
+                          </div>
+                        )}
+                        
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.preventDefault()}>
+                          {person.phone && <Button size="icon" variant="ghost" className="h-8 w-8"><Phone className="h-4 w-4" /></Button>}
+                          {person.email && <Button size="icon" variant="ghost" className="h-8 w-8"><Mail className="h-4 w-4" /></Button>}
+                          <Button size="icon" variant="ghost" className="h-8 w-8"><MessageSquare className="h-4 w-4" /></Button>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                </Link>
               ))}
             </div>
           )}

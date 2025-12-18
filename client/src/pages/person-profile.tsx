@@ -6,13 +6,18 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Phone, Mail, MapPin, Save, Loader2, User, Briefcase, Heart, Star } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  ArrowLeft, Phone, Mail, MapPin, Save, Loader2, User, Briefcase, Heart, Star,
+  PhoneCall, Video, FileText, Home, Calendar, MessageSquare, Clock, Building
+} from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { Link, useParams } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import type { Person } from "@shared/schema";
+import type { Person, Call, Meeting, Note, Deal, RealEstateReview } from "@shared/schema";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
+import { format } from "date-fns";
 
 export default function PersonProfile() {
   const { id } = useParams<{ id: string }>();
@@ -25,6 +30,37 @@ export default function PersonProfile() {
     queryKey: [`/api/people/${id}`],
     enabled: !!id,
   });
+
+  const { data: calls = [] } = useQuery<Call[]>({
+    queryKey: ["/api/calls"],
+    enabled: !!id,
+  });
+
+  const { data: meetings = [] } = useQuery<Meeting[]>({
+    queryKey: ["/api/meetings"],
+    enabled: !!id,
+  });
+
+  const { data: notes = [] } = useQuery<Note[]>({
+    queryKey: ["/api/notes"],
+    enabled: !!id,
+  });
+
+  const { data: deals = [] } = useQuery<Deal[]>({
+    queryKey: ["/api/deals"],
+    enabled: !!id,
+  });
+
+  const { data: reviews = [] } = useQuery<RealEstateReview[]>({
+    queryKey: ["/api/real-estate-reviews"],
+    enabled: !!id,
+  });
+
+  const personCalls = calls.filter(c => c.personId === id);
+  const personMeetings = meetings.filter(m => m.personId === id);
+  const personNotes = notes.filter(n => n.personId === id);
+  const personDeals = deals.filter(d => d.personId === id);
+  const personReviews = reviews.filter(r => r.personId === id);
 
   useEffect(() => {
     if (person) {
@@ -92,6 +128,26 @@ export default function PersonProfile() {
     return "bg-blue-100 text-blue-700";
   };
 
+  const formatDate = (date: Date | string | null | undefined) => {
+    if (!date) return "—";
+    try {
+      return format(new Date(date), "MMM d, yyyy");
+    } catch {
+      return "—";
+    }
+  };
+
+  const formatDateTime = (date: Date | string | null | undefined) => {
+    if (!date) return "—";
+    try {
+      return format(new Date(date), "MMM d, yyyy h:mm a");
+    } catch {
+      return "—";
+    }
+  };
+
+  const totalActivityCount = personCalls.length + personMeetings.length + personNotes.length;
+
   return (
     <Layout>
       <div className="min-h-screen bg-secondary/30 relative">
@@ -100,9 +156,9 @@ export default function PersonProfile() {
           style={{ backgroundImage: `url(${paperBg})`, backgroundSize: 'cover' }}
         />
         
-        <div className="container mx-auto px-4 py-6 max-w-4xl">
+        <div className="container mx-auto px-4 py-6 max-w-5xl">
           <div className="flex items-center gap-4 mb-6">
-            <Link href="/business-tracker">
+            <Link href="/people">
               <Button variant="ghost" size="icon" data-testid="button-back">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
@@ -132,169 +188,462 @@ export default function PersonProfile() {
             </Button>
           </div>
 
-          <div className="grid gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" /> Contact Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Name</Label>
-                    {isEditing ? (
-                      <Input 
-                        value={formData.name || ""} 
-                        onChange={(e) => handleChange("name", e.target.value)}
-                        data-testid="input-name"
-                      />
-                    ) : (
-                      <p className="text-lg">{person.name}</p>
-                    )}
-                  </div>
-                  <div>
-                    <Label>Category</Label>
-                    {isEditing ? (
-                      <Input 
-                        value={formData.category || ""} 
-                        onChange={(e) => handleChange("category", e.target.value)}
-                        placeholder="Hot, Warm, Nurture..."
-                        data-testid="input-category"
-                      />
-                    ) : (
-                      <p className="text-lg">{person.category || "—"}</p>
-                    )}
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    {isEditing ? (
-                      <Input 
-                        value={formData.email || ""} 
-                        onChange={(e) => handleChange("email", e.target.value)}
-                        placeholder="Email address"
-                        data-testid="input-email"
-                      />
-                    ) : (
-                      <span>{person.email || "No email"}</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    {isEditing ? (
-                      <Input 
-                        value={formData.phone || ""} 
-                        onChange={(e) => handleChange("phone", e.target.value)}
-                        placeholder="Phone number"
-                        data-testid="input-phone"
-                      />
-                    ) : (
-                      <span>{person.phone || "No phone"}</span>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <Label>Role</Label>
-                  {isEditing ? (
-                    <Input 
-                      value={formData.role || ""} 
-                      onChange={(e) => handleChange("role", e.target.value)}
-                      placeholder="Buyer, Seller, Investor..."
-                      data-testid="input-role"
-                    />
-                  ) : (
-                    <p>{person.role || "—"}</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Heart className="h-5 w-5" /> FORD Notes
-                </CardTitle>
-                <CardDescription>Family, Occupation, Recreation, Dreams</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label>Family</Label>
-                  {isEditing ? (
-                    <Textarea 
-                      value={formData.fordFamily || ""} 
-                      onChange={(e) => handleChange("fordFamily", e.target.value)}
-                      placeholder="Family details..."
-                      data-testid="input-ford-family"
-                    />
-                  ) : (
-                    <p className="text-sm whitespace-pre-wrap">{person.fordFamily || "—"}</p>
-                  )}
-                </div>
-                <div>
-                  <Label>Occupation</Label>
-                  {isEditing ? (
-                    <Textarea 
-                      value={formData.fordOccupation || ""} 
-                      onChange={(e) => handleChange("fordOccupation", e.target.value)}
-                      placeholder="Work, career..."
-                      data-testid="input-ford-occupation"
-                    />
-                  ) : (
-                    <p className="text-sm whitespace-pre-wrap">{person.fordOccupation || "—"}</p>
-                  )}
-                </div>
-                <div>
-                  <Label>Recreation</Label>
-                  {isEditing ? (
-                    <Textarea 
-                      value={formData.fordRecreation || ""} 
-                      onChange={(e) => handleChange("fordRecreation", e.target.value)}
-                      placeholder="Hobbies, interests..."
-                      data-testid="input-ford-recreation"
-                    />
-                  ) : (
-                    <p className="text-sm whitespace-pre-wrap">{person.fordRecreation || "—"}</p>
-                  )}
-                </div>
-                <div>
-                  <Label>Dreams</Label>
-                  {isEditing ? (
-                    <Textarea 
-                      value={formData.fordDreams || ""} 
-                      onChange={(e) => handleChange("fordDreams", e.target.value)}
-                      placeholder="Goals, aspirations..."
-                      data-testid="input-ford-dreams"
-                    />
-                  ) : (
-                    <p className="text-sm whitespace-pre-wrap">{person.fordDreams || "—"}</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Star className="h-5 w-5" /> Notes
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isEditing ? (
-                  <Textarea 
-                    value={formData.notes || ""} 
-                    onChange={(e) => handleChange("notes", e.target.value)}
-                    placeholder="General notes..."
-                    className="min-h-[100px]"
-                    data-testid="input-notes"
-                  />
-                ) : (
-                  <p className="text-sm whitespace-pre-wrap">{person.notes || "No notes yet"}</p>
+          <Tabs defaultValue="profile" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+              <TabsTrigger value="profile" className="gap-2">
+                <User className="h-4 w-4" /> Profile
+              </TabsTrigger>
+              <TabsTrigger value="activity" className="gap-2">
+                <Clock className="h-4 w-4" /> Activity
+                {totalActivityCount > 0 && (
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5">{totalActivityCount}</Badge>
                 )}
-              </CardContent>
-            </Card>
-          </div>
+              </TabsTrigger>
+              <TabsTrigger value="deals" className="gap-2">
+                <Briefcase className="h-4 w-4" /> Deals
+                {personDeals.length > 0 && (
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5">{personDeals.length}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="properties" className="gap-2">
+                <Home className="h-4 w-4" /> Properties
+                {personReviews.length > 0 && (
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5">{personReviews.length}</Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="profile" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-5 w-5" /> Contact Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Name</Label>
+                      {isEditing ? (
+                        <Input 
+                          value={formData.name || ""} 
+                          onChange={(e) => handleChange("name", e.target.value)}
+                          data-testid="input-name"
+                        />
+                      ) : (
+                        <p className="text-lg">{person.name}</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label>Category</Label>
+                      {isEditing ? (
+                        <Input 
+                          value={formData.category || ""} 
+                          onChange={(e) => handleChange("category", e.target.value)}
+                          placeholder="Hot, Warm, Nurture..."
+                          data-testid="input-category"
+                        />
+                      ) : (
+                        <p className="text-lg">{person.category || "—"}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      {isEditing ? (
+                        <Input 
+                          value={formData.email || ""} 
+                          onChange={(e) => handleChange("email", e.target.value)}
+                          placeholder="Email address"
+                          data-testid="input-email"
+                        />
+                      ) : (
+                        <span>{person.email || "No email"}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      {isEditing ? (
+                        <Input 
+                          value={formData.phone || ""} 
+                          onChange={(e) => handleChange("phone", e.target.value)}
+                          placeholder="Phone number"
+                          data-testid="input-phone"
+                        />
+                      ) : (
+                        <span>{person.phone || "No phone"}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Role</Label>
+                    {isEditing ? (
+                      <Input 
+                        value={formData.role || ""} 
+                        onChange={(e) => handleChange("role", e.target.value)}
+                        placeholder="Buyer, Seller, Investor..."
+                        data-testid="input-role"
+                      />
+                    ) : (
+                      <p>{person.role || "—"}</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Heart className="h-5 w-5" /> FORD Notes
+                  </CardTitle>
+                  <CardDescription>Family, Occupation, Recreation, Dreams</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Family</Label>
+                    {isEditing ? (
+                      <Textarea 
+                        value={formData.fordFamily || ""} 
+                        onChange={(e) => handleChange("fordFamily", e.target.value)}
+                        placeholder="Family details..."
+                        data-testid="input-ford-family"
+                      />
+                    ) : (
+                      <p className="text-sm whitespace-pre-wrap">{person.fordFamily || "—"}</p>
+                    )}
+                  </div>
+                  <div>
+                    <Label>Occupation</Label>
+                    {isEditing ? (
+                      <Textarea 
+                        value={formData.fordOccupation || ""} 
+                        onChange={(e) => handleChange("fordOccupation", e.target.value)}
+                        placeholder="Work, career..."
+                        data-testid="input-ford-occupation"
+                      />
+                    ) : (
+                      <p className="text-sm whitespace-pre-wrap">{person.fordOccupation || "—"}</p>
+                    )}
+                  </div>
+                  <div>
+                    <Label>Recreation</Label>
+                    {isEditing ? (
+                      <Textarea 
+                        value={formData.fordRecreation || ""} 
+                        onChange={(e) => handleChange("fordRecreation", e.target.value)}
+                        placeholder="Hobbies, interests..."
+                        data-testid="input-ford-recreation"
+                      />
+                    ) : (
+                      <p className="text-sm whitespace-pre-wrap">{person.fordRecreation || "—"}</p>
+                    )}
+                  </div>
+                  <div>
+                    <Label>Dreams</Label>
+                    {isEditing ? (
+                      <Textarea 
+                        value={formData.fordDreams || ""} 
+                        onChange={(e) => handleChange("fordDreams", e.target.value)}
+                        placeholder="Goals, aspirations..."
+                        data-testid="input-ford-dreams"
+                      />
+                    ) : (
+                      <p className="text-sm whitespace-pre-wrap">{person.fordDreams || "—"}</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {person.isBuyer && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Home className="h-5 w-5" /> Buyer Criteria
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Price Range</Label>
+                        <p className="font-medium">
+                          {person.buyerPriceMin && person.buyerPriceMax 
+                            ? `$${person.buyerPriceMin.toLocaleString()} - $${person.buyerPriceMax.toLocaleString()}`
+                            : "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Beds</Label>
+                        <p className="font-medium">{person.buyerBeds || "—"}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Baths</Label>
+                        <p className="font-medium">{person.buyerBaths || "—"}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Status</Label>
+                        <p className="font-medium">{person.buyerStatus || "—"}</p>
+                      </div>
+                    </div>
+                    {person.buyerAreas && person.buyerAreas.length > 0 && (
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Preferred Areas</Label>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {person.buyerAreas.map((area, i) => (
+                            <Badge key={i} variant="outline">{area}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {person.buyerMustHaves && person.buyerMustHaves.length > 0 && (
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Must Haves</Label>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {person.buyerMustHaves.map((item, i) => (
+                            <Badge key={i} variant="secondary">{item}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {person.buyerNotes && (
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Notes</Label>
+                        <p className="text-sm whitespace-pre-wrap">{person.buyerNotes}</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Star className="h-5 w-5" /> Notes
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isEditing ? (
+                    <Textarea 
+                      value={formData.notes || ""} 
+                      onChange={(e) => handleChange("notes", e.target.value)}
+                      placeholder="General notes..."
+                      className="min-h-[100px]"
+                      data-testid="input-notes"
+                    />
+                  ) : (
+                    <p className="text-sm whitespace-pre-wrap">{person.notes || "No notes yet"}</p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="activity" className="space-y-6">
+              <div className="grid gap-4">
+                {personCalls.length === 0 && personMeetings.length === 0 && personNotes.length === 0 ? (
+                  <Card className="border-dashed">
+                    <CardContent className="py-12 text-center">
+                      <Clock className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                      <p className="text-muted-foreground">No activity recorded yet</p>
+                      <p className="text-sm text-muted-foreground mt-1">Calls, meetings, and notes will appear here</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <>
+                    {personCalls.length > 0 && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2 text-lg">
+                            <PhoneCall className="h-5 w-5" /> Calls ({personCalls.length})
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          {personCalls.map((call) => (
+                            <div key={call.id} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                              <div className={`p-2 rounded-full ${call.direction === 'inbound' ? 'bg-green-100' : 'bg-blue-100'}`}>
+                                <PhoneCall className={`h-4 w-4 ${call.direction === 'inbound' ? 'text-green-600' : 'text-blue-600'}`} />
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium capitalize">{call.direction || 'Outbound'} Call</span>
+                                  {call.duration && (
+                                    <Badge variant="secondary" className="text-xs">{call.duration} min</Badge>
+                                  )}
+                                </div>
+                                {call.summary && <p className="text-sm text-muted-foreground mt-1">{call.summary}</p>}
+                                <p className="text-xs text-muted-foreground mt-1">{formatDateTime(call.createdAt)}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {personMeetings.length > 0 && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2 text-lg">
+                            <Video className="h-5 w-5" /> Meetings ({personMeetings.length})
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          {personMeetings.map((meeting) => (
+                            <div key={meeting.id} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                              <div className="p-2 rounded-full bg-purple-100">
+                                <Video className="h-4 w-4 text-purple-600" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{meeting.title}</span>
+                                  {meeting.platform && (
+                                    <Badge variant="outline" className="text-xs">{meeting.platform}</Badge>
+                                  )}
+                                </div>
+                                {meeting.summary && <p className="text-sm text-muted-foreground mt-1">{meeting.summary}</p>}
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {meeting.startTime ? formatDateTime(meeting.startTime) : formatDateTime(meeting.createdAt)}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {personNotes.length > 0 && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2 text-lg">
+                            <FileText className="h-5 w-5" /> Notes ({personNotes.length})
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          {personNotes.map((note) => (
+                            <div key={note.id} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                              <div className="p-2 rounded-full bg-amber-100">
+                                <FileText className="h-4 w-4 text-amber-600" />
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-sm whitespace-pre-wrap">{note.content}</p>
+                                {note.tags && note.tags.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-2">
+                                    {note.tags.map((tag, i) => (
+                                      <Badge key={i} variant="secondary" className="text-xs">{tag}</Badge>
+                                    ))}
+                                  </div>
+                                )}
+                                <p className="text-xs text-muted-foreground mt-1">{formatDateTime(note.createdAt)}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    )}
+                  </>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="deals" className="space-y-6">
+              {personDeals.length === 0 ? (
+                <Card className="border-dashed">
+                  <CardContent className="py-12 text-center">
+                    <Briefcase className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                    <p className="text-muted-foreground">No deals associated with this person</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid gap-4">
+                  {personDeals.map((deal) => (
+                    <Card key={deal.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h3 className="font-semibold text-lg">{deal.title}</h3>
+                            {deal.address && (
+                              <p className="text-muted-foreground flex items-center gap-1">
+                                <MapPin className="h-3 w-3" /> {deal.address}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <Badge className={
+                              deal.stage === 'closed' ? 'bg-green-100 text-green-700' :
+                              deal.stage === 'hot' ? 'bg-red-100 text-red-700' :
+                              deal.stage === 'warm' ? 'bg-orange-100 text-orange-700' :
+                              'bg-blue-100 text-blue-700'
+                            }>
+                              {deal.stage}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4 mt-4">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Type</p>
+                            <p className="font-medium capitalize">{deal.type}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Side</p>
+                            <p className="font-medium capitalize">{deal.side || '—'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Value</p>
+                            <p className="font-medium">{deal.value ? `$${deal.value.toLocaleString()}` : '—'}</p>
+                          </div>
+                        </div>
+                        {deal.expectedCloseDate && (
+                          <p className="text-sm text-muted-foreground mt-3">
+                            Expected Close: {formatDate(deal.expectedCloseDate)}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="properties" className="space-y-6">
+              {personReviews.length === 0 ? (
+                <Card className="border-dashed">
+                  <CardContent className="py-12 text-center">
+                    <Home className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                    <p className="text-muted-foreground">No property reviews for this person</p>
+                    <Link href="/reviews">
+                      <Button variant="outline" className="mt-4">Create Real Estate Review</Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid gap-4">
+                  {personReviews.map((review) => (
+                    <Link key={review.id} href={`/reviews/${review.id}`}>
+                      <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h3 className="font-semibold text-lg">{review.title}</h3>
+                              <p className="text-muted-foreground flex items-center gap-1">
+                                <MapPin className="h-3 w-3" /> {review.propertyAddress}
+                              </p>
+                            </div>
+                            <Badge variant={review.status === 'completed' ? 'default' : 'secondary'}>
+                              {review.status}
+                            </Badge>
+                          </div>
+                          {review.neighborhood && (
+                            <p className="text-sm text-muted-foreground mt-2">{review.neighborhood}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Created: {formatDate(review.createdAt)}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </Layout>
