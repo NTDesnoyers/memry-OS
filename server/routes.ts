@@ -52,6 +52,20 @@ const upload = multer({
   },
 });
 
+const uploadDocuments = multer({
+  storage: storage_multer,
+  limits: { fileSize: 50 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowedExt = /pdf|xlsx|xls|csv/;
+    const ext = allowedExt.test(path.extname(file.originalname).toLowerCase());
+    if (ext) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only PDF, Excel, and CSV files are allowed"));
+    }
+  },
+});
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -82,6 +96,21 @@ export async function registerRoutes(
       
       const urls = files.map(file => `/uploads/${file.filename}`);
       res.json({ urls, count: files.length });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // General document upload (PDF, Excel, CSV)
+  app.post("/api/upload", uploadDocuments.single("file"), async (req, res) => {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      
+      const url = `/uploads/${file.filename}`;
+      res.json({ url, filename: file.originalname });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
