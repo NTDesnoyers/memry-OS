@@ -54,6 +54,61 @@ export default function People() {
     notes: "",
   });
 
+  const detectColumnMapping = (headers: string[]) => {
+    const mapping: Record<string, string | string[]> = {};
+    const lowerHeaders = headers.map(h => h.toLowerCase());
+    
+    // Name detection
+    const firstNameIdx = lowerHeaders.findIndex(h => h.includes('first') && h.includes('name') || h === 'firstname' || h === 'first');
+    const lastNameIdx = lowerHeaders.findIndex(h => h.includes('last') && h.includes('name') || h === 'lastname' || h === 'last');
+    const fullNameIdx = lowerHeaders.findIndex(h => h === 'name' || h === 'full name' || h === 'fullname' || h === 'contact name');
+    
+    if (firstNameIdx >= 0 && lastNameIdx >= 0) {
+      mapping.name = [headers[firstNameIdx], headers[lastNameIdx]];
+    } else if (fullNameIdx >= 0) {
+      mapping.name = headers[fullNameIdx];
+    }
+    
+    // Email detection
+    const emailIdx = lowerHeaders.findIndex(h => h.includes('email') || h.includes('e-mail'));
+    if (emailIdx >= 0) mapping.email = headers[emailIdx];
+    
+    // Phone detection
+    const phoneIdx = lowerHeaders.findIndex(h => h.includes('phone') || h.includes('mobile') || h.includes('cell') || h.includes('tel'));
+    if (phoneIdx >= 0) mapping.phone = headers[phoneIdx];
+    
+    // Company detection
+    const companyIdx = lowerHeaders.findIndex(h => h.includes('company') || h.includes('organization') || h.includes('business'));
+    if (companyIdx >= 0) mapping.company = headers[companyIdx];
+    
+    // Notes detection
+    const notesIdx = lowerHeaders.findIndex(h => h.includes('note') || h.includes('comment') || h.includes('description'));
+    if (notesIdx >= 0) mapping.notes = headers[notesIdx];
+    
+    return mapping;
+  };
+
+  const transformWithMapping = (mapping: Record<string, string | string[]>, rows: any[]) => {
+    return rows.map((row: any) => {
+      const person: any = {};
+      
+      if (mapping.name) {
+        if (Array.isArray(mapping.name)) {
+          person.name = mapping.name.map((h: string) => row[h] || "").join(" ").trim();
+        } else {
+          person.name = row[mapping.name] || "";
+        }
+      }
+      
+      if (mapping.email) person.email = row[mapping.email as string] || null;
+      if (mapping.phone) person.phone = row[mapping.phone as string] || null;
+      if (mapping.company) person.company = row[mapping.company as string] || null;
+      if (mapping.notes) person.notes = row[mapping.notes as string] || null;
+      
+      return person;
+    }).filter((p: any) => p.name && p.name.trim());
+  };
+
   const processSpreadsheetData = async (rows: any[]) => {
     if (rows.length === 0) {
       setIsAnalyzing(false);
@@ -69,6 +124,7 @@ export default function People() {
     const headers = Object.keys(rows[0]);
     
     try {
+      // Try AI mapping first
       const mapRes = await fetch("/api/ai-map-csv", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -98,7 +154,7 @@ export default function People() {
       if (people.length === 0) {
         toast({
           title: "No contacts found",
-          description: "AI couldn't identify any contacts in the file",
+          description: "Couldn't identify any contacts in the file",
           variant: "destructive"
         });
       } else {
@@ -108,12 +164,43 @@ export default function People() {
         });
       }
     } catch (error: any) {
-      console.error("AI mapping error:", error);
-      toast({
-        title: "Analysis failed",
-        description: "Could not analyze the file. Please try again.",
-        variant: "destructive"
+      console.error("AI mapping error, falling back to basic detection:", error);
+      
+      // Fallback to basic column detection
+      const basicMapping = detectColumnMapping(headers);
+      
+      if (!basicMapping.name) {
+        toast({
+          title: "Could not detect columns",
+          description: "Please ensure your file has a Name or First/Last Name column",
+          variant: "destructive"
+        });
+        setIsAnalyzing(false);
+        return;
+      }
+      
+      const mappedFields = Object.keys(basicMapping).filter(k => basicMapping[k]);
+      setAiMapping({
+        mapping: basicMapping,
+        confidence: 0.7,
+        unmappedHeaders: headers.filter(h => !Object.values(basicMapping).flat().includes(h))
       });
+      
+      const people = transformWithMapping(basicMapping, rows);
+      setParsedData(people);
+      
+      if (people.length > 0) {
+        toast({
+          title: "File analyzed",
+          description: `Found ${people.length} contacts (basic detection: ${mappedFields.join(", ")})`,
+        });
+      } else {
+        toast({
+          title: "No contacts found",
+          description: "Could not extract contacts from the file",
+          variant: "destructive"
+        });
+      }
     }
     
     setIsAnalyzing(false);
