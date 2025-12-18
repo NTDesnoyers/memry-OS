@@ -12,7 +12,8 @@ import {
   Phone,
   Video,
   Mail,
-  Settings
+  Settings,
+  Palette
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState, useEffect } from "react";
@@ -32,6 +33,7 @@ const navItems = [
   { name: "Visual Pricing", href: "/visual-pricing", icon: BarChart3 },
   { name: "Haves & Wants", href: "/haves-wants", icon: Mail },
   { name: "RE Reviews", href: "/reviews", icon: Home },
+  { name: "Brand Center", href: "/brand-center", icon: Palette },
   { name: "Automation Hub", href: "/automation", icon: Workflow },
   { name: "Integrations", href: "/integrations", icon: Plug },
 ];

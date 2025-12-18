@@ -20,6 +20,7 @@ import PhoneDialer from "@/pages/phone";
 import Meetings from "@/pages/meetings";
 import HavesWants from "@/pages/haves-wants";
 import VisualPricing from "@/pages/visual-pricing";
+import BrandCenter from "@/pages/brand-center";
 
 function Router() {
   return (
@@ -38,6 +39,7 @@ function Router() {
       <Route path="/reviews/:id" component={ReviewDetail} />
       <Route path="/visual-pricing" component={VisualPricing} />
       <Route path="/haves-wants" component={HavesWants} />
+      <Route path="/brand-center" component={BrandCenter} />
       <Route path="/automation" component={AutomationHub} />
       <Route path="/integrations" component={Integrations} />
       <Route component={NotFound} />
