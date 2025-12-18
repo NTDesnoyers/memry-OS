@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Plus, Filter, Phone, Mail, MessageSquare, MapPin, Loader2, Upload, FileSpreadsheet, Check } from "lucide-react";
+import { Search, Plus, Filter, Phone, Mail, MessageSquare, MapPin, Loader2, Upload, FileSpreadsheet, Check, Sparkles, AlertCircle } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useRef } from "react";
@@ -15,13 +15,19 @@ import { useToast } from "@/hooks/use-toast";
 import type { Person, InsertPerson } from "@shared/schema";
 import Papa from "papaparse";
 
-interface ParsedPerson {
-  firstName: string;
-  lastName: string;
-  householdName: string;
-  phone: string;
-  email: string;
-  address: string;
+interface TransformedPerson {
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  role?: string | null;
+  category?: string | null;
+  notes?: string | null;
+}
+
+interface AIMapping {
+  mapping: Record<string, string | string[]>;
+  confidence: number;
+  unmappedHeaders: string[];
 }
 
 export default function People() {
@@ -30,9 +36,12 @@ export default function People() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [parsedData, setParsedData] = useState<ParsedPerson[]>([]);
+  const [parsedData, setParsedData] = useState<TransformedPerson[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [aiMapping, setAiMapping] = useState<AIMapping | null>(null);
+  const [rawCsvData, setRawCsvData] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState<Partial<InsertPerson>>({
@@ -44,38 +53,87 @@ export default function People() {
     notes: "",
   });
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    setIsAnalyzing(true);
+    setParsedData([]);
+    setAiMapping(null);
 
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
-      complete: (results) => {
-        const mapped: ParsedPerson[] = results.data.map((row: any) => {
-          const firstName = row["First Name"] || row["first name"] || row["FirstName"] || row["first_name"] || "";
-          const lastName = row["Last Name"] || row["last name"] || row["LastName"] || row["last_name"] || "";
-          const householdName = row["Household Name"] || row["household name"] || row["HouseholdName"] || row["household_name"] || "";
-          const phone = row["Cell Phone"] || row["cell phone"] || row["Phone"] || row["phone"] || row["Cell Phone Number"] || "";
-          const email = row["Email"] || row["email"] || row["Email Address"] || row["email address"] || "";
-          const address = row["Home Address"] || row["home address"] || row["Address"] || row["address"] || "";
-          
-          return { firstName, lastName, householdName, phone, email, address };
-        }).filter((p: ParsedPerson) => p.firstName || p.lastName || p.householdName);
-        
-        setParsedData(mapped);
-        if (mapped.length === 0) {
+      complete: async (results) => {
+        const rows = results.data as any[];
+        if (rows.length === 0) {
+          setIsAnalyzing(false);
           toast({
             title: "No data found",
-            description: "Please check your spreadsheet has the correct column headers",
+            description: "The file appears to be empty",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        setRawCsvData(rows);
+        const headers = Object.keys(rows[0]);
+        
+        try {
+          const mapRes = await fetch("/api/ai-map-csv", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ headers, sampleRows: rows.slice(0, 5) }),
+          });
+          
+          if (!mapRes.ok) {
+            throw new Error("AI mapping failed");
+          }
+          
+          const mapping: AIMapping = await mapRes.json();
+          setAiMapping(mapping);
+          
+          const transformRes = await fetch("/api/ai-transform-csv", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mapping: mapping.mapping, rows }),
+          });
+          
+          if (!transformRes.ok) {
+            throw new Error("Transform failed");
+          }
+          
+          const { people } = await transformRes.json();
+          setParsedData(people);
+          
+          if (people.length === 0) {
+            toast({
+              title: "No contacts found",
+              description: "AI couldn't identify any contacts in the file",
+              variant: "destructive"
+            });
+          } else {
+            toast({
+              title: "File analyzed",
+              description: `Found ${people.length} contacts with ${Math.round(mapping.confidence * 100)}% confidence`,
+            });
+          }
+        } catch (error: any) {
+          console.error("AI mapping error:", error);
+          toast({
+            title: "Analysis failed",
+            description: "Could not analyze the file. Please try again.",
             variant: "destructive"
           });
         }
+        
+        setIsAnalyzing(false);
       },
       error: () => {
+        setIsAnalyzing(false);
         toast({
           title: "Error parsing file",
-          description: "Please upload a valid CSV or Excel file",
+          description: "Please upload a valid CSV file",
           variant: "destructive"
         });
       }
@@ -91,19 +149,20 @@ export default function People() {
     
     for (let i = 0; i < parsedData.length; i++) {
       const person = parsedData[i];
-      const fullName = person.householdName || `${person.firstName} ${person.lastName}`.trim();
       
-      if (!fullName) continue;
+      if (!person.name) continue;
       
       try {
         await fetch("/api/people", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            name: fullName,
+            name: person.name,
             email: person.email || null,
             phone: person.phone || null,
-            notes: person.address ? `Address: ${person.address}` : null,
+            role: person.role || null,
+            category: person.category || null,
+            notes: person.notes || null,
           }),
         });
         imported++;
@@ -118,6 +177,8 @@ export default function People() {
     queryClient.invalidateQueries({ queryKey: ["/api/people"] });
     setUploadDialogOpen(false);
     setParsedData([]);
+    setAiMapping(null);
+    setRawCsvData([]);
     toast({
       title: "Import Complete",
       description: `Successfully imported ${imported} people`,
@@ -230,7 +291,14 @@ export default function People() {
             </div>
             
             <div className="flex gap-2">
-              <Dialog open={uploadDialogOpen} onOpenChange={(open) => { setUploadDialogOpen(open); if (!open) setParsedData([]); }}>
+              <Dialog open={uploadDialogOpen} onOpenChange={(open) => { 
+                setUploadDialogOpen(open); 
+                if (!open) { 
+                  setParsedData([]); 
+                  setAiMapping(null); 
+                  setRawCsvData([]); 
+                } 
+              }}>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="gap-2 shadow-md" data-testid="button-upload-spreadsheet">
                     <Upload className="h-4 w-4" /> Upload Spreadsheet
@@ -241,8 +309,9 @@ export default function People() {
                     <DialogTitle className="flex items-center gap-2">
                       <FileSpreadsheet className="h-5 w-5" /> Import People from Spreadsheet
                     </DialogTitle>
-                    <DialogDescription>
-                      Upload a CSV with columns: First Name, Last Name, Household Name, Cell Phone, Email, Home Address
+                    <DialogDescription className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-purple-500" />
+                      Upload any CRM export - AI will automatically figure out how to map the columns
                     </DialogDescription>
                   </DialogHeader>
                   
@@ -251,7 +320,7 @@ export default function People() {
                       <input
                         ref={fileInputRef}
                         type="file"
-                        accept=".csv,.xlsx,.xls"
+                        accept=".csv"
                         onChange={handleFileUpload}
                         className="hidden"
                         data-testid="input-file-upload"
@@ -260,12 +329,45 @@ export default function People() {
                         variant="outline" 
                         onClick={() => fileInputRef.current?.click()}
                         className="gap-2"
+                        disabled={isAnalyzing}
                         data-testid="button-select-file"
                       >
-                        <Upload className="h-4 w-4" /> Select File
+                        {isAnalyzing ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Analyzing with AI...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-4 w-4" /> Select CSV File
+                          </>
+                        )}
                       </Button>
-                      <p className="text-sm text-muted-foreground mt-2">CSV files supported</p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Works with any CRM export format
+                      </p>
                     </div>
+
+                    {aiMapping && (
+                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Sparkles className="h-4 w-4 text-purple-600" />
+                          <span className="font-medium text-purple-800">AI Analysis Complete</span>
+                          <Badge variant="outline" className="ml-auto bg-purple-100 text-purple-700 border-purple-300">
+                            {Math.round(aiMapping.confidence * 100)}% confident
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-purple-700">
+                          Mapped fields: {Object.keys(aiMapping.mapping).filter(k => aiMapping.mapping[k]).join(", ")}
+                        </div>
+                        {aiMapping.unmappedHeaders && aiMapping.unmappedHeaders.length > 0 && (
+                          <div className="text-xs text-purple-600 mt-1">
+                            Skipped columns: {aiMapping.unmappedHeaders.slice(0, 5).join(", ")}
+                            {aiMapping.unmappedHeaders.length > 5 && ` +${aiMapping.unmappedHeaders.length - 5} more`}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {parsedData.length > 0 && (
                       <>
@@ -276,18 +378,18 @@ export default function People() {
                                 <TableHead>Name</TableHead>
                                 <TableHead>Phone</TableHead>
                                 <TableHead>Email</TableHead>
-                                <TableHead>Address</TableHead>
+                                <TableHead>Notes</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
                               {parsedData.slice(0, 10).map((person, idx) => (
                                 <TableRow key={idx}>
-                                  <TableCell className="font-medium">
-                                    {person.householdName || `${person.firstName} ${person.lastName}`.trim()}
+                                  <TableCell className="font-medium">{person.name}</TableCell>
+                                  <TableCell>{person.phone || "-"}</TableCell>
+                                  <TableCell>{person.email || "-"}</TableCell>
+                                  <TableCell className="text-sm text-muted-foreground truncate max-w-[200px]">
+                                    {person.notes || "-"}
                                   </TableCell>
-                                  <TableCell>{person.phone}</TableCell>
-                                  <TableCell>{person.email}</TableCell>
-                                  <TableCell className="text-sm text-muted-foreground truncate max-w-[200px]">{person.address}</TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>

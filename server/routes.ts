@@ -21,6 +21,20 @@ import { fromZodError } from "zod-validation-error";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import OpenAI from "openai";
+
+// the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
+// Lazy initialize to prevent crash when API key is missing
+let openai: OpenAI | null = null;
+function getOpenAI(): OpenAI {
+  if (!openai) {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error("OPENAI_API_KEY is required for AI features");
+    }
+    openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return openai;
+}
 
 const uploadDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadDir)) {
@@ -244,6 +258,113 @@ export async function registerRoutes(
     }
   });
   
+  // AI-powered CSV column mapping for flexible imports
+  app.post("/api/ai-map-csv", async (req, res) => {
+    try {
+      const { headers, sampleRows } = req.body;
+      
+      if (!headers || !Array.isArray(headers)) {
+        return res.status(400).json({ message: "Headers array required" });
+      }
+
+      const prompt = `You are a data mapping assistant. Given CSV column headers and sample data from a CRM export, map them to a contact database schema.
+
+Target fields to map to:
+- name: Full name of the person (could come from combining first/last name, or a single name field)
+- email: Email address
+- phone: Phone number (cell, mobile, or primary)
+- address: Home or mailing address
+- company: Company or business name
+- role: Job title or role
+- category: Category or type of contact (e.g., client, lead, vendor)
+- notes: Any additional notes or comments
+- tags: Tags or labels
+
+CSV Headers: ${JSON.stringify(headers)}
+
+Sample Data (first 3 rows):
+${JSON.stringify(sampleRows?.slice(0, 3) || [], null, 2)}
+
+Analyze the headers and sample data. Return a JSON object with:
+1. "mapping": an object where keys are target fields (name, email, phone, etc.) and values are the original CSV header names that best match. If a field requires combining multiple columns (like first + last name), use an array of header names.
+2. "confidence": a number 0-1 indicating how confident you are in the mapping
+3. "unmappedHeaders": array of CSV headers that don't clearly map to any target field
+
+Only include mappings you're confident about. It's better to leave a field unmapped than to guess wrong.
+
+Respond with valid JSON only, no other text.`;
+
+      const response = await getOpenAI().chat.completions.create({
+        model: "gpt-5",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+      });
+
+      const result = JSON.parse(response.choices[0].message.content || "{}");
+      res.json(result);
+    } catch (error: any) {
+      console.error("AI mapping error:", error);
+      res.status(500).json({ message: error.message || "AI mapping failed" });
+    }
+  });
+
+  // AI-powered CSV transformation - apply mapping to convert rows
+  app.post("/api/ai-transform-csv", async (req, res) => {
+    try {
+      const { mapping, rows } = req.body;
+      
+      if (!mapping || !rows || !Array.isArray(rows)) {
+        return res.status(400).json({ message: "Mapping and rows required" });
+      }
+
+      const transformedPeople = rows.map((row: any) => {
+        const person: any = {};
+        
+        // Handle name (might be combined from multiple fields)
+        if (mapping.name) {
+          if (Array.isArray(mapping.name)) {
+            person.name = mapping.name.map((h: string) => row[h] || "").join(" ").trim();
+          } else {
+            person.name = row[mapping.name] || "";
+          }
+        }
+        
+        // Simple field mappings
+        if (mapping.email) person.email = row[mapping.email] || null;
+        if (mapping.phone) person.phone = row[mapping.phone] || null;
+        if (mapping.company) person.company = row[mapping.company] || null;
+        if (mapping.role) person.role = row[mapping.role] || null;
+        if (mapping.category) person.category = row[mapping.category] || null;
+        
+        // Combine address and notes
+        const noteParts: string[] = [];
+        if (mapping.address && row[mapping.address]) {
+          noteParts.push(`Address: ${row[mapping.address]}`);
+        }
+        if (mapping.notes && row[mapping.notes]) {
+          noteParts.push(row[mapping.notes]);
+        }
+        if (noteParts.length > 0) {
+          person.notes = noteParts.join("\n");
+        }
+        
+        // Handle tags
+        if (mapping.tags && row[mapping.tags]) {
+          const tagValue = row[mapping.tags];
+          person.tags = typeof tagValue === 'string' 
+            ? tagValue.split(/[,;]/).map((t: string) => t.trim()).filter(Boolean)
+            : [];
+        }
+        
+        return person;
+      }).filter((p: any) => p.name && p.name.trim());
+
+      res.json({ people: transformedPeople, count: transformedPeople.length });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ==================== PEOPLE ROUTES ====================
   
   // Get all people
