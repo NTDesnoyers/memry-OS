@@ -22,6 +22,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import OpenAI from "openai";
+import * as XLSX from "xlsx";
 
 // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
 // Lazy initialize to prevent crash when API key is missing
@@ -130,7 +131,7 @@ export async function registerRoutes(
     }
   });
 
-  // Parse MLS CSV file and return structured data
+  // Parse MLS spreadsheet file (CSV, Excel) and return structured data
   app.get("/api/parse-mls-csv", async (req, res) => {
     try {
       const fileUrl = req.query.url as string;
@@ -143,75 +144,108 @@ export async function registerRoutes(
         return res.status(404).json({ message: "File not found" });
       }
       
-      const csvContent = fs.readFileSync(filePath, 'utf-8');
-      const lines = csvContent.split('\n');
-      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+      const ext = path.extname(filePath).toLowerCase();
+      let rows: any[] = [];
+      
+      if (ext === '.xlsx' || ext === '.xls') {
+        // Parse Excel file
+        const workbook = XLSX.readFile(filePath);
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+      } else {
+        // Parse CSV file
+        const csvContent = fs.readFileSync(filePath, 'utf-8');
+        const lines = csvContent.split('\n');
+        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        
+        for (let i = 1; i < lines.length; i++) {
+          if (!lines[i].trim()) continue;
+          
+          // Parse CSV line handling quoted fields
+          const values: string[] = [];
+          let current = '';
+          let inQuotes = false;
+          for (const char of lines[i]) {
+            if (char === '"') {
+              inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+              values.push(current.trim());
+              current = '';
+            } else {
+              current += char;
+            }
+          }
+          values.push(current.trim());
+          
+          const row: any = {};
+          headers.forEach((header, idx) => {
+            let value = values[idx] || '';
+            value = value.replace(/^"|"$/g, '').trim();
+            row[header] = value;
+          });
+          rows.push(row);
+        }
+      }
       
       const properties: any[] = [];
-      for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
-        
-        // Parse CSV line handling quoted fields
-        const values: string[] = [];
-        let current = '';
-        let inQuotes = false;
-        for (const char of lines[i]) {
-          if (char === '"') {
-            inQuotes = !inQuotes;
-          } else if (char === ',' && !inQuotes) {
-            values.push(current.trim());
-            current = '';
-          } else {
-            current += char;
-          }
-        }
-        values.push(current.trim());
-        
-        const row: any = {};
-        headers.forEach((header, idx) => {
-          let value = values[idx] || '';
-          value = value.replace(/^"|"$/g, '').trim();
-          row[header] = value;
-        });
-        
-        // Extract key fields for Visual Pricing
-        const cleanPrice = (p: string) => {
+      for (const row of rows) {
+        // Extract key fields for Visual Pricing - handle various column naming conventions
+        const cleanPrice = (p: any) => {
           if (!p) return null;
-          const num = parseInt(p.replace(/[$,]/g, ''));
+          const str = String(p);
+          const num = parseInt(str.replace(/[$,]/g, ''));
           return isNaN(num) ? null : num;
         };
         
+        const getString = (keys: string[]) => {
+          for (const k of keys) {
+            if (row[k] !== undefined && row[k] !== '') return String(row[k]);
+          }
+          return '';
+        };
+        
+        const getNumber = (keys: string[], defaultVal = 0) => {
+          for (const k of keys) {
+            if (row[k] !== undefined && row[k] !== '') {
+              const val = parseFloat(String(row[k]).replace(/[,$]/g, ''));
+              if (!isNaN(val)) return val;
+            }
+          }
+          return defaultVal;
+        };
+        
         properties.push({
-          mlsNumber: row['MLSNumber'] || row['MLS #'] || '',
-          address: row['Address'] || '',
-          status: row['Status'] || '',
-          soldPrice: cleanPrice(row['SoldPrice']),
-          originalPrice: cleanPrice(row['OriginalPrice']),
-          currentPrice: cleanPrice(row['CurrentPrice']),
-          lastListPrice: cleanPrice(row['Last List Price']),
-          dom: parseInt(row['DOM']) || 0,
-          listDate: row['ListDate'] || '',
-          settledDate: row['SettledDate'] || '',
-          statusDate: row['StatusDate'] || '',
-          sqft: parseInt(row['InteriorSqFt']) || 0,
-          aboveGradeSqft: parseInt(row['AboveGradeSqFt']) || 0,
-          belowGradeSqft: parseInt(row['BelowGradeSqFt']) || 0,
-          beds: parseInt(row['Bedrooms']) || 0,
-          baths: parseFloat(row['Baths']) || 0,
-          yearBuilt: parseInt(row['HomeBuilt']) || 0,
-          acres: parseFloat(row['Acres']) || 0,
-          subdivision: row['Subdivision'] || '',
-          city: row['City'] || '',
-          zipCode: row['Zip Code'] || '',
-          style: row['Style'] || '',
-          condition: row['PropertyCondition'] || '',
+          mlsNumber: getString(['MLSNumber', 'MLS #', 'MLS Number', 'ListingId', 'Listing ID']),
+          address: getString(['Address', 'Full Address', 'Street Address', 'Property Address']),
+          status: getString(['Status', 'Listing Status', 'PropertyStatus']),
+          soldPrice: cleanPrice(row['SoldPrice'] || row['Sold Price'] || row['ClosePrice'] || row['Close Price']),
+          originalPrice: cleanPrice(row['OriginalPrice'] || row['Original Price'] || row['OriginalListPrice']),
+          currentPrice: cleanPrice(row['CurrentPrice'] || row['Current Price'] || row['ListPrice'] || row['List Price']),
+          lastListPrice: cleanPrice(row['Last List Price'] || row['LastListPrice']),
+          dom: getNumber(['DOM', 'Days On Market', 'DaysOnMarket', 'CDOM']),
+          listDate: getString(['ListDate', 'List Date', 'ListingDate', 'Listing Date']),
+          settledDate: getString(['SettledDate', 'Settled Date', 'CloseDate', 'Close Date', 'SoldDate', 'Sold Date']),
+          statusDate: getString(['StatusDate', 'Status Date', 'StatusChangeDate']),
+          sqft: getNumber(['InteriorSqFt', 'Interior SqFt', 'SqFt', 'Sq Ft', 'Square Feet', 'LivingArea', 'Living Area', 'TotalSqFt', 'Total SqFt', 'GLA']),
+          aboveGradeSqft: getNumber(['AboveGradeSqFt', 'Above Grade SqFt', 'AboveGrade']),
+          belowGradeSqft: getNumber(['BelowGradeSqFt', 'Below Grade SqFt', 'BelowGrade']),
+          beds: getNumber(['Bedrooms', 'Beds', 'BedroomsTotal', 'Bedrooms Total', 'BR']),
+          baths: getNumber(['Baths', 'Bathrooms', 'BathroomsFull', 'BathroomsTotal', 'Full Baths', 'BA']),
+          yearBuilt: getNumber(['HomeBuilt', 'Year Built', 'YearBuilt', 'Built']),
+          acres: getNumber(['Acres', 'Lot Acres', 'LotAcres', 'Lot Size']),
+          subdivision: getString(['Subdivision', 'SubdivisionName', 'Neighborhood']),
+          city: getString(['City', 'PropertyCity']),
+          zipCode: getString(['Zip Code', 'ZipCode', 'Zip', 'PostalCode', 'Postal Code']),
+          style: getString(['Style', 'PropertyStyle', 'Property Style', 'ArchitecturalStyle']),
+          condition: getString(['PropertyCondition', 'Property Condition', 'Condition']),
         });
       }
       
       // Calculate market statistics
-      const closed = properties.filter(p => p.status === 'Closed');
-      const active = properties.filter(p => ['Active', 'ComingSoon'].includes(p.status));
-      const pending = properties.filter(p => ['Pending', 'ActiveUnderContract'].includes(p.status));
+      const closed = properties.filter(p => p.status === 'Closed' || p.status === 'Sold');
+      const active = properties.filter(p => ['Active', 'ComingSoon', 'Coming Soon', 'For Sale'].includes(p.status));
+      const pending = properties.filter(p => ['Pending', 'ActiveUnderContract', 'Under Contract', 'Contingent'].includes(p.status));
       
       const avgSoldPrice = closed.length > 0 
         ? Math.round(closed.reduce((sum, p) => sum + (p.soldPrice || 0), 0) / closed.length)
@@ -219,8 +253,9 @@ export async function registerRoutes(
       const avgDOM = closed.length > 0
         ? Math.round(closed.reduce((sum, p) => sum + p.dom, 0) / closed.length)
         : 0;
-      const avgPricePerSqft = closed.length > 0
-        ? Math.round(closed.filter(p => p.sqft > 0).reduce((sum, p) => sum + ((p.soldPrice || 0) / p.sqft), 0) / closed.filter(p => p.sqft > 0).length)
+      const closedWithSqft = closed.filter(p => p.sqft > 0 && p.soldPrice);
+      const avgPricePerSqft = closedWithSqft.length > 0
+        ? Math.round(closedWithSqft.reduce((sum, p) => sum + ((p.soldPrice || 0) / p.sqft), 0) / closedWithSqft.length)
         : 0;
       
       res.json({
