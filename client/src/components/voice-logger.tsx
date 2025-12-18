@@ -1,15 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Mic, Square, Loader2, CheckCircle2, ListTodo, Mail, Sparkles, FileText, Send } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Mic, Square, Loader2, Send, MessageSquare, Sparkles, X, Bot, User } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 
-// Types for Speech Recognition
 declare global {
   interface Window {
     SpeechRecognition: any;
@@ -17,18 +13,29 @@ declare global {
   }
 }
 
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export function VoiceLogger() {
-  const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputText, setInputText] = useState("");
+  const [currentPage, setCurrentPage] = useState("");
   
   const recognitionRef = useRef<any>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    // Initialize Speech Recognition
+    setCurrentPage(window.location.pathname);
+  }, [isOpen]);
+
+  useEffect(() => {
     if (typeof window !== "undefined") {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (SpeechRecognition) {
@@ -48,222 +55,275 @@ export function VoiceLogger() {
           console.error("Speech recognition error", event.error);
           if (isRecording) stopRecording();
         };
+
+        recognitionRef.current.onend = () => {
+          if (isRecording) {
+            recognitionRef.current?.start();
+          }
+        };
       }
     }
   }, []);
 
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
   const startRecording = () => {
     setTranscript("");
-    setResult(null);
     setIsRecording(true);
-    setIsOpen(true);
     recognitionRef.current?.start();
   };
 
   const stopRecording = () => {
     setIsRecording(false);
     recognitionRef.current?.stop();
-    processRecording();
+    if (transcript.trim()) {
+      sendMessage(transcript);
+      setTranscript("");
+    }
   };
 
-  const processRecording = async () => {
-    setIsProcessing(true);
+  const getPageContext = () => {
+    const pageContexts: Record<string, string> = {
+      "/": "Dashboard - overview of business metrics, daily focus, and weekly stats",
+      "/people": "People/Contacts page - CRM contact list with FORD relationship tracking",
+      "/deals": "Deals page - active real estate transactions and pipeline",
+      "/reviews": "Real Estate Reviews - annual property reviews for clients",
+      "/brand-center": "Brand Center - managing logos, headshot, and branding assets",
+      "/relationships": "FORD Relationships - tracking Family, Occupation, Recreation, Dreams",
+      "/weekly-report": "Weekly Meeting Agenda - Ninja Selling weekly planning",
+      "/business-tracker": "Business Tracker - annual goals, transactions, and PIE metrics",
+      "/haves-wants": "Haves & Wants - client matching and newsletter management",
+      "/visual-pricing": "Visual Pricing - market analysis and comparable properties",
+      "/automation": "Automation Hub - workflow automations and integrations",
+      "/integrations": "Integrations - connected services and API settings",
+    };
+    return pageContexts[currentPage] || "Ninja OS - Real Estate Business Operating System";
+  };
+
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || isProcessing) return;
     
-    // Simulate LLM Processing Delay
-    setTimeout(() => {
-      // Mock LLM Output based on transcript (or generic if empty for demo)
-      const mockAnalysis = {
-        summary: transcript || "Discussed market trends and potential listing in Spring. Mentioned daughter's graduation coming up.",
-        ford: {
-          family: "Daughter graduating soon",
-          occupation: "Considering retirement in 2 years",
-          recreation: "Planning trip to Italy",
-          dreams: "Downsizing to a condo downtown"
-        },
-        tasks: [
-          { id: 1, text: "Send market report for 22030", due: "Tomorrow" },
-          { id: 2, text: "Call regarding Italy trip recommendations", due: "Next Week" }
-        ],
-        drafts: [
-          { 
-            type: "Email", 
-            subject: "Great catching up! + Market Info",
-            content: "Hi [Name],\n\nIt was wonderful speaking with you today! I'm so excited to hear about your daughter's upcoming graduation - what a milestone!\n\nPer our conversation, I'll pull those market stats for your neighborhood and send them over tomorrow. I think you'll be pleasantly surprised by the current equity position.\n\nBest,\nNathan"
+    const userMessage: Message = { role: "user", content: text.trim() };
+    setMessages(prev => [...prev, userMessage]);
+    setInputText("");
+    setIsProcessing(true);
+
+    try {
+      const response = await fetch("/api/ai-assistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [...messages, userMessage],
+          context: {
+            currentPage: currentPage,
+            pageDescription: getPageContext(),
+            appName: "Ninja OS",
+            appDescription: "A real estate business operating system following Ninja Selling methodology",
           }
-        ]
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("AI request failed");
+      }
+
+      const data = await response.json();
+      const assistantMessage: Message = { role: "assistant", content: data.response };
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error("AI error:", error);
+      const errorMessage: Message = { 
+        role: "assistant", 
+        content: "I'm having trouble connecting right now. Please make sure the OpenAI API key is configured in your settings." 
       };
-      
-      setResult(mockAnalysis);
-      setIsProcessing(false);
-    }, 2000);
+      setMessages(prev => [...prev, errorMessage]);
+    }
+    
+    setIsProcessing(false);
   };
 
-  const handleSave = () => {
-    toast({
-      title: "Processed & Saved",
-      description: "Interaction logged, FORD updated, tasks sent to Todoist.",
-    });
-    setIsOpen(false);
-    setResult(null);
-    setTranscript("");
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage(inputText);
+    }
+  };
+
+  const clearConversation = () => {
+    setMessages([]);
   };
 
   return (
     <>
-      {/* Floating Action Button */}
       <Button
         size="lg"
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-xl z-50 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 animate-in zoom-in duration-300"
-        onClick={startRecording}
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-xl z-50 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 animate-in zoom-in duration-300"
+        onClick={() => setIsOpen(true)}
+        data-testid="button-ai-assistant"
       >
-        <Mic className="h-6 w-6 text-white" />
+        <Sparkles className="h-6 w-6 text-white" />
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {isRecording ? (
-                <>
-                  <span className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                  </span>
-                  Listening...
-                </>
-              ) : isProcessing ? (
-                <>
-                  <Sparkles className="h-5 w-5 text-purple-500 animate-pulse" />
-                  Analyzing with AI...
-                </>
-              ) : (
-                "Interaction Processed"
+        <DialogContent className="sm:max-w-lg h-[600px] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-4 py-3 border-b flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="flex items-center gap-2 text-base">
+                <div className="h-8 w-8 rounded-full bg-gradient-to-r from-violet-600 to-purple-600 flex items-center justify-center">
+                  <Bot className="h-4 w-4 text-white" />
+                </div>
+                Ninja AI Assistant
+              </DialogTitle>
+              {messages.length > 0 && (
+                <Button variant="ghost" size="sm" onClick={clearConversation} className="text-xs text-muted-foreground">
+                  Clear
+                </Button>
               )}
-            </DialogTitle>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Your AI-powered second brain for real estate
+            </p>
           </DialogHeader>
 
-          {!result ? (
-            <div className="space-y-4 py-4">
-              <div className="min-h-[150px] p-4 bg-secondary/30 rounded-lg border-2 border-dashed border-secondary text-lg">
-                {transcript || <span className="text-muted-foreground italic">Start speaking to log an interaction...</span>}
-              </div>
-              
-              <div className="flex justify-center">
-                {isRecording ? (
-                  <Button variant="destructive" size="lg" onClick={stopRecording} className="gap-2">
-                    <Square className="h-4 w-4 fill-current" /> Stop & Process
-                  </Button>
-                ) : (
-                  <Button onClick={startRecording} className="gap-2" disabled={isProcessing}>
-                    {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
-                    {isProcessing ? "Processing..." : "Resume Recording"}
-                  </Button>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              <Tabs defaultValue="summary" className="w-full">
-                <TabsList className="w-full">
-                  <TabsTrigger value="summary">Summary & FORD</TabsTrigger>
-                  <TabsTrigger value="actions">Tasks & Drafts</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="summary" className="space-y-4 mt-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium text-sm text-muted-foreground uppercase">Summary</h4>
-                      <Badge variant="outline" className="text-green-600 bg-green-50 border-green-200">Log Created</Badge>
-                    </div>
-                    <p className="text-sm bg-secondary/30 p-3 rounded-md">
-                      {result.summary}
+          <ScrollArea className="flex-1 px-4" ref={scrollRef}>
+            <div className="py-4 space-y-4">
+              {messages.length === 0 && (
+                <div className="text-center py-8 space-y-4">
+                  <div className="h-16 w-16 rounded-full bg-gradient-to-r from-violet-100 to-purple-100 flex items-center justify-center mx-auto">
+                    <Sparkles className="h-8 w-8 text-violet-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-lg">How can I help you?</h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Ask me anything about your business, contacts, or real estate
                     </p>
                   </div>
+                  <div className="grid gap-2 text-sm">
+                    <button 
+                      onClick={() => sendMessage("What should I focus on this week?")}
+                      className="p-3 text-left rounded-lg border hover:bg-secondary/50 transition-colors"
+                    >
+                      What should I focus on this week?
+                    </button>
+                    <button 
+                      onClick={() => sendMessage("Help me prepare for my next listing appointment")}
+                      className="p-3 text-left rounded-lg border hover:bg-secondary/50 transition-colors"
+                    >
+                      Help me prepare for a listing appointment
+                    </button>
+                    <button 
+                      onClick={() => sendMessage("Give me ideas for staying in touch with my sphere")}
+                      className="p-3 text-left rounded-lg border hover:bg-secondary/50 transition-colors"
+                    >
+                      Ideas for staying in touch with my sphere
+                    </button>
+                  </div>
+                </div>
+              )}
 
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-sm text-muted-foreground uppercase">FORD Updates</h4>
-                    <div className="grid grid-cols-2 gap-3">
-                      {Object.entries(result.ford).map(([key, value]: any) => (
-                        <Card key={key} className="border-none bg-blue-50/50">
-                          <CardContent className="p-3">
-                            <span className="text-xs font-bold uppercase text-blue-700 block mb-1">{key}</span>
-                            <span className="text-sm text-blue-900">{value}</span>
-                          </CardContent>
-                        </Card>
-                      ))}
+              {messages.map((message, index) => (
+                <div
+                  key={index}
+                  className={cn(
+                    "flex gap-3",
+                    message.role === "user" ? "justify-end" : "justify-start"
+                  )}
+                >
+                  {message.role === "assistant" && (
+                    <div className="h-8 w-8 rounded-full bg-gradient-to-r from-violet-600 to-purple-600 flex items-center justify-center flex-shrink-0">
+                      <Bot className="h-4 w-4 text-white" />
+                    </div>
+                  )}
+                  <div
+                    className={cn(
+                      "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm",
+                      message.role === "user"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary"
+                    )}
+                  >
+                    <p className="whitespace-pre-wrap">{message.content}</p>
+                  </div>
+                  {message.role === "user" && (
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <User className="h-4 w-4 text-primary" />
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {isProcessing && (
+                <div className="flex gap-3 justify-start">
+                  <div className="h-8 w-8 rounded-full bg-gradient-to-r from-violet-600 to-purple-600 flex items-center justify-center flex-shrink-0">
+                    <Bot className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="bg-secondary rounded-2xl px-4 py-3">
+                    <div className="flex gap-1">
+                      <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
+                      <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
+                      <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
                     </div>
                   </div>
-                </TabsContent>
-
-                <TabsContent value="actions" className="space-y-4 mt-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium text-sm text-muted-foreground uppercase flex items-center gap-2">
-                        <ListTodo className="h-4 w-4" /> Todoist Tasks
-                      </h4>
-                      <Badge className="bg-red-100 text-red-700 hover:bg-red-200 border-none">2 Tasks</Badge>
-                    </div>
-                    {result.tasks.map((task: any) => (
-                      <div key={task.id} className="flex items-center gap-3 p-3 bg-secondary/20 rounded-md border-l-4 border-red-500">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">{task.text}</p>
-                          <p className="text-xs text-muted-foreground">Due: {task.due}</p>
-                        </div>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600">
-                           <CheckCircle2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-
-                  <Separator className="my-2" />
-
-                  <div className="space-y-3">
-                    <h4 className="font-medium text-sm text-muted-foreground uppercase flex items-center gap-2">
-                      <Mail className="h-4 w-4" /> Auto-Drafted Email
-                    </h4>
-                    {result.drafts.map((draft: any, i: number) => (
-                      <Card key={i} className="border border-border shadow-sm">
-                        <CardContent className="p-4 space-y-3">
-                          <div className="space-y-1">
-                            <p className="text-xs font-medium text-muted-foreground">Subject:</p>
-                            <p className="text-sm font-medium">{draft.subject}</p>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-xs font-medium text-muted-foreground">Body:</p>
-                            <Textarea 
-                              defaultValue={draft.content} 
-                              className="text-sm min-h-[120px] bg-background"
-                            />
-                          </div>
-                          <div className="flex justify-end gap-2">
-                            <Button size="sm" variant="outline">Discard</Button>
-                            <Button size="sm" className="gap-2">
-                              <Send className="h-3 w-3" /> Send
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </TabsContent>
-              </Tabs>
+                </div>
+              )}
             </div>
-          )}
+          </ScrollArea>
 
-          <DialogFooter className="sm:justify-between">
-             {result && (
-               <>
-                 <span className="text-xs text-muted-foreground flex items-center mt-2 sm:mt-0">
-                   <CheckCircle2 className="h-3 w-3 mr-1 text-green-500" /> Synced with Todoist
-                 </span>
-                 <div className="flex gap-2">
-                   <Button variant="outline" onClick={() => {setResult(null); setTranscript(""); setIsOpen(false);}}>Cancel</Button>
-                   <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700">Confirm & Save Log</Button>
-                 </div>
-               </>
-             )}
-          </DialogFooter>
+          <div className="p-4 border-t flex-shrink-0 space-y-3">
+            {isRecording && (
+              <div className="flex items-center gap-2 p-2 bg-red-50 rounded-lg border border-red-200">
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                </span>
+                <span className="text-sm text-red-700 flex-1">
+                  {transcript || "Listening..."}
+                </span>
+                <Button size="sm" variant="destructive" onClick={stopRecording}>
+                  <Square className="h-3 w-3 mr-1 fill-current" /> Stop
+                </Button>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={isRecording ? stopRecording : startRecording}
+                className={cn(
+                  "flex-shrink-0",
+                  isRecording && "bg-red-50 border-red-200 text-red-600 hover:bg-red-100"
+                )}
+                disabled={isProcessing}
+              >
+                {isRecording ? <Square className="h-4 w-4 fill-current" /> : <Mic className="h-4 w-4" />}
+              </Button>
+              
+              <Textarea
+                ref={inputRef}
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask me anything..."
+                className="min-h-[44px] max-h-32 resize-none"
+                rows={1}
+                disabled={isProcessing || isRecording}
+              />
+              
+              <Button
+                size="icon"
+                onClick={() => sendMessage(inputText)}
+                disabled={!inputText.trim() || isProcessing || isRecording}
+                className="flex-shrink-0 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700"
+              >
+                {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </>

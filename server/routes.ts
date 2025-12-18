@@ -400,6 +400,63 @@ Respond with valid JSON only, no other text.`;
     }
   });
 
+  // AI Assistant - general purpose conversational AI
+  app.post("/api/ai-assistant", async (req, res) => {
+    try {
+      const { messages, context } = req.body;
+      
+      if (!messages || !Array.isArray(messages)) {
+        return res.status(400).json({ message: "Messages array required" });
+      }
+
+      const openaiClient = getOpenAI();
+      
+      const systemPrompt = `You are the Ninja AI Assistant, an intelligent second brain built into Ninja OS - a real estate business operating system following the Ninja Selling methodology.
+
+Your role is to:
+- Help real estate agents be more productive and successful
+- Answer questions about their business, contacts, deals, and market
+- Provide advice based on Ninja Selling principles (relationship-first, value-driven, helping vs selling)
+- Suggest actions, follow-ups, and strategies
+- Help with email drafts, talking points, and client communications
+- Be concise but thorough - agents are busy
+
+Current context:
+- User is on: ${context?.pageDescription || context?.currentPage || 'Ninja OS'}
+- App: ${context?.appDescription || 'Real Estate Business Operating System'}
+
+Ninja Selling key principles to reference:
+- Build relationships before transactions
+- FORD: Ask about Family, Occupation, Recreation, Dreams
+- 50 Hot/50 Warm contact strategy
+- Weekly flow: Reviews, Hot/Warm contact, database touches
+- Focus on helping, not selling
+- Consistent daily habits (Ninja Nine)
+
+Be helpful, knowledgeable, and supportive. Keep responses concise but valuable.`;
+
+      const completion = await openaiClient.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...messages.map((m: any) => ({
+            role: m.role as "user" | "assistant",
+            content: m.content
+          }))
+        ],
+        max_tokens: 1000,
+        temperature: 0.7,
+      });
+
+      const response = completion.choices[0]?.message?.content || "I'm not sure how to help with that. Could you rephrase?";
+      
+      res.json({ response });
+    } catch (error: any) {
+      console.error("AI Assistant error:", error);
+      res.status(500).json({ message: error.message || "AI request failed" });
+    }
+  });
+
   // ==================== PEOPLE ROUTES ====================
   
   // Get all people
