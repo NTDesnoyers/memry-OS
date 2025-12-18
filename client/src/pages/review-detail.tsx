@@ -112,12 +112,20 @@ export default function ReviewDetail() {
       mlsExportFile: null,
     };
     
-    setProperties([...properties, newProperty]);
+    const updatedProperties = [...properties, newProperty];
+    setProperties(updatedProperties);
     setSelectedPropertyId(newProperty.id);
     setAddPropertyOpen(false);
     setNewPropertyName("");
     setNewPropertyAddress("");
-    toast({ title: "Property Added", description: `Added ${newPropertyName}` });
+    
+    // Auto-save to backend
+    updateMutation.mutate({
+      propertyData: {
+        properties: updatedProperties,
+        marketStatsRaw,
+      },
+    });
   };
 
   const handleDeleteProperty = (propId: string) => {
@@ -126,11 +134,27 @@ export default function ReviewDetail() {
     if (selectedPropertyId === propId) {
       setSelectedPropertyId(updated.length > 0 ? updated[0].id : null);
     }
-    toast({ title: "Property Removed" });
+    
+    // Auto-save to backend
+    updateMutation.mutate({
+      propertyData: {
+        properties: updated,
+        marketStatsRaw,
+      },
+    });
   };
 
   const updateProperty = (propId: string, updates: Partial<PropertyData>) => {
-    setProperties(properties.map(p => p.id === propId ? { ...p, ...updates } : p));
+    const updatedProperties = properties.map(p => p.id === propId ? { ...p, ...updates } : p);
+    setProperties(updatedProperties);
+    
+    // Auto-save to backend
+    updateMutation.mutate({
+      propertyData: {
+        properties: updatedProperties,
+        marketStatsRaw,
+      },
+    });
   };
 
   const handleFileUpload = async (file: File, type: 'publicRecords' | 'mlsExport', propId: string) => {
@@ -147,11 +171,25 @@ export default function ReviewDetail() {
       
       const data = await res.json();
       
-      if (type === 'publicRecords') {
-        updateProperty(propId, { publicRecordsFile: { name: file.name, url: data.url } });
-      } else {
-        updateProperty(propId, { mlsExportFile: { name: file.name, url: data.url } });
-      }
+      const fileData = { name: file.name, url: data.url };
+      const updatedProperties = properties.map(p => {
+        if (p.id === propId) {
+          return type === 'publicRecords' 
+            ? { ...p, publicRecordsFile: fileData }
+            : { ...p, mlsExportFile: fileData };
+        }
+        return p;
+      });
+      
+      setProperties(updatedProperties);
+      
+      // Auto-save to backend
+      updateMutation.mutate({
+        propertyData: {
+          properties: updatedProperties,
+          marketStatsRaw,
+        },
+      });
       
       toast({ title: "File Uploaded", description: file.name });
     } catch (error) {
