@@ -1176,20 +1176,20 @@ export default function WeeklyReport() {
                         <CardDescription>Upload pics of handwritten notes</CardDescription>
                       </CardHeader>
                       <CardContent className="pt-6">
-                        <div className="border-2 border-dashed border-input rounded-lg p-6 bg-background/50 transition-colors cursor-pointer group relative mb-4">
-                          <Input 
-                            type="file" 
-                            multiple 
-                            accept="image/*"
-                            className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                            onChange={handleBatchUpload}
-                          />
-                          <div className="flex flex-col items-center justify-center text-center">
+                        <div className="border-2 border-dashed border-input rounded-lg p-6 bg-background/50 transition-colors hover:bg-secondary/30 cursor-pointer group mb-4">
+                          <label className="flex flex-col items-center justify-center text-center cursor-pointer">
+                            <input 
+                              type="file" 
+                              multiple 
+                              accept="image/*,.heic"
+                              className="sr-only"
+                              onChange={handleBatchUpload}
+                            />
                             <CloudUpload className="h-8 w-8 text-muted-foreground mb-2 group-hover:text-primary transition-colors" />
                             <p className="text-sm text-muted-foreground">
                               <span className="font-semibold text-primary">Click to upload</span>
                             </p>
-                          </div>
+                          </label>
                         </div>
 
                         {noteUploads.length > 0 && (
