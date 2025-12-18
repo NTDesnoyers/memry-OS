@@ -192,9 +192,20 @@ export default function People() {
     return mapping;
   };
 
-  const transformWithMapping = (mapping: Record<string, string | string[]>, rows: any[]) => {
+  const transformWithMapping = (mapping: Record<string, string | string[]>, rows: any[], allHeaders?: string[]) => {
+    // Get all mapped column names to track which ones we've used
+    const mappedColumns = new Set<string>();
+    Object.values(mapping).forEach(val => {
+      if (Array.isArray(val)) {
+        val.forEach(v => mappedColumns.add(v));
+      } else if (val) {
+        mappedColumns.add(val as string);
+      }
+    });
+    
     return rows.map((row: any) => {
       const person: any = {};
+      const headers = allHeaders || Object.keys(row);
       
       // Build name from first+last or full name
       if (mapping.name) {
@@ -244,6 +255,23 @@ export default function People() {
       }
       if (mapping.headline && row[mapping.headline as string]) {
         notesParts.push(`Headline: ${row[mapping.headline as string]}`);
+      }
+      
+      // Capture ALL unmapped columns with data
+      const unmappedData: string[] = [];
+      headers.forEach(header => {
+        if (!mappedColumns.has(header) && row[header] && String(row[header]).trim()) {
+          const value = String(row[header]).trim();
+          // Skip if value is just whitespace or common empty values
+          if (value && value !== '-' && value !== 'N/A' && value !== 'null' && value !== 'undefined') {
+            unmappedData.push(`${header}: ${value}`);
+          }
+        }
+      });
+      
+      if (unmappedData.length > 0) {
+        notesParts.push("--- Additional Data ---");
+        notesParts.push(...unmappedData);
       }
       
       if (notesParts.length > 0) {
@@ -331,7 +359,7 @@ export default function People() {
         unmappedHeaders: headers.filter(h => !Object.values(basicMapping).flat().includes(h))
       });
       
-      const people = transformWithMapping(basicMapping, rows);
+      const people = transformWithMapping(basicMapping, rows, headers);
       setParsedData(people);
       
       if (people.length > 0) {
