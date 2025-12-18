@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "wouter";
 import { type Person } from "@shared/schema";
 import { toast } from "sonner";
@@ -26,7 +26,7 @@ import {
   Sparkles
 } from "lucide-react";
 
-type MissingField = {
+type FieldDef = {
   field: keyof Person;
   label: string;
   category: "ford" | "contact" | "history";
@@ -35,7 +35,7 @@ type MissingField = {
   isTextarea?: boolean;
 };
 
-const missingFieldDefinitions: MissingField[] = [
+const fieldDefinitions: FieldDef[] = [
   { field: "fordFamily", label: "Family", category: "ford", icon: <Heart className="h-4 w-4" />, placeholder: "Spouse, children, parents, pets...", isTextarea: true },
   { field: "fordOccupation", label: "Occupation", category: "ford", icon: <Briefcase className="h-4 w-4" />, placeholder: "Job title, company, work situation...", isTextarea: true },
   { field: "fordRecreation", label: "Recreation", category: "ford", icon: <Gamepad2 className="h-4 w-4" />, placeholder: "Hobbies, interests, sports, travel...", isTextarea: true },
@@ -45,7 +45,7 @@ const missingFieldDefinitions: MissingField[] = [
   { field: "address", label: "Address", category: "contact", icon: <Home className="h-4 w-4" />, placeholder: "123 Main St, City, State" },
 ];
 
-type PersonWithMissing = Person & { missingFields: MissingField[] };
+type PersonWithMissing = Person & { missingFields: FieldDef[] };
 
 export default function KnowYourPeople() {
   const queryClient = useQueryClient();
@@ -60,7 +60,7 @@ export default function KnowYourPeople() {
   const peopleWithMissing = useMemo(() => {
     return people
       .map(person => {
-        const missingFields = missingFieldDefinitions.filter(def => {
+        const missingFields = fieldDefinitions.filter(def => {
           const value = person[def.field];
           return !value || (typeof value === "string" && value.trim() === "");
         });
@@ -74,6 +74,18 @@ export default function KnowYourPeople() {
         return aOrder - bOrder;
       });
   }, [people]);
+
+  // When navigating to a person, pre-fill fieldValues with their existing data
+  const initializeFieldValues = (person: Person) => {
+    const values: Record<string, string> = {};
+    fieldDefinitions.forEach(def => {
+      const value = person[def.field];
+      if (value && typeof value === "string") {
+        values[def.field] = value;
+      }
+    });
+    setFieldValues(values);
+  };
 
   const currentPerson = peopleWithMissing[currentIndex];
   const totalPeople = peopleWithMissing.length;
@@ -102,18 +114,26 @@ export default function KnowYourPeople() {
   });
 
   const moveToNext = () => {
-    setFieldValues({});
     if (currentIndex < totalPeople - 1) {
       setCurrentIndex(prev => prev + 1);
+    } else {
+      setFieldValues({});
     }
   };
 
   const moveToPrevious = () => {
-    setFieldValues({});
     if (currentIndex > 0) {
       setCurrentIndex(prev => prev - 1);
     }
   };
+
+  // Initialize field values when current person changes
+  useEffect(() => {
+    if (currentPerson) {
+      initializeFieldValues(currentPerson);
+    }
+  }, [currentPerson?.id]);
+
 
   const handleSave = () => {
     if (!currentPerson) return;
@@ -146,7 +166,7 @@ export default function KnowYourPeople() {
     }
   };
 
-  const getCategoryStats = (fields: MissingField[]) => {
+  const getCategoryStats = (fields: FieldDef[]) => {
     const ford = fields.filter(f => f.category === "ford").length;
     const contact = fields.filter(f => f.category === "contact").length;
     return { ford, contact };
@@ -253,13 +273,15 @@ export default function KnowYourPeople() {
                 </div>
 
                 <div className="space-y-4">
-                  {currentPerson.missingFields.map((field) => (
-                    <div key={field.field} className="space-y-1">
-                      <label className="flex items-center gap-2 text-sm font-medium">
-                        {field.icon}
-                        {field.label}
-                      </label>
-                      {field.isTextarea ? (
+                  {fieldDefinitions.filter(f => f.category === "ford").map((field) => {
+                    const isMissing = currentPerson.missingFields.some(mf => mf.field === field.field);
+                    return (
+                      <div key={field.field} className="space-y-1">
+                        <label className="flex items-center gap-2 text-sm font-medium">
+                          {field.icon}
+                          {field.label}
+                          {!isMissing && <Check className="h-3 w-3 text-green-600" />}
+                        </label>
                         <Textarea
                           placeholder={field.placeholder}
                           value={fieldValues[field.field] || ""}
@@ -268,16 +290,29 @@ export default function KnowYourPeople() {
                           rows={2}
                           data-testid={`input-${field.field}`}
                         />
-                      ) : (
-                        <Input
-                          placeholder={field.placeholder}
-                          value={fieldValues[field.field] || ""}
-                          onChange={(e) => setFieldValues(prev => ({ ...prev, [field.field]: e.target.value }))}
-                          data-testid={`input-${field.field}`}
-                        />
-                      )}
+                      </div>
+                    );
+                  })}
+                  
+                  {currentPerson.missingFields.filter(f => f.category === "contact").length > 0 && (
+                    <div className="pt-2 border-t">
+                      <p className="text-xs text-muted-foreground mb-3">Contact Info (optional)</p>
+                      {fieldDefinitions.filter(f => f.category === "contact" && currentPerson.missingFields.some(mf => mf.field === f.field)).map((field) => (
+                        <div key={field.field} className="space-y-1 mb-3">
+                          <label className="flex items-center gap-2 text-sm font-medium">
+                            {field.icon}
+                            {field.label}
+                          </label>
+                          <Input
+                            placeholder={field.placeholder}
+                            value={fieldValues[field.field] || ""}
+                            onChange={(e) => setFieldValues(prev => ({ ...prev, [field.field]: e.target.value }))}
+                            data-testid={`input-${field.field}`}
+                          />
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
 
                 <div className="sticky bottom-0 bg-white pt-4 pb-2 border-t mt-4 -mx-6 px-6">
