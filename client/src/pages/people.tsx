@@ -534,20 +534,41 @@ export default function People() {
   };
 
   const handleBulkDelete = async () => {
-    if (!confirm(`Are you sure you want to delete ${selectedIds.size} people? This cannot be undone.`)) return;
+    const count = selectedIds.size;
+    if (count === 0) {
+      toast({ title: "No selection", description: "Please select people to delete", variant: "destructive" });
+      return;
+    }
+    
+    if (!confirm(`Are you sure you want to delete ${count} people? This cannot be undone.`)) return;
     
     const ids = Array.from(selectedIds);
-    for (const id of ids) {
+    let successCount = 0;
+    let failCount = 0;
+    
+    await Promise.all(ids.map(async (id) => {
       try {
-        await fetch(`/api/people/${id}`, { method: "DELETE" });
+        const res = await fetch(`/api/people/${id}`, { method: "DELETE" });
+        if (res.ok) {
+          successCount++;
+        } else {
+          failCount++;
+          console.error("Failed to delete:", id, res.status);
+        }
       } catch (e) {
-        console.error("Failed to delete:", id);
+        failCount++;
+        console.error("Failed to delete:", id, e);
       }
-    }
+    }));
     
     queryClient.invalidateQueries({ queryKey: ["/api/people"] });
     clearSelection();
-    toast({ title: "Deleted", description: `Removed ${selectedIds.size} people` });
+    
+    if (failCount > 0) {
+      toast({ title: "Partial Delete", description: `Deleted ${successCount}, failed ${failCount}`, variant: "destructive" });
+    } else {
+      toast({ title: "Deleted", description: `Removed ${successCount} people` });
+    }
   };
 
   const handleExportSelected = () => {
