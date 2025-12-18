@@ -116,6 +116,116 @@ export async function registerRoutes(
     }
   });
 
+  // Parse MLS CSV file and return structured data
+  app.get("/api/parse-mls-csv", async (req, res) => {
+    try {
+      const fileUrl = req.query.url as string;
+      if (!fileUrl) {
+        return res.status(400).json({ message: "File URL required" });
+      }
+      
+      const filePath = path.join(process.cwd(), fileUrl);
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ message: "File not found" });
+      }
+      
+      const csvContent = fs.readFileSync(filePath, 'utf-8');
+      const lines = csvContent.split('\n');
+      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+      
+      const properties: any[] = [];
+      for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        
+        // Parse CSV line handling quoted fields
+        const values: string[] = [];
+        let current = '';
+        let inQuotes = false;
+        for (const char of lines[i]) {
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            values.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        values.push(current.trim());
+        
+        const row: any = {};
+        headers.forEach((header, idx) => {
+          let value = values[idx] || '';
+          value = value.replace(/^"|"$/g, '').trim();
+          row[header] = value;
+        });
+        
+        // Extract key fields for Visual Pricing
+        const cleanPrice = (p: string) => {
+          if (!p) return null;
+          const num = parseInt(p.replace(/[$,]/g, ''));
+          return isNaN(num) ? null : num;
+        };
+        
+        properties.push({
+          mlsNumber: row['MLSNumber'] || row['MLS #'] || '',
+          address: row['Address'] || '',
+          status: row['Status'] || '',
+          soldPrice: cleanPrice(row['SoldPrice']),
+          originalPrice: cleanPrice(row['OriginalPrice']),
+          currentPrice: cleanPrice(row['CurrentPrice']),
+          lastListPrice: cleanPrice(row['Last List Price']),
+          dom: parseInt(row['DOM']) || 0,
+          listDate: row['ListDate'] || '',
+          settledDate: row['SettledDate'] || '',
+          statusDate: row['StatusDate'] || '',
+          sqft: parseInt(row['InteriorSqFt']) || 0,
+          aboveGradeSqft: parseInt(row['AboveGradeSqFt']) || 0,
+          belowGradeSqft: parseInt(row['BelowGradeSqFt']) || 0,
+          beds: parseInt(row['Bedrooms']) || 0,
+          baths: parseFloat(row['Baths']) || 0,
+          yearBuilt: parseInt(row['HomeBuilt']) || 0,
+          acres: parseFloat(row['Acres']) || 0,
+          subdivision: row['Subdivision'] || '',
+          city: row['City'] || '',
+          zipCode: row['Zip Code'] || '',
+          style: row['Style'] || '',
+          condition: row['PropertyCondition'] || '',
+        });
+      }
+      
+      // Calculate market statistics
+      const closed = properties.filter(p => p.status === 'Closed');
+      const active = properties.filter(p => ['Active', 'ComingSoon'].includes(p.status));
+      const pending = properties.filter(p => ['Pending', 'ActiveUnderContract'].includes(p.status));
+      
+      const avgSoldPrice = closed.length > 0 
+        ? Math.round(closed.reduce((sum, p) => sum + (p.soldPrice || 0), 0) / closed.length)
+        : 0;
+      const avgDOM = closed.length > 0
+        ? Math.round(closed.reduce((sum, p) => sum + p.dom, 0) / closed.length)
+        : 0;
+      const avgPricePerSqft = closed.length > 0
+        ? Math.round(closed.filter(p => p.sqft > 0).reduce((sum, p) => sum + ((p.soldPrice || 0) / p.sqft), 0) / closed.filter(p => p.sqft > 0).length)
+        : 0;
+      
+      res.json({
+        properties,
+        stats: {
+          total: properties.length,
+          closed: closed.length,
+          active: active.length,
+          pending: pending.length,
+          avgSoldPrice,
+          avgDOM,
+          avgPricePerSqft,
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Create note with uploaded images
   app.post("/api/notes/with-images", async (req, res) => {
     try {

@@ -29,6 +29,276 @@ function generatePropertyId() {
   return `prop_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
+interface MLSProperty {
+  mlsNumber: string;
+  address: string;
+  status: string;
+  soldPrice: number | null;
+  originalPrice: number | null;
+  currentPrice: number | null;
+  lastListPrice: number | null;
+  dom: number;
+  listDate: string;
+  settledDate: string;
+  statusDate: string;
+  sqft: number;
+  aboveGradeSqft: number;
+  belowGradeSqft: number;
+  beds: number;
+  baths: number;
+  yearBuilt: number;
+  acres: number;
+  subdivision: string;
+  city: string;
+  zipCode: string;
+  style: string;
+  condition: string;
+}
+
+interface MLSData {
+  properties: MLSProperty[];
+  stats: {
+    total: number;
+    closed: number;
+    active: number;
+    pending: number;
+    avgSoldPrice: number;
+    avgDOM: number;
+    avgPricePerSqft: number;
+  };
+}
+
+function VisualPricingSection({ properties }: { properties: PropertyData[] }) {
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(
+    properties.length > 0 ? properties[0].id : null
+  );
+  const [mlsData, setMlsData] = useState<MLSData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  const selectedProperty = properties.find(p => p.id === selectedPropertyId);
+
+  useEffect(() => {
+    if (selectedProperty?.mlsExportFile?.url) {
+      setLoading(true);
+      fetch(`/api/parse-mls-csv?url=${encodeURIComponent(selectedProperty.mlsExportFile.url)}`)
+        .then(res => res.json())
+        .then(data => {
+          setMlsData(data);
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
+    } else {
+      setMlsData(null);
+    }
+  }, [selectedProperty?.mlsExportFile?.url]);
+
+  const formatPrice = (price: number | null) => {
+    if (!price) return '-';
+    return '$' + price.toLocaleString();
+  };
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '-';
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      return `${parts[0]}/${parts[1]}/${parts[2].slice(-2)}`;
+    }
+    return dateStr;
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Closed': return 'bg-green-100 text-green-800';
+      case 'Active': return 'bg-blue-100 text-blue-800';
+      case 'ComingSoon': return 'bg-purple-100 text-purple-800';
+      case 'Pending': return 'bg-yellow-100 text-yellow-800';
+      case 'ActiveUnderContract': return 'bg-orange-100 text-orange-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const filteredProperties = mlsData?.properties.filter(p => {
+    if (statusFilter === 'all') return true;
+    if (statusFilter === 'closed') return p.status === 'Closed';
+    if (statusFilter === 'active') return ['Active', 'ComingSoon'].includes(p.status);
+    if (statusFilter === 'pending') return ['Pending', 'ActiveUnderContract'].includes(p.status);
+    return true;
+  }) || [];
+
+  if (properties.length === 0) {
+    return (
+      <Card className="border-none shadow-md">
+        <CardContent className="py-12 text-center text-muted-foreground">
+          <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>No properties with MLS data</p>
+          <p className="text-sm">Add a property and upload MLS export data to see Visual Pricing</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2 items-center">
+        {properties.map((prop) => (
+          <Button
+            key={prop.id}
+            variant={selectedPropertyId === prop.id ? "default" : "outline"}
+            size="sm"
+            onClick={() => setSelectedPropertyId(prop.id)}
+            className="gap-2"
+            disabled={!prop.mlsExportFile}
+          >
+            <Home className="h-4 w-4" />
+            {prop.name}
+            {!prop.mlsExportFile && <span className="text-xs opacity-50">(no data)</span>}
+          </Button>
+        ))}
+      </div>
+
+      {loading && (
+        <Card className="border-none shadow-md">
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">Loading MLS data...</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {!loading && !mlsData && selectedProperty?.mlsExportFile && (
+        <Card className="border-none shadow-md">
+          <CardContent className="py-12 text-center text-muted-foreground">
+            <p>Unable to parse MLS data</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {!loading && mlsData && (
+        <>
+          <Card className="border-none shadow-md">
+            <CardHeader>
+              <CardTitle className="font-serif">Market Summary - {selectedProperty?.name}</CardTitle>
+              <CardDescription>{selectedProperty?.address}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-secondary/30 p-4 rounded-lg text-center">
+                  <div className="text-3xl font-bold text-primary">{mlsData.stats.closed}</div>
+                  <div className="text-sm text-muted-foreground">Closed Sales</div>
+                </div>
+                <div className="bg-secondary/30 p-4 rounded-lg text-center">
+                  <div className="text-3xl font-bold text-blue-600">{mlsData.stats.active}</div>
+                  <div className="text-sm text-muted-foreground">Active Listings</div>
+                </div>
+                <div className="bg-secondary/30 p-4 rounded-lg text-center">
+                  <div className="text-3xl font-bold text-orange-600">{mlsData.stats.pending}</div>
+                  <div className="text-sm text-muted-foreground">Under Contract</div>
+                </div>
+                <div className="bg-secondary/30 p-4 rounded-lg text-center">
+                  <div className="text-3xl font-bold">{mlsData.stats.avgDOM}</div>
+                  <div className="text-sm text-muted-foreground">Avg Days on Market</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div className="bg-green-50 p-4 rounded-lg text-center border border-green-200">
+                  <div className="text-2xl font-bold text-green-700">{formatPrice(mlsData.stats.avgSoldPrice)}</div>
+                  <div className="text-sm text-green-600">Avg Sold Price</div>
+                </div>
+                <div className="bg-blue-50 p-4 rounded-lg text-center border border-blue-200">
+                  <div className="text-2xl font-bold text-blue-700">${mlsData.stats.avgPricePerSqft}/sqft</div>
+                  <div className="text-sm text-blue-600">Avg Price per SqFt</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-md">
+            <CardHeader>
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                  <CardTitle className="font-serif">Comparable Properties</CardTitle>
+                  <CardDescription>Single Family Homes Near You</CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant={statusFilter === 'all' ? 'default' : 'outline'} 
+                    size="sm"
+                    onClick={() => setStatusFilter('all')}
+                  >
+                    All ({mlsData.stats.total})
+                  </Button>
+                  <Button 
+                    variant={statusFilter === 'closed' ? 'default' : 'outline'} 
+                    size="sm"
+                    onClick={() => setStatusFilter('closed')}
+                  >
+                    Closed ({mlsData.stats.closed})
+                  </Button>
+                  <Button 
+                    variant={statusFilter === 'active' ? 'default' : 'outline'} 
+                    size="sm"
+                    onClick={() => setStatusFilter('active')}
+                  >
+                    Active ({mlsData.stats.active})
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-secondary/30">
+                      <th className="p-2 text-left font-medium">#</th>
+                      <th className="p-2 text-left font-medium">MLS #</th>
+                      <th className="p-2 text-left font-medium">Status</th>
+                      <th className="p-2 text-left font-medium">Address</th>
+                      <th className="p-2 text-right font-medium">SqFt</th>
+                      <th className="p-2 text-center font-medium">BD/BA</th>
+                      <th className="p-2 text-center font-medium">Year</th>
+                      <th className="p-2 text-right font-medium">List Price</th>
+                      <th className="p-2 text-center font-medium">DOM</th>
+                      <th className="p-2 text-center font-medium">Date</th>
+                      <th className="p-2 text-right font-medium">Sold Price</th>
+                      <th className="p-2 text-right font-medium">$/SqFt</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProperties.map((prop, idx) => {
+                      const listPrice = prop.originalPrice || prop.currentPrice || prop.lastListPrice;
+                      const pricePerSqft = prop.soldPrice && prop.sqft ? Math.round(prop.soldPrice / prop.sqft) : null;
+                      return (
+                        <tr key={prop.mlsNumber} className="border-b hover:bg-secondary/20">
+                          <td className="p-2 text-muted-foreground">{idx + 1}</td>
+                          <td className="p-2 font-mono text-xs">{prop.mlsNumber}</td>
+                          <td className="p-2">
+                            <span className={`px-2 py-0.5 rounded text-xs ${getStatusColor(prop.status)}`}>
+                              {prop.status}
+                            </span>
+                          </td>
+                          <td className="p-2 max-w-[200px] truncate">{prop.address}</td>
+                          <td className="p-2 text-right">{prop.sqft > 0 ? prop.sqft.toLocaleString() : '-'}</td>
+                          <td className="p-2 text-center">{prop.beds}/{prop.baths}</td>
+                          <td className="p-2 text-center">{prop.yearBuilt || '-'}</td>
+                          <td className="p-2 text-right">{formatPrice(listPrice)}</td>
+                          <td className="p-2 text-center">{prop.dom}</td>
+                          <td className="p-2 text-center text-xs">{formatDate(prop.settledDate || prop.statusDate)}</td>
+                          <td className="p-2 text-right font-medium text-green-700">{formatPrice(prop.soldPrice)}</td>
+                          <td className="p-2 text-right">{pricePerSqft ? `$${pricePerSqft}` : '-'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function ReviewDetail() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
@@ -286,6 +556,9 @@ export default function ReviewDetail() {
                   <TabsTrigger value="properties" className="gap-2">
                     <Building className="h-4 w-4" /> Properties ({properties.length})
                   </TabsTrigger>
+                  <TabsTrigger value="visual-pricing" className="gap-2">
+                    <BarChart3 className="h-4 w-4" /> Visual Pricing
+                  </TabsTrigger>
                   <TabsTrigger value="market" className="gap-2">
                     <TrendingUp className="h-4 w-4" /> Market Stats
                   </TabsTrigger>
@@ -483,6 +756,10 @@ export default function ReviewDetail() {
                       </Card>
                     )}
                   </div>
+                </TabsContent>
+
+                <TabsContent value="visual-pricing">
+                  <VisualPricingSection properties={properties} />
                 </TabsContent>
 
                 <TabsContent value="market">
