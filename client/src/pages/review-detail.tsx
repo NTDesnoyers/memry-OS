@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Home, FileText, Database, BarChart3, TrendingUp, Save, ExternalLink, Send, CheckCircle2, FileCheck, Map, Plus, Trash2, Building, Upload, File, X } from "lucide-react";
+import { ArrowLeft, Home, FileText, Database, BarChart3, TrendingUp, Save, ExternalLink, Send, CheckCircle2, FileCheck, Map, Plus, Trash2, Building, Upload, File, X, Printer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
@@ -479,6 +479,252 @@ export default function ReviewDetail() {
     });
   };
 
+  const handlePrint = async () => {
+    const propertiesWithData = properties.filter(p => p.mlsExportFile);
+    
+    const allMlsData: { property: PropertyData; mlsData: any }[] = [];
+    for (const prop of propertiesWithData) {
+      try {
+        const res = await fetch(`/api/parse-mls-csv?url=${encodeURIComponent(prop.mlsExportFile!.url)}`);
+        const data = await res.json();
+        allMlsData.push({ property: prop, mlsData: data });
+      } catch (e) {
+        console.error('Failed to load MLS data for', prop.name);
+      }
+    }
+
+    const formatPrice = (price: number | null) => {
+      if (!price) return '-';
+      return '$' + price.toLocaleString();
+    };
+
+    const formatDate = (dateStr: string) => {
+      if (!dateStr) return '-';
+      const parts = dateStr.split('/');
+      if (parts.length === 3) {
+        return `${parts[0]}/${parts[1]}/${parts[2].slice(-2)}`;
+      }
+      return dateStr;
+    };
+
+    const getStatusStyle = (status: string) => {
+      switch (status) {
+        case 'Closed': return 'background: #dcfce7; color: #166534;';
+        case 'Active': return 'background: #dbeafe; color: #1e40af;';
+        case 'Pending': return 'background: #fef9c3; color: #854d0e;';
+        default: return 'background: #f3f4f6; color: #374151;';
+      }
+    };
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${review?.title || 'Real Estate Review'}</title>
+        <style>
+          * { box-sizing: border-box; }
+          body { 
+            font-family: Georgia, serif; 
+            margin: 0; 
+            padding: 20px; 
+            color: #1a1a1a;
+            font-size: 11px;
+          }
+          .header { 
+            text-align: center; 
+            margin-bottom: 30px; 
+            border-bottom: 2px solid #1a365d;
+            padding-bottom: 15px;
+          }
+          .header h1 { 
+            color: #1a365d; 
+            margin: 0 0 5px 0;
+            font-size: 24px;
+          }
+          .header p { 
+            color: #666; 
+            margin: 0;
+            font-size: 12px;
+          }
+          .property-section { 
+            page-break-inside: avoid; 
+            margin-bottom: 30px; 
+          }
+          .property-header {
+            background: #1a365d;
+            color: white;
+            padding: 10px 15px;
+            margin-bottom: 15px;
+          }
+          .property-header h2 { 
+            margin: 0;
+            font-size: 16px;
+          }
+          .property-header p { 
+            margin: 3px 0 0 0;
+            opacity: 0.9;
+            font-size: 11px;
+          }
+          .stats-grid { 
+            display: grid; 
+            grid-template-columns: repeat(4, 1fr); 
+            gap: 10px; 
+            margin-bottom: 15px;
+          }
+          .stat-box { 
+            text-align: center; 
+            padding: 12px; 
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+          }
+          .stat-box .value { 
+            font-size: 20px; 
+            font-weight: bold; 
+            color: #1a365d;
+          }
+          .stat-box .label { 
+            font-size: 10px; 
+            color: #666;
+            margin-top: 3px;
+          }
+          .stat-box.green { background: #f0fdf4; border-color: #bbf7d0; }
+          .stat-box.green .value { color: #166534; }
+          .stat-box.blue { background: #eff6ff; border-color: #bfdbfe; }
+          .stat-box.blue .value { color: #1e40af; }
+          table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            font-size: 10px;
+          }
+          th { 
+            background: #1a365d; 
+            color: white; 
+            padding: 8px 5px; 
+            text-align: left;
+            font-weight: 600;
+          }
+          th.right, td.right { text-align: right; }
+          th.center, td.center { text-align: center; }
+          td { 
+            padding: 6px 5px; 
+            border-bottom: 1px solid #e2e8f0;
+          }
+          tr:nth-child(even) { background: #f8fafc; }
+          .status-badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 9px;
+            font-weight: 600;
+          }
+          .sold-price { color: #166534; font-weight: 600; }
+          @media print {
+            body { padding: 0; }
+            .property-section { page-break-before: auto; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>${review?.title || 'Real Estate Review'}</h1>
+          <p>Annual Property Review | ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+        </div>
+        
+        ${allMlsData.map(({ property, mlsData }) => `
+          <div class="property-section">
+            <div class="property-header">
+              <h2>${property.name}</h2>
+              <p>${property.address || ''}</p>
+            </div>
+            
+            <div class="stats-grid">
+              <div class="stat-box">
+                <div class="value">${mlsData.stats.closed}</div>
+                <div class="label">Closed Sales</div>
+              </div>
+              <div class="stat-box">
+                <div class="value">${mlsData.stats.active}</div>
+                <div class="label">Active Listings</div>
+              </div>
+              <div class="stat-box">
+                <div class="value">${mlsData.stats.pending}</div>
+                <div class="label">Under Contract</div>
+              </div>
+              <div class="stat-box">
+                <div class="value">${mlsData.stats.avgDOM}</div>
+                <div class="label">Avg Days on Market</div>
+              </div>
+            </div>
+            
+            <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr);">
+              <div class="stat-box green">
+                <div class="value">${formatPrice(mlsData.stats.avgSoldPrice)}</div>
+                <div class="label">Average Sold Price</div>
+              </div>
+              <div class="stat-box blue">
+                <div class="value">$${mlsData.stats.avgPricePerSqft}/sqft</div>
+                <div class="label">Average Price per SqFt</div>
+              </div>
+            </div>
+            
+            <h3 style="margin: 20px 0 10px; font-size: 14px; color: #1a365d;">Comparable Properties</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>MLS #</th>
+                  <th>Status</th>
+                  <th>Address</th>
+                  <th class="right">SqFt</th>
+                  <th class="center">BD/BA</th>
+                  <th class="center">Year</th>
+                  <th class="right">List Price</th>
+                  <th class="center">DOM</th>
+                  <th class="center">Date</th>
+                  <th class="right">Sold Price</th>
+                  <th class="right">$/SqFt</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${mlsData.properties.map((p: any, i: number) => {
+                  const listPrice = p.originalPrice || p.currentPrice || p.lastListPrice;
+                  const pricePerSqft = p.soldPrice && p.sqft ? Math.round(p.soldPrice / p.sqft) : null;
+                  return `
+                    <tr>
+                      <td>${i + 1}</td>
+                      <td style="font-family: monospace; font-size: 9px;">${p.mlsNumber}</td>
+                      <td><span class="status-badge" style="${getStatusStyle(p.status)}">${p.status}</span></td>
+                      <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${p.address}</td>
+                      <td class="right">${p.sqft > 0 ? p.sqft.toLocaleString() : '-'}</td>
+                      <td class="center">${p.beds}/${p.baths}</td>
+                      <td class="center">${p.yearBuilt || '-'}</td>
+                      <td class="right">${formatPrice(listPrice)}</td>
+                      <td class="center">${p.dom}</td>
+                      <td class="center">${formatDate(p.settledDate || p.statusDate)}</td>
+                      <td class="right sold-price">${formatPrice(p.soldPrice)}</td>
+                      <td class="right">${pricePerSqft ? '$' + pricePerSqft : '-'}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        `).join('')}
+        
+        ${allMlsData.length === 0 ? '<p style="text-align: center; color: #666;">No MLS data available. Upload CSV files to properties to generate Visual Pricing.</p>' : ''}
+      </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.onload = () => {
+        printWindow.print();
+      };
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "draft": return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">Draft</Badge>;
@@ -539,6 +785,9 @@ export default function ReviewDetail() {
             <div className="flex gap-2">
               <Button variant="outline" className="gap-2" onClick={handleSaveAll} disabled={updateMutation.isPending}>
                 <Save className="h-4 w-4" /> Save All
+              </Button>
+              <Button variant="outline" className="gap-2" onClick={handlePrint} data-testid="button-print">
+                <Printer className="h-4 w-4" /> Print
               </Button>
               <Button variant="outline" className="gap-2" onClick={() => updateMutation.mutate({ status: "ready" })}>
                 <CheckCircle2 className="h-4 w-4" /> Mark Ready
