@@ -53,6 +53,57 @@ export default function BusinessTracker() {
     },
   });
 
+  const [draggedDealId, setDraggedDealId] = useState<string | null>(null);
+  const [dragOverStage, setDragOverStage] = useState<string | null>(null);
+
+  const updateDealStageMutation = useMutation({
+    mutationFn: async ({ dealId, stage }: { dealId: string; stage: string }) => {
+      const res = await fetch(`/api/deals/${dealId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stage }),
+      });
+      if (!res.ok) throw new Error("Failed to update deal");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+      toast.success("Deal moved");
+    },
+    onError: () => {
+      toast.error("Failed to move deal");
+    },
+  });
+
+  const handleDragStart = (e: React.DragEvent, dealId: string) => {
+    setDraggedDealId(dealId);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent, stage: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverStage(stage);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverStage(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, stage: string) => {
+    e.preventDefault();
+    setDragOverStage(null);
+    if (draggedDealId) {
+      updateDealStageMutation.mutate({ dealId: draggedDealId, stage });
+      setDraggedDealId(null);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedDealId(null);
+    setDragOverStage(null);
+  };
+
   const handleSaveSettings = () => {
     updateSettingsMutation.mutate(settings);
   };
@@ -395,7 +446,12 @@ export default function BusinessTracker() {
               {/* 4-Column Layout */}
               <div className="grid grid-cols-4 gap-3">
                 {/* WARM PROSPECTS */}
-                <div className="bg-blue-100/80 rounded-lg overflow-hidden">
+                <div 
+                  className={`bg-blue-100/80 rounded-lg overflow-hidden transition-all ${dragOverStage === "warm" ? "ring-2 ring-blue-500 ring-offset-2" : ""}`}
+                  onDragOver={(e) => handleDragOver(e, "warm")}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, "warm")}
+                >
                   <div className="bg-slate-600 text-white p-2 text-center font-serif">
                     "Warm" Prospects
                   </div>
@@ -418,7 +474,14 @@ export default function BusinessTracker() {
                             </TableCell>
                           </TableRow>
                         ) : warmDeals.slice(0, 30).map((deal) => (
-                          <TableRow key={deal.id} className="text-xs hover:bg-blue-200/50" data-testid={`row-warm-${deal.id}`}>
+                          <TableRow 
+                            key={deal.id} 
+                            className={`text-xs hover:bg-blue-200/50 cursor-grab ${draggedDealId === deal.id ? "opacity-50" : ""}`}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, deal.id)}
+                            onDragEnd={handleDragEnd}
+                            data-testid={`row-warm-${deal.id}`}
+                          >
                             <TableCell className="py-1 px-1 font-bold text-primary">{deal.painPleasureRating || ""}</TableCell>
                             <TableCell className="py-1 px-1">
                               <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} dealId={deal.id} />
@@ -445,7 +508,12 @@ export default function BusinessTracker() {
                 {/* HOT AND ACTIVE + HOT AND CONFUSED */}
                 <div className="space-y-3">
                   {/* Hot and Active */}
-                  <div className="bg-blue-100/80 rounded-lg overflow-hidden">
+                  <div 
+                    className={`bg-blue-100/80 rounded-lg overflow-hidden transition-all ${dragOverStage === "hot" ? "ring-2 ring-red-500 ring-offset-2" : ""}`}
+                    onDragOver={(e) => handleDragOver(e, "hot")}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, "hot")}
+                  >
                     <div className="bg-slate-600 text-white p-2 text-center font-serif">
                       "Hot" and Active Prospects
                     </div>
@@ -468,7 +536,14 @@ export default function BusinessTracker() {
                               </TableCell>
                             </TableRow>
                           ) : hotActiveDeals.slice(0, 15).map((deal) => (
-                            <TableRow key={deal.id} className="text-xs hover:bg-blue-200/50" data-testid={`row-hot-${deal.id}`}>
+                            <TableRow 
+                              key={deal.id} 
+                              className={`text-xs hover:bg-blue-200/50 cursor-grab ${draggedDealId === deal.id ? "opacity-50" : ""}`}
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, deal.id)}
+                              onDragEnd={handleDragEnd}
+                              data-testid={`row-hot-${deal.id}`}
+                            >
                               <TableCell className="py-1 px-1 font-bold text-primary">{deal.painPleasureRating || ""}</TableCell>
                               <TableCell className="py-1 px-1">
                                 <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} dealId={deal.id} />
@@ -494,7 +569,12 @@ export default function BusinessTracker() {
                   </div>
                   
                   {/* Hot and Confused */}
-                  <div className="bg-amber-100/80 rounded-lg overflow-hidden">
+                  <div 
+                    className={`bg-amber-100/80 rounded-lg overflow-hidden transition-all ${dragOverStage === "hot_confused" ? "ring-2 ring-amber-500 ring-offset-2" : ""}`}
+                    onDragOver={(e) => handleDragOver(e, "hot_confused")}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, "hot_confused")}
+                  >
                     <div className="bg-amber-700 text-white p-2 text-center font-serif text-sm">
                       "Hot" and Confused Prospects
                     </div>
@@ -516,7 +596,13 @@ export default function BusinessTracker() {
                               </TableCell>
                             </TableRow>
                           ) : hotConfusedDeals.slice(0, 5).map((deal) => (
-                            <TableRow key={deal.id} className="text-xs hover:bg-amber-200/50">
+                            <TableRow 
+                              key={deal.id} 
+                              className={`text-xs hover:bg-amber-200/50 cursor-grab ${draggedDealId === deal.id ? "opacity-50" : ""}`}
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, deal.id)}
+                              onDragEnd={handleDragEnd}
+                            >
                               <TableCell className="py-1 px-1">{deal.createdAt ? new Date(deal.createdAt).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' }) : ""}</TableCell>
                               <TableCell className="py-1 px-1">
                                 <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} dealId={deal.id} />
@@ -532,7 +618,12 @@ export default function BusinessTracker() {
                 </div>
 
                 {/* UNDER CONTRACT */}
-                <div className="bg-slate-100/80 rounded-lg overflow-hidden">
+                <div 
+                  className={`bg-slate-100/80 rounded-lg overflow-hidden transition-all ${dragOverStage === "in_contract" ? "ring-2 ring-slate-500 ring-offset-2" : ""}`}
+                  onDragOver={(e) => handleDragOver(e, "in_contract")}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, "in_contract")}
+                >
                   <div className="bg-slate-600 text-white p-2 text-center font-serif">
                     Under Contract
                   </div>
@@ -555,7 +646,14 @@ export default function BusinessTracker() {
                             </TableCell>
                           </TableRow>
                         ) : underContractDeals.map((deal) => (
-                          <TableRow key={deal.id} className="text-xs hover:bg-slate-200/50" data-testid={`row-uc-${deal.id}`}>
+                          <TableRow 
+                            key={deal.id} 
+                            className={`text-xs hover:bg-slate-200/50 cursor-grab ${draggedDealId === deal.id ? "opacity-50" : ""}`}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, deal.id)}
+                            onDragEnd={handleDragEnd}
+                            data-testid={`row-uc-${deal.id}`}
+                          >
                             <TableCell className="py-1 px-1">
                               <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} dealId={deal.id} />
                             </TableCell>
@@ -589,7 +687,12 @@ export default function BusinessTracker() {
                 </div>
 
                 {/* CLOSED TRANSACTIONS */}
-                <div className="bg-slate-100/80 rounded-lg overflow-hidden">
+                <div 
+                  className={`bg-slate-100/80 rounded-lg overflow-hidden transition-all ${dragOverStage === "closed" ? "ring-2 ring-green-500 ring-offset-2" : ""}`}
+                  onDragOver={(e) => handleDragOver(e, "closed")}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, "closed")}
+                >
                   <div className="bg-slate-700 text-white p-2 text-center font-serif">
                     Closed Transactions
                   </div>

@@ -7,9 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   ArrowLeft, Phone, Mail, MapPin, Save, Loader2, User, Briefcase, Heart, Star,
-  PhoneCall, Video, FileText, Home, Calendar, MessageSquare, Clock, Building
+  PhoneCall, Video, FileText, Home, Calendar, MessageSquare, Clock, Building, Flame
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
@@ -89,6 +90,25 @@ export default function PersonProfile() {
     },
   });
 
+  const updateDealStageMutation = useMutation({
+    mutationFn: async ({ dealId, stage }: { dealId: string; stage: string }) => {
+      const res = await fetch(`/api/deals/${dealId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stage }),
+      });
+      if (!res.ok) throw new Error("Failed to update deal stage");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+      toast({ title: "Updated", description: "Deal status changed" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update deal status", variant: "destructive" });
+    },
+  });
+
   const handleSave = () => {
     updateMutation.mutate(formData);
   };
@@ -130,6 +150,30 @@ export default function PersonProfile() {
     return "bg-gray-100 text-gray-700";
   };
 
+  const getDealStageColor = (stage: string | null | undefined) => {
+    if (!stage) return "bg-gray-100 text-gray-700";
+    const lower = stage.toLowerCase();
+    if (lower === "warm") return "bg-amber-100 text-amber-700";
+    if (lower === "hot" || lower === "hot_active") return "bg-red-100 text-red-700";
+    if (lower === "hot_confused") return "bg-orange-100 text-orange-700";
+    if (lower === "in_contract") return "bg-blue-100 text-blue-700";
+    if (lower === "closed") return "bg-green-100 text-green-700";
+    return "bg-gray-100 text-gray-700";
+  };
+
+  const getDealStageLabel = (stage: string | null | undefined) => {
+    if (!stage) return "";
+    const lower = stage.toLowerCase();
+    if (lower === "warm") return "Warm";
+    if (lower === "hot" || lower === "hot_active") return "Hot";
+    if (lower === "hot_confused") return "Hot (Confused)";
+    if (lower === "in_contract") return "Under Contract";
+    if (lower === "closed") return "Closed";
+    return stage;
+  };
+
+  const activeDeal = personDeals.find(d => ["warm", "hot", "hot_active", "hot_confused", "in_contract"].includes(d.stage?.toLowerCase() || ""));
+
   const formatDate = (date: Date | string | null | undefined) => {
     if (!date) return "—";
     try {
@@ -167,7 +211,28 @@ export default function PersonProfile() {
             </Link>
             <div className="flex-1">
               <h1 className="text-3xl font-serif font-bold text-primary">{person.name}</h1>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                {activeDeal && (
+                  <div className="flex items-center gap-1">
+                    <Select
+                      value={activeDeal.stage || "warm"}
+                      onValueChange={(value) => updateDealStageMutation.mutate({ dealId: activeDeal.id, stage: value })}
+                    >
+                      <SelectTrigger className={`h-7 w-auto gap-1 px-2 border-0 ${getDealStageColor(activeDeal.stage)}`} data-testid="select-deal-stage">
+                        <Flame className="h-3 w-3" />
+                        <SelectValue>{getDealStageLabel(activeDeal.stage)} {activeDeal.side === "seller" ? "Seller" : "Buyer"}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="warm">Warm</SelectItem>
+                        <SelectItem value="hot">Hot</SelectItem>
+                        <SelectItem value="hot_confused">Hot (Confused)</SelectItem>
+                        <SelectItem value="in_contract">Under Contract</SelectItem>
+                        <SelectItem value="closed">Closed</SelectItem>
+                        <SelectItem value="lost">Lost</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 {person.segment && (
                   <Badge className={getSegmentColor(person.segment)}>{person.segment}</Badge>
                 )}
