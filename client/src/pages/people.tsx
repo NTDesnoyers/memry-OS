@@ -14,6 +14,7 @@ import { useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { Person, InsertPerson } from "@shared/schema";
 import Papa from "papaparse";
+import * as XLSX from "xlsx";
 
 interface TransformedPerson {
   name: string;
@@ -53,6 +54,71 @@ export default function People() {
     notes: "",
   });
 
+  const processSpreadsheetData = async (rows: any[]) => {
+    if (rows.length === 0) {
+      setIsAnalyzing(false);
+      toast({
+        title: "No data found",
+        description: "The file appears to be empty",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setRawCsvData(rows);
+    const headers = Object.keys(rows[0]);
+    
+    try {
+      const mapRes = await fetch("/api/ai-map-csv", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ headers, sampleRows: rows.slice(0, 5) }),
+      });
+      
+      if (!mapRes.ok) {
+        throw new Error("AI mapping failed");
+      }
+      
+      const mapping: AIMapping = await mapRes.json();
+      setAiMapping(mapping);
+      
+      const transformRes = await fetch("/api/ai-transform-csv", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mapping: mapping.mapping, rows }),
+      });
+      
+      if (!transformRes.ok) {
+        throw new Error("Transform failed");
+      }
+      
+      const { people } = await transformRes.json();
+      setParsedData(people);
+      
+      if (people.length === 0) {
+        toast({
+          title: "No contacts found",
+          description: "AI couldn't identify any contacts in the file",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "File analyzed",
+          description: `Found ${people.length} contacts with ${Math.round(mapping.confidence * 100)}% confidence`,
+        });
+      }
+    } catch (error: any) {
+      console.error("AI mapping error:", error);
+      toast({
+        title: "Analysis failed",
+        description: "Could not analyze the file. Please try again.",
+        variant: "destructive"
+      });
+    }
+    
+    setIsAnalyzing(false);
+  };
+
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -61,83 +127,55 @@ export default function People() {
     setParsedData([]);
     setAiMapping(null);
 
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: async (results) => {
-        const rows = results.data as any[];
-        if (rows.length === 0) {
+    const ext = file.name.toLowerCase().split('.').pop();
+
+    if (ext === 'xlsx' || ext === 'xls') {
+      // Handle Excel files
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const data = e.target?.result;
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+          await processSpreadsheetData(rows);
+        } catch (error) {
           setIsAnalyzing(false);
           toast({
-            title: "No data found",
-            description: "The file appears to be empty",
-            variant: "destructive"
-          });
-          return;
-        }
-
-        setRawCsvData(rows);
-        const headers = Object.keys(rows[0]);
-        
-        try {
-          const mapRes = await fetch("/api/ai-map-csv", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ headers, sampleRows: rows.slice(0, 5) }),
-          });
-          
-          if (!mapRes.ok) {
-            throw new Error("AI mapping failed");
-          }
-          
-          const mapping: AIMapping = await mapRes.json();
-          setAiMapping(mapping);
-          
-          const transformRes = await fetch("/api/ai-transform-csv", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mapping: mapping.mapping, rows }),
-          });
-          
-          if (!transformRes.ok) {
-            throw new Error("Transform failed");
-          }
-          
-          const { people } = await transformRes.json();
-          setParsedData(people);
-          
-          if (people.length === 0) {
-            toast({
-              title: "No contacts found",
-              description: "AI couldn't identify any contacts in the file",
-              variant: "destructive"
-            });
-          } else {
-            toast({
-              title: "File analyzed",
-              description: `Found ${people.length} contacts with ${Math.round(mapping.confidence * 100)}% confidence`,
-            });
-          }
-        } catch (error: any) {
-          console.error("AI mapping error:", error);
-          toast({
-            title: "Analysis failed",
-            description: "Could not analyze the file. Please try again.",
+            title: "Error parsing file",
+            description: "Could not read the Excel file",
             variant: "destructive"
           });
         }
-        
-        setIsAnalyzing(false);
-      },
-      error: () => {
+      };
+      reader.onerror = () => {
         setIsAnalyzing(false);
         toast({
-          title: "Error parsing file",
-          description: "Please upload a valid CSV file",
+          title: "Error reading file",
+          description: "Could not read the file",
           variant: "destructive"
         });
-      }
-    });
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      // Handle CSV files with Papa Parse
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: async (results) => {
+          await processSpreadsheetData(results.data as any[]);
+        },
+        error: () => {
+          setIsAnalyzing(false);
+          toast({
+            title: "Error parsing file",
+            description: "Please upload a valid spreadsheet file",
+            variant: "destructive"
+          });
+        }
+      });
+    }
   };
 
   const handleImportPeople = async () => {
@@ -320,7 +358,7 @@ export default function People() {
                       <input
                         ref={fileInputRef}
                         type="file"
-                        accept=".csv"
+                        accept=".csv,.xlsx,.xls"
                         onChange={handleFileUpload}
                         className="hidden"
                         data-testid="input-file-upload"
@@ -339,12 +377,12 @@ export default function People() {
                           </>
                         ) : (
                           <>
-                            <Upload className="h-4 w-4" /> Select CSV File
+                            <Upload className="h-4 w-4" /> Select Spreadsheet
                           </>
                         )}
                       </Button>
                       <p className="text-sm text-muted-foreground mt-2">
-                        Works with any CRM export format
+                        Works with CSV, Excel (.xlsx, .xls), and any CRM export
                       </p>
                     </div>
 
