@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Plus, Filter, Phone, Mail, MessageSquare, MapPin, Loader2, Upload, FileSpreadsheet, Check, Sparkles, AlertCircle } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Search, Plus, Filter, Phone, Mail, MessageSquare, MapPin, Loader2, Upload, FileSpreadsheet, Check, Sparkles, AlertCircle, X, Tag, Trash2, Download, CheckSquare } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useRef } from "react";
@@ -45,6 +46,9 @@ export default function People() {
   const [aiMapping, setAiMapping] = useState<AIMapping | null>(null);
   const [rawCsvData, setRawCsvData] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkCategoryDialogOpen, setBulkCategoryDialogOpen] = useState(false);
+  const [bulkCategory, setBulkCategory] = useState("");
   
   const [formData, setFormData] = useState<Partial<InsertPerson>>({
     name: "",
@@ -54,6 +58,26 @@ export default function People() {
     category: "",
     notes: "",
   });
+
+  const toggleSelect = (id: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
 
   const detectColumnMapping = (headers: string[]) => {
     const mapping: Record<string, string | string[]> = {};
@@ -87,11 +111,13 @@ export default function People() {
     const homePhoneCol = findHeader(['home phone', 'home']);
     const workPhoneCol = findHeader(['work phone', 'work', 'business phone', 'office phone']);
     const phoneCol = findHeader(['phone', 'phone number', 'telephone']);
-    mapping.phone = mobileCol || phoneCol || homePhoneCol || workPhoneCol || null;
+    const primaryPhone = mobileCol || phoneCol || homePhoneCol || workPhoneCol;
+    if (primaryPhone) mapping.phone = primaryPhone;
     
     // Secondary phone for notes
-    if (mapping.phone && (homePhoneCol || workPhoneCol)) {
-      mapping.secondaryPhone = homePhoneCol || workPhoneCol;
+    if (primaryPhone && (homePhoneCol || workPhoneCol)) {
+      const secondaryPhone = homePhoneCol || workPhoneCol;
+      if (secondaryPhone) mapping.secondaryPhone = secondaryPhone;
     }
     
     // Address detection
@@ -476,6 +502,79 @@ export default function People() {
     person.phone?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const selectAll = () => {
+    if (selectedIds.size === filteredPeople.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredPeople.map(p => p.id)));
+    }
+  };
+
+  const handleBulkCategoryChange = async () => {
+    if (!bulkCategory.trim()) return;
+    
+    const ids = Array.from(selectedIds);
+    for (const id of ids) {
+      try {
+        await fetch(`/api/people/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ category: bulkCategory }),
+        });
+      } catch (e) {
+        console.error("Failed to update:", id);
+      }
+    }
+    
+    queryClient.invalidateQueries({ queryKey: ["/api/people"] });
+    setBulkCategoryDialogOpen(false);
+    setBulkCategory("");
+    clearSelection();
+    toast({ title: "Updated", description: `Changed category for ${selectedIds.size} people` });
+  };
+
+  const handleBulkDelete = async () => {
+    if (!confirm(`Are you sure you want to delete ${selectedIds.size} people? This cannot be undone.`)) return;
+    
+    const ids = Array.from(selectedIds);
+    for (const id of ids) {
+      try {
+        await fetch(`/api/people/${id}`, { method: "DELETE" });
+      } catch (e) {
+        console.error("Failed to delete:", id);
+      }
+    }
+    
+    queryClient.invalidateQueries({ queryKey: ["/api/people"] });
+    clearSelection();
+    toast({ title: "Deleted", description: `Removed ${selectedIds.size} people` });
+  };
+
+  const handleExportSelected = () => {
+    const selectedPeople = people.filter(p => selectedIds.has(p.id));
+    const csv = [
+      ["Name", "Email", "Phone", "Category", "Role", "Notes"],
+      ...selectedPeople.map(p => [
+        p.name,
+        p.email || "",
+        p.phone || "",
+        p.category || "",
+        p.role || "",
+        (p.notes || "").replace(/\n/g, " ")
+      ])
+    ].map(row => row.map(cell => `"${cell}"`).join(",")).join("\n");
+    
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `contacts-export-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    toast({ title: "Exported", description: `Downloaded ${selectedIds.size} contacts` });
+  };
+
   return (
     <Layout>
       <div className="min-h-screen bg-secondary/30 relative">
@@ -718,6 +817,21 @@ export default function People() {
           </header>
 
           <div className="flex gap-4 mb-6">
+            <div className="flex items-center gap-3">
+              <Checkbox 
+                checked={filteredPeople.length > 0 && selectedIds.size === filteredPeople.length}
+                onCheckedChange={selectAll}
+                data-testid="checkbox-select-all"
+                className="h-5 w-5"
+              />
+              {selectedIds.size > 0 ? (
+                <span className="text-sm font-medium text-primary">
+                  {selectedIds.size} of {filteredPeople.length} selected
+                </span>
+              ) : (
+                <span className="text-sm text-muted-foreground">Select all</span>
+              )}
+            </div>
             <div className="relative flex-1">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input 
@@ -747,13 +861,25 @@ export default function People() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4">
+            <div className="grid gap-4 pb-20">
               {filteredPeople.map((person) => (
-                <Link key={person.id} href={`/people/${person.id}`}>
-                  <Card className="border-none shadow-sm hover:shadow-md transition-all bg-card/80 backdrop-blur-sm group cursor-pointer" data-testid={`card-person-${person.id}`}>
-                    <CardContent className="p-4 flex flex-col md:flex-row items-start md:items-center gap-4 justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                <Card 
+                  key={person.id} 
+                  className={`border-none shadow-sm hover:shadow-md transition-all bg-card/80 backdrop-blur-sm group cursor-pointer ${selectedIds.has(person.id) ? 'ring-2 ring-primary bg-primary/5' : ''}`} 
+                  data-testid={`card-person-${person.id}`}
+                >
+                  <CardContent className="p-4 flex flex-col md:flex-row items-start md:items-center gap-4 justify-between">
+                    <div className="flex items-center gap-4">
+                      <div onClick={(e) => toggleSelect(person.id, e)} className="flex-shrink-0">
+                        <Checkbox 
+                          checked={selectedIds.has(person.id)}
+                          onCheckedChange={() => toggleSelect(person.id)}
+                          className="h-5 w-5"
+                          data-testid={`checkbox-person-${person.id}`}
+                        />
+                      </div>
+                      <Link href={`/people/${person.id}`} className="flex items-center gap-4 flex-1">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold flex-shrink-0">
                           {person.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                         </div>
                         <div>
@@ -766,34 +892,92 @@ export default function People() {
                             )}
                           </div>
                         </div>
-                      </div>
-                      
-                      <div className="flex flex-col md:flex-row items-start md:items-center gap-4 w-full md:w-auto mt-4 md:mt-0">
-                        {person.category && (
-                          <div className="text-right">
-                            <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Category</p>
-                            <Badge className={
-                              person.category.toLowerCase().includes("hot") ? "bg-red-100 text-red-700 hover:bg-red-200 border-none" :
-                              person.category.toLowerCase().includes("warm") ? "bg-orange-100 text-orange-700 hover:bg-orange-200 border-none" :
-                              "bg-blue-100 text-blue-700 hover:bg-blue-200 border-none"
-                            }>{person.category}</Badge>
-                          </div>
-                        )}
-                        
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.preventDefault()}>
-                          {person.phone && <Button size="icon" variant="ghost" className="h-8 w-8"><Phone className="h-4 w-4" /></Button>}
-                          {person.email && <Button size="icon" variant="ghost" className="h-8 w-8"><Mail className="h-4 w-4" /></Button>}
-                          <Button size="icon" variant="ghost" className="h-8 w-8"><MessageSquare className="h-4 w-4" /></Button>
+                      </Link>
+                    </div>
+                    
+                    <div className="flex flex-col md:flex-row items-start md:items-center gap-4 w-full md:w-auto mt-4 md:mt-0">
+                      {person.category && (
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Category</p>
+                          <Badge className={
+                            person.category.toLowerCase().includes("hot") ? "bg-red-100 text-red-700 hover:bg-red-200 border-none" :
+                            person.category.toLowerCase().includes("warm") ? "bg-orange-100 text-orange-700 hover:bg-orange-200 border-none" :
+                            "bg-blue-100 text-blue-700 hover:bg-blue-200 border-none"
+                          }>{person.category}</Badge>
                         </div>
+                      )}
+                      
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {person.phone && <Button size="icon" variant="ghost" className="h-8 w-8"><Phone className="h-4 w-4" /></Button>}
+                        {person.email && <Button size="icon" variant="ghost" className="h-8 w-8"><Mail className="h-4 w-4" /></Button>}
+                        <Button size="icon" variant="ghost" className="h-8 w-8"><MessageSquare className="h-4 w-4" /></Button>
                       </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           )}
         </div>
       </div>
+
+      {/* Floating Action Bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-primary text-primary-foreground rounded-full shadow-2xl px-6 py-3 flex items-center gap-4 animate-in slide-in-from-bottom-4">
+          <span className="font-medium">{selectedIds.size} selected</span>
+          <div className="h-6 w-px bg-primary-foreground/30" />
+          
+          <Dialog open={bulkCategoryDialogOpen} onOpenChange={setBulkCategoryDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/20 gap-2">
+                <Tag className="h-4 w-4" /> Category
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Change Category</DialogTitle>
+                <DialogDescription>Set category for {selectedIds.size} selected people</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="flex gap-2 flex-wrap">
+                  {["Hot", "Warm", "Nurture", "Past Client", "Vendor"].map(cat => (
+                    <Button 
+                      key={cat} 
+                      variant={bulkCategory === cat ? "default" : "outline"} 
+                      size="sm"
+                      onClick={() => setBulkCategory(cat)}
+                    >
+                      {cat}
+                    </Button>
+                  ))}
+                </div>
+                <Input 
+                  placeholder="Or type custom category..." 
+                  value={bulkCategory}
+                  onChange={(e) => setBulkCategory(e.target.value)}
+                />
+                <Button onClick={handleBulkCategoryChange} className="w-full" disabled={!bulkCategory.trim()}>
+                  Apply to {selectedIds.size} people
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+          
+          <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/20 gap-2" onClick={handleExportSelected}>
+            <Download className="h-4 w-4" /> Export
+          </Button>
+          
+          <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/20 gap-2" onClick={handleBulkDelete}>
+            <Trash2 className="h-4 w-4" /> Delete
+          </Button>
+          
+          <div className="h-6 w-px bg-primary-foreground/30" />
+          
+          <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/20 h-8 w-8" onClick={clearSelection}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
     </Layout>
   );
 }
