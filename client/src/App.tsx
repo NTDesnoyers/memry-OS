@@ -12,6 +12,7 @@ import PersonNew from "@/pages/person-new";
 import Relationships from "@/pages/relationships";
 import Deals from "@/pages/deals";
 import Reviews from "@/pages/reviews";
+import ReviewDetail from "@/pages/review-detail";
 import BusinessTracker from "@/pages/business-tracker";
 import Integrations from "@/pages/integrations";
 import AutomationHub from "@/pages/automation";
@@ -34,6 +35,7 @@ function Router() {
       <Route path="/relationships" component={Relationships} />
       <Route path="/deals" component={Deals} />
       <Route path="/reviews" component={Reviews} />
+      <Route path="/reviews/:id" component={ReviewDetail} />
       <Route path="/visual-pricing" component={VisualPricing} />
       <Route path="/haves-wants" component={HavesWants} />
       <Route path="/automation" component={AutomationHub} />
