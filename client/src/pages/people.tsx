@@ -134,13 +134,13 @@ export default function People() {
       if (secondaryPhone) mapping.secondaryPhone = secondaryPhone;
     }
     
-    // Address detection - extended patterns
-    const addressCol = findHeader(['address', 'street address', 'street', 'address 1', 'mailing address', 'home address', 'address line 1', 'street1', 'primary address']);
+    // Address detection - extended patterns including Cloze/CRM format (Home Street, Home City, etc.)
+    const addressCol = findHeader(['address', 'street address', 'street', 'address 1', 'mailing address', 'home address', 'address line 1', 'street1', 'primary address', 'home street', 'business street', 'other street']);
     const address2Col = findHeader(['address 2', 'address line 2', 'street2', 'apt', 'unit', 'suite']);
-    const cityCol = findHeader(['city', 'town', 'locality']);
-    const stateCol = findHeader(['state', 'province', 'st', 'region']);
-    const zipCol = findHeader(['zip', 'zip code', 'postal code', 'postal', 'zipcode', 'postcode']);
-    const countryCol = findHeader(['country', 'nation']);
+    const cityCol = findHeader(['city', 'town', 'locality', 'home city', 'business city', 'other city']);
+    const stateCol = findHeader(['state', 'province', 'st', 'region', 'home state', 'business state', 'other state']);
+    const zipCol = findHeader(['zip', 'zip code', 'postal code', 'postal', 'zipcode', 'postcode', 'home postal code', 'business postal code', 'other postal code']);
+    const countryCol = findHeader(['country', 'nation', 'home country', 'business country', 'other country']);
     
     if (addressCol || cityCol || stateCol || zipCol) {
       mapping.address = [];
