@@ -1,0 +1,327 @@
+# WEEKLY MEETING AGENDA (WMA)
+## GTD-ALIGNED, SINGLE-FLOW SPEC
+## WITH AI INTERRUPTION RULES
+## (FOR REPLIT IMPLEMENTATION)
+
+---
+
+# CORE DESIGN INTENT
+
+- There is **one weekly review flow**, not multiple pages competing for attention.
+- The flow follows **GTD cognitive order**:
+  1. Get Clear
+  2. Get Current
+  3. Get Creative
+- Ninja systems are embedded **inside** this order.
+- AI behavior is explicitly controlled:
+  - When to stay silent
+  - When to assist
+  - When to challenge
+
+This document defines **exact structure + AI behavior contracts**.
+
+---
+
+# GLOBAL RULES
+
+## Layout
+- Persistent left-side navigation on all panes.
+- Weekly Review is a **single guided flow**, broken into collapsible sections.
+- User can pause and resume.
+
+## AI Rules (Global)
+- AI NEVER interrupts during “Get Clear”.
+- AI ASSISTS (quietly) during “Get Current”.
+- AI MAY CHALLENGE during “Get Creative”.
+
+---
+
+# WEEKLY REVIEW FLOW
+
+---
+
+## SECTION 1 — GET CLEAR
+### (Mental Unloading Only)
+
+**Purpose**
+- Reduce cognitive load
+- Empty head
+- Prepare brain for accurate review
+
+**User Actions**
+- Collect loose inputs
+- Inbox to zero (email, CRM, tasks)
+- Empty-head capture (free text)
+
+**UI**
+- Simple checklist
+- One free-text capture field
+
+**AI BEHAVIOR**
+- ❌ NO suggestions
+- ❌ NO analysis
+- ❌ NO insights
+- ✅ Passive capture only
+
+> AI is silent here by design.
+
+---
+
+## SECTION 2 — GET CURRENT
+### (Reality Reconciliation + System Review)
+
+**Purpose**
+- Answer: “What actually happened?”
+- Confirm system integrity
+- Prepare upcoming actions
+
+This is the **largest section**.
+
+---
+
+### 2.1 Snapshot Ratings (Quick Truth Check)
+
+- Business direction (1–10)
+- Time & energy (1–10)
+- Ninja implementation (1–10)
+
+**AI BEHAVIOR**
+- ❌ No commentary yet
+- Values are stored for later comparison
+
+---
+
+### 2.2 Persistent Context (Visible, Editable)
+
+- Mission statement
+- Core values
+- Whys
+- Guiding principles
+- Quarterly focus
+- Word of the year
+
+**Behavior**
+- Auto-carry forward
+- Editable
+- Changes apply going forward
+
+**AI BEHAVIOR**
+- Silent unless user edits
+- If edited, AI logs “context shift”
+
+---
+
+### 2.3 Ninja Systems Review (SYSTEM-BY-SYSTEM)
+
+Each system follows the SAME pattern:
+
+1. What happened last week (auto-populated)
+2. User confirms or corrects
+3. What’s planned this week (auto-populated)
+4. Prep needed (optional)
+
+---
+
+#### SYSTEM: Real Estate Reviews
+
+- Completed last week (auto)
+- Did I complete at least two? (Yes/No)
+- Planned this week (auto)
+- Prep needed (text)
+
+**AI BEHAVIOR**
+- Assist with prep ONLY if requested
+- No judgment language
+
+---
+
+#### SYSTEM: FORD Conversations
+
+- All contacts from last week auto-listed
+- What was learned (FORD)
+- Tasks created
+- Tally: “X FORD conversations last week”
+
+User can:
+- Confirm
+- Add missing
+- Correct AI assumptions
+
+**AI BEHAVIOR**
+- Ask ONE reconciliation question:
+  “Does this match reality?”
+- Learn from corrections
+- No motivational speech
+
+---
+
+#### SYSTEM: Meetings & Connections
+
+- Coffees / lunches / Zoom / networking (auto)
+- Notes & highlights
+- Follow-ups
+
+Upcoming:
+- Planned meetings
+- Reason
+- Prep needed
+
+**AI BEHAVIOR**
+- When prep is entered:
+  - Offer drafts, research, agendas
+- Otherwise silent
+
+---
+
+#### SYSTEM: Marketing & Mailings
+
+- What went out last week (auto)
+- Art / Science classification
+- Social, email, postcard review
+
+Upcoming:
+- Auto-populated from content calendar
+- Editable here
+
+**AI BEHAVIOR**
+- Silent unless user requests analysis
+
+---
+
+#### SYSTEM: Handwritten Notes
+
+- Notes completed last week (photo uploads)
+- Tagged to contacts
+- Stored in profiles
+
+Upcoming:
+- Planned notes (auto)
+- Suggested messages
+
+**AI BEHAVIOR**
+- Suggest message language ONLY
+- No guilt, no scoring
+
+---
+
+#### SYSTEM: Numbers to Know
+
+Auto-populated where possible:
+- Buyer appointments
+- Listing appointments
+- New contacts
+- Under contract
+- Closings
+
+Manual confirmation:
+- Offers written
+- Contracts ratified
+- New listings taken
+
+YTD:
+- Volume
+- Transactions
+- Gross commissions
+- Net commissions
+
+**AI BEHAVIOR**
+- Silent during entry
+- Flags discrepancies only (e.g., “This differs from last week”)
+
+---
+
+## SECTION 3 — GET CREATIVE
+### (Meaning, Adjustment, Improvement)
+
+**Purpose**
+- Reflection
+- Strategic thinking
+- Improvement design
+
+---
+
+### 3.1 Reflection Prompts
+
+- Reasons to celebrate
+- A-has
+- What didn’t work
+- How I can improve next week
+- Things keeping me awake at night
+
+**AI BEHAVIOR**
+- Summarize patterns AFTER user completes section
+- No interruption mid-writing
+
+---
+
+### 3.2 Strategic Adjustments
+
+- Ninja system needing attention
+- Quarterly focus alignment
+- Energy planning (vacation, recovery)
+
+**AI BEHAVIOR**
+- MAY challenge gently:
+  - “You’ve flagged this system 3 weeks in a row”
+  - “Would you like help redesigning this?”
+
+Tone:
+- Coaching
+- Curious
+- Never prescriptive
+
+---
+
+### 3.3 Coaching Message
+
+- Message to coach OR AI coach
+- Behavior determined by setup
+
+**AI BEHAVIOR**
+- If AI coach:
+  - Respond after submission
+  - Reference data from this review
+- If human coach:
+  - AI stays silent
+
+---
+
+# AI INTERRUPTION RULES (SUMMARY)
+
+## AI MUST STAY SILENT WHEN:
+- User is unloading thoughts (Get Clear)
+- User is entering raw data
+- User is reflecting emotionally
+- User did not explicitly request help
+
+## AI MAY ASSIST WHEN:
+- Prep is requested
+- Drafting is needed
+- Research is needed
+- Organization is requested
+
+## AI MAY CHALLENGE WHEN:
+- Patterns repeat over weeks
+- Ratings diverge from behavior
+- Systems are flagged consistently
+- ONLY in Get Creative section
+
+---
+
+# ENGINEERING NOTE (IMPORTANT)
+
+- Each system = modular component
+- Weekly Review = ordered container
+- GTD order is enforced at top level
+- Ninja systems are swappable modules inside Get Current
+
+---
+
+# PHILOSOPHY (DO NOT CODE, BUT HONOR)
+
+This is not a form.
+This is a ritual.
+The software exists to:
+- Tell the truth
+- Reduce noise
+- Support consistent excellence

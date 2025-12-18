@@ -166,7 +166,7 @@ interface WeeklyReviewSummary {
 }
 
 export default function WeeklyReport() {
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("get-clear");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [emailOpen, setEmailOpen] = useState(false);
@@ -532,65 +532,132 @@ export default function WeeklyReport() {
             
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="w-full justify-start h-auto p-1 bg-card/50 backdrop-blur-sm border shadow-sm overflow-x-auto no-print">
-                <TabsTrigger value="overview" className="gap-2 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  <User className="h-4 w-4" /> Snapshot
+                <TabsTrigger value="get-clear" className="gap-2 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  <RefreshCw className="h-4 w-4" /> 1. Get Clear
                 </TabsTrigger>
-                <TabsTrigger value="review" className="gap-2 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  <ListTodo className="h-4 w-4" /> GTD Review
+                <TabsTrigger value="get-current" className="gap-2 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  <ListTodo className="h-4 w-4" /> 2. Get Current
                 </TabsTrigger>
-                <TabsTrigger value="habits" className="gap-2 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  <Check className="h-4 w-4" /> Habits
-                </TabsTrigger>
-                <TabsTrigger value="results" className="gap-2 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  <Activity className="h-4 w-4" /> Results
-                </TabsTrigger>
-                <TabsTrigger value="focus" className="gap-2 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  <Briefcase className="h-4 w-4" /> Focus & Reflection
+                <TabsTrigger value="get-creative" className="gap-2 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  <Activity className="h-4 w-4" /> 3. Get Creative
                 </TabsTrigger>
               </TabsList>
 
               <div className="mt-6">
-                {/* --- SNAPSHOT TAB --- */}
-                <TabsContent value="overview" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {/* ============================================ */}
+                {/* SECTION 1: GET CLEAR - Mental Unloading */}
+                {/* ============================================ */}
+                <TabsContent value="get-clear" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <Card className="border-none shadow-md">
+                    <CardHeader className="bg-slate-100 pb-4">
+                      <CardTitle className="font-serif text-slate-900">Get Clear</CardTitle>
+                      <CardDescription>Empty your head. Reduce cognitive load before reviewing.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                      <p className="text-sm text-muted-foreground mb-6">
+                        Complete these items to prepare your mind for an accurate review. No thinking required here - just confirm completion.
+                      </p>
+                      
+                      <div className="grid gap-4 mb-6">
+                        {[
+                          { name: "inbox_zero_confirmed", label: "Inbox Zero (Email, Slack, messages)" },
+                          { name: "loose_notes_captured", label: "Loose notes captured to inbox" },
+                        ].map((item) => (
+                          <FormField
+                            key={item.name}
+                            control={form.control}
+                            name={item.name as any}
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 bg-secondary/20 hover:bg-secondary/30 transition-colors">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    className="h-5 w-5"
+                                  />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                  <FormLabel className="cursor-pointer font-medium text-base">
+                                    {item.label}
+                                  </FormLabel>
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+                        ))}
+                      </div>
+
+                      <FormField
+                        control={form.control}
+                        name="system_breakdown_note"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Empty Head Capture</FormLabel>
+                            <FormDescription>Dump anything on your mind here. Get it out of your head.</FormDescription>
+                            <FormControl>
+                              <Textarea 
+                                placeholder="What's floating around in your head? Tasks, worries, ideas, reminders..." 
+                                {...field} 
+                                className="min-h-[120px] bg-background/50" 
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
+                  
+                  <div className="flex justify-end no-print">
+                    <Button type="button" onClick={() => setActiveTab("get-current")} variant="outline" className="gap-2">
+                      Next: Get Current <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TabsContent>
+
+                {/* ============================================ */}
+                {/* SECTION 2: GET CURRENT - Reality Reconciliation */}
+                {/* ============================================ */}
+                <TabsContent value="get-current" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  
+                  {/* 2.1 Snapshot Ratings */}
                   <Card className="border-none shadow-md">
                     <CardHeader className="bg-primary/5 pb-4">
                       <div className="flex justify-between items-center">
                         <div>
-                          <CardTitle className="font-serif">Weekly Snapshot</CardTitle>
-                          <CardDescription>High-level clarity and self-honesty</CardDescription>
-                        </div>
-                        <div className="flex gap-2 text-xs text-muted-foreground items-center bg-background/50 px-2 py-1 rounded-md border no-print">
-                          <RefreshCw className="h-3 w-3" /> Auto-saved
+                          <CardTitle className="font-serif">Snapshot Ratings</CardTitle>
+                          <CardDescription>Quick truth check - how did this week really go?</CardDescription>
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent className="pt-6 grid md:grid-cols-2 gap-6">
-                      <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Name</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Your Name" {...field} className="bg-background/50" />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="date"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Date</FormLabel>
-                            <FormControl>
-                              <Input type="date" {...field} className="bg-background/50" />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
+                    <CardContent className="pt-6">
+                      <div className="grid md:grid-cols-2 gap-6 mb-6">
+                        <FormField
+                          control={form.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Name</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Your Name" {...field} className="bg-background/50" />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="date"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Date</FormLabel>
+                              <FormControl>
+                                <Input type="date" {...field} className="bg-background/50" />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                       
-                      <div className="md:col-span-2 grid md:grid-cols-3 gap-6 pt-4">
+                      <div className="grid md:grid-cols-3 gap-6">
                         <FormField
                           control={form.control}
                           name="businessDirection"
@@ -637,208 +704,112 @@ export default function WeeklyReport() {
                           )}
                         />
                       </div>
+                    </CardContent>
+                  </Card>
 
+                  {/* 2.2 Persistent Context */}
+                  <Card className="border-none shadow-md">
+                    <CardHeader className="bg-amber-50 pb-4">
+                      <CardTitle className="font-serif text-amber-900">Persistent Context</CardTitle>
+                      <CardDescription>Your guiding principles (auto-carried forward)</CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-6 grid md:grid-cols-2 gap-6">
                       <FormField
                         control={form.control}
-                        name="affirmation"
+                        name="familyMission"
                         render={({ field }) => (
-                          <FormItem className="md:col-span-2 pt-4">
-                            <FormLabel>Current Affirmation</FormLabel>
+                          <FormItem>
+                            <FormLabel>Family Mission</FormLabel>
                             <FormControl>
-                              <Input 
-                                placeholder="I consistently receive..." 
-                                {...field} 
+                              <Textarea 
+                                placeholder="Our family exists to..." 
+                                {...field}
                                 onChange={(e) => {
                                   field.onChange(e);
-                                  handleStaticFieldChange("affirmation", e.target.value);
+                                  handleStaticFieldChange("familyMission", e.target.value);
                                 }}
-                                className="font-serif italic text-lg bg-background/50 border-primary/20 focus:border-primary" 
+                                className="min-h-[80px] bg-amber-50/50" 
                               />
                             </FormControl>
                           </FormItem>
                         )}
                       />
-                    </CardContent>
-                  </Card>
-                  
-                  {/* Week in Review Section */}
-                  <Card className="border-none shadow-md">
-                    <CardHeader className="bg-amber-50 pb-4">
-                      <CardTitle className="font-serif text-amber-900">Week in Review</CardTitle>
-                      <CardDescription>Check the activities completed last week</CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-6">
-                      <div className="grid md:grid-cols-3 gap-4 mb-6">
-                        {[
-                          { name: "checklist_reviewMeetingNotes", label: "Review last week's meeting notes" },
-                          { name: "checklist_reviewYearlyGoals", label: "Review yearly goals" },
-                          { name: "checklist_reviewMonthlyGoals", label: "Review monthly goals" },
-                          { name: "checklist_reviewWeeklyGoals", label: "Review weekly goals" },
-                          { name: "checklist_reviewBusinessPlan", label: "Review business plan & FLOW calendar" },
-                        ].map((item) => (
-                          <FormField
-                            key={item.name}
-                            control={form.control}
-                            name={item.name as any}
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                  />
-                                </FormControl>
-                                <FormLabel className="text-sm font-normal cursor-pointer">
-                                  {item.label}
-                                </FormLabel>
-                              </FormItem>
-                            )}
-                          />
-                        ))}
-                      </div>
-                      
-                      <div className="grid md:grid-cols-2 gap-6">
+                      <FormField
+                        control={form.control}
+                        name="businessMission"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Business Mission</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder="My business exists to..." 
+                                {...field}
+                                onChange={(e) => {
+                                  field.onChange(e);
+                                  handleStaticFieldChange("businessMission", e.target.value);
+                                }}
+                                className="min-h-[80px] bg-amber-50/50" 
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="quarterlyFocus"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Quarterly Focus</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder="This quarter I'm focused on..." 
+                                {...field}
+                                onChange={(e) => {
+                                  field.onChange(e);
+                                  handleStaticFieldChange("quarterlyFocus", e.target.value);
+                                }}
+                                className="min-h-[80px] bg-amber-50/50" 
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <div className="space-y-4">
                         <FormField
                           control={form.control}
-                          name="reasonsToCelebrate"
+                          name="wordOfYear"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="font-semibold text-amber-800">Reasons to Celebrate</FormLabel>
+                              <FormLabel>Word of the Year</FormLabel>
                               <FormControl>
-                                <Textarea placeholder="What went well? What are you proud of?" {...field} className="min-h-[80px] bg-amber-50/50" />
+                                <Input 
+                                  placeholder="Focus, Growth, Abundance..." 
+                                  {...field}
+                                  onChange={(e) => {
+                                    field.onChange(e);
+                                    handleStaticFieldChange("wordOfYear", e.target.value);
+                                  }}
+                                  className="bg-amber-50/50" 
+                                />
                               </FormControl>
                             </FormItem>
                           )}
                         />
                         <FormField
                           control={form.control}
-                          name="businessLikeBusiness"
+                          name="affirmation"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="font-semibold text-amber-800">How I Ran My Business Like a Business</FormLabel>
+                              <FormLabel>Current Affirmation</FormLabel>
                               <FormControl>
-                                <Textarea placeholder="Professional practices, discipline, consistency..." {...field} className="min-h-[80px] bg-amber-50/50" />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="ahas"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="font-semibold text-amber-800">A-Has From Last Week</FormLabel>
-                              <FormDescription>Insights, sudden realizations, "lightbulb" moments</FormDescription>
-                              <FormControl>
-                                <Textarea placeholder="What did you learn? Any breakthroughs?" {...field} className="min-h-[80px] bg-amber-50/50" />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="improvements"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="font-semibold text-amber-800">How I Can Improve This Week</FormLabel>
-                              <FormControl>
-                                <Textarea placeholder="What will you do differently?" {...field} className="min-h-[80px] bg-amber-50/50" />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="readingListening"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="font-semibold text-amber-800">Podcasts/Books I Am Reading/Listening To</FormLabel>
-                              <FormDescription>Noteworthy ideas, thoughts, or quotes</FormDescription>
-                              <FormControl>
-                                <Textarea placeholder="Books, podcasts, ideas that resonated..." {...field} className="min-h-[80px] bg-amber-50/50" />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="awakeAtNight"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="font-semibold text-amber-800">Things Keeping Me Awake at Night</FormLabel>
-                              <FormDescription>Note a 5-minute action to take this week for each</FormDescription>
-                              <FormControl>
-                                <Textarea placeholder="Worries, concerns, and 5-min actions to address them..." {...field} className="min-h-[80px] bg-amber-50/50" />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <div className="flex justify-end no-print">
-                    <Button type="button" onClick={() => setActiveTab("review")} variant="outline" className="gap-2">
-                      Next: GTD Review <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TabsContent>
-
-                {/* --- GTD REVIEW TAB --- */}
-                <TabsContent value="review" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <Card className="border-none shadow-md">
-                    <CardHeader className="bg-primary/5 pb-4">
-                      <CardTitle className="font-serif">GTD Control Check</CardTitle>
-                      <CardDescription>Confirm system trust. "Did I trust my system?"</CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-6">
-                      <div className="grid gap-4">
-                        {[
-                          { name: "inbox_zero_confirmed", label: "Inbox Zero Confirmed (Email & Slack)" },
-                          { name: "loose_notes_captured", label: "Loose Notes Captured to Inbox" },
-                          { name: "calendar_reviewed", label: "Calendar Reviewed (Past 2 weeks & Next 4 weeks)" },
-                          { name: "waiting_for_reviewed", label: "Waiting For List Reviewed" },
-                          { name: "next_actions_reviewed", label: "Next Actions Lists Reviewed" },
-                          { name: "projects_reviewed", label: "Projects List Reviewed" },
-                          { name: "someday_reviewed", label: "Someday/Maybe List Reviewed" },
-                          { name: "reference_trusted", label: "Reference System Trusted & Clean" },
-                        ].map((item) => (
-                          <FormField
-                            key={item.name}
-                            control={form.control}
-                            name={item.name as any}
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 bg-secondary/20 hover:bg-secondary/30 transition-colors">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                    className="h-5 w-5"
-                                  />
-                                </FormControl>
-                                <div className="space-y-1 leading-none">
-                                  <FormLabel className="cursor-pointer font-medium text-base">
-                                    {item.label}
-                                  </FormLabel>
-                                </div>
-                              </FormItem>
-                            )}
-                          />
-                        ))}
-                      </div>
-                      
-                      <div className="mt-6">
-                        <FormField
-                          control={form.control}
-                          name="system_breakdown_note"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>System Breakdown Note (Optional)</FormLabel>
-                              <FormControl>
-                                <Textarea 
-                                  placeholder="Where is there friction in the system?" 
+                                <Input 
+                                  placeholder="I consistently receive..." 
                                   {...field} 
-                                  className="bg-background/50" 
+                                  onChange={(e) => {
+                                    field.onChange(e);
+                                    handleStaticFieldChange("affirmation", e.target.value);
+                                  }}
+                                  className="font-serif italic bg-amber-50/50" 
                                 />
                               </FormControl>
                             </FormItem>
@@ -847,92 +818,51 @@ export default function WeeklyReport() {
                       </div>
                     </CardContent>
                   </Card>
-                  
-                  <div className="flex justify-between no-print">
-                    <Button type="button" onClick={() => setActiveTab("overview")} variant="ghost">Previous</Button>
-                    <Button type="button" onClick={() => setActiveTab("habits")} variant="outline" className="gap-2">
-                      Next: Ninja Habits <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TabsContent>
 
-                {/* --- HABITS TAB --- */}
-                <TabsContent value="habits" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  {/* 2.3 GTD System Review */}
                   <Card className="border-none shadow-md">
                     <CardHeader className="bg-primary/5 pb-4">
-                      <CardTitle className="font-serif">Ninja Habits</CardTitle>
-                      <CardDescription>Rate your commitment (1-10) and log counts where applicable.</CardDescription>
+                      <CardTitle className="font-serif">GTD System Review</CardTitle>
+                      <CardDescription>Confirm your system is trustworthy</CardDescription>
                     </CardHeader>
                     <CardContent className="pt-6">
-                      <div className="grid gap-6">
+                      <div className="grid md:grid-cols-2 gap-4">
                         {[
-                          { name: "weeklyPlanning", label: "Weekly planning meeting", hasCount: false },
-                          { name: "dailyMovement", label: "Daily movement or exercise", hasCount: false },
-                          { name: "agendaSticking", label: "Sticking to your agenda", hasCount: false },
-                          { name: "hoursOfPower", label: "Hours of Power", hasCount: true, countName: "count_hoursOfPower", countLabel: "Hours" },
-                          { name: "handwrittenNotes", label: "Handwritten notes", hasCount: true, countName: "count_handwrittenNotes", countLabel: "Count" },
-                          { name: "realEstateReviews", label: "Real estate reviews", hasCount: true, countName: "count_realEstateReviews", countLabel: "Count" },
-                          { name: "customerServiceCalls", label: "Customer service calls", hasCount: true, countName: "count_customerServiceCalls", countLabel: "Hours" },
-                          { name: "lunchesCoffees", label: "1-2-1s (coffees, lunches, Zoom)", hasCount: true, countName: "count_lunchesCoffees", countLabel: "Count" },
-                          { name: "fordContacts", label: "FORD contacts 'live interviews'", hasCount: true, countName: "count_fordContacts", countLabel: "Count" },
-                          { name: "paperworkCleanup", label: "Paperwork cleanup", hasCount: true, countName: "count_paperworkCleanup", countLabel: "Hours" },
-                          { name: "databaseMaintenance", label: "Maintaining database", hasCount: true, countName: "count_newContacts", countLabel: "New Contacts" },
-                          { name: "warmListFocus", label: "Daily focus on warm list", hasCount: false },
-                          { name: "hotListFocus", label: "Daily focus on hot list", hasCount: false },
-                          { name: "dailyGratitudes", label: "Daily gratitudes", hasCount: false },
-                          { name: "dailyAffirmations", label: "Daily affirmations", hasCount: false },
-                        ].map((habit) => (
-                          <div key={habit.name} className="flex flex-col md:flex-row md:items-center gap-4 border-b border-border/50 pb-4 last:border-0 last:pb-0">
-                            <FormField
-                              control={form.control}
-                              name={habit.name as any}
-                              render={({ field }) => (
-                                <FormItem className="flex-1">
-                                  <div className="flex items-center gap-3">
-                                    <FormLabel className="text-sm font-normal flex-1">{habit.label}</FormLabel>
-                                    <FormControl>
-                                      <RatingSelect value={field.value} onChange={field.onChange} />
-                                    </FormControl>
-                                    <span className="text-xs text-muted-foreground w-8">/ 10</span>
-                                  </div>
-                                </FormItem>
-                              )}
-                            />
-                            {habit.hasCount && (
-                              <FormField
-                                control={form.control}
-                                name={habit.countName as any}
-                                render={({ field }) => (
-                                  <FormItem className="w-32">
-                                    <FormLabel className="text-xs text-muted-foreground">{habit.countLabel}</FormLabel>
-                                    <FormControl>
-                                      <Input type="number" placeholder="0" {...field} className="h-9" />
-                                    </FormControl>
-                                  </FormItem>
-                                )}
-                              />
+                          { name: "calendar_reviewed", label: "Calendar reviewed (past 2 weeks & next 4 weeks)" },
+                          { name: "waiting_for_reviewed", label: "Waiting For list reviewed" },
+                          { name: "next_actions_reviewed", label: "Next Actions lists reviewed" },
+                          { name: "projects_reviewed", label: "Projects list reviewed" },
+                          { name: "someday_reviewed", label: "Someday/Maybe list reviewed" },
+                          { name: "reference_trusted", label: "Reference system trusted & clean" },
+                        ].map((item) => (
+                          <FormField
+                            key={item.name}
+                            control={form.control}
+                            name={item.name as any}
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 bg-secondary/20 hover:bg-secondary/30 transition-colors">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                                <FormLabel className="cursor-pointer font-normal text-sm">
+                                  {item.label}
+                                </FormLabel>
+                              </FormItem>
                             )}
-                          </div>
+                          />
                         ))}
                       </div>
                     </CardContent>
                   </Card>
-                  
-                  <div className="flex justify-between no-print">
-                    <Button type="button" onClick={() => setActiveTab("review")} variant="ghost">Previous</Button>
-                    <Button type="button" onClick={() => setActiveTab("results")} variant="outline" className="gap-2">
-                      Next: Results <ArrowRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TabsContent>
 
-                {/* --- RESULTS TAB --- */}
-                <TabsContent value="results" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  {/* Real Estate Reviews Section */}
+                  {/* NINJA SYSTEM: Real Estate Reviews */}
                   <Card className="border-none shadow-md">
                     <CardHeader className="bg-blue-50 pb-4">
                       <CardTitle className="font-serif text-blue-900">Real Estate Reviews</CardTitle>
-                      <CardDescription>Track your completed and planned reviews</CardDescription>
+                      <CardDescription>Goal: At least 2 per week</CardDescription>
                     </CardHeader>
                     <CardContent className="pt-6">
                       <div className="grid md:grid-cols-2 gap-6">
@@ -941,8 +871,7 @@ export default function WeeklyReport() {
                           name="completedRealEstateReviews"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="font-semibold">Real Estate Reviews Completed Last Week</FormLabel>
-                              <FormDescription>Names/details of reviews</FormDescription>
+                              <FormLabel className="font-semibold">Completed Last Week</FormLabel>
                               <FormControl>
                                 <Textarea placeholder="John & Mary Smith - 123 Main St review&#10;Tom Jones - investment portfolio review" {...field} className="min-h-[100px] bg-blue-50/50" />
                               </FormControl>
@@ -954,8 +883,7 @@ export default function WeeklyReport() {
                           name="plannedRealEstateReviews"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="font-semibold">Real Estate Reviews Planned This Week</FormLabel>
-                              <FormDescription>Who are you meeting with?</FormDescription>
+                              <FormLabel className="font-semibold">Planned This Week</FormLabel>
                               <FormControl>
                                 <Textarea placeholder="Sarah Williams - annual review&#10;Mark Johnson - market update" {...field} className="min-h-[100px] bg-blue-50/50" />
                               </FormControl>
@@ -966,49 +894,11 @@ export default function WeeklyReport() {
                     </CardContent>
                   </Card>
 
-                  {/* 1-2-1s Section */}
-                  <Card className="border-none shadow-md">
-                    <CardHeader className="bg-green-50 pb-4">
-                      <CardTitle className="font-serif text-green-900">1-2-1s (Coffees, Lunches, Zooms)</CardTitle>
-                      <CardDescription>Track your personal meetings - both in-person and virtual</CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-6">
-                      <div className="grid md:grid-cols-2 gap-6">
-                        <FormField
-                          control={form.control}
-                          name="completedCoffees"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="font-semibold">1-2-1s Completed Last Week</FormLabel>
-                              <FormDescription>Names and meeting types</FormDescription>
-                              <FormControl>
-                                <Textarea placeholder="Coffee with Mike - referral partner&#10;Zoom with Linda - past client&#10;Lunch with Dave - sphere" {...field} className="min-h-[100px] bg-green-50/50" />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="plannedCoffees"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="font-semibold">1-2-1s Planned This Week</FormLabel>
-                              <FormDescription>Who are you meeting with?</FormDescription>
-                              <FormControl>
-                                <Textarea placeholder="Breakfast with Tom - lender&#10;Zoom with Jennifer - title rep&#10;Coffee with Chris - past buyer" {...field} className="min-h-[100px] bg-green-50/50" />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Connecting & Database Section */}
+                  {/* NINJA SYSTEM: FORD Conversations */}
                   <Card className="border-none shadow-md">
                     <CardHeader className="bg-purple-50 pb-4">
-                      <CardTitle className="font-serif text-purple-900">Connecting & Database</CardTitle>
-                      <CardDescription>FORD contacts, notes, and relationship building (Goal: 50 contacts/week)</CardDescription>
+                      <CardTitle className="font-serif text-purple-900">FORD Conversations</CardTitle>
+                      <CardDescription>Goal: 50 contacts per week</CardDescription>
                     </CardHeader>
                     <CardContent className="pt-6">
                       <div className="grid md:grid-cols-3 gap-6 mb-6">
@@ -1038,7 +928,7 @@ export default function WeeklyReport() {
                                   onCheckedChange={field.onChange}
                                 />
                               </FormControl>
-                              <FormLabel className="font-normal cursor-pointer">Recorded new FORD info in database</FormLabel>
+                              <FormLabel className="font-normal cursor-pointer">Recorded FORD info in database</FormLabel>
                             </FormItem>
                           )}
                         />
@@ -1055,80 +945,49 @@ export default function WeeklyReport() {
                           )}
                         />
                       </div>
-                      <div className="grid md:grid-cols-2 gap-6">
-                        <FormField
-                          control={form.control}
-                          name="peopleToConnect"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="font-semibold">People I Should Connect This Week</FormLabel>
-                              <FormDescription>Who needs a call, text, or visit?</FormDescription>
-                              <FormControl>
-                                <Textarea placeholder="Bob - birthday coming up&#10;Lisa - just moved, follow up&#10;Steve - mentioned selling" {...field} className="min-h-[100px] bg-purple-50/50" />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-                        <div>
-                          <FormField
-                            control={form.control}
-                            name="notesWrittenLastWeek"
-                            render={({ field }) => (
-                              <FormItem className="mb-4">
-                                <FormLabel className="font-semibold">Handwritten Notes Last Week</FormLabel>
-                                <FormControl>
-                                  <Input type="number" placeholder="0" {...field} className="w-24 bg-purple-50/50" />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="notesPlannedNextWeek"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="font-semibold">Notes Planned This Week</FormLabel>
-                                <FormControl>
-                                  <Input type="number" placeholder="0" {...field} className="w-24 bg-purple-50/50" />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                      </div>
+                      <FormField
+                        control={form.control}
+                        name="peopleToConnect"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="font-semibold">People to Connect With This Week</FormLabel>
+                            <FormControl>
+                              <Textarea placeholder="Bob - birthday coming up&#10;Lisa - just moved, follow up&#10;Steve - mentioned selling" {...field} className="min-h-[100px] bg-purple-50/50" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
                     </CardContent>
                   </Card>
 
-                  {/* Potential New Business Section */}
+                  {/* NINJA SYSTEM: 1-2-1s / Meetings */}
                   <Card className="border-none shadow-md">
-                    <CardHeader className="bg-orange-50 pb-4">
-                      <CardTitle className="font-serif text-orange-900">Potential New Business</CardTitle>
-                      <CardDescription>Track buyer and seller opportunities</CardDescription>
+                    <CardHeader className="bg-green-50 pb-4">
+                      <CardTitle className="font-serif text-green-900">Meetings & Connections</CardTitle>
+                      <CardDescription>1-2-1s, coffees, lunches, Zoom calls</CardDescription>
                     </CardHeader>
                     <CardContent className="pt-6">
                       <div className="grid md:grid-cols-2 gap-6">
                         <FormField
                           control={form.control}
-                          name="newBusinessBuyers"
+                          name="completedCoffees"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="font-semibold">New Buyers</FormLabel>
-                              <FormDescription>Names, timeframes, price ranges</FormDescription>
+                              <FormLabel className="font-semibold">Completed Last Week</FormLabel>
                               <FormControl>
-                                <Textarea placeholder="John Doe - 3 months, $400-500k&#10;Jane Smith - 6 months, $300k" {...field} className="min-h-[120px] bg-orange-50/50" />
+                                <Textarea placeholder="Coffee with Mike - referral partner&#10;Zoom with Linda - past client" {...field} className="min-h-[100px] bg-green-50/50" />
                               </FormControl>
                             </FormItem>
                           )}
                         />
                         <FormField
                           control={form.control}
-                          name="newBusinessSellers"
+                          name="plannedCoffees"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="font-semibold">New Sellers</FormLabel>
-                              <FormDescription>Names, addresses, timeframes</FormDescription>
+                              <FormLabel className="font-semibold">Planned This Week</FormLabel>
                               <FormControl>
-                                <Textarea placeholder="Mike Wilson - 123 Oak St, Spring listing&#10;Susan Brown - downsizing in 6 months" {...field} className="min-h-[120px] bg-orange-50/50" />
+                                <Textarea placeholder="Breakfast with Tom - lender&#10;Coffee with Chris - past buyer" {...field} className="min-h-[100px] bg-green-50/50" />
                               </FormControl>
                             </FormItem>
                           )}
@@ -1137,13 +996,100 @@ export default function WeeklyReport() {
                     </CardContent>
                   </Card>
 
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <Card className="border-none shadow-md">
-                      <CardHeader className="bg-primary/5 pb-4">
-                        <CardTitle className="font-serif">Numbers to Know</CardTitle>
-                        <CardDescription>This week's transaction metrics</CardDescription>
-                      </CardHeader>
-                      <CardContent className="pt-6 space-y-4">
+                  {/* NINJA SYSTEM: Handwritten Notes */}
+                  <Card className="border-none shadow-md">
+                    <CardHeader className="bg-primary/5 pb-4">
+                      <CardTitle className="font-serif">Handwritten Notes</CardTitle>
+                      <CardDescription>Track and upload your personal notes</CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                      <div className="grid md:grid-cols-2 gap-6 mb-6">
+                        <FormField
+                          control={form.control}
+                          name="notesWrittenLastWeek"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="font-semibold">Notes Written Last Week</FormLabel>
+                              <FormControl>
+                                <Input type="number" placeholder="0" {...field} className="w-24" />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="notesPlannedNextWeek"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="font-semibold">Notes Planned This Week</FormLabel>
+                              <FormControl>
+                                <Input type="number" placeholder="0" {...field} className="w-24" />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <div className="border-2 border-dashed border-input rounded-lg p-6 bg-background/50 transition-colors hover:bg-secondary/30 cursor-pointer group mb-4">
+                        <label className="flex flex-col items-center justify-center text-center cursor-pointer">
+                          <input 
+                            type="file" 
+                            multiple 
+                            accept="image/*,.heic"
+                            className="sr-only"
+                            onChange={handleBatchUpload}
+                          />
+                          <CloudUpload className="h-8 w-8 text-muted-foreground mb-2 group-hover:text-primary transition-colors" />
+                          <p className="text-sm text-muted-foreground">
+                            <span className="font-semibold text-primary">Upload photos of handwritten notes</span>
+                          </p>
+                        </label>
+                      </div>
+
+                      {noteUploads.length > 0 && (
+                        <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                          {noteUploads.map((note) => (
+                            <div key={note.id} className={`flex gap-2 p-2 rounded border text-xs ${note.uploading ? 'bg-yellow-50 border-yellow-200' : note.uploadedUrl ? 'bg-green-50 border-green-200' : 'bg-secondary/30'}`}>
+                              <div className="h-10 w-10 flex-shrink-0 bg-black/5 rounded overflow-hidden relative">
+                                <img src={note.uploadedUrl || note.preview} alt="Note" className="h-full w-full object-cover" />
+                                {note.uploading && (
+                                  <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                                    <RefreshCw className="h-4 w-4 text-white animate-spin" />
+                                  </div>
+                                )}
+                                {note.uploadedUrl && !note.uploading && (
+                                  <div className="absolute bottom-0 right-0 bg-green-500 rounded-full p-0.5">
+                                    <Check className="h-2 w-2 text-white" />
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <Input 
+                                  placeholder="Tag person..." 
+                                  className="h-7 text-xs" 
+                                  value={note.taggedPerson}
+                                  onChange={(e) => updateTaggedPerson(note.id, e.target.value)}
+                                  disabled={note.uploading}
+                                />
+                              </div>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeUpload(note.id)} disabled={note.uploading}>
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* NINJA SYSTEM: Numbers to Know */}
+                  <Card className="border-none shadow-md">
+                    <CardHeader className="bg-primary/5 pb-4">
+                      <CardTitle className="font-serif">Numbers to Know</CardTitle>
+                      <CardDescription>This week's transaction metrics</CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {[
                           { name: "offersWritten", label: "Offers Written" },
                           { name: "contractsMutual", label: "Contracts Ratified" },
@@ -1158,91 +1104,160 @@ export default function WeeklyReport() {
                             control={form.control}
                             name={field.name as any}
                             render={({ field: f }) => (
-                              <FormItem className="flex items-center justify-between">
-                                <FormLabel className="font-normal">{field.label}</FormLabel>
+                              <FormItem className="flex items-center justify-between border rounded-md p-3 bg-secondary/10">
+                                <FormLabel className="font-normal text-sm">{field.label}</FormLabel>
                                 <FormControl>
-                                  <Input type="number" placeholder="0" {...f} className="w-24 text-right" />
+                                  <Input type="number" placeholder="0" {...f} className="w-16 text-right h-8" />
                                 </FormControl>
                               </FormItem>
                             )}
                           />
                         ))}
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </CardContent>
+                  </Card>
 
-                    <Card className="border-none shadow-md">
-                      <CardHeader className="bg-primary/5 pb-4">
-                        <CardTitle className="font-serif">Batch Note Upload</CardTitle>
-                        <CardDescription>Upload pics of handwritten notes</CardDescription>
-                      </CardHeader>
-                      <CardContent className="pt-6">
-                        <div className="border-2 border-dashed border-input rounded-lg p-6 bg-background/50 transition-colors hover:bg-secondary/30 cursor-pointer group mb-4">
-                          <label className="flex flex-col items-center justify-center text-center cursor-pointer">
-                            <input 
-                              type="file" 
-                              multiple 
-                              accept="image/*,.heic"
-                              className="sr-only"
-                              onChange={handleBatchUpload}
-                            />
-                            <CloudUpload className="h-8 w-8 text-muted-foreground mb-2 group-hover:text-primary transition-colors" />
-                            <p className="text-sm text-muted-foreground">
-                              <span className="font-semibold text-primary">Click to upload</span>
-                            </p>
-                          </label>
-                        </div>
-
-                        {noteUploads.length > 0 && (
-                          <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                            {noteUploads.map((note) => (
-                              <div key={note.id} className={`flex gap-2 p-2 rounded border text-xs ${note.uploading ? 'bg-yellow-50 border-yellow-200' : note.uploadedUrl ? 'bg-green-50 border-green-200' : 'bg-secondary/30'}`}>
-                                <div className="h-10 w-10 flex-shrink-0 bg-black/5 rounded overflow-hidden relative">
-                                  <img src={note.uploadedUrl || note.preview} alt="Note" className="h-full w-full object-cover" />
-                                  {note.uploading && (
-                                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                                      <RefreshCw className="h-4 w-4 text-white animate-spin" />
-                                    </div>
-                                  )}
-                                  {note.uploadedUrl && !note.uploading && (
-                                    <div className="absolute bottom-0 right-0 bg-green-500 rounded-full p-0.5">
-                                      <Check className="h-2 w-2 text-white" />
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <Input 
-                                    placeholder="Tag person..." 
-                                    className="h-7 text-xs" 
-                                    value={note.taggedPerson}
-                                    onChange={(e) => updateTaggedPerson(note.id, e.target.value)}
-                                    disabled={note.uploading}
-                                  />
-                                </div>
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeUpload(note.id)} disabled={note.uploading}>
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </div>
+                  {/* Potential New Business */}
+                  <Card className="border-none shadow-md">
+                    <CardHeader className="bg-orange-50 pb-4">
+                      <CardTitle className="font-serif text-orange-900">Potential New Business</CardTitle>
+                      <CardDescription>New buyer and seller opportunities this week</CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <FormField
+                          control={form.control}
+                          name="newBusinessBuyers"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="font-semibold">New Buyers</FormLabel>
+                              <FormDescription>Names, timeframes, price ranges</FormDescription>
+                              <FormControl>
+                                <Textarea placeholder="John Doe - 3 months, $400-500k&#10;Jane Smith - 6 months, $300k" {...field} className="min-h-[100px] bg-orange-50/50" />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="newBusinessSellers"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="font-semibold">New Sellers</FormLabel>
+                              <FormDescription>Names, addresses, timeframes</FormDescription>
+                              <FormControl>
+                                <Textarea placeholder="Mike Wilson - 123 Oak St, Spring listing&#10;Susan Brown - downsizing in 6 months" {...field} className="min-h-[100px] bg-orange-50/50" />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
                   
                   <div className="flex justify-between no-print">
-                    <Button type="button" onClick={() => setActiveTab("habits")} variant="ghost">Previous</Button>
-                    <Button type="button" onClick={() => setActiveTab("focus")} variant="outline" className="gap-2">
-                      Next: Focus & Reflection <ArrowRight className="h-4 w-4" />
+                    <Button type="button" onClick={() => setActiveTab("get-clear")} variant="ghost">Previous</Button>
+                    <Button type="button" onClick={() => setActiveTab("get-creative")} variant="outline" className="gap-2">
+                      Next: Get Creative <ArrowRight className="h-4 w-4" />
                     </Button>
                   </div>
                 </TabsContent>
 
-                {/* --- FOCUS & REFLECTION TAB --- */}
-                <TabsContent value="focus" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {/* ============================================ */}
+                {/* SECTION 3: GET CREATIVE - Meaning & Reflection */}
+                {/* ============================================ */}
+                <TabsContent value="get-creative" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  
+                  {/* 3.1 Reflection Prompts */}
+                  <Card className="border-none shadow-md">
+                    <CardHeader className="bg-amber-50 pb-4">
+                      <CardTitle className="font-serif text-amber-900">Reflection Prompts</CardTitle>
+                      <CardDescription>Meaning, learning, and improvement</CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-6 grid md:grid-cols-2 gap-6">
+                      <FormField
+                        control={form.control}
+                        name="reasonsToCelebrate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="font-semibold text-amber-800">Reasons to Celebrate</FormLabel>
+                            <FormControl>
+                              <Textarea placeholder="What went well? What are you proud of?" {...field} className="min-h-[100px] bg-amber-50/50" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="ahas"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="font-semibold text-amber-800">A-Has</FormLabel>
+                            <FormDescription>Insights, realizations, "lightbulb" moments</FormDescription>
+                            <FormControl>
+                              <Textarea placeholder="What did you learn? Any breakthroughs?" {...field} className="min-h-[100px] bg-amber-50/50" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="businessLikeBusiness"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="font-semibold text-amber-800">What Didn't Work</FormLabel>
+                            <FormControl>
+                              <Textarea placeholder="What fell short? Where did you struggle?" {...field} className="min-h-[100px] bg-amber-50/50" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="improvements"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="font-semibold text-amber-800">How I Can Improve Next Week</FormLabel>
+                            <FormControl>
+                              <Textarea placeholder="What will you do differently?" {...field} className="min-h-[100px] bg-amber-50/50" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="readingListening"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="font-semibold text-amber-800">Podcasts/Books</FormLabel>
+                            <FormDescription>Noteworthy ideas, thoughts, or quotes</FormDescription>
+                            <FormControl>
+                              <Textarea placeholder="What are you reading or listening to?" {...field} className="min-h-[100px] bg-amber-50/50" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="awakeAtNight"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="font-semibold text-amber-800">Things Keeping Me Awake at Night</FormLabel>
+                            <FormDescription>Note a 5-minute action for each</FormDescription>
+                            <FormControl>
+                              <Textarea placeholder="Worries, concerns, and small actions to address them..." {...field} className="min-h-[100px] bg-amber-50/50" />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  {/* 3.2 Strategic Adjustments */}
                   <Card className="border-none shadow-md">
                     <CardHeader className="bg-primary/5 pb-4">
-                      <CardTitle className="font-serif">Project & Priority Alignment</CardTitle>
-                      <CardDescription>Bridge GTD "Projects" with Ninja execution focus</CardDescription>
+                      <CardTitle className="font-serif">Strategic Adjustments</CardTitle>
+                      <CardDescription>Plan your focus and energy for the week ahead</CardDescription>
                     </CardHeader>
                     <CardContent className="pt-6 space-y-6">
                       <FormField
@@ -1268,6 +1283,20 @@ export default function WeeklyReport() {
                         )}
                       />
                       
+                      <FormField
+                        control={form.control}
+                        name="ninjaSystemAttention"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Ninja System Needing Attention</FormLabel>
+                            <FormDescription>Which system needs focus this week?</FormDescription>
+                            <FormControl>
+                              <Input placeholder="e.g., FORD calls, Handwritten notes, Real estate reviews..." {...field} />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
                       <div className="grid md:grid-cols-2 gap-6">
                         <FormField
                           control={form.control}
@@ -1294,59 +1323,15 @@ export default function WeeklyReport() {
                           )}
                         />
                       </div>
-                    </CardContent>
-                  </Card>
 
-                  <Card className="border-none shadow-md">
-                    <CardHeader className="bg-primary/5 pb-4">
-                      <CardTitle className="font-serif">Reflection</CardTitle>
-                      <CardDescription>Minimal narrative reflection for context</CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-6 grid md:grid-cols-2 gap-6">
                       <FormField
                         control={form.control}
-                        name="biggest_win"
+                        name="nextGetaway"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Biggest Win</FormLabel>
+                            <FormLabel>Next Getaway / Recovery Planned</FormLabel>
                             <FormControl>
-                              <Textarea {...field} className="h-20" />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="biggest_insight"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Biggest Insight</FormLabel>
-                            <FormControl>
-                              <Textarea {...field} className="h-20" />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="primary_concern"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Primary Concern</FormLabel>
-                            <FormControl>
-                              <Textarea {...field} className="h-20" />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="improvement_next_week"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Improvement for Next Week</FormLabel>
-                            <FormControl>
-                              <Textarea {...field} className="h-20" />
+                              <Input placeholder="e.g., Weekend trip Jan 15, Vacation Feb 10-17..." {...field} />
                             </FormControl>
                           </FormItem>
                         )}
@@ -1354,9 +1339,11 @@ export default function WeeklyReport() {
                     </CardContent>
                   </Card>
 
+                  {/* 3.3 Coaching Message */}
                   <Card className="border-none shadow-md">
                     <CardHeader className="bg-primary/5 pb-4">
                       <CardTitle className="font-serif">Message to Coach</CardTitle>
+                      <CardDescription>Questions, wins, challenges, or focus for your next call</CardDescription>
                     </CardHeader>
                     <CardContent className="pt-6">
                       <FormField
@@ -1364,7 +1351,6 @@ export default function WeeklyReport() {
                         name="messageToCoach"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Questions, wins, or focus for our next call</FormLabel>
                             <FormControl>
                               <Textarea 
                                 placeholder="Hey Coach..." 
@@ -1379,7 +1365,7 @@ export default function WeeklyReport() {
                   </Card>
 
                   <div className="flex justify-between items-center pt-8 no-print">
-                    <Button type="button" onClick={() => setActiveTab("results")} variant="ghost">Previous</Button>
+                    <Button type="button" onClick={() => setActiveTab("get-current")} variant="ghost">Previous</Button>
                     <div className="flex gap-4">
                       <Link href="/">
                         <Button variant="outline">Cancel</Button>
