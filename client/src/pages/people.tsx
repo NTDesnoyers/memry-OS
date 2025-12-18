@@ -95,16 +95,24 @@ export default function People() {
     // Extended patterns for various CRM exports
     const firstNameCol = findHeader(['first name', 'firstname', 'first', 'given name', 'given', 'fname', 'contact first']);
     const lastNameCol = findHeader(['last name', 'lastname', 'last', 'family name', 'surname', 'lname', 'contact last']);
-    const fullNameCol = findHeader(['full name', 'fullname', 'contact name', 'name', 'client name', 'customer name', 'display name', 'person name']);
+    const fullNameCol = findHeader(['full name', 'fullname', 'contact name', 'client name', 'customer name', 'display name', 'person name']);
+    // Avoid matching just "Name" which might be a generic header - check for exact match only
+    const nameExactCol = headers.find(h => h.toLowerCase().trim() === 'name');
     
     if (firstNameCol && lastNameCol) {
       mapping.name = [firstNameCol, lastNameCol];
     } else if (fullNameCol) {
       mapping.name = fullNameCol;
+    } else if (nameExactCol) {
+      mapping.name = nameExactCol;
     } else if (firstNameCol) {
       // Sometimes only first name is available
       mapping.name = firstNameCol;
     }
+    
+    // Household name detection for family/household tracking
+    const householdCol = findHeader(['household name', 'household', 'family name', 'family']);
+    if (householdCol) mapping.household = householdCol;
     
     // Email detection - prefer primary email, handle various CRM patterns
     const emailCol = findHeader(['email', 'e mail', 'email address', 'primary email', 'email1', 'email 1', 'contact email', 'personal email', 'work email', 'main email']);
@@ -149,8 +157,17 @@ export default function People() {
     if (companyCol) mapping.company = companyCol;
     
     // Category/Type detection - extended for CRM systems
-    const categoryCol = findHeader(['category', 'type', 'contact type', 'tag', 'tags', 'group', 'status', 'lead status', 'client type', 'segment', 'pipeline', 'stage', 'label', 'labels']);
+    // Note: Tags is very common in Cloze and other CRMs
+    const categoryCol = findHeader(['category', 'type', 'contact type', 'group', 'status', 'lead status', 'client type', 'segment', 'pipeline', 'stage', 'label', 'labels']);
     if (categoryCol) mapping.category = categoryCol;
+    
+    // Tags detection (separate from category, will be added to notes)
+    const tagsCol = findHeader(['tags', 'tag', 'keywords']);
+    if (tagsCol) mapping.tags = tagsCol;
+    
+    // Headline/Title for professional info
+    const headlineCol = findHeader(['headline', 'professional headline', 'linkedin headline', 'tagline']);
+    if (headlineCol) mapping.headline = headlineCol;
     
     // Role/Title detection - extended
     const roleCol = findHeader(['role', 'title', 'job title', 'position', 'job', 'occupation', 'profession']);
@@ -218,6 +235,15 @@ export default function People() {
       }
       if (mapping.source && row[mapping.source as string]) {
         notesParts.push(`Source: ${row[mapping.source as string]}`);
+      }
+      if (mapping.household && row[mapping.household as string]) {
+        notesParts.push(`Household: ${row[mapping.household as string]}`);
+      }
+      if (mapping.tags && row[mapping.tags as string]) {
+        notesParts.push(`Tags: ${row[mapping.tags as string]}`);
+      }
+      if (mapping.headline && row[mapping.headline as string]) {
+        notesParts.push(`Headline: ${row[mapping.headline as string]}`);
       }
       
       if (notesParts.length > 0) {
