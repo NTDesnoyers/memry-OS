@@ -83,7 +83,7 @@ export default function KnowYourPeople() {
   const updateMutation = useMutation({
     mutationFn: async (data: { personId: string; updates: Partial<Person> }) => {
       const res = await fetch(`/api/people/${data.personId}`, {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data.updates),
       });
@@ -280,40 +280,38 @@ export default function KnowYourPeople() {
                   ))}
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={moveToPrevious}
-                    disabled={currentIndex === 0}
-                    data-testid="button-previous"
-                  >
-                    <ChevronLeft className="h-4 w-4 mr-1" />
-                    Previous
-                  </Button>
+                <div className="sticky bottom-0 bg-white pt-4 pb-2 border-t mt-4 -mx-6 px-6">
+                  <div className="flex items-center justify-between gap-2">
+                    <Button
+                      variant="outline"
+                      size="default"
+                      onClick={moveToPrevious}
+                      disabled={currentIndex === 0}
+                      data-testid="button-previous"
+                      className="flex-shrink-0"
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      Prev
+                    </Button>
 
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleSkip}
-                      data-testid="button-skip"
-                    >
-                      <SkipForward className="h-4 w-4 mr-1" />
-                      Skip
-                    </Button>
-                    <Button
-                      onClick={handleSave}
-                      disabled={updateMutation.isPending}
-                      data-testid="button-save-next"
-                    >
-                      {updateMutation.isPending ? "Saving..." : (
-                        <>
-                          Save & Next
-                          <ChevronRight className="h-4 w-4 ml-1" />
-                        </>
-                      )}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="default"
+                        onClick={handleSkip}
+                        data-testid="button-skip"
+                      >
+                        Skip
+                      </Button>
+                      <Button
+                        onClick={handleSave}
+                        disabled={updateMutation.isPending}
+                        data-testid="button-save-next"
+                        className="min-w-[100px]"
+                      >
+                        {updateMutation.isPending ? "Saving..." : "Save & Next"}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>
