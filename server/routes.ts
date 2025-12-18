@@ -367,6 +367,38 @@ Respond with valid JSON only, no other text.`;
         return res.status(400).json({ message: "Mapping and rows required" });
       }
 
+      // Helper to get first non-empty value from array or single mapping
+      const getFirstValue = (field: string | string[], row: any): string | null => {
+        if (Array.isArray(field)) {
+          for (const f of field) {
+            if (row[f] && String(row[f]).trim()) {
+              return String(row[f]).trim();
+            }
+          }
+          return null;
+        }
+        return row[field] ? String(row[field]).trim() : null;
+      };
+      
+      // Helper to get all non-empty values from array mapping
+      const getAllValues = (field: string | string[], row: any): string[] => {
+        if (Array.isArray(field)) {
+          return field.map(f => row[f] ? String(row[f]).trim() : "").filter(Boolean);
+        }
+        return row[field] ? [String(row[field]).trim()] : [];
+      };
+
+      // Get all headers from first row to track unmapped columns
+      const allHeaders = rows.length > 0 ? Object.keys(rows[0]) : [];
+      const mappedColumns = new Set<string>();
+      Object.values(mapping).forEach((val: any) => {
+        if (Array.isArray(val)) {
+          val.forEach((v: string) => mappedColumns.add(v));
+        } else if (val) {
+          mappedColumns.add(val);
+        }
+      });
+
       const transformedPeople = rows.map((row: any) => {
         const person: any = {};
         
@@ -379,31 +411,68 @@ Respond with valid JSON only, no other text.`;
           }
         }
         
-        // Simple field mappings
-        if (mapping.email) person.email = row[mapping.email] || null;
-        if (mapping.phone) person.phone = row[mapping.phone] || null;
-        if (mapping.company) person.company = row[mapping.company] || null;
-        if (mapping.role) person.role = row[mapping.role] || null;
-        if (mapping.category) person.category = row[mapping.category] || null;
+        // Handle email - get first non-empty from array
+        if (mapping.email) {
+          person.email = getFirstValue(mapping.email, row);
+        }
         
-        // Combine address and notes
+        // Handle phone - get first non-empty from array
+        if (mapping.phone) {
+          person.phone = getFirstValue(mapping.phone, row);
+        }
+        
+        // Simple field mappings
+        if (mapping.company) person.company = getFirstValue(mapping.company, row);
+        if (mapping.role) person.role = getFirstValue(mapping.role, row);
+        if (mapping.category) person.category = getFirstValue(mapping.category, row);
+        
+        // Build notes from multiple sources
         const noteParts: string[] = [];
-        if (mapping.address && row[mapping.address]) {
-          noteParts.push(`Address: ${row[mapping.address]}`);
+        
+        // Add original notes
+        if (mapping.notes) {
+          const notes = getFirstValue(mapping.notes, row);
+          if (notes) noteParts.push(notes);
         }
-        if (mapping.notes && row[mapping.notes]) {
-          noteParts.push(row[mapping.notes]);
+        
+        // Add company to notes if exists
+        if (mapping.company) {
+          const company = getFirstValue(mapping.company, row);
+          if (company) noteParts.push(`Company: ${company}`);
         }
-        if (noteParts.length > 0) {
-          person.notes = noteParts.join("\n");
+        
+        // Handle address - combine all address parts
+        if (mapping.address) {
+          const addressParts = getAllValues(mapping.address, row);
+          if (addressParts.length > 0) {
+            noteParts.push(`Address: ${addressParts.join(", ")}`);
+          }
         }
         
         // Handle tags
-        if (mapping.tags && row[mapping.tags]) {
-          const tagValue = row[mapping.tags];
-          person.tags = typeof tagValue === 'string' 
-            ? tagValue.split(/[,;]/).map((t: string) => t.trim()).filter(Boolean)
-            : [];
+        if (mapping.tags) {
+          const tags = getFirstValue(mapping.tags, row);
+          if (tags) noteParts.push(`Tags: ${tags}`);
+        }
+        
+        // Capture ALL unmapped columns with data
+        const unmappedData: string[] = [];
+        allHeaders.forEach(header => {
+          if (!mappedColumns.has(header) && row[header] && String(row[header]).trim()) {
+            const value = String(row[header]).trim();
+            if (value && value !== '-' && value !== 'N/A' && value !== 'null' && value !== 'undefined') {
+              unmappedData.push(`${header}: ${value}`);
+            }
+          }
+        });
+        
+        if (unmappedData.length > 0) {
+          noteParts.push("--- Additional Data ---");
+          noteParts.push(...unmappedData);
+        }
+        
+        if (noteParts.length > 0) {
+          person.notes = noteParts.join("\n");
         }
         
         return person;
