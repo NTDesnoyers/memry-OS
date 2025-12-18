@@ -5,6 +5,7 @@ import * as z from "zod";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import LayoutComponent from "@/components/layout";
 import {
   Form,
   FormControl,
@@ -415,6 +416,7 @@ export default function WeeklyReport() {
   }
 
   return (
+    <LayoutComponent>
     <div className="min-h-screen bg-secondary/30 relative">
       <div 
         className="fixed inset-0 opacity-40 mix-blend-multiply pointer-events-none -z-10 no-print"
@@ -1383,5 +1385,6 @@ export default function WeeklyReport() {
         </Form>
       </div>
     </div>
+    </LayoutComponent>
   );
 }

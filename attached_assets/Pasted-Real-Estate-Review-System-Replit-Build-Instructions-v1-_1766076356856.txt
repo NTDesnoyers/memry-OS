@@ -1,0 +1,181 @@
+Real Estate Review System – Replit Build Instructions (v1)
+Project Goal
+Build a Real Estate Review system that allows a realtor to create, manage, and deliver comprehensive annual home reviews that combine:
+Manual data accuracy
+Visual Pricing inputs
+Market context
+Digital delivery (Gamma)
+Print-ready outputs
+Task-based workflow execution
+This system must be fast, repeatable, and opinionated, not overly flexible.
+Core Principles
+Manual data entry is intentional
+Accuracy > automation (for v1)
+Visual Pricing already exists
+Do not rebuild pricing logic
+Digital-first, print-optional
+Workflow-driven
+Reviews generate tasks automatically
+Future AI-friendly
+Structure data cleanly for later agents
+Primary Objects (Data Models)
+1. RealEstateReview
+RealEstateReview {
+  id
+  title
+  propertyAddress
+  neighborhood
+  clientId
+  clientType: "prospect" | "past_client"
+  outputType: "digital" | "digital_and_print"
+  status: "draft" | "ready" | "sent" | "archived"
+  createdAt
+  updatedAt
+}
+2. PropertyData (Manual Input)
+PropertyData {
+  beds
+  baths
+  sqft
+  basement
+  garage
+  condition
+  amenities
+  yearBuilt
+}
+3. FinancialData (Manual Input)
+FinancialData {
+  mortgageBalance
+  interestRate
+  purchasePrice
+  estimatedValue
+}
+4. ComponentTracker
+Component {
+  name
+  installationDate
+  expectedLifespan
+  estimatedReplacementCost
+}
+5. PublicRecordsSnapshot
+PublicRecords {
+  taxId
+  assessedValueHistory[]
+  ownerOfRecord
+  zoning
+  lotSize
+}
+6. VisualPricingReference
+VisualPricing {
+  pricingAnalysisId
+  focusFirstExportUrl
+}
+7. MarketData (Referenced, Not Calculated)
+MarketData {
+  localTwoYearSnapshot
+  countyStats
+  regionalStats
+  nationalStats
+}
+⚠️ Market data is uploaded or pasted, not scraped.
+Navigation Structure (Left Sidebar)
+Dashboard
+├── Real Estate Reviews
+│   ├── Create Review
+│   ├── Active Reviews
+│   ├── Scheduled Reviews
+│   └── Archived Reviews
+├── Visual Pricing (link/reference only)
+├── Tasks
+└── Settings
+Core User Flows
+Flow 1: Create Real Estate Review
+Entry Point
+Left Nav → Real Estate Reviews → “Create Review”
+Modal / Page
+Fields:
+Review Title
+Property Address
+Neighborhood
+Client
+Client Type (Prospect / Past Client)
+Output Type:
+Digital Only
+Digital + Print
+On Submit
+Create RealEstateReview record
+Initialize empty sections
+Generate task bundle (see below)
+Flow 2: Populate Review Data
+Each section is edited independently:
+Cover Page (static template)
+Financial Checklist (manual)
+Component Tracker (manual)
+Public Records (manual paste/upload)
+Visual Pricing (reference existing export)
+Market Data (upload or paste PDFs/images)
+No calculations are performed inside Replit.
+Flow 3: Generate Outputs
+Digital Output
+Export structured data to Gamma
+Create a landing page draft
+Store Gamma link in review record
+Print Output (Optional)
+Two templates:
+Standard Print
+Book of Records Insert
+Generate print-ready PDF (no binding logic).
+Task Automation (Critical Feature)
+When a review is created, auto-generate tasks:
+TaskBundle {
+  "Create review record"
+  "Populate data"
+  "Generate Gamma page"
+  "Record Loom walkthrough"
+  "Send review (email/text)"
+  "Follow-up call"
+  "Print & deliver" (if applicable)
+}
+Tasks should:
+Appear in a task list
+Be checkable
+Be timestamped
+Scheduling Logic (v1)
+If a contact has a home purchase anniversary, auto-create a draft review during that week.
+Reviews appear on dashboard as:
+Upcoming
+In Progress
+Completed
+No calendar sync required for v1.
+What NOT to Build (Explicitly)
+❌ No AI valuation
+❌ No MLS scraping
+❌ No pricing logic
+❌ No automated market pulling
+❌ No Replit chart rendering
+All intelligence lives in structure + workflow, not computation.
+Tech Stack (Suggested)
+Frontend: React / Next.js
+Backend: Node / Express
+DB: SQLite or Postgres
+PDF generation: server-side (basic)
+Integrations:
+Gamma (export only)
+Loom (manual link)
+Future Hooks (Do Not Implement Yet)
+Real Estate Review AI Agent
+Auto data ingestion
+Component cost prediction
+Longitudinal home value tracking
+Client-facing portals
+Success Criteria
+A successful v1 allows the user to:
+Create a review in under 5 minutes
+Populate accurate data without friction
+Generate a professional digital review
+Produce a clean print version
+Execute the review as part of a repeatable workflow
+Guiding Product Philosophy
+This is not a CMA tool.
+This is a relationship + asset stewardship system.
+Build for clarity, reliability, and repetition.
