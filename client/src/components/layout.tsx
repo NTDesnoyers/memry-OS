@@ -20,6 +20,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { VoiceLogger } from "@/components/voice-logger";
 
 const navItems = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -134,6 +135,8 @@ export default function LayoutComponent({ children }: { children: React.ReactNod
       <main className="flex-1 md:ml-64 pt-16 md:pt-0" style={{ paddingTop: 'max(4rem, calc(env(safe-area-inset-top) + 3rem))' }}>
         {children}
       </main>
+      
+      <VoiceLogger />
     </div>
   );
 }
