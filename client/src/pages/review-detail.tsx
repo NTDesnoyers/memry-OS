@@ -841,50 +841,55 @@ export default function ReviewDetail() {
       <body>
         <!-- Cover Page -->
         <div class="page cover-page">
-          <div class="cover-header">
-            <div class="cover-agent">
-              ${headshotUrl ? `<img src="${headshotUrl}" class="cover-headshot" alt="Agent Photo">` : ''}
-              <div class="cover-agent-info">
-                <h2>${agentName}</h2>
-                <p>${tagline}</p>
-              </div>
+          <div style="text-align: center; padding-bottom: 20px; border-bottom: 2px solid ${primaryColor};">
+            <div style="font-size: 14pt; color: ${primaryColor}; margin-bottom: 5px;">From ${agentName}, ${agentProfile?.brokerage || 'eXp Realty'}</div>
+            <div style="font-size: 11pt; color: #666;">${phone ? phone : ''} ${phone && email ? ' | ' : ''} ${email ? email : ''}</div>
+          </div>
+          
+          <div style="text-align: center; padding: 30px 0;">
+            ${headshotUrl ? `<img src="${headshotUrl}" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid ${primaryColor}; margin-bottom: 15px;">` : ''}
+          </div>
+          
+          <div style="text-align: left; padding: 0 20px; line-height: 1.6; font-size: 11pt; color: #333;">
+            <p style="margin-bottom: 15px;">Here's some fun information about your home, its approximate value, local home sales, and a peek into the current market trends.</p>
+            <p style="margin-bottom: 15px;">Just as you'd get an annual physical, see the dentist once or twice a year, or meet with your accountant and/or financial advisor, getting a home wellness checkup could save you time and money. Our finances and plans change over time, and with that, our mortgage needs change as well.</p>
+            <p style="margin-bottom: 20px;">I have many valuable resources for all things related to your home. I would love to help you reach your financial housing goals!</p>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; padding: 20px; background: #f8f9fa; margin: 20px 0;">
+            <div>
+              <h4 style="color: ${primaryColor}; font-size: 12pt; margin-bottom: 12px; border-bottom: 2px solid ${primaryColor}; padding-bottom: 5px;">Financial:</h4>
+              <ul style="list-style: none; padding: 0; font-size: 10pt; line-height: 1.8;">
+                <li>• Contest your home's Tax Value</li>
+                <li>• Correct Deed / Ownership</li>
+                <li>• Removing Mortgage Insurance payments</li>
+                <li>• Refinancing / 2nd Mortgage / Home Equity Line of Credit</li>
+                <li>• Save you the cost of an Appraisal</li>
+                <li>• Know the Equity in your home</li>
+                <li>• Properly adding your home to your revocable trust</li>
+              </ul>
             </div>
-            <div class="cover-logos">
-              ${personalLogoUrl ? `<img src="${personalLogoUrl}" alt="Personal Logo">` : ''}
-              ${brokerageLogoUrl ? `<img src="${brokerageLogoUrl}" alt="Brokerage Logo">` : ''}
+            <div>
+              <h4 style="color: ${primaryColor}; font-size: 12pt; margin-bottom: 12px; border-bottom: 2px solid ${primaryColor}; padding-bottom: 5px;">Improvements/Maintenance:</h4>
+              <ul style="list-style: none; padding: 0; font-size: 10pt; line-height: 1.8;">
+                <li>• Home Renovations</li>
+                <li>• Handyman-type repairs</li>
+                <li>• Landscaping, Sprinkler and Lawn Service</li>
+                <li>• Licensed Contractors for Plumbing, HVAC, Roof, Sewer...</li>
+                <li>• Inspections i.e., Roof, Pest, Chimney</li>
+              </ul>
             </div>
           </div>
           
-          <div class="cover-title-section">
-            <div class="cover-title">Real Estate Review</div>
-            <div class="cover-subtitle">Annual Property Analysis & Market Report</div>
-            <div class="cover-address">${propertyAddress}</div>
-          </div>
-          
-          <div class="cover-benefits">
-            <h3>What's Included in Your Real Estate Review</h3>
-            <div class="benefits-grid">
-              <div class="benefit-item"><span class="benefit-check">✓</span> Current market value analysis</div>
-              <div class="benefit-item"><span class="benefit-check">✓</span> Comparable sales data</div>
-              <div class="benefit-item"><span class="benefit-check">✓</span> Property component life spans</div>
-              <div class="benefit-item"><span class="benefit-check">✓</span> Maintenance checklist</div>
-              <div class="benefit-item"><span class="benefit-check">✓</span> Public records verification</div>
-              <div class="benefit-item"><span class="benefit-check">✓</span> Equity position update</div>
-              <div class="benefit-item"><span class="benefit-check">✓</span> Neighborhood trends</div>
-              <div class="benefit-item"><span class="benefit-check">✓</span> Tax assessment review</div>
-            </div>
-          </div>
-          
-          <div class="cover-footer">
-            <div class="cover-contact">
-              ${phone ? `<p>📞 ${phone}</p>` : ''}
-              ${email ? `<p>✉️ ${email}</p>` : ''}
-              ${website ? `<p>🌐 ${website}</p>` : ''}
+          <div style="display: flex; justify-content: space-between; align-items: flex-end; padding-top: 20px; border-top: 1px solid #ddd; margin-top: auto;">
+            <div style="display: flex; gap: 15px; align-items: center;">
+              ${personalLogoUrl ? `<img src="${personalLogoUrl}" style="max-height: 50px; max-width: 100px;">` : ''}
+              ${brokerageLogoUrl ? `<img src="${brokerageLogoUrl}" style="max-height: 50px; max-width: 100px;">` : ''}
             </div>
             ${qrCodeUrl ? `
-            <div class="cover-qr">
-              <img src="${qrCodeUrl}" alt="Review QR Code">
-              <p>Leave a Review</p>
+            <div style="text-align: center;">
+              <p style="font-size: 9pt; color: #666; margin-bottom: 5px;">Scan this QR code to leave me a Google review!</p>
+              <img src="${qrCodeUrl}" style="width: 70px; height: 70px;">
             </div>
             ` : ''}
           </div>
@@ -892,193 +897,235 @@ export default function ReviewDetail() {
         
         <!-- Checklist Page -->
         <div class="page">
-          <div class="checklist-title">Financial Real Estate Review Checklist</div>
-          <div class="checklist-subtitle">Annual Property Assessment</div>
-          
-          <div class="checklist-section">
-            <h4>Property Value & Market Position</h4>
-            <div class="checklist-items">
-              <div class="checklist-item">
-                <div class="checkbox"></div>
-                <div class="checklist-item-text">
-                  <div class="checklist-item-title">Review Current Market Value</div>
-                  <div class="checklist-item-desc">Compare estimated value with recent comparable sales</div>
-                </div>
-              </div>
-              <div class="checklist-item">
-                <div class="checkbox"></div>
-                <div class="checklist-item-text">
-                  <div class="checklist-item-title">Analyze Price Per Square Foot</div>
-                  <div class="checklist-item-desc">Compare with neighborhood averages</div>
-                </div>
-              </div>
-              <div class="checklist-item">
-                <div class="checkbox"></div>
-                <div class="checklist-item-text">
-                  <div class="checklist-item-title">Track Equity Growth</div>
-                  <div class="checklist-item-desc">Calculate appreciation since purchase</div>
-                </div>
-              </div>
-            </div>
+          <div style="text-align: center; margin-bottom: 25px;">
+            <div style="font-size: 20pt; color: ${primaryColor}; font-weight: bold;">Financial Real Estate Review Checklist</div>
           </div>
           
-          <div class="checklist-section">
-            <h4>Tax & Insurance Review</h4>
-            <div class="checklist-items">
-              <div class="checklist-item">
-                <div class="checkbox"></div>
-                <div class="checklist-item-text">
-                  <div class="checklist-item-title">Verify Tax Assessment</div>
-                  <div class="checklist-item-desc">Compare assessed value to market value</div>
-                </div>
-              </div>
-              <div class="checklist-item">
-                <div class="checkbox"></div>
-                <div class="checklist-item-text">
-                  <div class="checklist-item-title">Review Insurance Coverage</div>
-                  <div class="checklist-item-desc">Ensure coverage matches current replacement cost</div>
-                </div>
-              </div>
-              <div class="checklist-item">
-                <div class="checkbox"></div>
-                <div class="checklist-item-text">
-                  <div class="checklist-item-title">Check for Tax Exemptions</div>
-                  <div class="checklist-item-desc">Homestead, senior, veteran exemptions</div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+            <thead>
+              <tr>
+                <th style="background: ${primaryColor}; color: white; padding: 10px; text-align: left; width: 25%;">Item</th>
+                <th style="background: ${primaryColor}; color: white; padding: 10px; text-align: center; width: 25%;">Installation Date</th>
+                <th style="background: ${primaryColor}; color: white; padding: 10px; text-align: center; width: 25%;">Life span</th>
+                <th style="background: ${primaryColor}; color: white; padding: 10px; text-align: center; width: 25%;">Cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td style="padding: 12px; border: 1px solid #ddd;">Roof</td><td style="padding: 12px; border: 1px solid #ddd;"></td><td style="padding: 12px; border: 1px solid #ddd;"></td><td style="padding: 12px; border: 1px solid #ddd;"></td></tr>
+              <tr><td style="padding: 12px; border: 1px solid #ddd;">Furnace/AC</td><td style="padding: 12px; border: 1px solid #ddd;"></td><td style="padding: 12px; border: 1px solid #ddd;"></td><td style="padding: 12px; border: 1px solid #ddd;"></td></tr>
+              <tr><td style="padding: 12px; border: 1px solid #ddd;">Water Heater</td><td style="padding: 12px; border: 1px solid #ddd;"></td><td style="padding: 12px; border: 1px solid #ddd;"></td><td style="padding: 12px; border: 1px solid #ddd;"></td></tr>
+              <tr><td style="padding: 12px; border: 1px solid #ddd;">Appliances</td><td style="padding: 12px; border: 1px solid #ddd;"></td><td style="padding: 12px; border: 1px solid #ddd;"></td><td style="padding: 12px; border: 1px solid #ddd;"></td></tr>
+              <tr><td style="padding: 12px; border: 1px solid #ddd;">Ext paint</td><td style="padding: 12px; border: 1px solid #ddd;"></td><td style="padding: 12px; border: 1px solid #ddd;"></td><td style="padding: 12px; border: 1px solid #ddd;"></td></tr>
+              <tr><td style="padding: 12px; border: 1px solid #ddd;">Int paint</td><td style="padding: 12px; border: 1px solid #ddd;"></td><td style="padding: 12px; border: 1px solid #ddd;"></td><td style="padding: 12px; border: 1px solid #ddd;"></td></tr>
+              <tr><td style="padding: 12px; border: 1px solid #ddd;">Carpet</td><td style="padding: 12px; border: 1px solid #ddd;"></td><td style="padding: 12px; border: 1px solid #ddd;"></td><td style="padding: 12px; border: 1px solid #ddd;"></td></tr>
+              <tr><td style="padding: 12px; border: 1px solid #ddd;">Light fixtures</td><td style="padding: 12px; border: 1px solid #ddd;"></td><td style="padding: 12px; border: 1px solid #ddd;"></td><td style="padding: 12px; border: 1px solid #ddd;"></td></tr>
+            </tbody>
+          </table>
           
-          <div class="checklist-section">
-            <h4>Maintenance & Improvements</h4>
-            <div class="checklist-items">
-              <div class="checklist-item">
-                <div class="checkbox"></div>
-                <div class="checklist-item-text">
-                  <div class="checklist-item-title">Review Component Life Spans</div>
-                  <div class="checklist-item-desc">Plan for upcoming replacements</div>
-                </div>
-              </div>
-              <div class="checklist-item">
-                <div class="checkbox"></div>
-                <div class="checklist-item-text">
-                  <div class="checklist-item-title">Document Recent Improvements</div>
-                  <div class="checklist-item-desc">Keep records for tax and resale purposes</div>
-                </div>
-              </div>
-              <div class="checklist-item">
-                <div class="checkbox"></div>
-                <div class="checklist-item-text">
-                  <div class="checklist-item-title">Schedule Annual Inspections</div>
-                  <div class="checklist-item-desc">HVAC, roof, plumbing, electrical</div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <div style="text-align: center; margin: 25px 0 15px; font-size: 16pt; color: ${primaryColor}; font-weight: bold;">Home Wealth Data</div>
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+            <thead>
+              <tr>
+                <th style="background: ${primaryColor}; color: white; padding: 10px; text-align: center; width: 33%;">Value</th>
+                <th style="background: ${primaryColor}; color: white; padding: 10px; text-align: center; width: 33%;">Mortgage Amount</th>
+                <th style="background: ${primaryColor}; color: white; padding: 10px; text-align: center; width: 34%;">Interest rate</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding: 20px; border: 1px solid #ddd; text-align: center;"></td>
+                <td style="padding: 20px; border: 1px solid #ddd; text-align: center;"></td>
+                <td style="padding: 20px; border: 1px solid #ddd; text-align: center;"></td>
+              </tr>
+            </tbody>
+          </table>
           
-          <div class="checklist-section">
-            <h4>Financial Planning</h4>
-            <div class="checklist-items">
-              <div class="checklist-item">
-                <div class="checkbox"></div>
-                <div class="checklist-item-text">
-                  <div class="checklist-item-title">Evaluate Refinance Options</div>
-                  <div class="checklist-item-desc">Review current rates and equity position</div>
-                </div>
-              </div>
-              <div class="checklist-item">
-                <div class="checkbox"></div>
-                <div class="checklist-item-text">
-                  <div class="checklist-item-title">Update Estate Planning</div>
-                  <div class="checklist-item-desc">Review property ownership and beneficiaries</div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <div style="text-align: center; margin: 25px 0 15px; font-size: 16pt; color: ${primaryColor}; font-weight: bold;">Home Information</div>
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr>
+                <th style="background: ${primaryColor}; color: white; padding: 8px; text-align: center; font-size: 9pt;">Style</th>
+                <th style="background: ${primaryColor}; color: white; padding: 8px; text-align: center; font-size: 9pt;">Beds</th>
+                <th style="background: ${primaryColor}; color: white; padding: 8px; text-align: center; font-size: 9pt;">Baths</th>
+                <th style="background: ${primaryColor}; color: white; padding: 8px; text-align: center; font-size: 9pt;">SF</th>
+                <th style="background: ${primaryColor}; color: white; padding: 8px; text-align: center; font-size: 9pt;">Bsmnt</th>
+                <th style="background: ${primaryColor}; color: white; padding: 8px; text-align: center; font-size: 9pt;">Garage</th>
+                <th style="background: ${primaryColor}; color: white; padding: 8px; text-align: center; font-size: 9pt;">Condition</th>
+                <th style="background: ${primaryColor}; color: white; padding: 8px; text-align: center; font-size: 9pt;">Amenities</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding: 15px; border: 1px solid #ddd; text-align: center;"></td>
+                <td style="padding: 15px; border: 1px solid #ddd; text-align: center;"></td>
+                <td style="padding: 15px; border: 1px solid #ddd; text-align: center;"></td>
+                <td style="padding: 15px; border: 1px solid #ddd; text-align: center;"></td>
+                <td style="padding: 15px; border: 1px solid #ddd; text-align: center;"></td>
+                <td style="padding: 15px; border: 1px solid #ddd; text-align: center;"></td>
+                <td style="padding: 15px; border: 1px solid #ddd; text-align: center;"></td>
+                <td style="padding: 15px; border: 1px solid #ddd; text-align: center;"></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
         
         <!-- Life Spans Page 1 -->
         <div class="page">
-          <div class="lifespan-title">Property Components Life Spans</div>
-          <table class="lifespan-table">
-            <thead>
-              <tr>
-                <th>Component</th>
-                <th>Expected Life</th>
-                <th>Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr class="lifespan-category"><td colspan="3">Roofing</td></tr>
-              <tr><td>Asphalt Shingles</td><td>20-30 years</td><td>Quality varies significantly</td></tr>
-              <tr><td>Metal Roofing</td><td>40-70 years</td><td>Low maintenance</td></tr>
-              <tr><td>Slate/Tile</td><td>50-100 years</td><td>Heavy, requires reinforced structure</td></tr>
-              <tr><td>Flat Roof (TPO/EPDM)</td><td>15-25 years</td><td>Inspect annually</td></tr>
+          <div style="text-align: center; font-size: 18pt; color: ${primaryColor}; font-weight: bold; margin-bottom: 20px;">Property Components Life Spans</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
+            <div>
+              <table style="width: 100%; border-collapse: collapse; font-size: 9pt;">
+                <tr style="background: ${primaryColor}; color: white;"><th colspan="2" style="padding: 8px; text-align: left;">Plumbing</th></tr>
+                <tr style="background: #f0f0f0; font-weight: bold;"><td colspan="2" style="padding: 5px;">Water Service (Public)</td></tr>
+                <tr><td style="padding: 4px 8px;">Galvanized Steel</td><td style="padding: 4px 8px; text-align: right;">40-60 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Copper</td><td style="padding: 4px 8px; text-align: right;">75+ yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Plastic</td><td style="padding: 4px 8px; text-align: right;">N/A</td></tr>
+                <tr style="background: #f0f0f0; font-weight: bold;"><td colspan="2" style="padding: 5px;">Interior Water Pipes</td></tr>
+                <tr><td style="padding: 4px 8px;">Galvanized Steel</td><td style="padding: 4px 8px; text-align: right;">40-60 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Copper</td><td style="padding: 4px 8px; text-align: right;">75+ yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Plastic</td><td style="padding: 4px 8px; text-align: right;">N/A</td></tr>
+                <tr style="background: #f0f0f0; font-weight: bold;"><td colspan="2" style="padding: 5px;">Drainage Line</td></tr>
+                <tr><td style="padding: 4px 8px;">Galvanized Steel</td><td style="padding: 4px 8px; text-align: right;">40-60 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Copper</td><td style="padding: 4px 8px; text-align: right;">50-75 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Cast Iron</td><td style="padding: 4px 8px; text-align: right;">60-90 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">ABS/PVC</td><td style="padding: 4px 8px; text-align: right;">30-50+ yrs</td></tr>
+                <tr style="background: #f0f0f0; font-weight: bold;"><td colspan="2" style="padding: 5px;">Water Heater</td></tr>
+                <tr><td style="padding: 4px 8px;">Tank water Heater</td><td style="padding: 4px 8px; text-align: right;">10-15 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Tankless Water Heater</td><td style="padding: 4px 8px; text-align: right;">15-20 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">In Boiler Domestic coil</td><td style="padding: 4px 8px; text-align: right;">15-20 yrs</td></tr>
+              </table>
               
-              <tr class="lifespan-category"><td colspan="3">HVAC Systems</td></tr>
-              <tr><td>Central Air Conditioner</td><td>15-20 years</td><td>Annual service recommended</td></tr>
-              <tr><td>Heat Pump</td><td>15-20 years</td><td>Replace filters monthly</td></tr>
-              <tr><td>Furnace (Gas)</td><td>15-25 years</td><td>Annual inspection required</td></tr>
-              <tr><td>Boiler</td><td>20-30 years</td><td>Cast iron lasts longer</td></tr>
-              <tr><td>Water Heater (Tank)</td><td>10-15 years</td><td>Anode rod inspection annual</td></tr>
-              <tr><td>Water Heater (Tankless)</td><td>20+ years</td><td>Descale annually in hard water</td></tr>
+              <table style="width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 15px;">
+                <tr style="background: ${primaryColor}; color: white;"><th colspan="2" style="padding: 8px; text-align: left;">Windows</th></tr>
+                <tr><td style="padding: 4px 8px;">Wood</td><td style="padding: 4px 8px; text-align: right;">50-80 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Vinyl</td><td style="padding: 4px 8px; text-align: right;">25+ yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Aluminum/Steel</td><td style="padding: 4px 8px; text-align: right;">35-50 yrs</td></tr>
+              </table>
               
-              <tr class="lifespan-category"><td colspan="3">Exterior</td></tr>
-              <tr><td>Vinyl Siding</td><td>20-40 years</td><td>Can fade over time</td></tr>
-              <tr><td>Wood Siding</td><td>20-40 years</td><td>Requires regular painting</td></tr>
-              <tr><td>Brick/Stone</td><td>100+ years</td><td>Mortar may need repointing</td></tr>
-              <tr><td>Exterior Paint</td><td>5-10 years</td><td>Climate dependent</td></tr>
-              <tr><td>Deck (Pressure Treated)</td><td>15-20 years</td><td>Seal every 2-3 years</td></tr>
-              <tr><td>Deck (Composite)</td><td>25-30 years</td><td>Lower maintenance</td></tr>
-              <tr><td>Fencing (Wood)</td><td>15-20 years</td><td>Stain/seal extends life</td></tr>
-              <tr><td>Driveway (Asphalt)</td><td>15-20 years</td><td>Seal coat every 3-5 years</td></tr>
-              <tr><td>Driveway (Concrete)</td><td>25-50 years</td><td>Seal to prevent cracking</td></tr>
-            </tbody>
-          </table>
+              <table style="width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 15px;">
+                <tr style="background: ${primaryColor}; color: white;"><th colspan="2" style="padding: 8px; text-align: left;">Deck</th></tr>
+                <tr><td style="padding: 4px 8px;">Wood</td><td style="padding: 4px 8px; text-align: right;">15-25 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Composite Materials</td><td style="padding: 4px 8px; text-align: right;">25-35 yrs</td></tr>
+              </table>
+              
+              <table style="width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 15px;">
+                <tr style="background: ${primaryColor}; color: white;"><th colspan="2" style="padding: 8px; text-align: left;">Appliances</th></tr>
+                <tr><td style="padding: 4px 8px;">Refrigerator</td><td style="padding: 4px 8px; text-align: right;">15-20 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Dishwasher</td><td style="padding: 4px 8px; text-align: right;">7-12 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Range/Cooktop</td><td style="padding: 4px 8px; text-align: right;">12-20 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Garbage Disposal</td><td style="padding: 4px 8px; text-align: right;">7-12 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Washer</td><td style="padding: 4px 8px; text-align: right;">7-12 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Microwave oven</td><td style="padding: 4px 8px; text-align: right;">7-12 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Dryer</td><td style="padding: 4px 8px; text-align: right;">10-15 yrs</td></tr>
+              </table>
+            </div>
+            
+            <div>
+              <table style="width: 100%; border-collapse: collapse; font-size: 9pt;">
+                <tr style="background: ${primaryColor}; color: white;"><th colspan="2" style="padding: 8px; text-align: left;">Roof Covering</th></tr>
+                <tr><td style="padding: 4px 8px;">Fiberglass Asphalt tab</td><td style="padding: 4px 8px; text-align: right;">16-20 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Fiberglass architectural</td><td style="padding: 4px 8px; text-align: right;">25-35 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Cedar shake/shingle</td><td style="padding: 4px 8px; text-align: right;">10-30 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Slate</td><td style="padding: 4px 8px; text-align: right;">50 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Synthetic slate</td><td style="padding: 4px 8px; text-align: right;">N/A</td></tr>
+                <tr><td style="padding: 4px 8px;">Metal Standing Seams</td><td style="padding: 4px 8px; text-align: right;">50-80 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Clay/concrete tiles</td><td style="padding: 4px 8px; text-align: right;">50-80+ yrs</td></tr>
+              </table>
+              
+              <table style="width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 15px;">
+                <tr style="background: ${primaryColor}; color: white;"><th colspan="2" style="padding: 8px; text-align: left;">Siding & Veneer</th></tr>
+                <tr><td style="padding: 4px 8px;">Cement Composite</td><td style="padding: 4px 8px; text-align: right;">50+ yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Vinyl</td><td style="padding: 4px 8px; text-align: right;">35+ yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Aluminum</td><td style="padding: 4px 8px; text-align: right;">50+ yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Hardboard / composite</td><td style="padding: 4px 8px; text-align: right;">20-30 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Stucco, brick, veneers</td><td style="padding: 4px 8px; text-align: right;">Lifetime</td></tr>
+              </table>
+              
+              <table style="width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 15px;">
+                <tr style="background: ${primaryColor}; color: white;"><th colspan="2" style="padding: 8px; text-align: left;">Gutter/Downspout</th></tr>
+                <tr><td style="padding: 4px 8px;">Aluminum</td><td style="padding: 4px 8px; text-align: right;">30+ yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Galvanized</td><td style="padding: 4px 8px; text-align: right;">15-25 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Copper</td><td style="padding: 4px 8px; text-align: right;">50-80 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Plastic (PVC)</td><td style="padding: 4px 8px; text-align: right;">15-25 yrs</td></tr>
+              </table>
+              
+              <table style="width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 15px;">
+                <tr style="background: ${primaryColor}; color: white;"><th colspan="2" style="padding: 8px; text-align: left;">Well</th></tr>
+                <tr><td style="padding: 4px 8px;">Submersible pump</td><td style="padding: 4px 8px; text-align: right;">15-20 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Above Ground Pump</td><td style="padding: 4px 8px; text-align: right;">15-20 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Steel Pressure Tank</td><td style="padding: 4px 8px; text-align: right;">15-25 yrs</td></tr>
+              </table>
+              
+              <table style="width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 15px;">
+                <tr style="background: ${primaryColor}; color: white;"><th colspan="2" style="padding: 8px; text-align: left;">Septic</th></tr>
+                <tr><td style="padding: 4px 8px;">Steel Tank</td><td style="padding: 4px 8px; text-align: right;">15-20 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Concrete Tank</td><td style="padding: 4px 8px; text-align: right;">30-50 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Leach field</td><td style="padding: 4px 8px; text-align: right;">30-50 yrs</td></tr>
+              </table>
+            </div>
+          </div>
         </div>
         
         <!-- Life Spans Page 2 -->
         <div class="page">
-          <div class="lifespan-title">Property Components Life Spans (Continued)</div>
-          <table class="lifespan-table">
-            <thead>
-              <tr>
-                <th>Component</th>
-                <th>Expected Life</th>
-                <th>Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr class="lifespan-category"><td colspan="3">Windows & Doors</td></tr>
-              <tr><td>Windows (Vinyl)</td><td>20-40 years</td><td>Check seals annually</td></tr>
-              <tr><td>Windows (Wood)</td><td>30+ years</td><td>Requires maintenance</td></tr>
-              <tr><td>Entry Door (Steel)</td><td>20-30 years</td><td>May dent</td></tr>
-              <tr><td>Entry Door (Fiberglass)</td><td>25-30 years</td><td>Low maintenance</td></tr>
-              <tr><td>Garage Door</td><td>15-30 years</td><td>Springs need replacement</td></tr>
+          <div style="text-align: center; font-size: 18pt; color: ${primaryColor}; font-weight: bold; margin-bottom: 20px;">Property Components Life Spans</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px;">
+            <div>
+              <table style="width: 100%; border-collapse: collapse; font-size: 9pt;">
+                <tr style="background: ${primaryColor}; color: white;"><th colspan="2" style="padding: 8px; text-align: left;">Heating System</th></tr>
+                <tr><td style="padding: 4px 8px;">Hot air furnace (oil/gas)</td><td style="padding: 4px 8px; text-align: right;">15-25 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Boiler</td><td style="padding: 4px 8px; text-align: right;">35-50 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Heat pump</td><td style="padding: 4px 8px; text-align: right;">10-15 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Electric Baseboard</td><td style="padding: 4px 8px; text-align: right;">15-25 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">In-floor radiant (electric)</td><td style="padding: 4px 8px; text-align: right;">15-25 yrs</td></tr>
+              </table>
               
-              <tr class="lifespan-category"><td colspan="3">Interior</td></tr>
-              <tr><td>Interior Paint</td><td>5-10 years</td><td>High traffic areas sooner</td></tr>
-              <tr><td>Carpet</td><td>8-10 years</td><td>Heavily dependent on use</td></tr>
-              <tr><td>Hardwood Floors</td><td>100+ years</td><td>Refinish every 10-20 years</td></tr>
-              <tr><td>Tile Flooring</td><td>75-100 years</td><td>Grout may need replacing</td></tr>
-              <tr><td>Vinyl/Laminate</td><td>10-25 years</td><td>Quality varies</td></tr>
+              <table style="width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 15px;">
+                <tr style="background: ${primaryColor}; color: white;"><th colspan="2" style="padding: 8px; text-align: left;">Cooling System</th></tr>
+                <tr><td style="padding: 4px 8px;">Central Split-system</td><td style="padding: 4px 8px; text-align: right;">10-15 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Heat Pump</td><td style="padding: 4px 8px; text-align: right;">10-15 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Evaporative cooler</td><td style="padding: 4px 8px; text-align: right;">10-15 yrs</td></tr>
+              </table>
               
-              <tr class="lifespan-category"><td colspan="3">Kitchen & Bath</td></tr>
-              <tr><td>Kitchen Cabinets</td><td>20-50 years</td><td>Wood lasts longer</td></tr>
-              <tr><td>Countertops (Granite/Quartz)</td><td>50+ years</td><td>Seal granite annually</td></tr>
-              <tr><td>Countertops (Laminate)</td><td>10-20 years</td><td>Can chip/scratch</td></tr>
-              <tr><td>Dishwasher</td><td>9-13 years</td><td>Average appliance</td></tr>
-              <tr><td>Refrigerator</td><td>13-17 years</td><td>Clean coils annually</td></tr>
-              <tr><td>Range/Oven</td><td>13-15 years</td><td>Gas outlasts electric</td></tr>
-              <tr><td>Garbage Disposal</td><td>8-12 years</td><td>Run cold water when using</td></tr>
+              <table style="width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 15px;">
+                <tr style="background: ${primaryColor}; color: white;"><th colspan="2" style="padding: 8px; text-align: left;">Other HVAC Components</th></tr>
+                <tr><td style="padding: 4px 8px;">Circulator pump</td><td style="padding: 4px 8px; text-align: right;">20-30 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Circulator Fan</td><td style="padding: 4px 8px; text-align: right;">15-20 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Fuel tank interior</td><td style="padding: 4px 8px; text-align: right;">50-80 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Fuel tank exterior</td><td style="padding: 4px 8px; text-align: right;">30-50 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Expansion tank bladder</td><td style="padding: 4px 8px; text-align: right;">15-25 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Humidifier</td><td style="padding: 4px 8px; text-align: right;">7-10 yrs</td></tr>
+              </table>
+            </div>
+            
+            <div>
+              <table style="width: 100%; border-collapse: collapse; font-size: 9pt;">
+                <tr style="background: ${primaryColor}; color: white;"><th colspan="2" style="padding: 8px; text-align: left;">Interior</th></tr>
+                <tr style="background: #f0f0f0; font-weight: bold;"><td colspan="2" style="padding: 5px;">Ceramic tile</td></tr>
+                <tr><td style="padding: 4px 8px;">Mud-set cement board</td><td style="padding: 4px 8px; text-align: right;">Lifetime</td></tr>
+                <tr><td style="padding: 4px 8px;">Mastics (adhesive)</td><td style="padding: 4px 8px; text-align: right;">15-25 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Plaster or Drywall</td><td style="padding: 4px 8px; text-align: right;">Lifetime</td></tr>
+              </table>
               
-              <tr class="lifespan-category"><td colspan="3">Plumbing & Electrical</td></tr>
-              <tr><td>Copper Pipes</td><td>50-70 years</td><td>Check for pinhole leaks</td></tr>
-              <tr><td>PEX Pipes</td><td>40-50 years</td><td>Flexible, fewer joints</td></tr>
-              <tr><td>Sump Pump</td><td>7-10 years</td><td>Test annually</td></tr>
-              <tr><td>Electrical Panel</td><td>25-40 years</td><td>May need upgrading</td></tr>
-            </tbody>
-          </table>
+              <table style="width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 15px;">
+                <tr style="background: ${primaryColor}; color: white;"><th colspan="2" style="padding: 8px; text-align: left;">Flooring</th></tr>
+                <tr><td style="padding: 4px 8px;">Wood (solid)</td><td style="padding: 4px 8px; text-align: right;">Lifetime</td></tr>
+                <tr><td style="padding: 4px 8px;">Wood (engineered)</td><td style="padding: 4px 8px; text-align: right;">50+ yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Laminate</td><td style="padding: 4px 8px; text-align: right;">15-25 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Linoleum</td><td style="padding: 4px 8px; text-align: right;">10-15 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Granite/marble</td><td style="padding: 4px 8px; text-align: right;">100+ yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Carpet</td><td style="padding: 4px 8px; text-align: right;">7-12 yrs</td></tr>
+              </table>
+              
+              <table style="width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 15px;">
+                <tr style="background: ${primaryColor}; color: white;"><th colspan="2" style="padding: 8px; text-align: left;">Electrical</th></tr>
+                <tr><td style="padding: 4px 8px;">Service Entrance Cable</td><td style="padding: 4px 8px; text-align: right;">25-40 yrs</td></tr>
+                <tr><td style="padding: 4px 8px;">Circuit breakers/fuse panel</td><td style="padding: 4px 8px; text-align: right;">Lifetime</td></tr>
+                <tr><td style="padding: 4px 8px;">Wiring (modern romex)</td><td style="padding: 4px 8px; text-align: right;">Lifetime</td></tr>
+                <tr><td style="padding: 4px 8px;">Wiring (armored/cloth)</td><td style="padding: 4px 8px; text-align: right;">60-80 yrs</td></tr>
+              </table>
+            </div>
+          </div>
         </div>
         
         <!-- Visual Pricing Pages -->
