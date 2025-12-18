@@ -24,6 +24,7 @@ interface TransformedPerson {
   phone?: string | null;
   role?: string | null;
   segment?: string | null;
+  address?: string | null;
   notes?: string | null;
 }
 
@@ -461,6 +462,7 @@ export default function People() {
             phone: person.phone || null,
             role: person.role || null,
             segment: person.segment || null,
+            address: person.address || null,
             notes: person.notes || null,
           }),
         });
