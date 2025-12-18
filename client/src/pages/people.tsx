@@ -23,7 +23,7 @@ interface TransformedPerson {
   email?: string | null;
   phone?: string | null;
   role?: string | null;
-  category?: string | null;
+  segment?: string | null;
   notes?: string | null;
 }
 
@@ -47,15 +47,16 @@ export default function People() {
   const [rawCsvData, setRawCsvData] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkCategoryDialogOpen, setBulkCategoryDialogOpen] = useState(false);
-  const [bulkCategory, setBulkCategory] = useState("");
+  const [bulkSegmentDialogOpen, setBulkSegmentDialogOpen] = useState(false);
+  const [bulkSegment, setBulkSegment] = useState("");
+  const [segmentFilter, setSegmentFilter] = useState<string>("all");
   
   const [formData, setFormData] = useState<Partial<InsertPerson>>({
     name: "",
     email: "",
     phone: "",
     role: "",
-    category: "",
+    segment: "",
     notes: "",
   });
 
@@ -156,10 +157,10 @@ export default function People() {
     const companyCol = findHeader(['company', 'organization', 'business', 'employer', 'company name', 'business name', 'org', 'firm', 'workplace']);
     if (companyCol) mapping.company = companyCol;
     
-    // Category/Type detection - extended for CRM systems
+    // Segment/Category detection - extended for CRM systems
     // Note: Tags is very common in Cloze and other CRMs
-    const categoryCol = findHeader(['category', 'type', 'contact type', 'group', 'status', 'lead status', 'client type', 'segment', 'pipeline', 'stage', 'label', 'labels']);
-    if (categoryCol) mapping.category = categoryCol;
+    const segmentCol = findHeader(['segment', 'category', 'type', 'contact type', 'group', 'status', 'lead status', 'client type', 'pipeline', 'stage', 'label', 'labels']);
+    if (segmentCol) mapping.segment = segmentCol;
     
     // Tags detection (separate from category, will be added to notes)
     const tagsCol = findHeader(['tags', 'tag', 'keywords']);
@@ -218,7 +219,7 @@ export default function People() {
       
       if (mapping.email) person.email = row[mapping.email as string] || null;
       if (mapping.phone) person.phone = row[mapping.phone as string] || null;
-      if (mapping.category) person.category = row[mapping.category as string] || null;
+      if (mapping.segment) person.segment = row[mapping.segment as string] || null;
       if (mapping.role) person.role = row[mapping.role as string] || null;
       
       // Build notes from multiple sources
@@ -459,7 +460,7 @@ export default function People() {
             email: person.email || null,
             phone: person.phone || null,
             role: person.role || null,
-            category: person.category || null,
+            segment: person.segment || null,
             notes: person.notes || null,
           }),
         });
@@ -505,10 +506,10 @@ export default function People() {
     onSuccess: (person: Person) => {
       queryClient.invalidateQueries({ queryKey: ["/api/people"] });
       
-      // If category is Hot or Warm, automatically create a deal so they show in Business Tracker
-      const category = formData.category?.toLowerCase() || "";
-      if (category.includes("hot") || category.includes("warm")) {
-        const stage = category.includes("hot") ? "hot" : "warm";
+      // If segment indicates Hot or Warm, automatically create a deal so they show in Business Tracker
+      const segment = formData.segment?.toLowerCase() || "";
+      if (segment.includes("hot") || segment.includes("warm")) {
+        const stage = segment.includes("hot") ? "hot" : "warm";
         fetch("/api/deals", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -535,12 +536,12 @@ export default function People() {
         email: "",
         phone: "",
         role: "",
-        category: "",
+        segment: "",
         notes: "",
       });
       toast({
         title: "Success",
-        description: category.includes("hot") || category.includes("warm") 
+        description: segment.includes("hot") || segment.includes("warm") 
           ? `${person.name} added and will appear in Business Tracker`
           : "Person added successfully",
       });
@@ -567,11 +568,18 @@ export default function People() {
     createPersonMutation.mutate(formData as InsertPerson);
   };
 
-  const filteredPeople = people.filter((person) =>
-    person.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    person.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    person.phone?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredPeople = people.filter((person) => {
+    const matchesSearch = person.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      person.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      person.phone?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesSegment = segmentFilter === "all" || 
+      (person.segment?.toLowerCase().includes(segmentFilter.toLowerCase()));
+    
+    return matchesSearch && matchesSegment;
+  });
+
+  const uniqueSegments = Array.from(new Set(people.map(p => p.segment).filter(Boolean))) as string[];
 
   const selectAll = () => {
     if (selectedIds.size === filteredPeople.length) {
@@ -581,8 +589,8 @@ export default function People() {
     }
   };
 
-  const handleBulkCategoryChange = async () => {
-    if (!bulkCategory.trim()) return;
+  const handleBulkSegmentChange = async () => {
+    if (!bulkSegment.trim()) return;
     
     const ids = Array.from(selectedIds);
     for (const id of ids) {
@@ -590,7 +598,7 @@ export default function People() {
         await fetch(`/api/people/${id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ category: bulkCategory }),
+          body: JSON.stringify({ segment: bulkSegment }),
         });
       } catch (e) {
         console.error("Failed to update:", id);
@@ -598,10 +606,10 @@ export default function People() {
     }
     
     queryClient.invalidateQueries({ queryKey: ["/api/people"] });
-    setBulkCategoryDialogOpen(false);
-    setBulkCategory("");
+    setBulkSegmentDialogOpen(false);
+    setBulkSegment("");
     clearSelection();
-    toast({ title: "Updated", description: `Changed category for ${selectedIds.size} people` });
+    toast({ title: "Updated", description: `Changed segment for ${selectedIds.size} people` });
   };
 
   const handleBulkDelete = async () => {
@@ -645,12 +653,12 @@ export default function People() {
   const handleExportSelected = () => {
     const selectedPeople = people.filter(p => selectedIds.has(p.id));
     const csv = [
-      ["Name", "Email", "Phone", "Category", "Role", "Notes"],
+      ["Name", "Email", "Phone", "Segment", "Role", "Notes"],
       ...selectedPeople.map(p => [
         p.name,
         p.email || "",
         p.phone || "",
-        p.category || "",
+        p.segment || "",
         p.role || "",
         (p.notes || "").replace(/\n/g, " ")
       ])
@@ -871,13 +879,13 @@ export default function People() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="category">Category</Label>
+                    <Label htmlFor="segment">Segment</Label>
                     <Input
-                      id="category"
-                      value={formData.category || ""}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      placeholder="Hot, Warm, Nurture..."
-                      data-testid="input-category"
+                      id="segment"
+                      value={formData.segment || ""}
+                      onChange={(e) => setFormData({ ...formData, segment: e.target.value })}
+                      placeholder="A - Advocate, B - Fan, C - Network, D - 8x8..."
+                      data-testid="input-segment"
                     />
                   </div>
                   <div>
@@ -934,9 +942,21 @@ export default function People() {
                 data-testid="input-search"
               />
             </div>
-            <Button variant="outline" className="gap-2 bg-background/80">
-              <Filter className="h-4 w-4" /> Filter
-            </Button>
+            <select
+              value={segmentFilter}
+              onChange={(e) => setSegmentFilter(e.target.value)}
+              className="h-10 px-3 py-2 rounded-md border border-input bg-background/80 text-sm"
+              data-testid="select-segment-filter"
+            >
+              <option value="all">All Segments</option>
+              <option value="a">A - Advocate</option>
+              <option value="b">B - Fan</option>
+              <option value="c">C - Network</option>
+              <option value="d">D - 8x8</option>
+              {uniqueSegments.filter(s => !s.toLowerCase().startsWith('a') && !s.toLowerCase().startsWith('b') && !s.toLowerCase().startsWith('c') && !s.toLowerCase().startsWith('d')).map(seg => (
+                <option key={seg} value={seg.toLowerCase()}>{seg}</option>
+              ))}
+            </select>
           </div>
 
           {isLoading ? (
@@ -988,14 +1008,16 @@ export default function People() {
                     </div>
                     
                     <div className="flex flex-col md:flex-row items-start md:items-center gap-4 w-full md:w-auto mt-4 md:mt-0">
-                      {person.category && (
+                      {person.segment && (
                         <div className="text-right">
-                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Category</p>
+                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Segment</p>
                           <Badge className={
-                            person.category.toLowerCase().includes("hot") ? "bg-red-100 text-red-700 hover:bg-red-200 border-none" :
-                            person.category.toLowerCase().includes("warm") ? "bg-orange-100 text-orange-700 hover:bg-orange-200 border-none" :
-                            "bg-blue-100 text-blue-700 hover:bg-blue-200 border-none"
-                          }>{person.category}</Badge>
+                            person.segment.toLowerCase().startsWith("a") ? "bg-purple-100 text-purple-700 hover:bg-purple-200 border-none" :
+                            person.segment.toLowerCase().startsWith("b") ? "bg-blue-100 text-blue-700 hover:bg-blue-200 border-none" :
+                            person.segment.toLowerCase().startsWith("c") ? "bg-green-100 text-green-700 hover:bg-green-200 border-none" :
+                            person.segment.toLowerCase().startsWith("d") ? "bg-orange-100 text-orange-700 hover:bg-orange-200 border-none" :
+                            "bg-gray-100 text-gray-700 hover:bg-gray-200 border-none"
+                          }>{person.segment}</Badge>
                         </div>
                       )}
                       
@@ -1019,36 +1041,36 @@ export default function People() {
           <span className="font-medium">{selectedIds.size} selected</span>
           <div className="h-6 w-px bg-primary-foreground/30" />
           
-          <Dialog open={bulkCategoryDialogOpen} onOpenChange={setBulkCategoryDialogOpen}>
+          <Dialog open={bulkSegmentDialogOpen} onOpenChange={setBulkSegmentDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/20 gap-2">
-                <Tag className="h-4 w-4" /> Category
+                <Tag className="h-4 w-4" /> Segment
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Change Category</DialogTitle>
-                <DialogDescription>Set category for {selectedIds.size} selected people</DialogDescription>
+                <DialogTitle>Change Segment</DialogTitle>
+                <DialogDescription>Set segment for {selectedIds.size} selected people</DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="flex gap-2 flex-wrap">
-                  {["Hot", "Warm", "Nurture", "Past Client", "Vendor"].map(cat => (
+                  {["A - Advocate", "B - Fan", "C - Network", "D - 8x8"].map(seg => (
                     <Button 
-                      key={cat} 
-                      variant={bulkCategory === cat ? "default" : "outline"} 
+                      key={seg} 
+                      variant={bulkSegment === seg ? "default" : "outline"} 
                       size="sm"
-                      onClick={() => setBulkCategory(cat)}
+                      onClick={() => setBulkSegment(seg)}
                     >
-                      {cat}
+                      {seg}
                     </Button>
                   ))}
                 </div>
                 <Input 
-                  placeholder="Or type custom category..." 
-                  value={bulkCategory}
-                  onChange={(e) => setBulkCategory(e.target.value)}
+                  placeholder="Or type custom segment..." 
+                  value={bulkSegment}
+                  onChange={(e) => setBulkSegment(e.target.value)}
                 />
-                <Button onClick={handleBulkCategoryChange} className="w-full" disabled={!bulkCategory.trim()}>
+                <Button onClick={handleBulkSegmentChange} className="w-full" disabled={!bulkSegment.trim()}>
                   Apply to {selectedIds.size} people
                 </Button>
               </div>

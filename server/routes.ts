@@ -326,7 +326,7 @@ Target fields to map to:
 - address: Home or mailing address
 - company: Company or business name
 - role: Job title or role
-- category: Category or type of contact (e.g., client, lead, vendor)
+- segment: Ninja Selling relationship segment (A - Advocate, B - Fan, C - Network, D - 8x8)
 - notes: Any additional notes or comments
 - tags: Tags or labels
 
@@ -424,7 +424,7 @@ Respond with valid JSON only, no other text.`;
         // Simple field mappings
         if (mapping.company) person.company = getFirstValue(mapping.company, row);
         if (mapping.role) person.role = getFirstValue(mapping.role, row);
-        if (mapping.category) person.category = getFirstValue(mapping.category, row);
+        if (mapping.segment) person.segment = getFirstValue(mapping.segment, row);
         
         // Build notes from multiple sources
         const noteParts: string[] = [];

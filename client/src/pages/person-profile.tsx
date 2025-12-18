@@ -120,12 +120,14 @@ export default function PersonProfile() {
     );
   }
 
-  const getCategoryColor = (category: string | null | undefined) => {
-    if (!category) return "bg-gray-100 text-gray-700";
-    const lower = category.toLowerCase();
-    if (lower.includes("hot")) return "bg-red-100 text-red-700";
-    if (lower.includes("warm")) return "bg-orange-100 text-orange-700";
-    return "bg-blue-100 text-blue-700";
+  const getSegmentColor = (segment: string | null | undefined) => {
+    if (!segment) return "bg-gray-100 text-gray-700";
+    const lower = segment.toLowerCase();
+    if (lower.startsWith("a")) return "bg-purple-100 text-purple-700";
+    if (lower.startsWith("b")) return "bg-blue-100 text-blue-700";
+    if (lower.startsWith("c")) return "bg-green-100 text-green-700";
+    if (lower.startsWith("d")) return "bg-orange-100 text-orange-700";
+    return "bg-gray-100 text-gray-700";
   };
 
   const formatDate = (date: Date | string | null | undefined) => {
@@ -166,8 +168,8 @@ export default function PersonProfile() {
             <div className="flex-1">
               <h1 className="text-3xl font-serif font-bold text-primary">{person.name}</h1>
               <div className="flex items-center gap-2 mt-1">
-                {person.category && (
-                  <Badge className={getCategoryColor(person.category)}>{person.category}</Badge>
+                {person.segment && (
+                  <Badge className={getSegmentColor(person.segment)}>{person.segment}</Badge>
                 )}
                 {person.role && (
                   <span className="text-muted-foreground text-sm">{person.role}</span>
@@ -235,16 +237,16 @@ export default function PersonProfile() {
                       )}
                     </div>
                     <div>
-                      <Label>Category</Label>
+                      <Label>Segment</Label>
                       {isEditing ? (
                         <Input 
-                          value={formData.category || ""} 
-                          onChange={(e) => handleChange("category", e.target.value)}
-                          placeholder="Hot, Warm, Nurture..."
-                          data-testid="input-category"
+                          value={formData.segment || ""} 
+                          onChange={(e) => handleChange("segment", e.target.value)}
+                          placeholder="A - Advocate, B - Fan, C - Network, D - 8x8..."
+                          data-testid="input-segment"
                         />
                       ) : (
-                        <p className="text-lg">{person.category || "—"}</p>
+                        <p className="text-lg">{person.segment || "—"}</p>
                       )}
                     </div>
                   </div>
