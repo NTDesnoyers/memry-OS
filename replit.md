@@ -18,6 +18,20 @@ Following Getting Things Done (GTD) principles, Ninja OS is **intelligent refere
 
 Preferred communication style: Simple, everyday language.
 
+### AI Assistant (Agentic Mode)
+The AI assistant is fully agentic - it can take actions, not just give advice. Using OpenAI function calling, it has 9 tools:
+- **search_people**: Find contacts by name, email, segment, or any attribute
+- **get_person_details**: View complete person record including FORD notes and deals
+- **update_person**: Modify segment, FORD notes, buyer needs, contact info
+- **create_person**: Add new contacts to the database
+- **log_interaction**: Record calls, meetings, emails, texts with automatic last-contact update
+- **create_task**: Create follow-up tasks with due dates and priorities
+- **update_deal_stage**: Move deals through warm → hot → in_contract → closed
+- **get_hot_warm_lists**: Retrieve current Hot and Warm lists
+- **get_todays_tasks**: Get tasks due today or overdue
+
+The AI executes up to 5 sequential tool calls per request, allowing complex multi-step operations like "find Miguel, log a call, and create a follow-up task for next week".
+
 ## Ninja Selling Methodology
 
 Ninja Selling is a relationship-first, process-driven sales system. Agents increase income per hour by focusing on people they know, delivering value, and following consistent daily/weekly habits rather than chasing leads with pressure tactics.
