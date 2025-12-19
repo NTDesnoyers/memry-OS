@@ -25,6 +25,7 @@ import fs from "fs";
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import * as XLSX from "xlsx";
+import * as googleCalendar from "./google-calendar";
 
 // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
 // Lazy initialize to prevent crash when API key is missing
@@ -2479,6 +2480,115 @@ When analyzing images:
       }
     } catch (error: any) {
       res.status(500).json({ success: false, message: error.message });
+    }
+  });
+
+  // Google Calendar API Routes
+  app.get("/api/calendar/status", async (req, res) => {
+    try {
+      const connected = await googleCalendar.isCalendarConnected();
+      res.json({ connected });
+    } catch (error: any) {
+      res.json({ connected: false, error: error.message });
+    }
+  });
+
+  app.get("/api/calendar/calendars", async (req, res) => {
+    try {
+      const calendars = await googleCalendar.listCalendars();
+      res.json(calendars);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/calendar/events", async (req, res) => {
+    try {
+      const { calendarId, timeMin, timeMax, maxResults } = req.query;
+      const events = await googleCalendar.listEvents({
+        calendarId: calendarId as string,
+        timeMin: timeMin ? new Date(timeMin as string) : undefined,
+        timeMax: timeMax ? new Date(timeMax as string) : undefined,
+        maxResults: maxResults ? parseInt(maxResults as string) : undefined,
+      });
+      res.json(events);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/calendar/events/today", async (req, res) => {
+    try {
+      const events = await googleCalendar.getTodaysEvents();
+      res.json(events);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/calendar/events/upcoming", async (req, res) => {
+    try {
+      const { days } = req.query;
+      const events = await googleCalendar.getUpcomingEvents(
+        days ? parseInt(days as string) : 7
+      );
+      res.json(events);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/calendar/events", async (req, res) => {
+    try {
+      const { calendarId, summary, description, start, end, attendees, location } = req.body;
+      if (!summary || !start || !end) {
+        return res.status(400).json({ message: "summary, start, and end are required" });
+      }
+      const event = await googleCalendar.createEvent({
+        calendarId,
+        summary,
+        description,
+        start: new Date(start),
+        end: new Date(end),
+        attendees,
+        location,
+      });
+      res.status(201).json(event);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/calendar/events/:eventId", async (req, res) => {
+    try {
+      const { eventId } = req.params;
+      const { calendarId, summary, description, start, end, location } = req.body;
+      const event = await googleCalendar.updateEvent({
+        calendarId,
+        eventId,
+        summary,
+        description,
+        start: start ? new Date(start) : undefined,
+        end: end ? new Date(end) : undefined,
+        location,
+      });
+      res.json(event);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/calendar/events/:eventId", async (req, res) => {
+    try {
+      const { eventId } = req.params;
+      const { calendarId } = req.query;
+      await googleCalendar.deleteEvent(
+        (calendarId as string) || 'primary',
+        eventId
+      );
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   });
 
