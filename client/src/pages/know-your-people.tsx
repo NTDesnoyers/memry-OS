@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { MentionTextarea } from "@/components/mention-textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -282,10 +283,10 @@ export default function KnowYourPeople() {
                           {field.label}
                           {!isMissing && <Check className="h-3 w-3 text-green-600" />}
                         </label>
-                        <Textarea
-                          placeholder={field.placeholder}
+                        <MentionTextarea
+                          placeholder={`${field.placeholder} (type @ to mention someone)`}
                           value={fieldValues[field.field] || ""}
-                          onChange={(e) => setFieldValues(prev => ({ ...prev, [field.field]: e.target.value }))}
+                          onChange={(value) => setFieldValues(prev => ({ ...prev, [field.field]: value }))}
                           className="resize-none"
                           rows={2}
                           data-testid={`input-${field.field}`}
