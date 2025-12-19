@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Link } from "wouter";
 import type { Person } from "@shared/schema";
 
 interface MentionTextareaProps {
@@ -37,6 +38,7 @@ export function MentionTextarea({
   const [mentionStart, setMentionStart] = useState<number | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+  const [isFocused, setIsFocused] = useState(false);
 
   const { data: people = [] } = useQuery<Person[]>({
     queryKey: ["/api/people"],
@@ -175,12 +177,60 @@ export function MentionTextarea({
     return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
+  const renderTextWithMentions = (text: string) => {
+    const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
+    const parts: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let match;
+    let key = 0;
+    
+    while ((match = mentionRegex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(text.substring(lastIndex, match.index));
+      }
+      const personName = match[1];
+      const personId = match[2];
+      parts.push(
+        <Link
+          key={key++}
+          href={`/people/${personId}`}
+          className="text-primary font-medium hover:underline cursor-pointer"
+          onClick={(e) => e.stopPropagation()}
+        >
+          @{personName}
+        </Link>
+      );
+      lastIndex = match.index + match[0].length;
+    }
+    
+    if (lastIndex < text.length) {
+      parts.push(text.substring(lastIndex));
+    }
+    
+    return parts.length > 0 ? parts : text;
+  };
+
   return (
     <div className="relative">
+      {!isFocused && value && (
+        <div
+          className={cn(
+            "absolute inset-0 px-3 py-2 text-base md:text-sm whitespace-pre-wrap break-words overflow-auto bg-background rounded-md border border-input",
+            className
+          )}
+          onClick={() => {
+            setIsFocused(true);
+            setTimeout(() => textareaRef.current?.focus(), 0);
+          }}
+        >
+          {renderTextWithMentions(value)}
+        </div>
+      )}
       <textarea
         ref={textareaRef}
         id={id}
         value={getDisplayValue(value)}
+        onFocus={() => setIsFocused(true)}
         onChange={(e) => {
           const displayText = e.target.value;
           const originalText = value;
@@ -210,13 +260,17 @@ export function MentionTextarea({
         }}
         onKeyDown={handleKeyDown}
         onBlur={() => {
-          setTimeout(() => setShowDropdown(false), 200);
+          setTimeout(() => {
+            setShowDropdown(false);
+            setIsFocused(false);
+          }, 200);
         }}
         placeholder={placeholder}
         rows={rows}
         data-testid={dataTestId}
         className={cn(
-          "flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+          "flex min-h-[60px] w-full rounded-md border border-input px-3 py-2 text-base shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+          !isFocused && value ? "text-transparent caret-transparent bg-transparent" : "bg-background",
           className
         )}
       />
@@ -288,4 +342,36 @@ export function parseMentions(text: string): { personId: string; personName: str
 
 export function getDisplayText(text: string): string {
   return text.replace(/@\[([^\]]+)\]\([^)]+\)/g, "@$1");
+}
+
+export function MentionDisplay({ text, className }: { text: string; className?: string }) {
+  const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match;
+  let key = 0;
+  
+  while ((match = mentionRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index));
+    }
+    const personName = match[1];
+    const personId = match[2];
+    parts.push(
+      <Link
+        key={key++}
+        href={`/people/${personId}`}
+        className="text-primary font-medium hover:underline"
+      >
+        @{personName}
+      </Link>
+    );
+    lastIndex = match.index + match[0].length;
+  }
+  
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+  
+  return <span className={className}>{parts.length > 0 ? parts : text}</span>;
 }
