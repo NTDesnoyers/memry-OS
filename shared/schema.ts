@@ -193,6 +193,7 @@ export const pieEntries = pgTable("pie_entries", {
   pTime: integer("p_time").default(0),
   iTime: integer("i_time").default(0),
   eTime: integer("e_time").default(0),
+  totalTime: integer("total_time").default(0),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

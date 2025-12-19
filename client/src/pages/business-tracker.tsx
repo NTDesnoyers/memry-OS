@@ -565,15 +565,16 @@ export default function BusinessTracker() {
   };
 
   const weeklyTotals = useMemo(() => {
-    let pTotal = 0, iTotal = 0;
+    let pTotal = 0, iTotal = 0, totalTotal = 0;
     weekDays.forEach(day => {
       const entry = getEntryForDate(day);
       if (entry) {
         pTotal += entry.pTime || 0;
         iTotal += entry.iTime || 0;
+        totalTotal += entry.totalTime || 0;
       }
     });
-    return { pTotal, iTotal };
+    return { pTotal, iTotal, totalTotal };
   }, [weekDays, pieEntries]);
 
   const formatPrice = (value: number | null | undefined) => {
@@ -1580,6 +1581,12 @@ export default function BusinessTracker() {
                           </TableHead>
                           <TableHead className="text-center w-20">
                             <div className="flex flex-col items-center">
+                              <span className="text-purple-600 font-bold">Total</span>
+                              <span className="text-xs text-muted-foreground">All Time</span>
+                            </div>
+                          </TableHead>
+                          <TableHead className="text-center w-20">
+                            <div className="flex flex-col items-center">
                               <span className="text-slate-600 font-bold">E</span>
                               <span className="text-xs text-muted-foreground">Other</span>
                             </div>
@@ -1592,7 +1599,8 @@ export default function BusinessTracker() {
                           const isToday = day.toDateString() === new Date().toDateString();
                           const pTime = entry?.pTime || 0;
                           const iTime = entry?.iTime || 0;
-                          const eTime = entry?.eTime || 0;
+                          const totalTime = entry?.totalTime || 0;
+                          const calculatedE = totalTime > 0 ? Math.max(0, totalTime - pTime - iTime) : 0;
                           
                           return (
                             <TableRow key={day.toISOString()} className={isToday ? "bg-primary/5" : ""}>
@@ -1627,8 +1635,19 @@ export default function BusinessTracker() {
                                 />
                               </TableCell>
                               <TableCell className="text-center">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={totalTime || ""}
+                                  onChange={(e) => handlePieTimeChange(day, "totalTime", parseInt(e.target.value) || 0)}
+                                  className="w-16 mx-auto text-center h-8 text-purple-600 font-medium"
+                                  placeholder="0"
+                                  data-testid={`input-totaltime-${day.toISOString().split('T')[0]}`}
+                                />
+                              </TableCell>
+                              <TableCell className="text-center">
                                 <div className="w-16 mx-auto h-8 flex items-center justify-center bg-slate-100 rounded text-slate-600 font-medium">
-                                  {eTime || "--"}
+                                  {totalTime > 0 ? calculatedE : "--"}
                                 </div>
                               </TableCell>
                             </TableRow>
@@ -1638,7 +1657,13 @@ export default function BusinessTracker() {
                           <TableCell>Weekly Total</TableCell>
                           <TableCell className="text-center text-blue-600">{weeklyTotals.pTotal} min</TableCell>
                           <TableCell className="text-center text-green-600">{weeklyTotals.iTotal} min</TableCell>
-                          <TableCell className="text-center text-slate-600">--</TableCell>
+                          <TableCell className="text-center text-purple-600">{weeklyTotals.totalTotal} min</TableCell>
+                          <TableCell className="text-center text-slate-600">
+                            {weeklyTotals.totalTotal > 0 
+                              ? Math.max(0, weeklyTotals.totalTotal - weeklyTotals.pTotal - weeklyTotals.iTotal) 
+                              : "--"} 
+                            {weeklyTotals.totalTotal > 0 ? " min" : ""}
+                          </TableCell>
                         </TableRow>
                       </TableBody>
                     </Table>
@@ -1666,11 +1691,11 @@ export default function BusinessTracker() {
                   <CardContent className="pt-4 text-center">
                     <p className="text-xs text-slate-600 uppercase font-medium">Income-Producing %</p>
                     <p className="text-2xl font-bold text-slate-700">
-                      {weeklyTotals.pTotal + weeklyTotals.iTotal > 0 
-                        ? Math.round((weeklyTotals.pTotal + weeklyTotals.iTotal) / (weeklyTotals.pTotal + weeklyTotals.iTotal) * 100)
+                      {weeklyTotals.totalTotal > 0 
+                        ? Math.round((weeklyTotals.pTotal + weeklyTotals.iTotal) / weeklyTotals.totalTotal * 100)
                         : "--"}%
                     </p>
-                    <p className="text-xs text-muted-foreground">P + I time</p>
+                    <p className="text-xs text-muted-foreground">(P + I) / Total</p>
                   </CardContent>
                 </Card>
                 <Card className="bg-amber-50 border-amber-200">
