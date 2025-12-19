@@ -15,7 +15,9 @@ import { ArrowLeft, Home, FileText, Database, BarChart3, TrendingUp, Save, Exter
 import { useToast } from "@/hooks/use-toast";
 import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
-import type { RealEstateReview, Task, AgentProfile } from "@shared/schema";
+import { VisualPricingTools, calculateMetrics, type VisualPricingMetrics } from "@/components/visual-pricing-tools";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { RealEstateReview, Task, AgentProfile, PricingReview, MLSProperty as SchemaMLSProperty } from "@shared/schema";
 
 interface PropertyData {
   id: string;
@@ -328,6 +330,14 @@ export default function ReviewDetail() {
   const { data: agentProfile } = useQuery<AgentProfile>({
     queryKey: ["/api/agent-profile"],
   });
+
+  const { data: pricingReviews = [] } = useQuery<PricingReview[]>({
+    queryKey: ["/api/pricing-reviews"],
+  });
+
+  const linkedPricingReview = pricingReviews.find(pr => pr.id === review?.visualPricingId);
+  const linkedMetrics = linkedPricingReview?.calculatedMetrics as VisualPricingMetrics | undefined;
+  const linkedMlsData = (linkedPricingReview?.mlsData as SchemaMLSProperty[]) || [];
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -1518,7 +1528,72 @@ export default function ReviewDetail() {
                 </TabsContent>
 
                 <TabsContent value="visual-pricing">
-                  <VisualPricingSection properties={properties} />
+                  <div className="space-y-6">
+                    <Card className="border-none shadow-md">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="font-serif flex items-center gap-2">
+                          <TrendingUp className="h-5 w-5" />
+                          Link Visual Pricing Analysis
+                        </CardTitle>
+                        <CardDescription>
+                          Connect an analysis from Visual Pricing to display all charts here
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center gap-4">
+                          <Select
+                            value={review?.visualPricingId || "none"}
+                            onValueChange={(value) => {
+                              updateMutation.mutate({ 
+                                visualPricingId: value === "none" ? null : value 
+                              });
+                            }}
+                          >
+                            <SelectTrigger className="w-[300px]" data-testid="select-pricing-review">
+                              <SelectValue placeholder="Select a pricing analysis..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">No analysis linked</SelectItem>
+                              {pricingReviews.map(pr => (
+                                <SelectItem key={pr.id} value={pr.id}>
+                                  {pr.title} {pr.neighborhood ? `(${pr.neighborhood})` : ''}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Link href="/visual-pricing">
+                            <Button variant="outline" className="gap-2">
+                              <Plus className="h-4 w-4" />
+                              Create New Analysis
+                            </Button>
+                          </Link>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {linkedPricingReview && linkedMetrics ? (
+                      <VisualPricingTools
+                        metrics={linkedMetrics}
+                        title={linkedPricingReview.title}
+                        neighborhood={linkedPricingReview.neighborhood || undefined}
+                        mlsData={linkedMlsData}
+                        defaultTab="scattergram"
+                      />
+                    ) : (
+                      <Card className="border-none shadow-md">
+                        <CardContent className="py-12 text-center text-muted-foreground">
+                          <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                          <p className="font-medium">No Visual Pricing Analysis Linked</p>
+                          <p className="text-sm mt-2">
+                            Select an existing analysis above or create a new one in Visual Pricing.
+                          </p>
+                          <p className="text-sm mt-1">
+                            Any updates you make in Visual Pricing will automatically appear here.
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="market">
