@@ -19,7 +19,7 @@ import paperBg from "@assets/generated_images/subtle_paper_texture_background.pn
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { Link } from "wouter";
-import { type Deal, type Person, type BusinessSettings, type PieEntry } from "@shared/schema";
+import { type Deal, type Person, type BusinessSettings, type PieEntry, type Interaction } from "@shared/schema";
 import { toast } from "sonner";
 
 type DealWithPerson = Deal & { person?: Person };
@@ -125,6 +125,21 @@ export default function BusinessTracker() {
   const { data: people = [] } = useQuery<Person[]>({
     queryKey: ["/api/people"],
   });
+
+  const { data: interactions = [] } = useQuery<Interaction[]>({
+    queryKey: ["/api/interactions"],
+  });
+
+  // Get the most recent contact date for a person
+  const getLastContactDate = (personId: string | null): Date | null => {
+    if (!personId) return null;
+    const personInteractions = interactions.filter(i => i.personId === personId);
+    if (personInteractions.length === 0) return null;
+    const sorted = personInteractions.sort((a, b) => 
+      new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
+    );
+    return new Date(sorted[0].occurredAt);
+  };
 
   const dealsWithPeople: DealWithPerson[] = deals.map(deal => ({
     ...deal,
@@ -889,38 +904,45 @@ export default function BusinessTracker() {
                     <Table>
                       <TableHeader>
                         <TableRow className="text-xs">
-                          <TableHead className="py-1 px-1 w-8">P/P</TableHead>
+                          <TableHead className="py-1 px-1 w-12">Date</TableHead>
                           <TableHead className="py-1 px-1">Client Name</TableHead>
+                          <TableHead className="py-1 px-1 w-8">P/P</TableHead>
                           <TableHead className="py-1 px-1 text-right w-20">Est. Price</TableHead>
-                          <TableHead className="py-1 px-1 w-8">%</TableHead>
+                          <TableHead className="py-1 px-1 w-10">%</TableHead>
                           <TableHead className="py-1 px-1 text-right w-20">GCI</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {warmDeals.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={5} className="text-center text-muted-foreground py-4 text-xs">
+                            <TableCell colSpan={6} className="text-center text-muted-foreground py-4 text-xs">
                               No warm prospects
                             </TableCell>
                           </TableRow>
-                        ) : warmDeals.slice(0, 30).map((deal) => (
-                          <TableRow 
-                            key={deal.id} 
-                            className={`text-xs hover:bg-blue-200/50 cursor-grab ${draggedDealId === deal.id ? "opacity-50" : ""}`}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, deal.id)}
-                            onDragEnd={handleDragEnd}
-                            data-testid={`row-warm-${deal.id}`}
-                          >
-                            <TableCell className="py-1 px-1 font-bold text-primary">{deal.painPleasureRating || ""}</TableCell>
-                            <TableCell className="py-1 px-1">
-                              <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} dealId={deal.id} />
-                            </TableCell>
-                            <TableCell className="py-1 px-1 text-right">{formatCompact(deal.value)}</TableCell>
-                            <TableCell className="py-1 px-1">{deal.commissionPercent || 3}%</TableCell>
-                            <TableCell className="py-1 px-1 text-right text-green-700 font-medium">{formatCompact(calculateGCI(deal.value, deal.commissionPercent))}</TableCell>
-                          </TableRow>
-                        ))}
+                        ) : warmDeals.slice(0, 30).map((deal) => {
+                          const lastContact = getLastContactDate(deal.personId);
+                          return (
+                            <TableRow 
+                              key={deal.id} 
+                              className={`text-xs hover:bg-blue-200/50 cursor-grab ${draggedDealId === deal.id ? "opacity-50" : ""}`}
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, deal.id)}
+                              onDragEnd={handleDragEnd}
+                              data-testid={`row-warm-${deal.id}`}
+                            >
+                              <TableCell className="py-1 px-1 text-muted-foreground">
+                                {lastContact ? format(lastContact, "M/d") : "-"}
+                              </TableCell>
+                              <TableCell className="py-1 px-1">
+                                <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} dealId={deal.id} />
+                              </TableCell>
+                              <TableCell className="py-1 px-1 font-bold text-primary">{deal.painPleasureRating || ""}</TableCell>
+                              <TableCell className="py-1 px-1 text-right">{formatCompact(deal.value)}</TableCell>
+                              <TableCell className="py-1 px-1">{deal.commissionPercent || 3}%</TableCell>
+                              <TableCell className="py-1 px-1 text-right text-green-700 font-medium">{formatCompact(calculateGCI(deal.value, deal.commissionPercent))}</TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>
@@ -951,38 +973,45 @@ export default function BusinessTracker() {
                       <Table>
                         <TableHeader>
                           <TableRow className="text-xs">
-                            <TableHead className="py-1 px-1 w-8">P/P</TableHead>
+                            <TableHead className="py-1 px-1 w-12">Date</TableHead>
                             <TableHead className="py-1 px-1">Client Name</TableHead>
+                            <TableHead className="py-1 px-1 w-8">P/P</TableHead>
                             <TableHead className="py-1 px-1 text-right w-20">Est. Price</TableHead>
-                            <TableHead className="py-1 px-1 w-8">%</TableHead>
+                            <TableHead className="py-1 px-1 w-10">%</TableHead>
                             <TableHead className="py-1 px-1 text-right w-20">GCI</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {hotActiveDeals.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={5} className="text-center text-muted-foreground py-4 text-xs">
+                              <TableCell colSpan={6} className="text-center text-muted-foreground py-4 text-xs">
                                 No hot prospects
                               </TableCell>
                             </TableRow>
-                          ) : hotActiveDeals.slice(0, 15).map((deal) => (
-                            <TableRow 
-                              key={deal.id} 
-                              className={`text-xs hover:bg-blue-200/50 cursor-grab ${draggedDealId === deal.id ? "opacity-50" : ""}`}
-                              draggable
-                              onDragStart={(e) => handleDragStart(e, deal.id)}
-                              onDragEnd={handleDragEnd}
-                              data-testid={`row-hot-${deal.id}`}
-                            >
-                              <TableCell className="py-1 px-1 font-bold text-primary">{deal.painPleasureRating || ""}</TableCell>
-                              <TableCell className="py-1 px-1">
-                                <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} dealId={deal.id} />
-                              </TableCell>
-                              <TableCell className="py-1 px-1 text-right">{formatCompact(deal.value)}</TableCell>
-                              <TableCell className="py-1 px-1">{deal.commissionPercent || 3}%</TableCell>
-                              <TableCell className="py-1 px-1 text-right text-green-700 font-medium">{formatCompact(calculateGCI(deal.value, deal.commissionPercent))}</TableCell>
-                            </TableRow>
-                          ))}
+                          ) : hotActiveDeals.slice(0, 15).map((deal) => {
+                            const lastContact = getLastContactDate(deal.personId);
+                            return (
+                              <TableRow 
+                                key={deal.id} 
+                                className={`text-xs hover:bg-blue-200/50 cursor-grab ${draggedDealId === deal.id ? "opacity-50" : ""}`}
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, deal.id)}
+                                onDragEnd={handleDragEnd}
+                                data-testid={`row-hot-${deal.id}`}
+                              >
+                                <TableCell className="py-1 px-1 text-muted-foreground">
+                                  {lastContact ? format(lastContact, "M/d") : "-"}
+                                </TableCell>
+                                <TableCell className="py-1 px-1">
+                                  <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} dealId={deal.id} />
+                                </TableCell>
+                                <TableCell className="py-1 px-1 font-bold text-primary">{deal.painPleasureRating || ""}</TableCell>
+                                <TableCell className="py-1 px-1 text-right">{formatCompact(deal.value)}</TableCell>
+                                <TableCell className="py-1 px-1">{deal.commissionPercent || 3}%</TableCell>
+                                <TableCell className="py-1 px-1 text-right text-green-700 font-medium">{formatCompact(calculateGCI(deal.value, deal.commissionPercent))}</TableCell>
+                              </TableRow>
+                            );
+                          })}
                         </TableBody>
                       </Table>
                     </div>
@@ -1025,22 +1054,27 @@ export default function BusinessTracker() {
                                 None
                               </TableCell>
                             </TableRow>
-                          ) : hotConfusedDeals.slice(0, 5).map((deal) => (
-                            <TableRow 
-                              key={deal.id} 
-                              className={`text-xs hover:bg-amber-200/50 cursor-grab ${draggedDealId === deal.id ? "opacity-50" : ""}`}
-                              draggable
-                              onDragStart={(e) => handleDragStart(e, deal.id)}
-                              onDragEnd={handleDragEnd}
-                            >
-                              <TableCell className="py-1 px-1">{deal.createdAt ? new Date(deal.createdAt).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' }) : ""}</TableCell>
-                              <TableCell className="py-1 px-1">
-                                <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} dealId={deal.id} />
-                              </TableCell>
-                              <TableCell className="py-1 px-1 font-bold">{deal.painPleasureRating || ""}</TableCell>
-                              <TableCell className="py-1 px-1 text-right text-green-700">{formatCompact(calculateGCI(deal.value, deal.commissionPercent))}</TableCell>
-                            </TableRow>
-                          ))}
+                          ) : hotConfusedDeals.slice(0, 5).map((deal) => {
+                            const lastContact = getLastContactDate(deal.personId);
+                            return (
+                              <TableRow 
+                                key={deal.id} 
+                                className={`text-xs hover:bg-amber-200/50 cursor-grab ${draggedDealId === deal.id ? "opacity-50" : ""}`}
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, deal.id)}
+                                onDragEnd={handleDragEnd}
+                              >
+                                <TableCell className="py-1 px-1 text-muted-foreground">
+                                  {lastContact ? format(lastContact, "M/d") : "-"}
+                                </TableCell>
+                                <TableCell className="py-1 px-1">
+                                  <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} dealId={deal.id} />
+                                </TableCell>
+                                <TableCell className="py-1 px-1 font-bold">{deal.painPleasureRating || ""}</TableCell>
+                                <TableCell className="py-1 px-1 text-right text-green-700">{formatCompact(calculateGCI(deal.value, deal.commissionPercent))}</TableCell>
+                              </TableRow>
+                            );
+                          })}
                         </TableBody>
                       </Table>
                     </div>
