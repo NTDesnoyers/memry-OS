@@ -1860,9 +1860,9 @@ Be concise. Take action. Confirm results.`;
       }
 
       // Fetch meetings from Fathom API
-      const fathomResponse = await fetch("https://api.fathom.ai/v1/calls", {
+      const fathomResponse = await fetch("https://api.fathom.ai/external/v1/meetings?include_summary=true&include_transcript=true&calendar_invitees_domains_type=all", {
         headers: {
-          "Authorization": `Bearer ${apiKey}`,
+          "X-Api-Key": apiKey,
           "Content-Type": "application/json",
         },
       });
@@ -1876,7 +1876,7 @@ Be concise. Take action. Confirm results.`;
       }
 
       const fathomData = await fathomResponse.json();
-      const meetings = fathomData.calls || fathomData.data || fathomData || [];
+      const meetings = fathomData.items || fathomData.calls || fathomData.data || [];
       
       if (!Array.isArray(meetings)) {
         return res.status(400).json({ message: "Unexpected response format from Fathom" });
@@ -1899,15 +1899,20 @@ Be concise. Take action. Confirm results.`;
             continue;
           }
 
-          // Parse meeting data
-          const meetingId = meeting.id || meeting.call_id;
-          const title = meeting.title || meeting.name || "Fathom Meeting";
-          const summary = meeting.summary || meeting.ai_summary || "";
-          const transcript = meeting.transcript || "";
-          const occurredAt = meeting.started_at || meeting.created_at || meeting.date || new Date().toISOString();
-          const duration = meeting.duration_seconds ? Math.round(meeting.duration_seconds / 60) : meeting.duration_minutes || null;
-          const participants = meeting.participants?.map((p: any) => p.name || p.email || p) || [];
-          const externalLink = meeting.share_url || meeting.url || `https://fathom.ai/call/${meetingId}`;
+          // Parse meeting data from Fathom API response
+          const meetingId = String(meeting.recording_id || meeting.id);
+          const title = meeting.meeting_title || meeting.title || "Fathom Meeting";
+          const summary = meeting.default_summary?.markdown_formatted || meeting.summary || "";
+          const transcriptData = meeting.transcript || [];
+          const transcript = Array.isArray(transcriptData) 
+            ? transcriptData.map((t: any) => `${t.speaker?.display_name || 'Speaker'}: ${t.text}`).join('\n')
+            : String(transcriptData);
+          const occurredAt = meeting.recording_start_time || meeting.scheduled_start_time || meeting.created_at || new Date().toISOString();
+          const startTime = meeting.recording_start_time ? new Date(meeting.recording_start_time) : null;
+          const endTime = meeting.recording_end_time ? new Date(meeting.recording_end_time) : null;
+          const duration = startTime && endTime ? Math.round((endTime.getTime() - startTime.getTime()) / 60000) : null;
+          const participants = meeting.calendar_invitees?.map((p: any) => p.name || p.email) || [];
+          const externalLink = meeting.share_url || meeting.url || `https://fathom.video/${meetingId}`;
 
           // Create interaction
           await storage.createInteraction({
@@ -1951,9 +1956,9 @@ Be concise. Take action. Confirm results.`;
         return res.status(400).json({ message: "Fathom API key is required" });
       }
 
-      const response = await fetch("https://api.fathom.ai/v1/calls?limit=1", {
+      const response = await fetch("https://api.fathom.ai/external/v1/meetings?calendar_invitees_domains_type=all", {
         headers: {
-          "Authorization": `Bearer ${apiKey}`,
+          "X-Api-Key": apiKey,
           "Content-Type": "application/json",
         },
       });
