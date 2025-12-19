@@ -142,11 +142,11 @@ function parseCSVRow(headers: string[], row: Record<string, string>): MLSPropert
     }
   }
   
-  // Calculate price per sqft
-  if (prop.totalSqft && prop.closePrice) {
-    prop.pricePerSqft = Math.round(prop.closePrice / prop.totalSqft);
-  } else if (prop.aboveGradeSqft && prop.closePrice) {
+  // Calculate price per sqft (prefer above grade sqft)
+  if (prop.aboveGradeSqft && prop.closePrice) {
     prop.pricePerSqft = Math.round(prop.closePrice / prop.aboveGradeSqft);
+  } else if (prop.totalSqft && prop.closePrice) {
+    prop.pricePerSqft = Math.round(prop.closePrice / prop.totalSqft);
   }
   
   // Only return if we have at least an MLS number or address
@@ -342,9 +342,9 @@ export default function VisualPricing() {
   const sqftPriceData = useMemo(() => {
     const closedProps = metrics.closedProperties || [];
     return closedProps
-      .filter(p => (p.totalSqft || p.aboveGradeSqft) && p.closePrice)
+      .filter(p => (p.aboveGradeSqft || p.totalSqft) && p.closePrice)
       .map(p => ({
-        sqft: p.totalSqft || p.aboveGradeSqft || 0,
+        sqft: p.aboveGradeSqft || p.totalSqft || 0,  // Prefer above grade sqft
         price: p.closePrice || 0,
         address: p.address || ''
       }));
@@ -1230,7 +1230,7 @@ export default function VisualPricing() {
                                 <TableCell className="max-w-[200px] truncate">{prop.address}</TableCell>
                                 <TableCell>{prop.beds || '-'}</TableCell>
                                 <TableCell>{prop.baths || '-'}</TableCell>
-                                <TableCell>{prop.totalSqft?.toLocaleString() || prop.aboveGradeSqft?.toLocaleString() || '-'}</TableCell>
+                                <TableCell>{prop.aboveGradeSqft?.toLocaleString() || prop.totalSqft?.toLocaleString() || '-'}</TableCell>
                                 <TableCell>${prop.listPrice?.toLocaleString() || '-'}</TableCell>
                                 <TableCell className="font-medium">${prop.closePrice?.toLocaleString() || '-'}</TableCell>
                                 <TableCell>{prop.dom || '-'}</TableCell>
