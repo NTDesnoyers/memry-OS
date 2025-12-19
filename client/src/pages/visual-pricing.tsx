@@ -761,14 +761,15 @@ export default function VisualPricing() {
                               </div>
                               <div className="h-[450px]">
                                 <ResponsiveContainer width="100%" height="100%">
-                                  <ComposedChart margin={{ top: 20, right: 30, bottom: 60, left: 80 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />
+                                  <ComposedChart margin={{ top: 20, right: 30, bottom: 60, left: 20 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#d0d0d0" />
                                     <XAxis 
                                       type="number" 
                                       dataKey="xValue" 
-                                      domain={['dataMin - dataMin * 0.1', 'dataMax + dataMax * 0.1']}
+                                      domain={['dataMin - dataMin * 0.05', 'dataMax + dataMax * 0.05']}
                                       tickFormatter={(v) => {
-                                        if (scatterXAxis === 'acres' || scatterXAxis === 'baths') return v.toFixed(2);
+                                        if (scatterXAxis === 'acres') return v.toFixed(2);
+                                        if (scatterXAxis === 'baths') return v.toFixed(1);
                                         return v.toLocaleString();
                                       }}
                                       label={{ 
@@ -782,12 +783,13 @@ export default function VisualPricing() {
                                       type="number" 
                                       dataKey="price" 
                                       domain={['dataMin - 50000', 'dataMax + 50000']}
-                                      tickFormatter={(v) => `$${(v/1000000).toFixed(1)}M`}
+                                      tickFormatter={(v) => `$${v.toLocaleString()}`}
+                                      width={90}
                                       label={{ 
                                         value: 'Property Price', 
                                         angle: -90, 
                                         position: 'insideLeft', 
-                                        offset: -10,
+                                        offset: -5,
                                         style: { fontWeight: 'bold', fontSize: 14 }
                                       }}
                                     />
