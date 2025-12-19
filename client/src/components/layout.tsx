@@ -22,11 +22,12 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { VoiceLogger } from "@/components/voice-logger";
+import { useQuery } from "@tanstack/react-query";
 
 const navItems = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -147,14 +148,11 @@ interface ProfileData {
 export default function LayoutComponent({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [open, setOpen] = useState(false);
-  const [profile, setProfile] = useState<ProfileData | null>(null);
 
-  useEffect(() => {
-    fetch("/api/profile")
-      .then(res => res.json())
-      .then(data => setProfile(data))
-      .catch(() => setProfile(null));
-  }, []);
+  const { data: profile } = useQuery<ProfileData>({
+    queryKey: ["/api/profile"],
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes to prevent blinking
+  });
 
   const userName = profile?.name || "Your Name";
   const userInitials = userName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
