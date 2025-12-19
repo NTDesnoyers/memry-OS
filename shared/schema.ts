@@ -668,6 +668,27 @@ export const generatedDraftsRelations = relations(generatedDrafts, ({ one }) => 
   }),
 }));
 
+// Voice Profile - Stores learned communication patterns from Nathan's conversations
+export const voiceProfile = pgTable("voice_profile", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  category: text("category").notNull(), // greetings, signoffs, phrases, tone_notes, expressions
+  value: text("value").notNull(), // The actual phrase or pattern
+  context: text("context"), // Where this was observed (email, phone call, meeting)
+  frequency: integer("frequency").default(1), // How often this pattern appears
+  source: text("source"), // Which interaction(s) this came from
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertVoiceProfileSchema = createInsertSchema(voiceProfile).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertVoiceProfile = z.infer<typeof insertVoiceProfileSchema>;
+export type VoiceProfile = typeof voiceProfile.$inferSelect;
+
 // AI Extracted Data structure for type safety
 export type AIExtractedData = {
   fordUpdates?: {

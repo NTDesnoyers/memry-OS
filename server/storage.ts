@@ -18,7 +18,8 @@ import {
   type AiConversation, type InsertAiConversation,
   type Household, type InsertHousehold,
   type GeneratedDraft, type InsertGeneratedDraft,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts
+  type VoiceProfile, type InsertVoiceProfile,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt } from "drizzle-orm";
@@ -167,6 +168,14 @@ export interface IStorage {
   getHouseholdMembers(householdId: string): Promise<Person[]>;
   addPersonToHousehold(personId: string, householdId: string): Promise<Person | undefined>;
   removePersonFromHousehold(personId: string): Promise<Person | undefined>;
+  
+  // Voice Profile
+  getAllVoiceProfiles(): Promise<VoiceProfile[]>;
+  getVoiceProfilesByCategory(category: string): Promise<VoiceProfile[]>;
+  createVoiceProfile(profile: InsertVoiceProfile): Promise<VoiceProfile>;
+  updateVoiceProfile(id: string, profile: Partial<InsertVoiceProfile>): Promise<VoiceProfile | undefined>;
+  deleteVoiceProfile(id: string): Promise<void>;
+  upsertVoicePattern(category: string, value: string, context?: string, source?: string): Promise<VoiceProfile>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -847,6 +856,64 @@ export class DatabaseStorage implements IStorage {
   
   async deleteGeneratedDraft(id: string): Promise<void> {
     await db.delete(generatedDrafts).where(eq(generatedDrafts.id, id));
+  }
+  
+  // Voice Profile
+  async getAllVoiceProfiles(): Promise<VoiceProfile[]> {
+    return await db.select().from(voiceProfile).orderBy(desc(voiceProfile.frequency));
+  }
+  
+  async getVoiceProfilesByCategory(category: string): Promise<VoiceProfile[]> {
+    return await db.select().from(voiceProfile)
+      .where(eq(voiceProfile.category, category))
+      .orderBy(desc(voiceProfile.frequency));
+  }
+  
+  async createVoiceProfile(insertProfile: InsertVoiceProfile): Promise<VoiceProfile> {
+    const [profile] = await db
+      .insert(voiceProfile)
+      .values({ ...insertProfile, updatedAt: new Date() })
+      .returning();
+    return profile;
+  }
+  
+  async updateVoiceProfile(id: string, profile: Partial<InsertVoiceProfile>): Promise<VoiceProfile | undefined> {
+    const [updated] = await db
+      .update(voiceProfile)
+      .set({ ...profile, updatedAt: new Date() })
+      .where(eq(voiceProfile.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async deleteVoiceProfile(id: string): Promise<void> {
+    await db.delete(voiceProfile).where(eq(voiceProfile.id, id));
+  }
+  
+  async upsertVoicePattern(category: string, value: string, context?: string, source?: string): Promise<VoiceProfile> {
+    // Check if this pattern already exists
+    const [existing] = await db.select().from(voiceProfile)
+      .where(and(eq(voiceProfile.category, category), eq(voiceProfile.value, value)));
+    
+    if (existing) {
+      // Increment frequency
+      const [updated] = await db
+        .update(voiceProfile)
+        .set({ 
+          frequency: (existing.frequency || 1) + 1,
+          updatedAt: new Date()
+        })
+        .where(eq(voiceProfile.id, existing.id))
+        .returning();
+      return updated;
+    }
+    
+    // Create new pattern
+    const [created] = await db
+      .insert(voiceProfile)
+      .values({ category, value, context, source, frequency: 1, updatedAt: new Date() })
+      .returning();
+    return created;
   }
 }
 
