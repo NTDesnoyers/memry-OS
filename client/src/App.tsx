@@ -23,6 +23,7 @@ import VisualPricing from "@/pages/visual-pricing";
 import BrandCenter from "@/pages/brand-center";
 import KnowYourPeople from "@/pages/know-your-people";
 import ConversationLog from "@/pages/conversation-log";
+import Calendar from "@/pages/calendar";
 
 function Router() {
   return (
@@ -44,6 +45,7 @@ function Router() {
       <Route path="/brand-center" component={BrandCenter} />
       <Route path="/know-your-people" component={KnowYourPeople} />
       <Route path="/conversations" component={ConversationLog} />
+      <Route path="/calendar" component={Calendar} />
       <Route path="/automation" component={AutomationHub} />
       <Route path="/integrations" component={Integrations} />
       <Route component={NotFound} />

@@ -26,6 +26,7 @@ import { VoiceLogger } from "@/components/voice-logger";
 
 const navItems = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Calendar", href: "/calendar", icon: Calendar },
   { name: "Business Tracker", href: "/business-tracker", icon: PieChart },
   { name: "Phone & Dialer", href: "/phone", icon: Phone },
   { name: "Meetings", href: "/meetings", icon: Video },
