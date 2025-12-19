@@ -17,7 +17,8 @@ import {
   Sparkles,
   MessageSquare,
   ChevronUp,
-  LogOut
+  LogOut,
+  FileEdit
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -36,6 +37,7 @@ const navItems = [
   { name: "Phone & Dialer", href: "/phone", icon: Phone },
   { name: "Meetings", href: "/meetings", icon: Video },
   { name: "Conversations", href: "/conversations", icon: MessageSquare },
+  { name: "AI Drafts", href: "/drafts", icon: FileEdit },
   { name: "People", href: "/people", icon: Users },
   { name: "Know Your People", href: "/know-your-people", icon: Sparkles },
   { name: "Relationships (FORD)", href: "/relationships", icon: Repeat },

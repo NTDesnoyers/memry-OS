@@ -23,6 +23,7 @@ import VisualPricing from "@/pages/visual-pricing";
 import BrandCenter from "@/pages/brand-center";
 import KnowYourPeople from "@/pages/know-your-people";
 import ConversationLog from "@/pages/conversation-log";
+import Drafts from "@/pages/drafts";
 import Calendar from "@/pages/calendar";
 import Settings from "@/pages/settings";
 
@@ -46,6 +47,7 @@ function Router() {
       <Route path="/brand-center" component={BrandCenter} />
       <Route path="/know-your-people" component={KnowYourPeople} />
       <Route path="/conversations" component={ConversationLog} />
+      <Route path="/drafts" component={Drafts} />
       <Route path="/calendar" component={Calendar} />
       <Route path="/automation" component={AutomationHub} />
       <Route path="/integrations" component={Integrations} />
