@@ -1961,8 +1961,24 @@ Be concise. Take action. Confirm results.`;
           const startTime = meeting.recording_start_time ? new Date(meeting.recording_start_time) : null;
           const endTime = meeting.recording_end_time ? new Date(meeting.recording_end_time) : null;
           const duration = startTime && endTime ? Math.round((endTime.getTime() - startTime.getTime()) / 60000) : null;
+          const participantEmails = meeting.calendar_invitees?.map((p: any) => p.email).filter(Boolean) || [];
           const participants = meeting.calendar_invitees?.map((p: any) => p.name || p.email) || [];
           const externalLink = meeting.share_url || meeting.url || `https://fathom.video/${meetingId}`;
+
+          // Try to auto-match participant to a person in database by email
+          let matchedPersonId: string | null = null;
+          if (participantEmails.length > 0) {
+            const allPeople = await storage.getAllPeople();
+            for (const email of participantEmails) {
+              const matchedPerson = allPeople.find(p => 
+                p.email?.toLowerCase() === email.toLowerCase()
+              );
+              if (matchedPerson) {
+                matchedPersonId = matchedPerson.id;
+                break; // Use first match
+              }
+            }
+          }
 
           // Create interaction
           await storage.createInteraction({
@@ -1976,7 +1992,7 @@ Be concise. Take action. Confirm results.`;
             duration,
             occurredAt: new Date(occurredAt),
             participants,
-            personId: null, // User will need to link to contacts manually
+            personId: matchedPersonId, // Auto-matched by email or null
           });
 
           imported++;
@@ -1994,6 +2010,61 @@ Be concise. Take action. Confirm results.`;
       });
     } catch (error: any) {
       console.error("Fathom import error:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Auto-match existing unlinked conversations by participant email
+  app.post("/api/interactions/auto-match", async (req, res) => {
+    try {
+      const allInteractions = await storage.getAllInteractions();
+      const allPeople = await storage.getAllPeople();
+      
+      let matched = 0;
+      let alreadyLinked = 0;
+      let noMatch = 0;
+      
+      for (const interaction of allInteractions) {
+        // Skip if already linked
+        if (interaction.personId) {
+          alreadyLinked++;
+          continue;
+        }
+        
+        // Try to match by participant emails
+        const participants = interaction.participants || [];
+        let matchedPersonId: string | null = null;
+        
+        for (const participant of participants) {
+          // Check if participant looks like an email
+          if (participant.includes('@')) {
+            const matchedPerson = allPeople.find(p => 
+              p.email?.toLowerCase() === participant.toLowerCase()
+            );
+            if (matchedPerson) {
+              matchedPersonId = matchedPerson.id;
+              break;
+            }
+          }
+        }
+        
+        if (matchedPersonId) {
+          await storage.updateInteraction(interaction.id, { personId: matchedPersonId });
+          matched++;
+        } else {
+          noMatch++;
+        }
+      }
+      
+      res.json({
+        success: true,
+        matched,
+        alreadyLinked,
+        noMatch,
+        total: allInteractions.length,
+      });
+    } catch (error: any) {
+      console.error("Auto-match error:", error);
       res.status(500).json({ message: error.message });
     }
   });
