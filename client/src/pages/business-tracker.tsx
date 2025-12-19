@@ -260,7 +260,7 @@ export default function BusinessTracker() {
       } else {
         createPieEntryMutation.mutate({ date: today, [field]: minutes });
       }
-      toast.success(`Added ${minutes} minutes of ${timerType === "P" ? "Prospecting" : "In-Person"} time`);
+      toast.success(`Added ${minutes} minutes of ${timerType === "P" ? "Productive" : "Indirectly Productive"} time`);
     }
     setTimerType(null);
     setTimerSeconds(0);
@@ -1148,20 +1148,20 @@ export default function BusinessTracker() {
                       </div>
                       {timerType && (
                         <Badge variant="secondary" className="mt-2">
-                          {timerType === "P" ? "Prospecting" : "In-Person"}
+                          {timerType === "P" ? "Productive Time" : "Indirectly Productive"}
                         </Badge>
                       )}
                     </div>
                     
                     {!isTimerRunning && !timerType ? (
                       <div className="grid grid-cols-2 gap-2">
-                        <Button onClick={() => startTimer("P")} className="bg-blue-600 hover:bg-blue-700" data-testid="button-start-prospecting">
+                        <Button onClick={() => startTimer("P")} className="bg-blue-600 hover:bg-blue-700" data-testid="button-start-productive">
                           <Play className="h-4 w-4 mr-1" />
-                          Prospecting
+                          Productive
                         </Button>
-                        <Button onClick={() => startTimer("I")} className="bg-green-600 hover:bg-green-700" data-testid="button-start-inperson">
+                        <Button onClick={() => startTimer("I")} className="bg-green-600 hover:bg-green-700" data-testid="button-start-indirect">
                           <Play className="h-4 w-4 mr-1" />
-                          In-Person
+                          Indirect
                         </Button>
                       </div>
                     ) : (
@@ -1214,19 +1214,19 @@ export default function BusinessTracker() {
                           <TableHead className="text-center w-20">
                             <div className="flex flex-col items-center">
                               <span className="text-blue-600 font-bold">P</span>
-                              <span className="text-xs text-muted-foreground">Prospecting</span>
+                              <span className="text-xs text-muted-foreground">Productive</span>
                             </div>
                           </TableHead>
                           <TableHead className="text-center w-20">
                             <div className="flex flex-col items-center">
                               <span className="text-green-600 font-bold">I</span>
-                              <span className="text-xs text-muted-foreground">In-Person</span>
+                              <span className="text-xs text-muted-foreground">Indirect</span>
                             </div>
                           </TableHead>
                           <TableHead className="text-center w-20">
                             <div className="flex flex-col items-center">
                               <span className="text-slate-600 font-bold">E</span>
-                              <span className="text-xs text-muted-foreground">Everything</span>
+                              <span className="text-xs text-muted-foreground">Other</span>
                             </div>
                           </TableHead>
                         </TableRow>
@@ -1295,14 +1295,14 @@ export default function BusinessTracker() {
               <div className="grid md:grid-cols-4 gap-4">
                 <Card className="bg-blue-50 border-blue-200">
                   <CardContent className="pt-4 text-center">
-                    <p className="text-xs text-blue-600 uppercase font-medium">Prospecting This Week</p>
+                    <p className="text-xs text-blue-600 uppercase font-medium">Productive This Week</p>
                     <p className="text-2xl font-bold text-blue-700">{Math.round(weeklyTotals.pTotal / 60 * 10) / 10} hrs</p>
                     <p className="text-xs text-muted-foreground">{weeklyTotals.pTotal} minutes</p>
                   </CardContent>
                 </Card>
                 <Card className="bg-green-50 border-green-200">
                   <CardContent className="pt-4 text-center">
-                    <p className="text-xs text-green-600 uppercase font-medium">In-Person This Week</p>
+                    <p className="text-xs text-green-600 uppercase font-medium">Indirect This Week</p>
                     <p className="text-2xl font-bold text-green-700">{Math.round(weeklyTotals.iTotal / 60 * 10) / 10} hrs</p>
                     <p className="text-xs text-muted-foreground">{weeklyTotals.iTotal} minutes</p>
                   </CardContent>
@@ -1335,16 +1335,16 @@ export default function BusinessTracker() {
                 <h3 className="font-medium mb-2">What is PIE?</h3>
                 <div className="grid md:grid-cols-3 gap-4 text-sm">
                   <div>
-                    <span className="font-bold text-blue-600">P = Prospecting</span>
-                    <p className="text-muted-foreground">Calls, texts, emails to your database. Building relationships with potential clients.</p>
+                    <span className="font-bold text-blue-600">P = Productive Time</span>
+                    <p className="text-muted-foreground">Face-to-face with client in a selling situation. Time leading to a contract: buyer consultations, showings, listing presentations, writing offers.</p>
                   </div>
                   <div>
-                    <span className="font-bold text-green-600">I = In-Person</span>
-                    <p className="text-muted-foreground">Showings, listing appointments, buyer consultations. Face-to-face client time.</p>
+                    <span className="font-bold text-green-600">I = Indirectly Productive</span>
+                    <p className="text-muted-foreground">Supports P time: prospecting calls, handwritten notes, real estate reviews, CMAs, touring homes, open houses, Hour of Power.</p>
                   </div>
                   <div>
                     <span className="font-bold text-slate-600">E = Everything Else</span>
-                    <p className="text-muted-foreground">Admin, paperwork, marketing, education. Important but not income-producing.</p>
+                    <p className="text-muted-foreground">Non-productive time: training, office meetings, MLS tours, driving, admin after mutual acceptance.</p>
                   </div>
                 </div>
               </div>
