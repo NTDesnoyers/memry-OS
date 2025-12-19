@@ -675,9 +675,25 @@ Respond with valid JSON only, no other text.`;
       switch (toolName) {
         case "search_people": {
           const people = await storage.getAllPeople();
-          const query = args.query.toLowerCase();
+          const query = args.query.toLowerCase().trim();
+          const queryWords = query.split(/\s+/).filter(w => w.length > 0);
+          
+          // Fuzzy matching function - handles middle initials, partial names, etc.
+          const fuzzyNameMatch = (name: string | null | undefined, searchWords: string[]): boolean => {
+            if (!name) return false;
+            const nameLower = name.toLowerCase();
+            // Direct substring match
+            if (nameLower.includes(query)) return true;
+            // All search words must appear somewhere in name
+            const nameWords = nameLower.split(/\s+/);
+            return searchWords.every(sw => 
+              nameWords.some(nw => nw.includes(sw) || sw.includes(nw))
+            );
+          };
+          
           const matches = people.filter(p => 
-            p.name?.toLowerCase().includes(query) ||
+            fuzzyNameMatch(p.name, queryWords) ||
+            fuzzyNameMatch(p.nickname, queryWords) ||
             p.email?.toLowerCase().includes(query) ||
             p.phone?.includes(query) ||
             p.segment?.toLowerCase() === query ||
@@ -687,6 +703,7 @@ Respond with valid JSON only, no other text.`;
           return JSON.stringify(matches.map(p => ({
             id: p.id,
             name: p.name,
+            nickname: p.nickname,
             email: p.email,
             phone: p.phone,
             segment: p.segment,
