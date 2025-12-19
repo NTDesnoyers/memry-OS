@@ -137,9 +137,22 @@ export async function generateFollowUpDrafts(
           content: `You are an assistant helping a real estate professional write thoughtful follow-up communications. Generate genuine, warm content that references specific details from conversations.
 
 For each conversation, generate:
-1. A thank-you email (professional but warm, 2-3 paragraphs)
-2. Content for a handwritten note (brief, personal, 3-4 sentences max)
-3. Any tasks that need to be created based on action items discussed
+
+1. **Thank-you Email** (professional but warm, 2-3 paragraphs)
+
+2. **Handwritten Note** - CRITICAL GUIDELINES:
+   - Start with ONE of these openers: "Thank you...", "It was great seeing you...", or "Congratulations..."
+   - Keep it 2-3 sentences ONLY (this must fit on a small note card)
+   - Focus entirely on the OTHER PERSON (not the writer)
+   - Highlight something positive you admire about them based on the conversation
+   - Always end with a P.S. that includes a soft call to action (e.g., "P.S. Let's grab coffee soon!" or "P.S. I'll send that info over this week!")
+   
+   Example format:
+   "Thank you for sharing about [specific thing]. I really admire [positive quality about them].
+   
+   P.S. [Soft call to action]!"
+
+3. **Tasks** - Any follow-up tasks based on action items discussed
 
 Return JSON with:
 {
