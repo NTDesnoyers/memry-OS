@@ -24,6 +24,7 @@ import BrandCenter from "@/pages/brand-center";
 import KnowYourPeople from "@/pages/know-your-people";
 import ConversationLog from "@/pages/conversation-log";
 import Calendar from "@/pages/calendar";
+import Settings from "@/pages/settings";
 
 function Router() {
   return (
@@ -48,6 +49,7 @@ function Router() {
       <Route path="/calendar" component={Calendar} />
       <Route path="/automation" component={AutomationHub} />
       <Route path="/integrations" component={Integrations} />
+      <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
   );
