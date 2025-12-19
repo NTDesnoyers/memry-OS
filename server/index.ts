@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { storage } from "./storage";
 
 const app = express();
 const httpServer = createServer(app);
@@ -70,6 +71,22 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
     throw err;
   });
+
+  // Run cleanup of old deleted interactions on startup
+  const runCleanup = async () => {
+    try {
+      const count = await storage.cleanupOldDeletedInteractions(30);
+      if (count > 0) {
+        log(`Cleaned up ${count} deleted interaction(s) older than 30 days`);
+      }
+    } catch (error) {
+      console.error('Error cleaning up old deleted interactions:', error);
+    }
+  };
+
+  // Run cleanup immediately and then every 24 hours
+  runCleanup();
+  setInterval(runCleanup, 24 * 60 * 60 * 1000);
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
