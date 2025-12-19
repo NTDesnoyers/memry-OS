@@ -58,8 +58,21 @@ export default function KnowYourPeople() {
     queryKey: ["/api/people"],
   });
 
+  // Generate a stable shuffle seed per session (stored in state)
+  const [shuffleSeed] = useState(() => Math.random());
+
+  // Simple hash function for consistent but random-seeming ordering
+  const hashString = (str: string, seed: number): number => {
+    let hash = seed * 1000000;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i);
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return hash;
+  };
+
   const peopleWithMissing = useMemo(() => {
-    return people
+    const withMissing = people
       .map(person => {
         const missingFields = fieldDefinitions.filter(def => {
           const value = person[def.field];
@@ -67,14 +80,15 @@ export default function KnowYourPeople() {
         });
         return { ...person, missingFields } as PersonWithMissing;
       })
-      .filter(p => p.missingFields.length > 0)
-      .sort((a, b) => {
-        const segmentOrder: Record<string, number> = { "A": 1, "B": 2, "C": 3, "D": 4 };
-        const aOrder = segmentOrder[a.segment || "D"] || 5;
-        const bOrder = segmentOrder[b.segment || "D"] || 5;
-        return aOrder - bOrder;
-      });
-  }, [people]);
+      .filter(p => p.missingFields.length > 0);
+
+    // Shuffle using seeded hash (consistent within session, different between sessions)
+    const shuffled = [...withMissing].sort((a, b) => {
+      return hashString(a.id, shuffleSeed) - hashString(b.id, shuffleSeed);
+    });
+
+    return shuffled;
+  }, [people, shuffleSeed]);
 
   // When navigating to a person, pre-fill fieldValues with their existing data
   const initializeFieldValues = (person: Person) => {
