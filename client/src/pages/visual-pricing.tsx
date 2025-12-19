@@ -43,37 +43,102 @@ function parseCSVRow(headers: string[], row: Record<string, string>): MLSPropert
   const prop: any = {};
   
   for (const [key, value] of Object.entries(row)) {
-    const header = key.trim().toLowerCase();
+    const header = key.trim().toLowerCase().replace(/[^a-z0-9\s]/g, '');
     const val = (value || '').trim();
+    if (!val) continue;
     
-    if (header.includes('mls') && (header.includes('number') || header.includes('#'))) prop.mlsNumber = val;
-    else if (header === 'mls#' || header === 'mls #') prop.mlsNumber = val;
-    else if (header.includes('status') && !header.includes('change')) prop.status = val;
-    else if (header.includes('address') || header.includes('street')) prop.address = val;
-    else if (header === 'city') prop.city = val;
-    else if (header.includes('subdivision') || header.includes('neighborhood')) prop.subdivision = val;
-    else if (header.includes('acre') || header.includes('lot size')) prop.acres = parseFloat(val) || undefined;
-    else if (header.includes('above grade') && header.includes('sqft')) prop.aboveGradeSqft = parseInt(val) || undefined;
-    else if ((header.includes('total') && header.includes('sqft')) || header === 'sqft' || header === 'square feet') prop.totalSqft = parseInt(val) || undefined;
-    else if (header === 'beds' || header.includes('bedroom') || header === 'br') prop.beds = parseInt(val) || undefined;
-    else if (header.includes('bath') || header === 'ba') prop.baths = parseFloat(val) || undefined;
-    else if (header.includes('year') && header.includes('built')) prop.yearBuilt = parseInt(val) || undefined;
-    else if (header === 'style' || header === 'type') prop.style = val;
-    else if (header === 'list price' || header.includes('list price') || header === 'lp') prop.listPrice = parseInt(val.replace(/[$,]/g, '')) || undefined;
-    else if (header.includes('original') && header.includes('price')) prop.originalListPrice = parseInt(val.replace(/[$,]/g, '')) || undefined;
-    else if (header.includes('close price') || header.includes('sold price') || header === 'sp' || header === 'sale price') prop.closePrice = parseInt(val.replace(/[$,]/g, '')) || undefined;
-    else if (header === 'dom' || header.includes('days on market') || header === 'cdom') prop.dom = parseInt(val) || undefined;
-    else if (header.includes('list') && header.includes('date')) prop.listDate = val;
-    else if (header.includes('close date') || header.includes('sold date') || header === 'settlement date') prop.closeDate = val;
-    else if (header.includes('status change')) prop.statusChangeDate = val;
+    // MLS Number - many variations
+    if (!prop.mlsNumber && (header.includes('mls') || header.startsWith('listing') || header === 'id' || header === 'listno')) {
+      prop.mlsNumber = val;
+    }
+    // Status
+    else if (!prop.status && header.includes('status') && !header.includes('change')) {
+      prop.status = val;
+    }
+    // Address - full street or just address
+    else if (!prop.address && (header.includes('address') || header.includes('street') || header === 'fulladdress' || header === 'property')) {
+      prop.address = val;
+    }
+    // City
+    else if (!prop.city && header === 'city') {
+      prop.city = val;
+    }
+    // Subdivision/Neighborhood
+    else if (!prop.subdivision && (header.includes('subdivision') || header.includes('neighborhood') || header.includes('community') || header.includes('area'))) {
+      prop.subdivision = val;
+    }
+    // Square Footage - many variations in Bright MLS
+    else if (!prop.totalSqft && !prop.aboveGradeSqft) {
+      if (header.includes('above') && (header.includes('sqft') || header.includes('sf') || header.includes('sq'))) {
+        prop.aboveGradeSqft = parseInt(val.replace(/[^0-9]/g, '')) || undefined;
+      } else if (header.includes('sqft') || header.includes('sf') || header === 'squarefeet' || header === 'sqft' || 
+                 header.includes('totalsquare') || header.includes('living') || header === 'gla' || header === 'grossliving') {
+        prop.totalSqft = parseInt(val.replace(/[^0-9]/g, '')) || undefined;
+      }
+    }
+    // Bedrooms
+    else if (!prop.beds && (header === 'beds' || header.includes('bedroom') || header === 'br' || header === 'bedrooms' || header === 'bed')) {
+      prop.beds = parseInt(val) || undefined;
+    }
+    // Bathrooms
+    else if (!prop.baths && (header.includes('bath') || header === 'ba' || header === 'baths' || header.includes('fullbath') || header.includes('totalbath'))) {
+      prop.baths = parseFloat(val) || undefined;
+    }
+    // Acres/Lot
+    else if (!prop.acres && (header.includes('acre') || header.includes('lot'))) {
+      prop.acres = parseFloat(val) || undefined;
+    }
+    // Year Built
+    else if (!prop.yearBuilt && (header.includes('year') || header === 'built' || header === 'yrbuilt')) {
+      prop.yearBuilt = parseInt(val) || undefined;
+    }
+    // Style/Type
+    else if (!prop.style && (header === 'style' || header === 'type' || header === 'propertytype' || header === 'proptype')) {
+      prop.style = val;
+    }
+    // List Price - many variations
+    else if (!prop.listPrice && (header === 'listprice' || header === 'lp' || header === 'askingprice' || header.includes('listprice') || 
+               (header.includes('list') && header.includes('price')))) {
+      prop.listPrice = parseInt(val.replace(/[^0-9.]/g, '')) || undefined;
+    }
+    // Close/Sold Price
+    else if (!prop.closePrice && (header.includes('close') || header.includes('sold') || header.includes('sale') || header === 'sp' || 
+               header === 'soldprice' || header === 'closeprice' || header === 'saleprice' || header.includes('settlement'))) {
+      if (header.includes('price') || header === 'sp' || header === 'soldprice' || header === 'closeprice' || header === 'saleprice') {
+        prop.closePrice = parseInt(val.replace(/[^0-9.]/g, '')) || undefined;
+      }
+    }
+    // DOM (Days on Market)
+    else if (!prop.dom && (header === 'dom' || header === 'cdom' || header.includes('dayson') || header.includes('daysmarket') || 
+               header === 'markettime' || header.includes('cumulative'))) {
+      prop.dom = parseInt(val) || undefined;
+    }
+    // Original List Price
+    else if (!prop.originalListPrice && header.includes('original') && header.includes('price')) {
+      prop.originalListPrice = parseInt(val.replace(/[^0-9.]/g, '')) || undefined;
+    }
+    // List Date
+    else if (!prop.listDate && header.includes('list') && header.includes('date')) {
+      prop.listDate = val;
+    }
+    // Close/Sold Date
+    else if (!prop.closeDate && ((header.includes('close') || header.includes('sold') || header.includes('settlement')) && header.includes('date'))) {
+      prop.closeDate = val;
+    }
+    // Status Change Date
+    else if (!prop.statusChangeDate && header.includes('status') && header.includes('change')) {
+      prop.statusChangeDate = val;
+    }
   }
   
+  // Calculate price per sqft
   if (prop.totalSqft && prop.closePrice) {
     prop.pricePerSqft = Math.round(prop.closePrice / prop.totalSqft);
   } else if (prop.aboveGradeSqft && prop.closePrice) {
     prop.pricePerSqft = Math.round(prop.closePrice / prop.aboveGradeSqft);
   }
   
+  // Only return if we have at least an MLS number or address
   if (prop.mlsNumber || prop.address) {
     return prop as MLSProperty;
   }
@@ -84,6 +149,8 @@ function parseMLSData(csvData: Papa.ParseResult<Record<string, string>>): MLSPro
   if (!csvData.data || csvData.data.length === 0) return [];
   
   const headers = csvData.meta.fields || [];
+  console.log('CSV Headers detected:', headers);
+  
   const properties: MLSProperty[] = [];
   
   for (const row of csvData.data) {
@@ -91,6 +158,11 @@ function parseMLSData(csvData: Papa.ParseResult<Record<string, string>>): MLSPro
     if (prop) {
       properties.push(prop);
     }
+  }
+  
+  console.log(`Parsed ${properties.length} properties from CSV`);
+  if (properties.length > 0) {
+    console.log('Sample property:', properties[0]);
   }
   
   return properties;
