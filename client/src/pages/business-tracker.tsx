@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
 import { DollarSign, Save, Plus, FileText, BarChart3, Clock, Phone, Calculator, Play, Pause, RotateCcw, ChevronLeft, ChevronRight, CalendarIcon, History, TrendingUp, Upload, FileSpreadsheet, X, Check, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
@@ -479,7 +480,7 @@ export default function BusinessTracker() {
     });
   };
 
-  const handlePieTimeChange = (date: Date, field: "pTime" | "iTime", value: number) => {
+  const handlePieTimeChange = (date: Date, field: "pTime" | "iTime" | "totalTime", value: number) => {
     const entry = getEntryForDate(date);
     const minutes = Math.max(0, value);
     
@@ -487,6 +488,52 @@ export default function BusinessTracker() {
       updatePieEntryMutation.mutate({ id: entry.id, [field]: minutes });
     } else {
       createPieEntryMutation.mutate({ date, [field]: minutes });
+    }
+  };
+
+  const [isLoadingCalendarSuggestion, setIsLoadingCalendarSuggestion] = useState(false);
+  const [calendarSuggestionError, setCalendarSuggestionError] = useState<string | null>(null);
+
+  const suggestFromCalendar = async (date: Date) => {
+    setIsLoadingCalendarSuggestion(true);
+    setCalendarSuggestionError(null);
+    try {
+      const dateStr = date.toISOString().split('T')[0];
+      const response = await fetch(`/api/calendar/suggest-pie?date=${dateStr}`);
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || 'Failed to get calendar events');
+      }
+      const data = await response.json();
+      
+      if (data.suggestion) {
+        const entry = getEntryForDate(date);
+        const updates: any = {};
+        
+        if (data.suggestion.pTime > 0) updates.pTime = data.suggestion.pTime;
+        if (data.suggestion.iTime > 0) updates.iTime = data.suggestion.iTime;
+        if (data.suggestion.totalTime > 0) updates.totalTime = data.suggestion.totalTime;
+        
+        if (Object.keys(updates).length > 0) {
+          if (entry) {
+            updatePieEntryMutation.mutate({ id: entry.id, ...updates });
+          } else {
+            createPieEntryMutation.mutate({ date, ...updates });
+          }
+          
+          toast.success(
+            `Suggested ${data.suggestion.pTime || 0} min P, ${data.suggestion.iTime || 0} min I from ${data.events?.length || 0} calendar events`
+          );
+        } else {
+          toast.info('No calendar events with time found for this day');
+        }
+      }
+    } catch (error: any) {
+      console.error('Calendar suggestion error:', error);
+      setCalendarSuggestionError(error.message);
+      toast.error(error.message || 'Failed to get calendar suggestions');
+    } finally {
+      setIsLoadingCalendarSuggestion(false);
     }
   };
 
@@ -1591,6 +1638,7 @@ export default function BusinessTracker() {
                               <span className="text-xs text-muted-foreground">Other</span>
                             </div>
                           </TableHead>
+                          <TableHead className="w-10"></TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1650,6 +1698,23 @@ export default function BusinessTracker() {
                                   {totalTime > 0 ? calculatedE : "--"}
                                 </div>
                               </TableCell>
+                              <TableCell className="text-center">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={() => suggestFromCalendar(day)}
+                                      disabled={isLoadingCalendarSuggestion}
+                                      data-testid={`button-suggest-calendar-${day.toISOString().split('T')[0]}`}
+                                    >
+                                      <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Suggest from Calendar</TooltipContent>
+                                </Tooltip>
+                              </TableCell>
                             </TableRow>
                           );
                         })}
@@ -1664,6 +1729,7 @@ export default function BusinessTracker() {
                               : "--"} 
                             {weeklyTotals.totalTotal > 0 ? " min" : ""}
                           </TableCell>
+                          <TableCell></TableCell>
                         </TableRow>
                       </TableBody>
                     </Table>

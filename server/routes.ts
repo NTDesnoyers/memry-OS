@@ -2609,5 +2609,101 @@ When analyzing images:
     }
   });
 
+  // Suggest PIE time from calendar events
+  app.get("/api/calendar/suggest-pie", async (req, res) => {
+    try {
+      const { date } = req.query;
+      if (!date) {
+        return res.status(400).json({ message: "date parameter is required" });
+      }
+      
+      const targetDate = new Date(date as string);
+      const startOfDay = new Date(targetDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(targetDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      const events = await googleCalendar.listEvents({
+        timeMin: startOfDay,
+        timeMax: endOfDay,
+        maxResults: 100,
+      });
+      
+      // Categorize events into P, I, E based on keywords in title/description
+      const pKeywords = [
+        'showing', 'buyer consultation', 'listing presentation', 'offer', 'contract',
+        'appointment', 'client meeting', 'closing', 'settlement', 'open house',
+        'negotiation', 'listing appt', 'buyer appt', 'seller appt', 'walkthrough',
+        'inspection', 'buyer meeting', 'seller meeting', 'presentation'
+      ];
+      
+      const iKeywords = [
+        'prospecting', 'call', 'phone', 'hour of power', 'hop', 'pop by', 'note',
+        'handwritten', 'cma', 'real estate review', 'rer', 'tour', 'preview',
+        'networking', 'sphere', 'database', 'follow up', 'follow-up', 'check in',
+        'check-in', 'touch base', 'coffee', 'lunch', 'breakfast', 'happy hour',
+        'client care', 'reach out', 'personal note', 'ford', 'prep', 'research'
+      ];
+      
+      let pTime = 0; // in minutes
+      let iTime = 0;
+      let eTime = 0;
+      const categorizedEvents: { title: string; duration: number; category: 'P' | 'I' | 'E'; }[] = [];
+      
+      for (const event of events) {
+        const title = (event.summary || '').toLowerCase();
+        const description = (event.description || '').toLowerCase();
+        const searchText = title + ' ' + description;
+        
+        // Calculate duration in minutes
+        let durationMinutes = 0;
+        if (event.start?.dateTime && event.end?.dateTime) {
+          const start = new Date(event.start.dateTime);
+          const end = new Date(event.end.dateTime);
+          durationMinutes = Math.round((end.getTime() - start.getTime()) / (1000 * 60));
+        } else if (event.start?.date && event.end?.date) {
+          // All-day event - skip or treat as E time
+          durationMinutes = 0;
+        }
+        
+        if (durationMinutes <= 0) continue;
+        
+        // Categorize based on keywords
+        let category: 'P' | 'I' | 'E' = 'E';
+        
+        if (pKeywords.some(kw => searchText.includes(kw))) {
+          category = 'P';
+          pTime += durationMinutes;
+        } else if (iKeywords.some(kw => searchText.includes(kw))) {
+          category = 'I';
+          iTime += durationMinutes;
+        } else {
+          eTime += durationMinutes;
+        }
+        
+        categorizedEvents.push({
+          title: event.summary || 'Untitled',
+          duration: durationMinutes,
+          category,
+        });
+      }
+      
+      const totalTime = pTime + iTime + eTime;
+      
+      res.json({
+        date: date,
+        suggestion: {
+          pTime,
+          iTime,
+          eTime,
+          totalTime,
+        },
+        events: categorizedEvents,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }
