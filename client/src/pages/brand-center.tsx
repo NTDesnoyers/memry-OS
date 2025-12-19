@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Save, Upload, User, Building2, Palette, Image, QrCode, Globe, Phone, Mail, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Slider } from "@/components/ui/slider";
+import { Save, Upload, User, Building2, Palette, Image, QrCode, Globe, Phone, Mail, Loader2, Move } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import type { AgentProfile } from "@shared/schema";
@@ -27,6 +29,9 @@ export default function BrandCenter() {
   });
 
   const [formData, setFormData] = useState<Partial<AgentProfile>>({});
+  const [showPositionDialog, setShowPositionDialog] = useState(false);
+  const [positionX, setPositionX] = useState(50);
+  const [positionY, setPositionY] = useState(50);
 
   const updateMutation = useMutation({
     mutationFn: async (data: Partial<AgentProfile>) => {
@@ -83,6 +88,25 @@ export default function BrandCenter() {
 
   const getValue = (field: keyof AgentProfile) => {
     return (formData[field] ?? profile?.[field] ?? "") as string;
+  };
+
+  const openPositionDialog = () => {
+    const currentPosition = getValue("headshotPosition") || "50% 50%";
+    const [x, y] = currentPosition.replace(/%/g, "").split(" ").map(Number);
+    setPositionX(isNaN(x) ? 50 : x);
+    setPositionY(isNaN(y) ? 50 : y);
+    setShowPositionDialog(true);
+  };
+
+  const savePosition = () => {
+    const position = `${positionX}% ${positionY}%`;
+    setFormData(prev => ({ ...prev, headshotPosition: position }));
+    updateMutation.mutate({ ...getFormValues(), headshotPosition: position });
+    setShowPositionDialog(false);
+  };
+
+  const getHeadshotPosition = () => {
+    return (formData.headshotPosition ?? profile?.headshotPosition ?? "50% 50%") as string;
   };
 
   if (isLoading) {
@@ -219,27 +243,45 @@ export default function BrandCenter() {
                       }}
                     />
                     
-                    <div 
-                      className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:bg-secondary/30 transition-colors"
-                      onClick={() => headshotInputRef.current?.click()}
-                    >
-                      {getValue("headshotUrl") ? (
-                        <div className="space-y-4">
+                    {getValue("headshotUrl") ? (
+                      <div className="space-y-4">
+                        <div className="relative w-32 h-32 mx-auto">
                           <img 
                             src={getValue("headshotUrl")} 
                             alt="Headshot" 
-                            className="w-32 h-32 rounded-full mx-auto object-cover border-4 border-white shadow-lg"
+                            className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
+                            style={{ objectPosition: getHeadshotPosition() }}
                           />
-                          <p className="text-sm text-muted-foreground">Click to change</p>
                         </div>
-                      ) : (
-                        <>
-                          <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                          <p className="font-medium">Upload Headshot</p>
-                          <p className="text-sm text-muted-foreground">JPG, PNG up to 10MB</p>
-                        </>
-                      )}
-                    </div>
+                        <div className="flex gap-2 justify-center">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => headshotInputRef.current?.click()}
+                            data-testid="button-change-headshot"
+                          >
+                            <Upload className="h-4 w-4 mr-1" /> Change
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={openPositionDialog}
+                            data-testid="button-reposition-headshot"
+                          >
+                            <Move className="h-4 w-4 mr-1" /> Reposition
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div 
+                        className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:bg-secondary/30 transition-colors"
+                        onClick={() => headshotInputRef.current?.click()}
+                      >
+                        <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                        <p className="font-medium">Upload Headshot</p>
+                        <p className="text-sm text-muted-foreground">JPG, PNG up to 10MB</p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -503,6 +545,71 @@ export default function BrandCenter() {
           </Tabs>
         </div>
       </div>
+
+      {/* Headshot Position Dialog */}
+      <Dialog open={showPositionDialog} onOpenChange={setShowPositionDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-serif">Adjust Headshot Position</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="flex justify-center">
+              <div className="w-40 h-40 rounded-full overflow-hidden border-4 border-white shadow-lg">
+                <img 
+                  src={getValue("headshotUrl")} 
+                  alt="Headshot preview" 
+                  className="w-full h-full object-cover"
+                  style={{ objectPosition: `${positionX}% ${positionY}%` }}
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">Horizontal Position</Label>
+                <div className="flex items-center gap-4">
+                  <span className="text-xs text-muted-foreground">Left</span>
+                  <Slider
+                    value={[positionX]}
+                    onValueChange={([v]) => setPositionX(v)}
+                    min={0}
+                    max={100}
+                    step={1}
+                    className="flex-1"
+                    data-testid="slider-position-x"
+                  />
+                  <span className="text-xs text-muted-foreground">Right</span>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">Vertical Position</Label>
+                <div className="flex items-center gap-4">
+                  <span className="text-xs text-muted-foreground">Top</span>
+                  <Slider
+                    value={[positionY]}
+                    onValueChange={([v]) => setPositionY(v)}
+                    min={0}
+                    max={100}
+                    step={1}
+                    className="flex-1"
+                    data-testid="slider-position-y"
+                  />
+                  <span className="text-xs text-muted-foreground">Bottom</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPositionDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={savePosition} data-testid="button-save-position">
+              Save Position
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }

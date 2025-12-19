@@ -107,6 +107,7 @@ export const agentProfile = pgTable("agent_profile", {
   teamName: text("team_name"),
   personalLogoUrl: text("personal_logo_url"),
   headshotUrl: text("headshot_url"),
+  headshotPosition: text("headshot_position").default("center center"), // CSS object-position for cropping
   website: text("website"),
   socialLinkedIn: text("social_linkedin"),
   socialFacebook: text("social_facebook"),

@@ -1595,9 +1595,18 @@ Be concise. Take action. Confirm results.`;
   });
   
   // Alias for agent profile with POST (used by Brand Center)
+  // Uses partial schema to allow updating individual fields
   app.post("/api/agent-profile", async (req, res) => {
     try {
-      const data = validate(insertAgentProfileSchema, req.body);
+      // Get existing profile to merge with updates
+      const existing = await storage.getAgentProfile();
+      const mergedData = {
+        name: "Agent Name", // Default if no profile exists
+        ...existing,
+        ...req.body,
+      };
+      // Validate the merged data
+      const data = validate(insertAgentProfileSchema, mergedData);
       const profile = await storage.upsertAgentProfile(data);
       res.json(profile);
     } catch (error: any) {
