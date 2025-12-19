@@ -68,16 +68,27 @@ function parseCSVRow(headers: string[], row: Record<string, string>): MLSPropert
       prop.subdivision = val;
     }
     // Square Footage - many variations in Bright MLS
-    else if (!prop.totalSqft && !prop.aboveGradeSqft) {
-      if (header.includes('above') && (header.includes('sqft') || header.includes('sf') || header.includes('sq'))) {
-        prop.aboveGradeSqft = parseInt(val.replace(/[^0-9]/g, '')) || undefined;
-      } else if (header.includes('sqft') || header.includes('sf') || header === 'squarefeet' || header === 'sqft' || 
-                 header.includes('totalsquare') || header.includes('living') || header === 'gla' || header === 'grossliving') {
-        prop.totalSqft = parseInt(val.replace(/[^0-9]/g, '')) || undefined;
+    // Check for sqft patterns (handles spaces: "sq ft", "sqft", "sf", "square feet", etc.)
+    const isSqftHeader = header.includes('sqft') || header.includes('sq ft') || header.includes('sf') || 
+                         header.includes('square') || header.includes('sqfeet') || header === 'gla' || 
+                         header.includes('grossliving') || header.includes('living area');
+    const isAboveGrade = header.includes('above') || header.includes('abv') || header.includes('agla') || 
+                         header.includes('finished');
+    const isTotalSqft = header.includes('total') || header.includes('ttl') || header.includes('gross') ||
+                        header.includes('living') || header === 'gla';
+    
+    if (isSqftHeader) {
+      const sqftValue = parseInt(val.replace(/[^0-9]/g, '')) || undefined;
+      if (sqftValue && sqftValue > 0) {
+        if (isAboveGrade && !prop.aboveGradeSqft) {
+          prop.aboveGradeSqft = sqftValue;
+        } else if (!prop.totalSqft) {
+          prop.totalSqft = sqftValue;
+        }
       }
     }
-    // Bedrooms
-    else if (!prop.beds && (header === 'beds' || header.includes('bedroom') || header === 'br' || header === 'bedrooms' || header === 'bed')) {
+    // Bedrooms (not in else-if chain since sqft is separate)
+    if (!prop.beds && (header === 'beds' || header.includes('bedroom') || header === 'br' || header === 'bedrooms' || header === 'bed')) {
       prop.beds = parseInt(val) || undefined;
     }
     // Bathrooms
