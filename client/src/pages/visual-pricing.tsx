@@ -409,15 +409,31 @@ export default function VisualPricing() {
   
   const sqftPriceData = useMemo(() => {
     const closedProps = metrics.closedProperties || [];
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    
     return closedProps
-      .filter(p => getXAxisValue(p, scatterXAxis) !== null && p.closePrice)
+      .filter(p => {
+        // Must have x-axis value and price
+        if (getXAxisValue(p, scatterXAxis) === null || !p.closePrice) return false;
+        
+        // Filter to last 6 months if close date is available
+        if (p.closeDate) {
+          const closeDate = new Date(p.closeDate);
+          if (!isNaN(closeDate.getTime()) && closeDate < sixMonthsAgo) {
+            return false;
+          }
+        }
+        return true;
+      })
       .map(p => ({
         xValue: getXAxisValue(p, scatterXAxis) || 0,
         price: p.closePrice || 0,
         address: p.address || '',
         beds: p.beds,
         baths: p.baths,
-        sqft: p.aboveGradeSqft || p.totalSqft
+        sqft: p.aboveGradeSqft || p.totalSqft,
+        closeDate: p.closeDate
       }));
   }, [metrics.closedProperties, scatterXAxis]);
   
