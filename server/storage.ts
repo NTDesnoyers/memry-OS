@@ -16,7 +16,8 @@ import {
   type RealEstateReview, type InsertRealEstateReview,
   type Interaction, type InsertInteraction,
   type AiConversation, type InsertAiConversation,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations
+  type Household, type InsertHousehold,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, or, sql, gte, lte } from "drizzle-orm";
@@ -141,6 +142,16 @@ export interface IStorage {
   createAiConversation(conversation: InsertAiConversation): Promise<AiConversation>;
   updateAiConversation(id: string, conversation: Partial<InsertAiConversation>): Promise<AiConversation | undefined>;
   deleteAiConversation(id: string): Promise<void>;
+  
+  // Households
+  getAllHouseholds(): Promise<Household[]>;
+  getHousehold(id: string): Promise<Household | undefined>;
+  createHousehold(household: InsertHousehold): Promise<Household>;
+  updateHousehold(id: string, household: Partial<InsertHousehold>): Promise<Household | undefined>;
+  deleteHousehold(id: string): Promise<void>;
+  getHouseholdMembers(householdId: string): Promise<Person[]>;
+  addPersonToHousehold(personId: string, householdId: string): Promise<Person | undefined>;
+  removePersonFromHousehold(personId: string): Promise<Person | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -684,6 +695,61 @@ export class DatabaseStorage implements IStorage {
   
   async deleteAiConversation(id: string): Promise<void> {
     await db.delete(aiConversations).where(eq(aiConversations.id, id));
+  }
+  
+  // Households
+  async getAllHouseholds(): Promise<Household[]> {
+    return await db.select().from(households).orderBy(desc(households.createdAt));
+  }
+  
+  async getHousehold(id: string): Promise<Household | undefined> {
+    const [household] = await db.select().from(households).where(eq(households.id, id));
+    return household || undefined;
+  }
+  
+  async createHousehold(insertHousehold: InsertHousehold): Promise<Household> {
+    const [household] = await db
+      .insert(households)
+      .values({ ...insertHousehold, updatedAt: new Date() })
+      .returning();
+    return household;
+  }
+  
+  async updateHousehold(id: string, household: Partial<InsertHousehold>): Promise<Household | undefined> {
+    const [updated] = await db
+      .update(households)
+      .set({ ...household, updatedAt: new Date() })
+      .where(eq(households.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async deleteHousehold(id: string): Promise<void> {
+    // Remove household reference from all members first
+    await db.update(people).set({ householdId: null }).where(eq(people.householdId, id));
+    await db.delete(households).where(eq(households.id, id));
+  }
+  
+  async getHouseholdMembers(householdId: string): Promise<Person[]> {
+    return await db.select().from(people).where(eq(people.householdId, householdId));
+  }
+  
+  async addPersonToHousehold(personId: string, householdId: string): Promise<Person | undefined> {
+    const [updated] = await db
+      .update(people)
+      .set({ householdId, updatedAt: new Date() })
+      .where(eq(people.id, personId))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async removePersonFromHousehold(personId: string): Promise<Person | undefined> {
+    const [updated] = await db
+      .update(people)
+      .set({ householdId: null, updatedAt: new Date() })
+      .where(eq(people.id, personId))
+      .returning();
+    return updated || undefined;
   }
 }
 

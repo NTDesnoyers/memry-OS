@@ -23,6 +23,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import * as XLSX from "xlsx";
 
 // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
@@ -36,6 +37,37 @@ function getOpenAI(): OpenAI {
     openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   }
   return openai;
+}
+
+// Anthropic client for Claude
+let anthropic: Anthropic | null = null;
+function getAnthropic(): Anthropic {
+  if (!anthropic) {
+    anthropic = new Anthropic();
+  }
+  return anthropic;
+}
+
+// Smart model selection based on task type
+type ModelChoice = { provider: "openai" | "claude"; model: string; reason: string };
+function selectModel(hasImages: boolean, hasTools: boolean, messageCount: number): ModelChoice {
+  // Use GPT-4o for vision tasks (image analysis)
+  if (hasImages) {
+    return { provider: "openai", model: "gpt-4o", reason: "Vision/image analysis" };
+  }
+  
+  // Use GPT-4o for tool-heavy agentic tasks (better function calling)
+  if (hasTools) {
+    return { provider: "openai", model: "gpt-4o", reason: "Tool/function calling" };
+  }
+  
+  // Use Claude for complex reasoning and long conversations
+  if (messageCount > 6) {
+    return { provider: "claude", model: "claude-sonnet-4-20250514", reason: "Complex reasoning" };
+  }
+  
+  // Default to GPT-4o for quick responses
+  return { provider: "openai", model: "gpt-4o", reason: "Quick response" };
 }
 
 const uploadDir = path.join(process.cwd(), "uploads");
@@ -897,8 +929,14 @@ When analyzing images:
         })
       ];
 
+      // Determine if this request has images
+      const hasImages = messages.some((m: any) => m.images && Array.isArray(m.images) && m.images.length > 0);
+      
+      // Select the best model for this task
+      const modelChoice = selectModel(hasImages, true, messages.length);
+      
       let completion = await openaiClient.chat.completions.create({
-        model: "gpt-4o",
+        model: modelChoice.model,
         messages: apiMessages,
         tools: aiTools,
         tool_choice: "auto",
@@ -934,7 +972,7 @@ When analyzing images:
         
         // Get next response
         completion = await openaiClient.chat.completions.create({
-          model: "gpt-4o",
+          model: modelChoice.model,
           messages: apiMessages,
           tools: aiTools,
           tool_choice: "auto",
@@ -949,7 +987,8 @@ When analyzing images:
       
       res.json({ 
         response,
-        actions: actionsExecuted.length > 0 ? actionsExecuted : undefined
+        actions: actionsExecuted.length > 0 ? actionsExecuted : undefined,
+        model: { name: modelChoice.model, reason: modelChoice.reason }
       });
     } catch (error: any) {
       console.error("AI Assistant error:", error);
@@ -1014,6 +1053,122 @@ When analyzing images:
     try {
       await storage.deleteAiConversation(req.params.id);
       res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ==================== HOUSEHOLD ROUTES ====================
+  
+  // Get all households
+  app.get("/api/households", async (req, res) => {
+    try {
+      const allHouseholds = await storage.getAllHouseholds();
+      res.json(allHouseholds);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get household by ID with members
+  app.get("/api/households/:id", async (req, res) => {
+    try {
+      const household = await storage.getHousehold(req.params.id);
+      if (!household) {
+        return res.status(404).json({ message: "Household not found" });
+      }
+      const members = await storage.getHouseholdMembers(req.params.id);
+      res.json({ ...household, members });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Create household with members
+  app.post("/api/households", async (req, res) => {
+    try {
+      const { name, address, primaryPersonId, memberIds } = req.body;
+      const household = await storage.createHousehold({ 
+        name, 
+        address, 
+        primaryPersonId 
+      });
+      
+      // Add members to household
+      if (memberIds && Array.isArray(memberIds)) {
+        for (const personId of memberIds) {
+          await storage.addPersonToHousehold(personId, household.id);
+        }
+      }
+      
+      const members = await storage.getHouseholdMembers(household.id);
+      res.status(201).json({ ...household, members });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Update household
+  app.patch("/api/households/:id", async (req, res) => {
+    try {
+      const { memberIds, ...updates } = req.body;
+      const household = await storage.updateHousehold(req.params.id, updates);
+      if (!household) {
+        return res.status(404).json({ message: "Household not found" });
+      }
+      
+      // Update members if provided
+      if (memberIds && Array.isArray(memberIds)) {
+        // Remove all current members
+        const currentMembers = await storage.getHouseholdMembers(req.params.id);
+        for (const member of currentMembers) {
+          await storage.removePersonFromHousehold(member.id);
+        }
+        // Add new members
+        for (const personId of memberIds) {
+          await storage.addPersonToHousehold(personId, req.params.id);
+        }
+      }
+      
+      const members = await storage.getHouseholdMembers(req.params.id);
+      res.json({ ...household, members });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Delete household
+  app.delete("/api/households/:id", async (req, res) => {
+    try {
+      await storage.deleteHousehold(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Add person to household
+  app.post("/api/households/:id/members", async (req, res) => {
+    try {
+      const { personId } = req.body;
+      const updated = await storage.addPersonToHousehold(personId, req.params.id);
+      if (!updated) {
+        return res.status(404).json({ message: "Person not found" });
+      }
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Remove person from household
+  app.delete("/api/households/:householdId/members/:personId", async (req, res) => {
+    try {
+      const updated = await storage.removePersonFromHousehold(req.params.personId);
+      if (!updated) {
+        return res.status(404).json({ message: "Person not found" });
+      }
+      res.json(updated);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

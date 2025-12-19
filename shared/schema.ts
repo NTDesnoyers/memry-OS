@@ -19,6 +19,25 @@ export const insertUserSchema = createInsertSchema(users).pick({
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
+// Households - Group people living at the same address
+export const households = pgTable("households", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(), // e.g. "Cohen & Davis Household" or auto-generated
+  address: text("address"),
+  primaryPersonId: varchar("primary_person_id"), // For mailers, which name to use
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertHouseholdSchema = createInsertSchema(households).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertHousehold = z.infer<typeof insertHouseholdSchema>;
+export type Household = typeof households.$inferSelect;
+
 // People (Contacts) - Core entity
 export const people = pgTable("people", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -29,6 +48,7 @@ export const people = pgTable("people", {
   role: text("role"),
   segment: text("segment"),
   address: text("address"),
+  householdId: varchar("household_id"), // Links to households table
   notes: text("notes"),
   fordFamily: text("ford_family"),
   fordOccupation: text("ford_occupation"),
