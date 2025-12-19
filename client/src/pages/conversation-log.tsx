@@ -450,6 +450,16 @@ export default function ConversationLog() {
                 placeholder="What did you discuss? Key takeaways..."
                 value={formData.summary}
                 onChange={e => setFormData(prev => ({ ...prev, summary: e.target.value }))}
+                onPaste={e => {
+                  const pastedText = e.clipboardData.getData('text');
+                  const target = e.target as HTMLTextAreaElement;
+                  const start = target.selectionStart;
+                  const end = target.selectionEnd;
+                  const currentValue = formData.summary || '';
+                  const newValue = currentValue.substring(0, start) + pastedText + currentValue.substring(end);
+                  setFormData(prev => ({ ...prev, summary: newValue }));
+                  e.preventDefault();
+                }}
                 rows={4}
                 data-testid="input-summary"
               />
