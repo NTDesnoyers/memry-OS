@@ -129,6 +129,7 @@ export interface IStorage {
   getAllInteractions(): Promise<Interaction[]>;
   getInteractionsByPerson(personId: string): Promise<Interaction[]>;
   getInteraction(id: string): Promise<Interaction | undefined>;
+  getInteractionByExternalId(externalId: string): Promise<Interaction | undefined>;
   createInteraction(interaction: InsertInteraction): Promise<Interaction>;
   updateInteraction(id: string, interaction: Partial<InsertInteraction>): Promise<Interaction | undefined>;
   deleteInteraction(id: string): Promise<void>;
@@ -617,6 +618,11 @@ export class DatabaseStorage implements IStorage {
   
   async getInteraction(id: string): Promise<Interaction | undefined> {
     const [interaction] = await db.select().from(interactions).where(eq(interactions.id, id));
+    return interaction || undefined;
+  }
+  
+  async getInteractionByExternalId(externalId: string): Promise<Interaction | undefined> {
+    const [interaction] = await db.select().from(interactions).where(eq(interactions.externalId, externalId));
     return interaction || undefined;
   }
   

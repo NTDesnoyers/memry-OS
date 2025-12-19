@@ -15,9 +15,13 @@ import {
   Settings,
   Palette,
   Sparkles,
-  MessageSquare
+  MessageSquare,
+  ChevronUp,
+  LogOut
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -39,9 +43,13 @@ const navItems = [
   { name: "Visual Pricing", href: "/visual-pricing", icon: BarChart3 },
   { name: "Haves & Wants", href: "/haves-wants", icon: Mail },
   { name: "RE Reviews", href: "/reviews", icon: Home },
+];
+
+const profileMenuItems = [
   { name: "Brand Center", href: "/brand-center", icon: Palette },
-  { name: "Automation Hub", href: "/automation", icon: Workflow },
   { name: "Integrations", href: "/integrations", icon: Plug },
+  { name: "Automation", href: "/automation", icon: Workflow },
+  { name: "Settings", href: "/settings", icon: Settings },
 ];
 
 interface NavContentProps {
@@ -50,9 +58,10 @@ interface NavContentProps {
   userName: string;
   userInitials: string;
   brokerage: string;
+  headshotUrl?: string;
 }
 
-function NavContent({ location, setOpen, userName, userInitials, brokerage }: NavContentProps) {
+function NavContent({ location, setOpen, userName, userInitials, brokerage, headshotUrl }: NavContentProps) {
   return (
     <div className="flex flex-col h-full bg-sidebar border-r border-sidebar-border text-sidebar-foreground">
       <div className="p-6 border-b border-sidebar-border">
@@ -79,16 +88,40 @@ function NavContent({ location, setOpen, userName, userInitials, brokerage }: Na
           );
         })}
       </nav>
-      <div className="p-4 border-t border-sidebar-border">
-        <div className="flex items-center gap-3 px-2 py-2">
-          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-serif font-bold">
-            {userInitials}
-          </div>
-          <div className="text-sm flex-1 min-w-0">
-            <p className="font-medium truncate">{userName}</p>
-            <p className="text-xs text-muted-foreground truncate">{brokerage}</p>
-          </div>
-        </div>
+      <div className="p-3 border-t border-sidebar-border">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-sidebar-accent transition-colors" data-testid="button-profile-menu">
+              <Avatar className="h-9 w-9">
+                {headshotUrl && <AvatarImage src={headshotUrl} alt={userName} />}
+                <AvatarFallback className="bg-primary/10 text-primary font-serif font-bold text-sm">
+                  {userInitials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="text-sm flex-1 min-w-0 text-left">
+                <p className="font-medium truncate">{userName}</p>
+                <p className="text-xs text-muted-foreground truncate">{brokerage}</p>
+              </div>
+              <ChevronUp className="h-4 w-4 text-muted-foreground" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" side="top" className="w-56 mb-1">
+            {profileMenuItems.map((item) => {
+              const isActive = location === item.href;
+              return (
+                <Link key={item.href} href={item.href}>
+                  <DropdownMenuItem 
+                    className={cn("cursor-pointer gap-2", isActive && "bg-accent")}
+                    onClick={() => setOpen(false)}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {item.name}
+                  </DropdownMenuItem>
+                </Link>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );
@@ -97,6 +130,7 @@ function NavContent({ location, setOpen, userName, userInitials, brokerage }: Na
 interface ProfileData {
   name?: string;
   brokerage?: string;
+  headshotUrl?: string;
 }
 
 export default function LayoutComponent({ children }: { children: React.ReactNode }) {
@@ -114,8 +148,9 @@ export default function LayoutComponent({ children }: { children: React.ReactNod
   const userName = profile?.name || "Your Name";
   const userInitials = userName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
   const brokerage = profile?.brokerage || "Ninja Selling";
+  const headshotUrl = profile?.headshotUrl;
 
-  const navProps = { location, setOpen, userName, userInitials, brokerage };
+  const navProps = { location, setOpen, userName, userInitials, brokerage, headshotUrl };
 
   return (
     <div className="flex min-h-screen bg-background text-foreground font-sans">

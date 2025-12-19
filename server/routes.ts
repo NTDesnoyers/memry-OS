@@ -1968,6 +1968,58 @@ Be concise. Take action. Confirm results.`;
     }
   });
 
+  // Zapier Webhook - Create conversation from external sources (Granola, etc.)
+  app.post("/api/webhooks/conversation", async (req, res) => {
+    try {
+      const { 
+        type = "meeting",
+        title,
+        summary,
+        transcript,
+        occurredAt,
+        externalLink,
+        externalId,
+        source = "zapier",
+        participants
+      } = req.body;
+
+      // Check for duplicate by externalId
+      if (externalId) {
+        const existing = await storage.getInteractionByExternalId(externalId);
+        if (existing) {
+          return res.json({ success: true, message: "Already exists", id: existing.id, skipped: true });
+        }
+      }
+
+      // Build transcript from raw content if available
+      let transcriptText = "";
+      if (transcript) {
+        transcriptText = typeof transcript === "string" ? transcript : JSON.stringify(transcript);
+      }
+
+      const interaction = await storage.createInteraction({
+        type: type as any,
+        personId: null, // Will be assigned manually in UI
+        title: title || null,
+        summary: summary || null,
+        transcript: transcriptText || null,
+        externalLink: externalLink || null,
+        externalId: externalId || null,
+        source: source,
+        occurredAt: occurredAt ? new Date(occurredAt) : new Date(),
+      });
+
+      res.status(201).json({ 
+        success: true, 
+        id: interaction.id,
+        message: "Conversation created"
+      });
+    } catch (error: any) {
+      console.error("Webhook error:", error);
+      res.status(400).json({ success: false, message: error.message });
+    }
+  });
+
   // Fathom API - Test connection
   app.post("/api/integrations/fathom/test", async (req, res) => {
     try {
