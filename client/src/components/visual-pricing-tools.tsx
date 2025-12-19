@@ -182,10 +182,25 @@ export function VisualPricingTools({
   
   const sqftPriceData = useMemo(() => {
     const closedProps = metrics.closedProperties || [];
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    
     return closedProps
-      .filter(p => (p.totalSqft || p.aboveGradeSqft) && p.closePrice)
+      .filter(p => {
+        // Must have sqft (prefer above grade) and price
+        if (!(p.aboveGradeSqft || p.totalSqft) || !p.closePrice) return false;
+        
+        // Filter to last 6 months if close date is available
+        if (p.closeDate) {
+          const closeDate = new Date(p.closeDate);
+          if (!isNaN(closeDate.getTime()) && closeDate < sixMonthsAgo) {
+            return false;
+          }
+        }
+        return true;
+      })
       .map(p => ({
-        sqft: p.totalSqft || p.aboveGradeSqft || 0,
+        sqft: p.aboveGradeSqft || p.totalSqft || 0,
         price: p.closePrice || 0,
         address: p.address || ''
       }));
@@ -342,7 +357,7 @@ export function ScattergramChart({ sqftPriceData, regressionLine, title, neighbo
       <CardHeader className="text-center">
         <CardTitle className="font-serif text-2xl">Homes in Your Area</CardTitle>
         <CardDescription>
-          Property Price vs. Total Square Feet (TSF); {neighborhood || title}
+          Property Price vs. Above Ground SqFt; {neighborhood || title}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -366,9 +381,9 @@ export function ScattergramChart({ sqftPriceData, regressionLine, title, neighbo
                     type="number" 
                     dataKey="sqft" 
                     domain={['dataMin - 200', 'dataMax + 200']}
-                    tickFormatter={(v) => v.toLocaleString()}
+                    tickFormatter={(v) => Math.round(v).toLocaleString()}
                     label={{ 
-                      value: 'Total Square Feet', 
+                      value: 'Above Ground SqFt', 
                       position: 'bottom', 
                       offset: 40,
                       style: { fontWeight: 'bold', fontSize: 14 }
@@ -378,7 +393,7 @@ export function ScattergramChart({ sqftPriceData, regressionLine, title, neighbo
                     type="number" 
                     dataKey="price" 
                     domain={['dataMin - 50000', 'dataMax + 50000']}
-                    tickFormatter={(v) => `$${(v/1000000).toFixed(1)}M`}
+                    tickFormatter={(v) => `$${Math.round(v/1000).toLocaleString()}K`}
                     label={{ 
                       value: 'Property Price', 
                       angle: -90, 
@@ -442,8 +457,8 @@ export function ScattergramChart({ sqftPriceData, regressionLine, title, neighbo
           </>
         ) : (
           <div className="text-center py-12 text-muted-foreground">
-            <p>No properties with square footage data available.</p>
-            <p className="text-sm mt-2">Make sure your MLS export includes Total SqFt or Above Grade SqFt fields.</p>
+            <p>No properties with square footage data available in the last 6 months.</p>
+            <p className="text-sm mt-2">Make sure your MLS export includes Above Grade SqFt or Total SqFt fields.</p>
           </div>
         )}
       </CardContent>
@@ -539,7 +554,7 @@ export function TimeToCloseChart({ scatterData, metrics, title, neighborhood }: 
                 type="number" 
                 dataKey="price" 
                 name="Price" 
-                tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`}
+                tickFormatter={(v) => `$${Math.round(v/1000).toLocaleString()}K`}
                 label={{ value: 'Property Price', angle: -90, position: 'insideLeft', offset: -10 }}
               />
               <Tooltip 
