@@ -1,0 +1,61 @@
+Use a consistent spacing scale (4px or 8px).  
+Use only spacing values that are multiples of your chosen scale (4, 8, 12, 16, 24, 32).  
+Use the same vertical spacing between similar elements (e.g., title → subtitle → controls → search → list).  
+Use a max content width and center it on larger screens; keep generous side padding on mobile.  
+Align all main content (titles, search, cards, tables) to the same left edge.  
+
+Use one primary font and one secondary font at most.  
+Use 16px as the base body text size on mobile, with line-height around 1.4–1.6.  
+Use only 2–3 heading sizes and keep heading line-height tighter (around 1.2–1.3).  
+Add consistent bottom margins under headings and paragraphs (e.g., headings mb-2/mb-3, paragraphs mb-4).  
+Limit line length to ~50–75 characters for readability; avoid super-wide text blocks.  
+
+Use a small, fixed color system.  
+Use one primary color, one accent, and a small set of neutrals (background, card, border, text).  
+Use color to indicate hierarchy and states, not decoration (primary for main actions, muted for secondary text).  
+Avoid too many background colors on the same screen; push emphasis into small elements like badges and labels instead of whole sections.  
+Keep contrast strong for text versus background, softer for borders and dividers.  
+
+Standardize component shapes and shadows.  
+Use the same border-radius values for cards, buttons, and inputs (e.g., sm and lg only).  
+Use a single subtle shadow style for cards on mobile (no heavy or multiple shadows).  
+Use borders OR shadows as the primary separation mechanism, not both heavily at the same time.  
+Keep input and button shapes and radii consistent across the app.  
+
+Standardize buttons.  
+Use consistent height, padding, font weight, and radius for all buttons.  
+Use one high-emphasis style for primary actions (filled) and one low-emphasis style for secondary actions (outline/ghost).  
+Give all buttons clear hover, focus, and active states (slightly darker background or border, small opacity change or scale).  
+Ensure touch targets are at least 44px tall on mobile.  
+
+Standardize inputs and search.  
+Use the same border, background, and focus ring for all inputs.  
+Avoid mixing different input styles (underlined, filled, outlined) in the same app.  
+Give inputs comfortable padding and consistent text size.  
+Make the main search bar full-width on mobile and place it in a predictable location (often directly under primary actions).  
+
+Clean up cards and lists.  
+Use one card pattern: border, background, padding, radius, and shadow are always the same.  
+Use a clear card header (title, small subtitle or meta) and card body with consistent spacing.  
+Align avatars, checkboxes, and text on a single vertical grid line.  
+Lower the emphasis of secondary text (smaller size or muted color).  
+
+Simplify tables.  
+Wrap tables in a card with a clear header area and body.  
+Keep table cell backgrounds mostly white or a single neutral; avoid many colored rows.  
+Use badges or labels to show status instead of coloring full rows or columns.  
+Reduce table font size slightly on mobile and increase row height for easier tapping.  
+
+Optimize for mobile.  
+Design with mobile as the default, then add larger spacing and text sizes at bigger breakpoints.  
+Stack action buttons vertically on small screens and switch to horizontal layouts only on larger screens.  
+Minimize vertical chrome at the top (app bar + title + actions) so core content appears sooner.  
+Use bottom padding to avoid important content sitting behind system bars or floating buttons.  
+
+Polish interactions.  
+Use short, subtle transitions (around 100–200ms) for hover and focus, and avoid heavy animations on mobile.  
+Give active or pressed states a clear but gentle feedback (slight scale down and opacity change).  
+Add explicit empty states for lists and tables instead of leaving large blank areas.  
+Respect reduced-motion preferences by disabling or minimizing animations.
+
+Sources
