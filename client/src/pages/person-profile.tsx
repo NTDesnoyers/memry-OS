@@ -10,7 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   ArrowLeft, Phone, Mail, MapPin, Save, Loader2, User, Briefcase, Heart, Star,
-  PhoneCall, Video, FileText, Home, Calendar, MessageSquare, Clock, Building, Flame
+  PhoneCall, Video, FileText, Home, Calendar, MessageSquare, Clock, Building, Flame,
+  Linkedin, Facebook, Instagram, Twitter, ExternalLink, Globe
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
@@ -398,6 +399,111 @@ export default function PersonProfile() {
                     ) : (
                       <span>{person.address || "No address"}</span>
                     )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Globe className="h-5 w-5" /> Social Profiles
+                  </CardTitle>
+                  <CardDescription>Quick links to their social media</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-2">
+                      <Linkedin className="h-4 w-4 text-[#0077B5]" />
+                      {isEditing ? (
+                        <Input 
+                          value={formData.linkedinUrl || ""} 
+                          onChange={(e) => handleChange("linkedinUrl", e.target.value)}
+                          placeholder="LinkedIn profile URL"
+                          data-testid="input-linkedin"
+                        />
+                      ) : person.linkedinUrl ? (
+                        <a 
+                          href={person.linkedinUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline flex items-center gap-1"
+                          data-testid="link-linkedin"
+                        >
+                          LinkedIn <ExternalLink className="h-3 w-3" />
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">Not set</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Facebook className="h-4 w-4 text-[#1877F2]" />
+                      {isEditing ? (
+                        <Input 
+                          value={formData.facebookUrl || ""} 
+                          onChange={(e) => handleChange("facebookUrl", e.target.value)}
+                          placeholder="Facebook profile URL"
+                          data-testid="input-facebook"
+                        />
+                      ) : person.facebookUrl ? (
+                        <a 
+                          href={person.facebookUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline flex items-center gap-1"
+                          data-testid="link-facebook"
+                        >
+                          Facebook <ExternalLink className="h-3 w-3" />
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">Not set</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Instagram className="h-4 w-4 text-[#E4405F]" />
+                      {isEditing ? (
+                        <Input 
+                          value={formData.instagramUrl || ""} 
+                          onChange={(e) => handleChange("instagramUrl", e.target.value)}
+                          placeholder="Instagram profile URL"
+                          data-testid="input-instagram"
+                        />
+                      ) : person.instagramUrl ? (
+                        <a 
+                          href={person.instagramUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline flex items-center gap-1"
+                          data-testid="link-instagram"
+                        >
+                          Instagram <ExternalLink className="h-3 w-3" />
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">Not set</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Twitter className="h-4 w-4 text-[#1DA1F2]" />
+                      {isEditing ? (
+                        <Input 
+                          value={formData.twitterUrl || ""} 
+                          onChange={(e) => handleChange("twitterUrl", e.target.value)}
+                          placeholder="X/Twitter profile URL"
+                          data-testid="input-twitter"
+                        />
+                      ) : person.twitterUrl ? (
+                        <a 
+                          href={person.twitterUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline flex items-center gap-1"
+                          data-testid="link-twitter"
+                        >
+                          X/Twitter <ExternalLink className="h-3 w-3" />
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">Not set</span>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
