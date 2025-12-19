@@ -237,14 +237,14 @@ export async function registerRoutes(
         }
       }
       
+      // Parse properties using schema-compatible MLSProperty format
       const properties: any[] = [];
       for (const row of rows) {
-        // Extract key fields for Visual Pricing - handle various column naming conventions
         const cleanPrice = (p: any) => {
-          if (!p) return null;
+          if (!p) return undefined;
           const str = String(p);
           const num = parseInt(str.replace(/[$,]/g, ''));
-          return isNaN(num) ? null : num;
+          return isNaN(num) ? undefined : num;
         };
         
         const getString = (keys: string[]) => {
@@ -254,7 +254,7 @@ export async function registerRoutes(
           return '';
         };
         
-        const getNumber = (keys: string[], defaultVal = 0) => {
+        const getNumber = (keys: string[], defaultVal?: number) => {
           for (const k of keys) {
             if (row[k] !== undefined && row[k] !== '') {
               const val = parseFloat(String(row[k]).replace(/[,$]/g, ''));
@@ -264,47 +264,55 @@ export async function registerRoutes(
           return defaultVal;
         };
         
+        const aboveGradeSqft = getNumber(['AboveGradeSqFt', 'Above Grade SqFt', 'AboveGrade', 'Above Grade Finished SqFt']);
+        const totalSqft = getNumber(['InteriorSqFt', 'Interior SqFt', 'SqFt', 'Sq Ft', 'Square Feet', 'LivingArea', 'Living Area', 'TotalSqFt', 'Total SqFt', 'GLA']);
+        const closePrice = cleanPrice(row['SoldPrice'] || row['Sold Price'] || row['ClosePrice'] || row['Close Price']);
+        
+        // Calculate pricePerSqft using above grade sqft preferentially
+        const sqftForCalc = aboveGradeSqft || totalSqft;
+        const pricePerSqft = sqftForCalc && closePrice ? Math.round(closePrice / sqftForCalc) : undefined;
+        
+        // Schema-compatible MLSProperty format
         properties.push({
           mlsNumber: getString(['MLSNumber', 'MLS #', 'MLS Number', 'ListingId', 'Listing ID']),
           address: getString(['Address', 'Full Address', 'Street Address', 'Property Address']),
           status: getString(['Status', 'Listing Status', 'PropertyStatus']),
-          soldPrice: cleanPrice(row['SoldPrice'] || row['Sold Price'] || row['ClosePrice'] || row['Close Price']),
-          originalPrice: cleanPrice(row['OriginalPrice'] || row['Original Price'] || row['OriginalListPrice']),
-          currentPrice: cleanPrice(row['CurrentPrice'] || row['Current Price'] || row['ListPrice'] || row['List Price']),
-          lastListPrice: cleanPrice(row['Last List Price'] || row['LastListPrice']),
+          closePrice,
+          listPrice: cleanPrice(row['CurrentPrice'] || row['Current Price'] || row['ListPrice'] || row['List Price']),
+          originalListPrice: cleanPrice(row['OriginalPrice'] || row['Original Price'] || row['OriginalListPrice']),
           dom: getNumber(['DOM', 'Days On Market', 'DaysOnMarket', 'CDOM']),
           listDate: getString(['ListDate', 'List Date', 'ListingDate', 'Listing Date']),
-          settledDate: getString(['SettledDate', 'Settled Date', 'CloseDate', 'Close Date', 'SoldDate', 'Sold Date']),
-          statusDate: getString(['StatusDate', 'Status Date', 'StatusChangeDate']),
-          sqft: getNumber(['InteriorSqFt', 'Interior SqFt', 'SqFt', 'Sq Ft', 'Square Feet', 'LivingArea', 'Living Area', 'TotalSqFt', 'Total SqFt', 'GLA']),
-          aboveGradeSqft: getNumber(['AboveGradeSqFt', 'Above Grade SqFt', 'AboveGrade']),
-          belowGradeSqft: getNumber(['BelowGradeSqFt', 'Below Grade SqFt', 'BelowGrade']),
+          closeDate: getString(['SettledDate', 'Settled Date', 'CloseDate', 'Close Date', 'SoldDate', 'Sold Date']),
+          statusChangeDate: getString(['StatusDate', 'Status Date', 'StatusChangeDate']),
+          aboveGradeSqft,
+          totalSqft,
+          finishedSqft: getNumber(['FinishedSqFt', 'Finished SqFt', 'Finished Square Feet']),
+          frontage: getNumber(['Frontage', 'LotFrontage', 'Lot Frontage']),
           beds: getNumber(['Bedrooms', 'Beds', 'BedroomsTotal', 'Bedrooms Total', 'BR']),
           baths: getNumber(['Baths', 'Bathrooms', 'BathroomsFull', 'BathroomsTotal', 'Full Baths', 'BA']),
           yearBuilt: getNumber(['HomeBuilt', 'Year Built', 'YearBuilt', 'Built']),
           acres: getNumber(['Acres', 'Lot Acres', 'LotAcres', 'Lot Size']),
           subdivision: getString(['Subdivision', 'SubdivisionName', 'Neighborhood']),
           city: getString(['City', 'PropertyCity']),
-          zipCode: getString(['Zip Code', 'ZipCode', 'Zip', 'PostalCode', 'Postal Code']),
           style: getString(['Style', 'PropertyStyle', 'Property Style', 'ArchitecturalStyle']),
-          condition: getString(['PropertyCondition', 'Property Condition', 'Condition']),
+          pricePerSqft,
         });
       }
       
-      // Calculate market statistics
-      const closed = properties.filter(p => p.status === 'Closed' || p.status === 'Sold');
-      const active = properties.filter(p => ['Active', 'ComingSoon', 'Coming Soon', 'For Sale'].includes(p.status));
-      const pending = properties.filter(p => ['Pending', 'ActiveUnderContract', 'Under Contract', 'Contingent'].includes(p.status));
+      // Calculate market statistics using schema field names
+      const closed = properties.filter(p => p.status?.toLowerCase().includes('closed') || p.status?.toLowerCase().includes('sold'));
+      const active = properties.filter(p => p.status?.toLowerCase().includes('active') || p.status?.toLowerCase().includes('for sale'));
+      const pending = properties.filter(p => p.status?.toLowerCase().includes('pending') || p.status?.toLowerCase().includes('contract'));
       
       const avgSoldPrice = closed.length > 0 
-        ? Math.round(closed.reduce((sum, p) => sum + (p.soldPrice || 0), 0) / closed.length)
+        ? Math.round(closed.reduce((sum: number, p: any) => sum + (p.closePrice || 0), 0) / closed.length)
         : 0;
       const avgDOM = closed.length > 0
-        ? Math.round(closed.reduce((sum, p) => sum + p.dom, 0) / closed.length)
+        ? Math.round(closed.reduce((sum: number, p: any) => sum + (p.dom || 0), 0) / closed.length)
         : 0;
-      const closedWithSqft = closed.filter(p => p.sqft > 0 && p.soldPrice);
+      const closedWithSqft = closed.filter((p: any) => (p.aboveGradeSqft || p.totalSqft) && p.closePrice);
       const avgPricePerSqft = closedWithSqft.length > 0
-        ? Math.round(closedWithSqft.reduce((sum, p) => sum + ((p.soldPrice || 0) / p.sqft), 0) / closedWithSqft.length)
+        ? Math.round(closedWithSqft.reduce((sum: number, p: any) => sum + (p.pricePerSqft || 0), 0) / closedWithSqft.length)
         : 0;
       
       res.json({
