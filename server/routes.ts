@@ -2209,7 +2209,63 @@ When analyzing images:
     }
   });
   
-  // Delete interaction
+  // Soft delete interaction (move to Recently Deleted)
+  app.post("/api/interactions/:id/delete", async (req, res) => {
+    try {
+      const interaction = await storage.softDeleteInteraction(req.params.id);
+      if (!interaction) {
+        return res.status(404).json({ message: "Interaction not found" });
+      }
+      res.json(interaction);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Restore interaction from Recently Deleted
+  app.post("/api/interactions/:id/restore", async (req, res) => {
+    try {
+      const interaction = await storage.restoreInteraction(req.params.id);
+      if (!interaction) {
+        return res.status(404).json({ message: "Interaction not found" });
+      }
+      res.json(interaction);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get all deleted interactions (Recently Deleted)
+  app.get("/api/interactions/deleted", async (req, res) => {
+    try {
+      const deleted = await storage.getDeletedInteractions();
+      res.json(deleted);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Permanently delete interaction
+  app.delete("/api/interactions/:id/permanent", async (req, res) => {
+    try {
+      await storage.permanentlyDeleteInteraction(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Cleanup old deleted interactions (older than 30 days)
+  app.post("/api/interactions/cleanup-deleted", async (req, res) => {
+    try {
+      const count = await storage.cleanupOldDeletedInteractions(30);
+      res.json({ deletedCount: count });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Hard delete interaction (kept for compatibility, but prefer soft delete)
   app.delete("/api/interactions/:id", async (req, res) => {
     try {
       await storage.deleteInteraction(req.params.id);

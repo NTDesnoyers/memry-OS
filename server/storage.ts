@@ -20,7 +20,7 @@ import {
   users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, isNull, or, sql, gte, lte } from "drizzle-orm";
+import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -129,11 +129,16 @@ export interface IStorage {
   
   // Interactions
   getAllInteractions(): Promise<Interaction[]>;
+  getDeletedInteractions(): Promise<Interaction[]>;
   getInteractionsByPerson(personId: string): Promise<Interaction[]>;
   getInteraction(id: string): Promise<Interaction | undefined>;
   getInteractionByExternalId(externalId: string): Promise<Interaction | undefined>;
   createInteraction(interaction: InsertInteraction): Promise<Interaction>;
   updateInteraction(id: string, interaction: Partial<InsertInteraction>): Promise<Interaction | undefined>;
+  softDeleteInteraction(id: string): Promise<Interaction | undefined>;
+  restoreInteraction(id: string): Promise<Interaction | undefined>;
+  permanentlyDeleteInteraction(id: string): Promise<void>;
+  cleanupOldDeletedInteractions(daysOld: number): Promise<number>;
   deleteInteraction(id: string): Promise<void>;
   
   // AI Conversations
@@ -626,12 +631,20 @@ export class DatabaseStorage implements IStorage {
   
   // Interactions
   async getAllInteractions(): Promise<Interaction[]> {
-    return await db.select().from(interactions).orderBy(desc(interactions.occurredAt));
+    return await db.select().from(interactions)
+      .where(isNull(interactions.deletedAt))
+      .orderBy(desc(interactions.occurredAt));
+  }
+  
+  async getDeletedInteractions(): Promise<Interaction[]> {
+    return await db.select().from(interactions)
+      .where(isNotNull(interactions.deletedAt))
+      .orderBy(desc(interactions.deletedAt));
   }
   
   async getInteractionsByPerson(personId: string): Promise<Interaction[]> {
     return await db.select().from(interactions)
-      .where(eq(interactions.personId, personId))
+      .where(and(eq(interactions.personId, personId), isNull(interactions.deletedAt)))
       .orderBy(desc(interactions.occurredAt));
   }
   
@@ -660,6 +673,37 @@ export class DatabaseStorage implements IStorage {
       .where(eq(interactions.id, id))
       .returning();
     return updated || undefined;
+  }
+  
+  async softDeleteInteraction(id: string): Promise<Interaction | undefined> {
+    const [updated] = await db
+      .update(interactions)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(interactions.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async restoreInteraction(id: string): Promise<Interaction | undefined> {
+    const [updated] = await db
+      .update(interactions)
+      .set({ deletedAt: null, updatedAt: new Date() })
+      .where(eq(interactions.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async permanentlyDeleteInteraction(id: string): Promise<void> {
+    await db.delete(interactions).where(eq(interactions.id, id));
+  }
+  
+  async cleanupOldDeletedInteractions(daysOld: number): Promise<number> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+    const result = await db.delete(interactions)
+      .where(and(isNotNull(interactions.deletedAt), lt(interactions.deletedAt, cutoffDate)))
+      .returning();
+    return result.length;
   }
   
   async deleteInteraction(id: string): Promise<void> {

@@ -584,6 +584,7 @@ export const interactions = pgTable("interactions", {
   participants: text("participants").array(), // names of other people in the conversation
   tags: text("tags").array(),
   aiExtractedData: jsonb("ai_extracted_data"), // FORD notes, action items, etc.
+  deletedAt: timestamp("deleted_at"), // soft delete - null means not deleted
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
