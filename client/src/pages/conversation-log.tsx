@@ -71,6 +71,7 @@ export default function ConversationLog() {
     occurredAt: new Date().toISOString().slice(0, 16),
   });
   const [filterType, setFilterType] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [showFathomDialog, setShowFathomDialog] = useState(false);
   const [fathomApiKey, setFathomApiKey] = useState("");
   const [fathomImportResult, setFathomImportResult] = useState<{
@@ -268,8 +269,22 @@ export default function ConversationLog() {
   };
 
   const filteredInteractions = interactions.filter(i => {
-    if (filterType === "all") return true;
-    return i.type === filterType;
+    const matchesType = filterType === "all" || i.type === filterType;
+    if (!matchesType) return false;
+    
+    if (!searchQuery.trim()) return true;
+    
+    const query = searchQuery.toLowerCase();
+    const person = getPersonById(i.personId);
+    const personName = person?.name?.toLowerCase() || "";
+    const personNickname = person?.nickname?.toLowerCase() || "";
+    const summary = i.summary?.toLowerCase() || "";
+    const transcript = i.transcript?.toLowerCase() || "";
+    
+    return personName.includes(query) || 
+           personNickname.includes(query) ||
+           summary.includes(query) || 
+           transcript.includes(query);
   });
 
   const groupedInteractions = filteredInteractions.reduce((acc, interaction) => {
@@ -323,6 +338,16 @@ export default function ConversationLog() {
           </header>
 
           <div className="flex gap-4 mb-6">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search conversations, transcripts..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 bg-background"
+                data-testid="input-search-conversations"
+              />
+            </div>
             <Select value={filterType} onValueChange={setFilterType}>
               <SelectTrigger className="w-[200px] bg-background" data-testid="select-filter-type">
                 <Filter className="h-4 w-4 mr-2" />
@@ -399,6 +424,12 @@ export default function ConversationLog() {
                                     <TypeIcon className="h-3 w-3 mr-1" />
                                     {typeConfig.label}
                                   </Badge>
+                                  {interaction.transcript && (
+                                    <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+                                      <FileText className="h-3 w-3 mr-1" />
+                                      Transcript
+                                    </Badge>
+                                  )}
                                   {interaction.externalLink && (
                                     <a 
                                       href={interaction.externalLink} 
@@ -895,6 +926,20 @@ export default function ConversationLog() {
                 data-testid="input-edit-link"
               />
             </div>
+
+            {selectedInteraction?.transcript && (
+              <div>
+                <Label className="mb-2 block flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Full Transcript
+                </Label>
+                <div className="bg-muted/50 rounded-lg p-3 max-h-64 overflow-y-auto">
+                  <pre className="text-xs whitespace-pre-wrap font-sans leading-relaxed">
+                    {selectedInteraction.transcript}
+                  </pre>
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter>
