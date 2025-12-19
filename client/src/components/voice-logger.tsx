@@ -34,11 +34,17 @@ interface AttachedImage {
   name?: string;
 }
 
+interface ModelInfo {
+  name: string;
+  reason: string;
+}
+
 interface Message {
   role: "user" | "assistant";
   content: string;
   actions?: Action[];
   images?: AttachedImage[];
+  model?: ModelInfo;
 }
 
 export function VoiceLogger() {
@@ -265,7 +271,8 @@ export function VoiceLogger() {
       const assistantMessage: Message = { 
         role: "assistant", 
         content: data.response,
-        actions: data.actions
+        actions: data.actions,
+        model: data.model
       };
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
@@ -572,6 +579,14 @@ export function VoiceLogger() {
                       </div>
                     )}
                     <p className="whitespace-pre-wrap">{message.content}</p>
+                    {message.role === "assistant" && message.model && (
+                      <div className="mt-2 pt-2 border-t border-border/30 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                        <Sparkles className="h-2.5 w-2.5" />
+                        <span>{message.model.name}</span>
+                        <span className="text-muted-foreground/50">•</span>
+                        <span className="italic">{message.model.reason}</span>
+                      </div>
+                    )}
                   </div>
                   {message.role === "user" && (
                     <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
