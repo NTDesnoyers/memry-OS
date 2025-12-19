@@ -6,6 +6,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { 
   Video, 
@@ -21,7 +24,8 @@ import {
   Link as LinkIcon,
   Mic,
   StopCircle,
-  Loader2
+  Loader2,
+  ExternalLink
 } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useToast } from "@/hooks/use-toast";
@@ -72,6 +76,40 @@ export default function Meetings() {
   const [isRecording, setIsRecording] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState<string[]>([]);
   const [recordingDuration, setRecordingDuration] = useState(0);
+  const [showZoomDialog, setShowZoomDialog] = useState(false);
+  const [zoomLink, setZoomLink] = useState("");
+
+  const handleJoinZoom = () => {
+    if (!zoomLink.trim()) {
+      toast({
+        title: "Enter a link",
+        description: "Please paste a valid Zoom meeting link.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate Zoom link format
+    const zoomRegex = /zoom\.(us|com)/i;
+    if (!zoomRegex.test(zoomLink)) {
+      toast({
+        title: "Invalid Link",
+        description: "Please enter a valid Zoom meeting link.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Open Zoom link in new tab
+    window.open(zoomLink, "_blank");
+    setShowZoomDialog(false);
+    setZoomLink("");
+
+    toast({
+      title: "Opening Zoom",
+      description: "Your meeting is opening in a new tab. Click 'Start Recording' when ready.",
+    });
+  };
 
   // Simulate live recording
   const startRecording = () => {
@@ -274,12 +312,40 @@ export default function Meetings() {
                       <p className="text-slate-400 max-w-md mx-auto">
                         The AI Assistant will record audio, transcribe in real-time, and automatically generate tasks and summaries for your CRM.
                       </p>
-                      <div className="flex gap-4 justify-center mt-6">
-                        <Button variant="outline" className="border-slate-600 text-white hover:bg-slate-800 gap-2">
-                          <LinkIcon className="h-4 w-4" /> Paste Zoom Link
+                      <div className="flex flex-wrap gap-3 justify-center mt-6">
+                        <Button 
+                          variant="outline" 
+                          className="border-blue-500/50 text-white hover:bg-blue-500/20 gap-2"
+                          onClick={() => setShowZoomDialog(true)}
+                          data-testid="button-paste-zoom"
+                        >
+                          <LinkIcon className="h-4 w-4 text-blue-400" /> Paste Zoom Link
                         </Button>
-                        <Button variant="outline" className="border-slate-600 text-white hover:bg-slate-800 gap-2">
-                          <Video className="h-4 w-4" /> Launch Google Meet
+                        <Button 
+                          variant="outline" 
+                          className="border-slate-600 text-slate-400 hover:bg-slate-800 gap-2 opacity-70"
+                          onClick={() => {
+                            toast({
+                              title: "Coming Soon",
+                              description: "Google Meet integration is coming in a future update.",
+                            });
+                          }}
+                          data-testid="button-google-meet"
+                        >
+                          <Video className="h-4 w-4" /> Google Meet
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="border-slate-600 text-slate-400 hover:bg-slate-800 gap-2 opacity-70"
+                          onClick={() => {
+                            toast({
+                              title: "Coming Soon",
+                              description: "Microsoft Teams integration is coming in a future update.",
+                            });
+                          }}
+                          data-testid="button-teams"
+                        >
+                          <Video className="h-4 w-4" /> Teams
                         </Button>
                       </div>
                     </div>
@@ -321,6 +387,50 @@ export default function Meetings() {
           </Tabs>
         </div>
       </div>
+
+      {/* Zoom Link Dialog */}
+      <Dialog open={showZoomDialog} onOpenChange={setShowZoomDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Video className="h-5 w-5 text-blue-500" />
+              Join Zoom Meeting
+            </DialogTitle>
+            <DialogDescription>
+              Paste your Zoom meeting link below. We'll open it in a new tab so you can join.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="zoom-link" className="mb-2 block">Zoom Meeting Link</Label>
+              <Input
+                id="zoom-link"
+                placeholder="https://zoom.us/j/123456789"
+                value={zoomLink}
+                onChange={(e) => setZoomLink(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleJoinZoom();
+                  }
+                }}
+                data-testid="input-zoom-link"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              After joining, click "Start Recording" to have the AI Assistant take notes.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowZoomDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleJoinZoom} className="gap-2" data-testid="button-join-zoom">
+              <ExternalLink className="h-4 w-4" />
+              Open Zoom
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }
