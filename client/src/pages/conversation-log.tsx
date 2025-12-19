@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { MentionTextarea, getDisplayText } from "@/components/mention-textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -576,22 +577,13 @@ export default function ConversationLog() {
               <Label htmlFor="summary" className="mb-2 block flex items-center gap-2">
                 <FileText className="h-4 w-4" />
                 Notes / Summary
+                <span className="text-xs text-muted-foreground ml-auto">Type @ to mention someone</span>
               </Label>
-              <Textarea
+              <MentionTextarea
                 id="summary"
-                placeholder="What did you discuss? Key takeaways..."
+                placeholder="What did you discuss? Key takeaways... Type @ to mention someone"
                 value={formData.summary}
-                onChange={e => setFormData(prev => ({ ...prev, summary: e.target.value }))}
-                onPaste={e => {
-                  const pastedText = e.clipboardData.getData('text');
-                  const target = e.target as HTMLTextAreaElement;
-                  const start = target.selectionStart;
-                  const end = target.selectionEnd;
-                  const currentValue = formData.summary || '';
-                  const newValue = currentValue.substring(0, start) + pastedText + currentValue.substring(end);
-                  setFormData(prev => ({ ...prev, summary: newValue }));
-                  e.preventDefault();
-                }}
+                onChange={(value) => setFormData(prev => ({ ...prev, summary: value }))}
                 rows={4}
                 data-testid="input-summary"
               />
@@ -879,12 +871,15 @@ export default function ConversationLog() {
             </div>
 
             <div>
-              <Label htmlFor="edit-summary" className="mb-2 block">Summary / Notes</Label>
-              <Textarea
+              <Label htmlFor="edit-summary" className="mb-2 block flex items-center gap-2">
+                Summary / Notes
+                <span className="text-xs text-muted-foreground ml-auto">Type @ to mention someone</span>
+              </Label>
+              <MentionTextarea
                 id="edit-summary"
-                placeholder="What did you discuss?"
+                placeholder="What did you discuss? Type @ to mention someone"
                 value={editForm.summary}
-                onChange={(e) => setEditForm(f => ({ ...f, summary: e.target.value }))}
+                onChange={(value) => setEditForm(f => ({ ...f, summary: value }))}
                 rows={4}
                 data-testid="input-edit-summary"
               />
