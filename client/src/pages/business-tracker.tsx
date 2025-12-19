@@ -146,10 +146,10 @@ export default function BusinessTracker() {
     person: people.find(p => p.id === deal.personId)
   }));
 
-  const warmDeals = dealsWithPeople.filter(d => d.prospectCategory === "warm" || (d.stage === "warm" && !d.prospectCategory));
-  const hotActiveDeals = dealsWithPeople.filter(d => d.prospectCategory === "hot_active" || (d.stage === "hot" && d.prospectCategory !== "hot_confused"));
-  const hotConfusedDeals = dealsWithPeople.filter(d => d.prospectCategory === "hot_confused");
-  const underContractDeals = dealsWithPeople.filter(d => d.prospectCategory === "under_contract" || d.stage === "under_contract" || d.stage === "active");
+  const warmDeals = dealsWithPeople.filter(d => d.stage === "warm");
+  const hotActiveDeals = dealsWithPeople.filter(d => d.stage === "hot" || d.stage === "hot_active");
+  const hotConfusedDeals = dealsWithPeople.filter(d => d.stage === "hot_confused");
+  const underContractDeals = dealsWithPeople.filter(d => d.stage === "under_contract" || d.stage === "in_contract" || d.stage === "active");
   const closedDeals = dealsWithPeople.filter(d => d.stage === "closed");
 
   // PIE Time Tracker State
