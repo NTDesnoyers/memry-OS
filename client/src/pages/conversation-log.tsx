@@ -198,24 +198,11 @@ export default function ConversationLog() {
   const handleEditSubmit = () => {
     if (!selectedInteraction) return;
     
-    // Handle date - could be string or Date object, or invalid
+    // Handle date safely
     let occurredAtISO: string;
     try {
-      let dateValue: Date;
-      if (typeof editForm.occurredAt === 'string' && editForm.occurredAt) {
-        dateValue = new Date(editForm.occurredAt);
-      } else if (editForm.occurredAt instanceof Date) {
-        dateValue = editForm.occurredAt;
-      } else {
-        dateValue = new Date();
-      }
-      
-      // Check if the date is valid
-      if (isNaN(dateValue.getTime())) {
-        dateValue = new Date();
-      }
-      
-      occurredAtISO = dateValue.toISOString();
+      const dateValue = editForm.occurredAt ? new Date(editForm.occurredAt) : new Date();
+      occurredAtISO = isNaN(dateValue.getTime()) ? new Date().toISOString() : dateValue.toISOString();
     } catch {
       occurredAtISO = new Date().toISOString();
     }
