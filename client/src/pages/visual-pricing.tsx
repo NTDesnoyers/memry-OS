@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Upload, BarChart3, PieChart, TrendingUp, FileText, Printer, Home, ArrowRight, ChevronRight, DollarSign, Calculator, Target, FileSpreadsheet } from "lucide-react";
+import { Plus, Upload, BarChart3, PieChart, TrendingUp, FileText, Printer, Home, ArrowRight, ChevronRight, DollarSign, Calculator, Target, FileSpreadsheet, User, Building2 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -293,6 +293,10 @@ export default function VisualPricing() {
   const [parseError, setParseError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  // Person and property linking
+  const [selectedPersonId, setSelectedPersonId] = useState<string>("");
+  const [subjectAddress, setSubjectAddress] = useState("");
+  
   // Scattergram options
   type XAxisOption = 'aboveGradeSqft' | 'totalSqft' | 'finishedSqft' | 'beds' | 'baths' | 'acres' | 'frontage';
   const [scatterXAxis, setScatterXAxis] = useState<XAxisOption>('aboveGradeSqft');
@@ -308,13 +312,15 @@ export default function VisualPricing() {
   });
   
   const createReviewMutation = useMutation({
-    mutationFn: async (data: { title: string; neighborhood?: string; mlsData: MLSProperty[] }) => {
+    mutationFn: async (data: { title: string; neighborhood?: string; personId?: string; subjectAddress?: string; mlsData: MLSProperty[] }) => {
       const res = await fetch("/api/pricing-reviews", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: data.title,
           neighborhood: data.neighborhood,
+          personId: data.personId || null,
+          subjectAddress: data.subjectAddress || null,
           mlsData: data.mlsData,
           calculatedMetrics: calculateMetrics(data.mlsData)
         }),
@@ -327,6 +333,8 @@ export default function VisualPricing() {
       setCreateDialogOpen(false);
       setReviewTitle("");
       setNeighborhood("");
+      setSelectedPersonId("");
+      setSubjectAddress("");
       setUploadedFile(null);
       setParsedProperties([]);
       setParseError(null);
@@ -373,6 +381,8 @@ export default function VisualPricing() {
     createReviewMutation.mutate({
       title: reviewTitle || `${neighborhood || 'Market'} Analysis`,
       neighborhood,
+      personId: selectedPersonId || undefined,
+      subjectAddress: subjectAddress || undefined,
       mlsData: parsedProperties
     });
   };
@@ -572,6 +582,41 @@ export default function VisualPricing() {
                       />
                     </div>
                   </div>
+                  
+                  <Separator />
+                  <p className="text-sm font-medium">Link to Person & Property (Optional)</p>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="person">Client/Contact</Label>
+                      <Select value={selectedPersonId} onValueChange={setSelectedPersonId}>
+                        <SelectTrigger data-testid="select-person">
+                          <SelectValue placeholder="Select a person..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">No person linked</SelectItem>
+                          {people.map((person) => (
+                            <SelectItem key={person.id} value={person.id}>
+                              {person.firstName} {person.lastName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="subjectAddress">Subject Property Address</Label>
+                      <Input 
+                        id="subjectAddress" 
+                        placeholder="e.g., 123 Main St, Centreville, VA"
+                        value={subjectAddress}
+                        onChange={(e) => setSubjectAddress(e.target.value)}
+                        data-testid="input-subject-address"
+                      />
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
                   <div className="space-y-3">
                     <Label>Upload MLS Export (CSV)</Label>
                     <div 
@@ -645,17 +690,25 @@ export default function VisualPricing() {
                     </div>
                   ) : (
                     <div className="divide-y">
-                      {reviews.map((review) => (
-                        <button
-                          key={review.id}
-                          onClick={() => setActiveReviewId(review.id)}
-                          className={`w-full text-left p-3 hover:bg-muted/50 transition-colors ${activeReviewId === review.id ? 'bg-primary/5 border-l-2 border-primary' : ''}`}
-                          data-testid={`button-review-${review.id}`}
-                        >
-                          <p className="font-medium text-sm truncate">{review.title}</p>
-                          <p className="text-xs text-muted-foreground">{review.neighborhood || 'No location'}</p>
-                        </button>
-                      ))}
+                      {reviews.map((review) => {
+                        const linkedPerson = review.personId ? people.find(p => p.id === review.personId) : null;
+                        return (
+                          <button
+                            key={review.id}
+                            onClick={() => setActiveReviewId(review.id)}
+                            className={`w-full text-left p-3 hover:bg-muted/50 transition-colors ${activeReviewId === review.id ? 'bg-primary/5 border-l-2 border-primary' : ''}`}
+                            data-testid={`button-review-${review.id}`}
+                          >
+                            <p className="font-medium text-sm truncate">{review.title}</p>
+                            <p className="text-xs text-muted-foreground">{review.neighborhood || 'No location'}</p>
+                            {linkedPerson && (
+                              <p className="text-xs text-primary mt-0.5">
+                                For: {linkedPerson.firstName} {linkedPerson.lastName}
+                              </p>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </CardContent>
@@ -676,6 +729,27 @@ export default function VisualPricing() {
                 </Card>
               ) : (
                 <Tabs defaultValue="overview" className="w-full">
+                  {/* Linked Person & Property Header */}
+                  {(activeReview.personId || activeReview.subjectAddress) && (
+                    <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mb-4 flex flex-wrap items-center gap-4">
+                      {activeReview.personId && people.find(p => p.id === activeReview.personId) && (
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-primary" />
+                          <span className="text-sm font-medium">
+                            Client: {people.find(p => p.id === activeReview.personId)?.firstName} {people.find(p => p.id === activeReview.personId)?.lastName}
+                          </span>
+                        </div>
+                      )}
+                      {activeReview.subjectAddress && (
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4 text-primary" />
+                          <span className="text-sm font-medium">
+                            Property: {activeReview.subjectAddress}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <TabsList className="bg-card/50 backdrop-blur-sm flex-wrap">
                     <TabsTrigger value="overview">Overview</TabsTrigger>
                     <TabsTrigger value="scattergram">Scattergram</TabsTrigger>
