@@ -603,6 +603,25 @@ Respond with valid JSON only, no other text.`;
     {
       type: "function",
       function: {
+        name: "update_deal",
+        description: "Update a deal's information (estimated price, commission percentage, stage, side, etc.). Use this to add someone to hot list with price and commission info.",
+        parameters: {
+          type: "object",
+          properties: {
+            personId: { type: "string", description: "The person ID whose deal to update" },
+            estimatedPrice: { type: "number", description: "Estimated sales price in dollars (e.g., 500000 for $500,000)" },
+            commissionPercent: { type: "number", description: "Commission percentage as a decimal (e.g., 2.5 for 2.5%, 3 for 3%)" },
+            stage: { type: "string", enum: ["warm", "hot", "hot_confused", "in_contract", "closed", "lost"], description: "Deal stage" },
+            side: { type: "string", enum: ["buyer", "seller", "both"], description: "Which side of transaction" },
+            painPleasure: { type: "number", description: "Pain/Pleasure rating 1-10" }
+          },
+          required: ["personId"]
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
         name: "get_hot_warm_lists",
         description: "Get the current Hot and Warm lists (people likely to transact soon)",
         parameters: { type: "object", properties: {} }
@@ -654,9 +673,22 @@ Respond with valid JSON only, no other text.`;
         }
         
         case "update_person": {
-          const updated = await storage.updatePerson(args.personId, args.updates);
+          if (!args.updates || typeof args.updates !== 'object') {
+            return `Error: updates must be an object with fields to update`;
+          }
+          // Filter out null/undefined values
+          const cleanUpdates: Record<string, any> = {};
+          for (const [key, value] of Object.entries(args.updates)) {
+            if (value !== null && value !== undefined) {
+              cleanUpdates[key] = value;
+            }
+          }
+          if (Object.keys(cleanUpdates).length === 0) {
+            return `Error: no valid fields to update`;
+          }
+          const updated = await storage.updatePerson(args.personId, cleanUpdates);
           if (!updated) return `Failed to update person ${args.personId}`;
-          return `Successfully updated ${updated.name}: ${Object.keys(args.updates).join(", ")}`;
+          return `Successfully updated ${updated.name}: ${Object.keys(cleanUpdates).join(", ")}`;
         }
         
         case "create_person": {
@@ -710,6 +742,41 @@ Respond with valid JSON only, no other text.`;
           if (!deal) return `No active deal found for this person`;
           await storage.updateDeal(deal.id, { stage: args.stage });
           return `Updated deal stage to ${args.stage}`;
+        }
+        
+        case "update_deal": {
+          const allDeals = await storage.getAllDeals();
+          let deal = allDeals.find(d => d.personId === args.personId && 
+            ["warm", "hot", "hot_active", "hot_confused", "in_contract"].includes(d.stage?.toLowerCase() || ""));
+          
+          // If no deal exists, create one
+          if (!deal) {
+            deal = await storage.createDeal({
+              personId: args.personId,
+              stage: args.stage || "hot",
+              side: args.side || "buyer",
+              type: "sale",
+              estimatedPrice: args.estimatedPrice || null,
+              commissionPercent: args.commissionPercent || null,
+              painPleasure: args.painPleasure || null
+            });
+            return `Created new deal with estimated price $${args.estimatedPrice?.toLocaleString() || 0}, ${args.commissionPercent || 0}% commission`;
+          }
+          
+          // Update existing deal
+          const updates: Record<string, any> = {};
+          if (args.estimatedPrice !== undefined) updates.estimatedPrice = args.estimatedPrice;
+          if (args.commissionPercent !== undefined) updates.commissionPercent = args.commissionPercent;
+          if (args.stage !== undefined) updates.stage = args.stage;
+          if (args.side !== undefined) updates.side = args.side;
+          if (args.painPleasure !== undefined) updates.painPleasure = args.painPleasure;
+          
+          await storage.updateDeal(deal.id, updates);
+          const updateInfo = [];
+          if (args.estimatedPrice !== undefined) updateInfo.push(`price: $${args.estimatedPrice.toLocaleString()}`);
+          if (args.commissionPercent !== undefined) updateInfo.push(`commission: ${args.commissionPercent}%`);
+          if (args.stage !== undefined) updateInfo.push(`stage: ${args.stage}`);
+          return `Updated deal: ${updateInfo.join(", ")}`;
         }
         
         case "get_hot_warm_lists": {
