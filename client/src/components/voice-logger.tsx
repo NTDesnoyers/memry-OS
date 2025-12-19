@@ -1,10 +1,20 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Mic, Square, Loader2, Send, MessageSquare, Sparkles, X, Bot, User, CheckCircle2, Zap, Image as ImageIcon, Paperclip } from "lucide-react";
+import { Mic, Square, Loader2, Send, MessageSquare, Sparkles, X, Bot, User, CheckCircle2, Zap, Paperclip, Plus, History, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
+
+interface AiConversation {
+  id: string;
+  title: string;
+  messages: Message[];
+  createdAt: string;
+  updatedAt: string;
+}
 
 declare global {
   interface Window {
@@ -40,11 +50,69 @@ export function VoiceLogger() {
   const [inputText, setInputText] = useState("");
   const [currentPage, setCurrentPage] = useState("");
   const [attachedImages, setAttachedImages] = useState<AttachedImage[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   
   const recognitionRef = useRef<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const queryClient = useQueryClient();
+  
+  // Fetch all conversations
+  const { data: conversations = [] } = useQuery<AiConversation[]>({
+    queryKey: ["/api/ai-conversations"],
+    queryFn: async () => {
+      const res = await fetch("/api/ai-conversations");
+      if (!res.ok) throw new Error("Failed to fetch conversations");
+      return res.json();
+    },
+    enabled: isOpen,
+  });
+  
+  // Create conversation mutation
+  const createConversation = useMutation({
+    mutationFn: async (data: { title: string; messages: Message[] }) => {
+      const res = await fetch("/api/ai-conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create conversation");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/ai-conversations"] });
+    },
+  });
+  
+  // Update conversation mutation
+  const updateConversation = useMutation({
+    mutationFn: async ({ id, messages }: { id: string; messages: Message[] }) => {
+      const res = await fetch(`/api/ai-conversations/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages }),
+      });
+      if (!res.ok) throw new Error("Failed to update conversation");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/ai-conversations"] });
+    },
+  });
+  
+  // Delete conversation mutation
+  const deleteConversation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/ai-conversations/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete conversation");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/ai-conversations"] });
+    },
+  });
 
   useEffect(() => {
     setCurrentPage(window.location.pathname);
@@ -221,7 +289,56 @@ export function VoiceLogger() {
 
   const clearConversation = () => {
     setMessages([]);
+    setCurrentConversationId(null);
   };
+  
+  const startNewConversation = () => {
+    // Save current conversation if it has messages
+    if (messages.length > 0 && !currentConversationId) {
+      const title = messages[0].content.slice(0, 50) + (messages[0].content.length > 50 ? "..." : "");
+      createConversation.mutate({ title, messages });
+    } else if (messages.length > 0 && currentConversationId) {
+      updateConversation.mutate({ id: currentConversationId, messages });
+    }
+    setMessages([]);
+    setCurrentConversationId(null);
+    setShowHistory(false);
+  };
+  
+  const loadConversation = (conversation: AiConversation) => {
+    // Save current conversation first if needed
+    if (messages.length > 0 && currentConversationId) {
+      updateConversation.mutate({ id: currentConversationId, messages });
+    } else if (messages.length > 0 && !currentConversationId) {
+      const title = messages[0].content.slice(0, 50) + (messages[0].content.length > 50 ? "..." : "");
+      createConversation.mutate({ title, messages });
+    }
+    
+    setMessages(conversation.messages || []);
+    setCurrentConversationId(conversation.id);
+    setShowHistory(false);
+  };
+  
+  const handleDeleteConversation = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    deleteConversation.mutate(id);
+    if (currentConversationId === id) {
+      setMessages([]);
+      setCurrentConversationId(null);
+    }
+  };
+  
+  // Auto-save on close
+  useEffect(() => {
+    if (!isOpen && messages.length > 0) {
+      if (currentConversationId) {
+        updateConversation.mutate({ id: currentConversationId, messages });
+      } else {
+        const title = messages[0].content.slice(0, 50) + (messages[0].content.length > 50 ? "..." : "");
+        createConversation.mutate({ title, messages });
+      }
+    }
+  }, [isOpen]);
 
   const formatToolName = (toolName: string): string => {
     const toolLabels: Record<string, string> = {
@@ -250,20 +367,99 @@ export function VoiceLogger() {
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-lg h-[600px] flex flex-col p-0 gap-0">
+        <DialogContent className={cn(
+          "h-[600px] flex p-0 gap-0 transition-all duration-300",
+          showHistory ? "sm:max-w-3xl" : "sm:max-w-lg"
+        )}>
+          {/* History Sidebar */}
+          {showHistory && (
+            <div className="w-64 border-r flex flex-col bg-muted/30">
+              <div className="p-3 border-b flex items-center justify-between">
+                <h3 className="font-medium text-sm flex items-center gap-2">
+                  <History className="h-4 w-4" />
+                  Chat History
+                </h3>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowHistory(false)}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </div>
+              <ScrollArea className="flex-1">
+                <div className="p-2 space-y-1">
+                  <button
+                    onClick={startNewConversation}
+                    className="w-full p-2 text-sm text-left rounded-lg flex items-center gap-2 hover:bg-secondary transition-colors text-violet-600"
+                    data-testid="button-new-conversation"
+                  >
+                    <Plus className="h-4 w-4" />
+                    New Conversation
+                  </button>
+                  
+                  {conversations.map((conv) => (
+                    <div
+                      key={conv.id}
+                      onClick={() => loadConversation(conv)}
+                      className={cn(
+                        "w-full p-2 text-sm text-left rounded-lg cursor-pointer group flex items-start gap-2 transition-colors",
+                        currentConversationId === conv.id ? "bg-secondary" : "hover:bg-secondary/50"
+                      )}
+                      data-testid={`conversation-item-${conv.id}`}
+                    >
+                      <MessageSquare className="h-4 w-4 mt-0.5 flex-shrink-0 text-muted-foreground" />
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate font-medium">{conv.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(conv.updatedAt), "MMM d, h:mm a")}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                        onClick={(e) => handleDeleteConversation(conv.id, e)}
+                      >
+                        <Trash2 className="h-3 w-3 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                  
+                  {conversations.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-4">
+                      No saved conversations yet
+                    </p>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+          
+          {/* Main Chat Area */}
+          <div className="flex-1 flex flex-col min-w-0">
           <DialogHeader className="px-4 py-3 border-b flex-shrink-0">
             <div className="flex items-center justify-between">
               <DialogTitle className="flex items-center gap-2 text-base">
+                {!showHistory && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 mr-1" 
+                    onClick={() => setShowHistory(true)}
+                    title="View chat history"
+                  >
+                    <History className="h-4 w-4" />
+                  </Button>
+                )}
                 <div className="h-8 w-8 rounded-full bg-gradient-to-r from-violet-600 to-purple-600 flex items-center justify-center">
                   <Bot className="h-4 w-4 text-white" />
                 </div>
                 Ninja AI Assistant
               </DialogTitle>
-              {messages.length > 0 && (
-                <Button variant="ghost" size="sm" onClick={clearConversation} className="text-xs text-muted-foreground">
-                  Clear
-                </Button>
-              )}
+              <div className="flex items-center gap-1">
+                {messages.length > 0 && (
+                  <Button variant="ghost" size="sm" onClick={clearConversation} className="text-xs text-muted-foreground">
+                    Clear
+                  </Button>
+                )}
+              </div>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Agentic AI that can search, update, and create data for you
@@ -492,6 +688,7 @@ export function VoiceLogger() {
                 {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </Button>
             </div>
+          </div>
           </div>
         </DialogContent>
       </Dialog>
