@@ -1860,7 +1860,7 @@ Be concise. Take action. Confirm results.`;
       }
 
       // Fetch meetings from Fathom API
-      const fathomResponse = await fetch("https://api.fathom.video/v1/calls", {
+      const fathomResponse = await fetch("https://api.fathom.ai/v1/calls", {
         headers: {
           "Authorization": `Bearer ${apiKey}`,
           "Content-Type": "application/json",
@@ -1907,7 +1907,7 @@ Be concise. Take action. Confirm results.`;
           const occurredAt = meeting.started_at || meeting.created_at || meeting.date || new Date().toISOString();
           const duration = meeting.duration_seconds ? Math.round(meeting.duration_seconds / 60) : meeting.duration_minutes || null;
           const participants = meeting.participants?.map((p: any) => p.name || p.email || p) || [];
-          const externalLink = meeting.share_url || meeting.url || `https://fathom.video/call/${meetingId}`;
+          const externalLink = meeting.share_url || meeting.url || `https://fathom.ai/call/${meetingId}`;
 
           // Create interaction
           await storage.createInteraction({
@@ -1951,7 +1951,7 @@ Be concise. Take action. Confirm results.`;
         return res.status(400).json({ message: "Fathom API key is required" });
       }
 
-      const response = await fetch("https://api.fathom.video/v1/calls?limit=1", {
+      const response = await fetch("https://api.fathom.ai/v1/calls?limit=1", {
         headers: {
           "Authorization": `Bearer ${apiKey}`,
           "Content-Type": "application/json",
