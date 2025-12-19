@@ -25,22 +25,35 @@ import Layout from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckSquare, Video, GripVertical } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckSquare, Video, GripVertical, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import type { Task, Meeting } from "@shared/schema";
 
 type ViewMode = "month" | "week" | "day";
 
+interface GoogleCalendarEvent {
+  id: string;
+  summary: string;
+  description?: string;
+  start: { dateTime?: string; date?: string };
+  end: { dateTime?: string; date?: string };
+  location?: string;
+  htmlLink?: string;
+}
+
 interface CalendarEvent {
   id: string;
   title: string;
   date: Date;
-  type: "task" | "meeting";
+  endDate?: Date;
+  type: "task" | "meeting" | "google";
   completed?: boolean;
   priority?: string;
   personId?: string | null;
   duration?: number;
+  googleLink?: string;
+  isAllDay?: boolean;
 }
 
 function getEventsForDate(events: CalendarEvent[], date: Date): CalendarEvent[] {
@@ -57,35 +70,60 @@ function EventItem({
   compact?: boolean;
 }) {
   const isTask = event.type === "task";
+  const isGoogle = event.type === "google";
+  const isMeeting = event.type === "meeting";
   
-  return (
+  const getEventStyles = () => {
+    if (isGoogle) {
+      return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300";
+    }
+    if (isTask) {
+      if (event.completed) {
+        return "bg-muted text-muted-foreground line-through";
+      }
+      if (event.priority === "high") {
+        return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300";
+      }
+      return "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300";
+    }
+    return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300";
+  };
+  
+  const content = (
     <div
-      draggable
-      onDragStart={(e) => onDragStart(e, event)}
+      draggable={!isGoogle}
+      onDragStart={(e) => !isGoogle && onDragStart(e, event)}
       className={cn(
-        "group flex items-center gap-1 px-2 py-1 rounded text-xs cursor-grab active:cursor-grabbing transition-colors",
-        isTask
-          ? event.completed
-            ? "bg-muted text-muted-foreground line-through"
-            : event.priority === "high"
-            ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-            : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-          : "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+        "group flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors",
+        !isGoogle && "cursor-grab active:cursor-grabbing",
+        isGoogle && event.googleLink && "cursor-pointer",
+        getEventStyles(),
         "hover:ring-2 hover:ring-ring hover:ring-offset-1"
       )}
       data-testid={`event-${event.type}-${event.id}`}
     >
-      <GripVertical className="h-3 w-3 opacity-0 group-hover:opacity-50 flex-shrink-0" />
-      {isTask ? (
-        <CheckSquare className="h-3 w-3 flex-shrink-0" />
-      ) : (
-        <Video className="h-3 w-3 flex-shrink-0" />
-      )}
+      {!isGoogle && <GripVertical className="h-3 w-3 opacity-0 group-hover:opacity-50 flex-shrink-0" />}
+      {isTask && <CheckSquare className="h-3 w-3 flex-shrink-0" />}
+      {isMeeting && <Video className="h-3 w-3 flex-shrink-0" />}
+      {isGoogle && <CalendarIcon className="h-3 w-3 flex-shrink-0" />}
       <span className={cn("truncate", compact ? "max-w-[60px]" : "max-w-[120px]")}>
         {event.title}
       </span>
+      {isGoogle && event.googleLink && (
+        <ExternalLink className="h-3 w-3 opacity-50 flex-shrink-0" />
+      )}
     </div>
   );
+
+  if (isGoogle && event.googleLink) {
+    return (
+      <a href={event.googleLink} target="_blank" rel="noopener noreferrer">
+        {content}
+      </a>
+    );
+  }
+
+  return content;
 }
 
 function DayCell({
@@ -325,6 +363,47 @@ export default function CalendarPage() {
     queryKey: ["/api/meetings"],
   });
 
+  // Calculate date range for Google Calendar query based on view mode
+  const googleCalendarRange = useMemo(() => {
+    if (viewMode === "month") {
+      const monthStart = startOfMonth(currentDate);
+      const monthEnd = endOfMonth(currentDate);
+      return {
+        timeMin: startOfWeek(monthStart).toISOString(),
+        timeMax: endOfWeek(monthEnd).toISOString(),
+      };
+    } else if (viewMode === "week") {
+      return {
+        timeMin: startOfWeek(currentDate).toISOString(),
+        timeMax: endOfWeek(currentDate).toISOString(),
+      };
+    } else {
+      const dayStart = startOfDay(currentDate);
+      return {
+        timeMin: dayStart.toISOString(),
+        timeMax: addDays(dayStart, 1).toISOString(),
+      };
+    }
+  }, [currentDate, viewMode]);
+
+  const { data: googleEvents = [], isLoading: googleLoading } = useQuery<GoogleCalendarEvent[]>({
+    queryKey: ["/api/calendar/events", googleCalendarRange.timeMin, googleCalendarRange.timeMax],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        timeMin: googleCalendarRange.timeMin,
+        timeMax: googleCalendarRange.timeMax,
+        maxResults: "100",
+      });
+      const res = await fetch(`/api/calendar/events?${params}`);
+      if (!res.ok) {
+        if (res.status === 500) return []; // Google Calendar not connected
+        throw new Error("Failed to fetch calendar events");
+      }
+      return res.json();
+    },
+    staleTime: 60000, // Cache for 1 minute
+  });
+
   const updateTaskMutation = useMutation({
     mutationFn: async ({ id, dueDate }: { id: string; dueDate: Date }) => {
       const res = await fetch(`/api/tasks/${id}`, {
@@ -387,8 +466,25 @@ export default function CalendarPage() {
         personId: meeting.personId,
       }));
 
-    return [...taskEvents, ...meetingEvents];
-  }, [tasks, meetings]);
+    // Convert Google Calendar events to CalendarEvent format
+    const googleCalendarEvents: CalendarEvent[] = googleEvents.map((event) => {
+      const startStr = event.start?.dateTime || event.start?.date;
+      const endStr = event.end?.dateTime || event.end?.date;
+      const isAllDay = !event.start?.dateTime;
+      
+      return {
+        id: `google-${event.id}`,
+        title: event.summary || "(No title)",
+        date: startStr ? new Date(startStr) : new Date(),
+        endDate: endStr ? new Date(endStr) : undefined,
+        type: "google" as const,
+        googleLink: event.htmlLink,
+        isAllDay,
+      };
+    });
+
+    return [...taskEvents, ...meetingEvents, ...googleCalendarEvents];
+  }, [tasks, meetings, googleEvents]);
 
   const handlePrev = () => {
     if (viewMode === "month") setCurrentDate(subMonths(currentDate, 1));
@@ -430,9 +526,10 @@ export default function CalendarPage() {
 
     if (draggedEvent.type === "task") {
       updateTaskMutation.mutate({ id: draggedEvent.id, dueDate: newDate });
-    } else {
+    } else if (draggedEvent.type === "meeting") {
       updateMeetingMutation.mutate({ id: draggedEvent.id, startTime: newDate });
     }
+    // Google Calendar events cannot be rescheduled via drag & drop
 
     setDraggedEvent(null);
   };
@@ -449,6 +546,7 @@ export default function CalendarPage() {
 
   const taskCount = events.filter((e) => e.type === "task").length;
   const meetingCount = events.filter((e) => e.type === "meeting").length;
+  const googleEventCount = events.filter((e) => e.type === "google").length;
 
   return (
     <Layout>
@@ -472,6 +570,13 @@ export default function CalendarPage() {
               <Video className="h-3 w-3" />
               {meetingCount} meetings
             </Badge>
+            {googleEventCount > 0 && (
+              <Badge variant="secondary" className="gap-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                <CalendarIcon className="h-3 w-3" />
+                {googleEventCount} Google
+                {googleLoading && <span className="ml-1 animate-pulse">...</span>}
+              </Badge>
+            )}
           </div>
         </div>
 
