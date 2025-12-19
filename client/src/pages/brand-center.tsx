@@ -32,6 +32,10 @@ export default function BrandCenter() {
   const [showPositionDialog, setShowPositionDialog] = useState(false);
   const [positionX, setPositionX] = useState(50);
   const [positionY, setPositionY] = useState(50);
+  const [zoom, setZoom] = useState(100);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const imageContainerRef = useRef<HTMLDivElement>(null);
 
   const updateMutation = useMutation({
     mutationFn: async (data: Partial<AgentProfile>) => {
@@ -91,22 +95,55 @@ export default function BrandCenter() {
   };
 
   const openPositionDialog = () => {
-    const currentPosition = getValue("headshotPosition") || "50% 50%";
-    const [x, y] = currentPosition.replace(/%/g, "").split(" ").map(Number);
-    setPositionX(isNaN(x) ? 50 : x);
-    setPositionY(isNaN(y) ? 50 : y);
+    const currentPosition = getValue("headshotPosition") || "50% 50% 100";
+    const parts = currentPosition.split(" ");
+    const x = parseFloat(parts[0]) || 50;
+    const y = parseFloat(parts[1]) || 50;
+    const z = parseFloat(parts[2]) || 100;
+    setPositionX(x);
+    setPositionY(y);
+    setZoom(z);
     setShowPositionDialog(true);
   };
 
   const savePosition = () => {
-    const position = `${positionX}% ${positionY}%`;
+    const position = `${positionX} ${positionY} ${zoom}`;
     setFormData(prev => ({ ...prev, headshotPosition: position }));
     updateMutation.mutate({ ...getFormValues(), headshotPosition: position });
     setShowPositionDialog(false);
   };
 
   const getHeadshotPosition = () => {
-    return (formData.headshotPosition ?? profile?.headshotPosition ?? "50% 50%") as string;
+    return (formData.headshotPosition ?? profile?.headshotPosition ?? "50 50 100") as string;
+  };
+
+  const parsePosition = (pos: string) => {
+    const parts = pos.split(" ");
+    return {
+      x: parseFloat(parts[0]) || 50,
+      y: parseFloat(parts[1]) || 50,
+      zoom: parseFloat(parts[2]) || 100
+    };
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    setDragStart({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging) return;
+    const dx = e.clientX - dragStart.x;
+    const dy = e.clientY - dragStart.y;
+    // Invert direction so dragging moves the visible area
+    setPositionX(prev => Math.max(0, Math.min(100, prev - dx * 0.5)));
+    setPositionY(prev => Math.max(0, Math.min(100, prev - dy * 0.5)));
+    setDragStart({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
   };
 
   if (isLoading) {
@@ -245,13 +282,25 @@ export default function BrandCenter() {
                     
                     {getValue("headshotUrl") ? (
                       <div className="space-y-4">
-                        <div className="relative w-32 h-32 mx-auto">
-                          <img 
-                            src={getValue("headshotUrl")} 
-                            alt="Headshot" 
-                            className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
-                            style={{ objectPosition: getHeadshotPosition() }}
-                          />
+                        <div className="relative w-32 h-32 mx-auto rounded-full overflow-hidden border-4 border-white shadow-lg">
+                          {(() => {
+                            const pos = parsePosition(getHeadshotPosition());
+                            return (
+                              <img 
+                                src={getValue("headshotUrl")} 
+                                alt="Headshot" 
+                                className="absolute"
+                                style={{ 
+                                  width: `${pos.zoom}%`,
+                                  height: `${pos.zoom}%`,
+                                  objectFit: 'cover',
+                                  left: `${50 - pos.x * (pos.zoom - 100) / 100}%`,
+                                  top: `${50 - pos.y * (pos.zoom - 100) / 100}%`,
+                                  transform: 'translate(-50%, -50%)'
+                                }}
+                              />
+                            );
+                          })()}
                         </div>
                         <div className="flex gap-2 justify-center">
                           <Button 
@@ -554,49 +603,50 @@ export default function BrandCenter() {
           </DialogHeader>
           <div className="space-y-6 py-4">
             <div className="flex justify-center">
-              <div className="w-40 h-40 rounded-full overflow-hidden border-4 border-white shadow-lg">
+              <div 
+                ref={imageContainerRef}
+                className="w-48 h-48 rounded-full overflow-hidden border-4 border-white shadow-lg cursor-move relative bg-muted"
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                data-testid="drag-area"
+              >
                 <img 
                   src={getValue("headshotUrl")} 
                   alt="Headshot preview" 
-                  className="w-full h-full object-cover"
-                  style={{ objectPosition: `${positionX}% ${positionY}%` }}
+                  className="absolute pointer-events-none select-none"
+                  draggable={false}
+                  style={{ 
+                    width: `${zoom}%`,
+                    height: `${zoom}%`,
+                    objectFit: 'cover',
+                    left: `${50 - positionX * (zoom - 100) / 100}%`,
+                    top: `${50 - positionY * (zoom - 100) / 100}%`,
+                    transform: 'translate(-50%, -50%)'
+                  }}
                 />
               </div>
             </div>
             
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">Horizontal Position</Label>
-                <div className="flex items-center gap-4">
-                  <span className="text-xs text-muted-foreground">Left</span>
-                  <Slider
-                    value={[positionX]}
-                    onValueChange={([v]) => setPositionX(v)}
-                    min={0}
-                    max={100}
-                    step={1}
-                    className="flex-1"
-                    data-testid="slider-position-x"
-                  />
-                  <span className="text-xs text-muted-foreground">Right</span>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">Vertical Position</Label>
-                <div className="flex items-center gap-4">
-                  <span className="text-xs text-muted-foreground">Top</span>
-                  <Slider
-                    value={[positionY]}
-                    onValueChange={([v]) => setPositionY(v)}
-                    min={0}
-                    max={100}
-                    step={1}
-                    className="flex-1"
-                    data-testid="slider-position-y"
-                  />
-                  <span className="text-xs text-muted-foreground">Bottom</span>
-                </div>
+            <p className="text-sm text-muted-foreground text-center">
+              Drag the image to reposition
+            </p>
+            
+            <div className="space-y-2">
+              <Label className="text-sm text-muted-foreground">Zoom</Label>
+              <div className="flex items-center gap-4">
+                <span className="text-xs text-muted-foreground">-</span>
+                <Slider
+                  value={[zoom]}
+                  onValueChange={([v]) => setZoom(v)}
+                  min={100}
+                  max={200}
+                  step={5}
+                  className="flex-1"
+                  data-testid="slider-zoom"
+                />
+                <span className="text-xs text-muted-foreground">+</span>
               </div>
             </div>
           </div>
