@@ -890,6 +890,68 @@ When analyzing images:
     }
   });
 
+  // ==================== AI CONVERSATIONS ROUTES ====================
+  
+  // Get all AI conversations
+  app.get("/api/ai-conversations", async (req, res) => {
+    try {
+      const conversations = await storage.getAllAiConversations();
+      res.json(conversations);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get single AI conversation
+  app.get("/api/ai-conversations/:id", async (req, res) => {
+    try {
+      const conversation = await storage.getAiConversation(req.params.id);
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      res.json(conversation);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Create AI conversation
+  app.post("/api/ai-conversations", async (req, res) => {
+    try {
+      const { title, messages } = req.body;
+      const conversation = await storage.createAiConversation({ 
+        title: title || "New Conversation", 
+        messages: messages || [] 
+      });
+      res.status(201).json(conversation);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Update AI conversation
+  app.patch("/api/ai-conversations/:id", async (req, res) => {
+    try {
+      const conversation = await storage.updateAiConversation(req.params.id, req.body);
+      if (!conversation) {
+        return res.status(404).json({ message: "Conversation not found" });
+      }
+      res.json(conversation);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Delete AI conversation
+  app.delete("/api/ai-conversations/:id", async (req, res) => {
+    try {
+      await storage.deleteAiConversation(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ==================== PEOPLE ROUTES ====================
   
   // Get all people
