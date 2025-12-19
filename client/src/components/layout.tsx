@@ -88,22 +88,19 @@ function NavContent({ location, setOpen, userName, userInitials, brokerage, head
           );
         })}
       </nav>
-      <div className="p-3 border-t border-sidebar-border">
+      <div className="p-3 border-t border-sidebar-border space-y-2">
+        {/* Settings button - clear and obvious */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-sidebar-accent transition-colors" data-testid="button-profile-menu">
-              <Avatar className="h-9 w-9">
-                {headshotUrl && <AvatarImage src={headshotUrl} alt={userName} />}
-                <AvatarFallback className="bg-primary/10 text-primary font-serif font-bold text-sm">
-                  {userInitials}
-                </AvatarFallback>
-              </Avatar>
-              <div className="text-sm flex-1 min-w-0 text-left">
-                <p className="font-medium truncate">{userName}</p>
-                <p className="text-xs text-muted-foreground truncate">{brokerage}</p>
-              </div>
-              <ChevronUp className="h-4 w-4 text-muted-foreground" />
-            </button>
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start gap-3 h-10 px-3 text-muted-foreground hover:text-foreground"
+              data-testid="button-settings-menu"
+            >
+              <Settings className="h-5 w-5" />
+              <span className="font-medium">Settings</span>
+              <ChevronUp className="h-4 w-4 ml-auto" />
+            </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" side="top" className="w-56 mb-1">
             {profileMenuItems.map((item) => {
@@ -122,6 +119,20 @@ function NavContent({ location, setOpen, userName, userInitials, brokerage, head
             })}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Profile info - compact display */}
+        <div className="flex items-center gap-3 px-2 py-1">
+          <Avatar className="h-8 w-8">
+            {headshotUrl && <AvatarImage src={headshotUrl} alt={userName} />}
+            <AvatarFallback className="bg-primary/10 text-primary font-serif font-bold text-xs">
+              {userInitials}
+            </AvatarFallback>
+          </Avatar>
+          <div className="text-sm flex-1 min-w-0">
+            <p className="font-medium truncate text-sm">{userName}</p>
+            <p className="text-xs text-muted-foreground truncate">{brokerage}</p>
+          </div>
+        </div>
       </div>
     </div>
   );
