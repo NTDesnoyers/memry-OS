@@ -10,12 +10,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Upload, BarChart3, PieChart, TrendingUp, FileText, Printer, Home, ArrowRight, ChevronRight, DollarSign, Calculator, Target } from "lucide-react";
+import { Plus, Upload, BarChart3, PieChart, TrendingUp, FileText, Printer, Home, ArrowRight, ChevronRight, DollarSign, Calculator, Target, FileSpreadsheet } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ScatterChart, Scatter, Cell, ReferenceLine, Line, ComposedChart, Legend } from "recharts";
 import { type PricingReview, type MLSProperty, type Person } from "@shared/schema";
+import Papa from "papaparse";
 
 function calculateLinearRegression(data: { x: number; y: number }[]): { slope: number; intercept: number; rSquared: number } {
   if (data.length < 2) return { slope: 0, intercept: 0, rSquared: 0 };
@@ -38,49 +39,57 @@ function calculateLinearRegression(data: { x: number; y: number }[]): { slope: n
   return { slope, intercept, rSquared };
 }
 
-function parseMLSData(rawData: string): MLSProperty[] {
-  const lines = rawData.trim().split('\n');
-  if (lines.length < 2) return [];
+function parseCSVRow(headers: string[], row: Record<string, string>): MLSProperty | null {
+  const prop: any = {};
   
-  const headers = lines[0].split('\t').map(h => h.trim().toLowerCase());
+  for (const [key, value] of Object.entries(row)) {
+    const header = key.trim().toLowerCase();
+    const val = (value || '').trim();
+    
+    if (header.includes('mls') && (header.includes('number') || header.includes('#'))) prop.mlsNumber = val;
+    else if (header === 'mls#' || header === 'mls #') prop.mlsNumber = val;
+    else if (header.includes('status') && !header.includes('change')) prop.status = val;
+    else if (header.includes('address') || header.includes('street')) prop.address = val;
+    else if (header === 'city') prop.city = val;
+    else if (header.includes('subdivision') || header.includes('neighborhood')) prop.subdivision = val;
+    else if (header.includes('acre') || header.includes('lot size')) prop.acres = parseFloat(val) || undefined;
+    else if (header.includes('above grade') && header.includes('sqft')) prop.aboveGradeSqft = parseInt(val) || undefined;
+    else if ((header.includes('total') && header.includes('sqft')) || header === 'sqft' || header === 'square feet') prop.totalSqft = parseInt(val) || undefined;
+    else if (header === 'beds' || header.includes('bedroom') || header === 'br') prop.beds = parseInt(val) || undefined;
+    else if (header.includes('bath') || header === 'ba') prop.baths = parseFloat(val) || undefined;
+    else if (header.includes('year') && header.includes('built')) prop.yearBuilt = parseInt(val) || undefined;
+    else if (header === 'style' || header === 'type') prop.style = val;
+    else if (header === 'list price' || header.includes('list price') || header === 'lp') prop.listPrice = parseInt(val.replace(/[$,]/g, '')) || undefined;
+    else if (header.includes('original') && header.includes('price')) prop.originalListPrice = parseInt(val.replace(/[$,]/g, '')) || undefined;
+    else if (header.includes('close price') || header.includes('sold price') || header === 'sp' || header === 'sale price') prop.closePrice = parseInt(val.replace(/[$,]/g, '')) || undefined;
+    else if (header === 'dom' || header.includes('days on market') || header === 'cdom') prop.dom = parseInt(val) || undefined;
+    else if (header.includes('list') && header.includes('date')) prop.listDate = val;
+    else if (header.includes('close date') || header.includes('sold date') || header === 'settlement date') prop.closeDate = val;
+    else if (header.includes('status change')) prop.statusChangeDate = val;
+  }
+  
+  if (prop.totalSqft && prop.closePrice) {
+    prop.pricePerSqft = Math.round(prop.closePrice / prop.totalSqft);
+  } else if (prop.aboveGradeSqft && prop.closePrice) {
+    prop.pricePerSqft = Math.round(prop.closePrice / prop.aboveGradeSqft);
+  }
+  
+  if (prop.mlsNumber || prop.address) {
+    return prop as MLSProperty;
+  }
+  return null;
+}
+
+function parseMLSData(csvData: Papa.ParseResult<Record<string, string>>): MLSProperty[] {
+  if (!csvData.data || csvData.data.length === 0) return [];
+  
+  const headers = csvData.meta.fields || [];
   const properties: MLSProperty[] = [];
   
-  for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split('\t');
-    const prop: any = {};
-    
-    headers.forEach((header, idx) => {
-      const value = values[idx]?.trim() || '';
-      
-      if (header.includes('mls') && header.includes('number')) prop.mlsNumber = value;
-      else if (header.includes('status') && !header.includes('change')) prop.status = value;
-      else if (header.includes('address') || header.includes('street')) prop.address = value;
-      else if (header === 'city') prop.city = value;
-      else if (header.includes('subdivision') || header.includes('neighborhood')) prop.subdivision = value;
-      else if (header.includes('acre') || header.includes('lot size')) prop.acres = parseFloat(value) || undefined;
-      else if (header.includes('above grade') && header.includes('sqft')) prop.aboveGradeSqft = parseInt(value) || undefined;
-      else if (header.includes('total') && header.includes('sqft')) prop.totalSqft = parseInt(value) || undefined;
-      else if (header === 'beds' || header.includes('bedroom')) prop.beds = parseInt(value) || undefined;
-      else if (header.includes('bath')) prop.baths = parseFloat(value) || undefined;
-      else if (header.includes('year') && header.includes('built')) prop.yearBuilt = parseInt(value) || undefined;
-      else if (header === 'style') prop.style = value;
-      else if (header === 'list price' || header.includes('list price')) prop.listPrice = parseInt(value.replace(/[$,]/g, '')) || undefined;
-      else if (header.includes('original') && header.includes('price')) prop.originalListPrice = parseInt(value.replace(/[$,]/g, '')) || undefined;
-      else if (header.includes('close price') || header.includes('sold price')) prop.closePrice = parseInt(value.replace(/[$,]/g, '')) || undefined;
-      else if (header === 'dom' || header.includes('days on market')) prop.dom = parseInt(value) || undefined;
-      else if (header.includes('list') && header.includes('date')) prop.listDate = value;
-      else if (header.includes('close date') || header.includes('sold date')) prop.closeDate = value;
-      else if (header.includes('status change')) prop.statusChangeDate = value;
-    });
-    
-    if (prop.totalSqft && prop.closePrice) {
-      prop.pricePerSqft = Math.round(prop.closePrice / prop.totalSqft);
-    } else if (prop.aboveGradeSqft && prop.closePrice) {
-      prop.pricePerSqft = Math.round(prop.closePrice / prop.aboveGradeSqft);
-    }
-    
-    if (prop.mlsNumber || prop.address) {
-      properties.push(prop as MLSProperty);
+  for (const row of csvData.data) {
+    const prop = parseCSVRow(headers, row);
+    if (prop) {
+      properties.push(prop);
     }
   }
   
@@ -152,13 +161,16 @@ function calculateMetrics(properties: MLSProperty[]) {
 
 export default function VisualPricing() {
   const queryClient = useQueryClient();
-  const [mlsInput, setMlsInput] = useState("");
   const [reviewTitle, setReviewTitle] = useState("");
   const [neighborhood, setNeighborhood] = useState("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [activeReviewId, setActiveReviewId] = useState<string | null>(null);
   const [subjectPrice, setSubjectPrice] = useState<number>(500000);
   const [subjectSqft, setSubjectSqft] = useState<number>(2000);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [parsedProperties, setParsedProperties] = useState<MLSProperty[]>([]);
+  const [parseError, setParseError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { data: reviews = [], isLoading } = useQuery<PricingReview[]>({
     queryKey: ["/api/pricing-reviews"],
@@ -186,9 +198,11 @@ export default function VisualPricing() {
     onSuccess: (newReview) => {
       queryClient.invalidateQueries({ queryKey: ["/api/pricing-reviews"] });
       setCreateDialogOpen(false);
-      setMlsInput("");
       setReviewTitle("");
       setNeighborhood("");
+      setUploadedFile(null);
+      setParsedProperties([]);
+      setParseError(null);
       setActiveReviewId(newReview.id);
     },
   });
@@ -197,16 +211,42 @@ export default function VisualPricing() {
   const mlsData = (activeReview?.mlsData as MLSProperty[]) || [];
   const metrics = useMemo(() => activeReview?.calculatedMetrics as ReturnType<typeof calculateMetrics> || calculateMetrics([]), [activeReview]);
   
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setUploadedFile(file);
+    setParseError(null);
+    
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results: Papa.ParseResult<Record<string, string>>) => {
+        const properties = parseMLSData(results);
+        if (properties.length === 0) {
+          setParseError("Could not find any valid properties. Make sure your CSV has headers like MLS#, Status, Address, SqFt, Close Price, etc.");
+          setParsedProperties([]);
+        } else {
+          setParsedProperties(properties);
+          setParseError(null);
+        }
+      },
+      error: (error: Error) => {
+        setParseError(`Failed to parse CSV: ${error.message}`);
+        setParsedProperties([]);
+      }
+    });
+  };
+  
   const handleCreateReview = () => {
-    const properties = parseMLSData(mlsInput);
-    if (properties.length === 0) {
-      alert("Could not parse any properties from the data. Make sure it's tab-separated with headers.");
+    if (parsedProperties.length === 0) {
+      setParseError("Please upload a valid CSV file first.");
       return;
     }
     createReviewMutation.mutate({
       title: reviewTitle || `${neighborhood || 'Market'} Analysis`,
       neighborhood,
-      mlsData: properties
+      mlsData: parsedProperties
     });
   };
   
@@ -338,23 +378,56 @@ export default function VisualPricing() {
                       />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="mlsData">Paste MLS Export Data (Tab-Separated)</Label>
-                    <Textarea 
-                      id="mlsData"
-                      placeholder="Paste your MLS export data here... Include headers on the first line."
-                      className="min-h-[200px] font-mono text-xs"
-                      value={mlsInput}
-                      onChange={(e) => setMlsInput(e.target.value)}
-                      data-testid="input-mls-data"
-                    />
+                  <div className="space-y-3">
+                    <Label>Upload MLS Export (CSV)</Label>
+                    <div 
+                      className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                        uploadedFile ? 'border-primary bg-primary/5' : 'border-muted-foreground/25 hover:border-primary/50'
+                      }`}
+                      onClick={() => fileInputRef.current?.click()}
+                      data-testid="upload-area"
+                    >
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".csv"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                        data-testid="input-csv-file"
+                      />
+                      {uploadedFile ? (
+                        <div className="space-y-2">
+                          <FileSpreadsheet className="h-10 w-10 mx-auto text-primary" />
+                          <p className="font-medium">{uploadedFile.name}</p>
+                          {parsedProperties.length > 0 && (
+                            <Badge variant="secondary" className="bg-green-100 text-green-800">
+                              {parsedProperties.length} properties found
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <Upload className="h-10 w-10 mx-auto text-muted-foreground/50" />
+                          <p className="text-muted-foreground">Click to upload CSV file</p>
+                          <p className="text-xs text-muted-foreground">
+                            Export from Bright MLS as CSV
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    {parseError && (
+                      <p className="text-sm text-red-600 flex items-center gap-2">
+                        <span className="h-4 w-4 rounded-full bg-red-100 flex items-center justify-center text-xs">!</span>
+                        {parseError}
+                      </p>
+                    )}
                     <p className="text-xs text-muted-foreground">
-                      Export from Bright MLS using "Focus1st Export" format. Must include: MLS Number, Status, Address, Beds, Baths, SqFt, List Price, Close Price, DOM, Close Date
+                      Required columns: MLS#, Status, Address, SqFt, List Price, Close Price, DOM, Close Date
                     </p>
                   </div>
                   <div className="flex justify-end gap-2 pt-4">
                     <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>Cancel</Button>
-                    <Button onClick={handleCreateReview} disabled={!mlsInput.trim()} data-testid="button-create-analysis">
+                    <Button onClick={handleCreateReview} disabled={parsedProperties.length === 0} data-testid="button-create-analysis">
                       <Upload className="h-4 w-4 mr-2" /> Import & Analyze
                     </Button>
                   </div>
