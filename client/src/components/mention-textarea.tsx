@@ -42,9 +42,12 @@ export function MentionTextarea({
     queryKey: ["/api/people"],
   });
 
-  const filteredPeople = people.filter(person =>
-    person.name.toLowerCase().includes(searchQuery.toLowerCase())
-  ).slice(0, 8);
+  const filteredPeople = people.filter(person => {
+    const query = searchQuery.toLowerCase();
+    const nameMatch = person.name.toLowerCase().includes(query);
+    const nicknameMatch = person.nickname?.toLowerCase().includes(query);
+    return nameMatch || nicknameMatch;
+  }).slice(0, 8);
 
   const updateDropdownPosition = useCallback(() => {
     if (!textareaRef.current || mentionStart === null) return;
@@ -245,7 +248,10 @@ export function MentionTextarea({
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{person.name}</p>
+                <p className="text-sm font-medium truncate">
+                  {person.name}
+                  {person.nickname && <span className="text-muted-foreground"> ({person.nickname})</span>}
+                </p>
                 {person.role && (
                   <p className="text-xs text-muted-foreground truncate">{person.role}</p>
                 )}

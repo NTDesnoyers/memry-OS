@@ -54,6 +54,7 @@ export default function People() {
   
   const [formData, setFormData] = useState<Partial<InsertPerson>>({
     name: "",
+    nickname: "",
     email: "",
     phone: "",
     role: "",
@@ -839,15 +840,27 @@ export default function People() {
                   <DialogTitle>Add New Person</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="name">Name *</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="John Doe"
-                      data-testid="input-name"
-                    />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="name">Name *</Label>
+                      <Input
+                        id="name"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="Joseph Melody"
+                        data-testid="input-name"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="nickname">Nickname</Label>
+                      <Input
+                        id="nickname"
+                        value={formData.nickname || ""}
+                        onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
+                        placeholder="Joe"
+                        data-testid="input-nickname"
+                      />
+                    </div>
                   </div>
                   <div>
                     <Label htmlFor="email">Email</Label>

@@ -55,10 +55,13 @@ export function PersonProfileDrawer({ personId, open, onClose }: PersonProfileDr
                 {person.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
               </div>
               <div className="flex-1">
-                <h2 className="text-lg font-semibold" data-testid="text-person-name">{person.name}</h2>
+                <h2 className="text-lg font-semibold" data-testid="text-person-name">
+                  {person.name}
+                  {person.nickname && <span className="text-muted-foreground font-normal"> ({person.nickname})</span>}
+                </h2>
                 <div className="flex flex-wrap gap-2 mt-2">
                   {person.role && <Badge variant="secondary">{person.role}</Badge>}
-                  {person.category && <Badge variant="outline">{person.category}</Badge>}
+                  {person.segment && <Badge variant="outline">{person.segment}</Badge>}
                   {person.isBuyer && <Badge className="bg-blue-100 text-blue-800">Buyer</Badge>}
                   {person.isRealtor && <Badge className="bg-purple-100 text-purple-800">Realtor</Badge>}
                   {person.buyerStatus && <Badge className="bg-orange-100 text-orange-800">{person.buyerStatus}</Badge>}

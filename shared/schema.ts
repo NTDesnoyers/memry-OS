@@ -23,6 +23,7 @@ export type User = typeof users.$inferSelect;
 export const people = pgTable("people", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
+  nickname: text("nickname"),
   email: text("email"),
   phone: text("phone"),
   role: text("role"),
