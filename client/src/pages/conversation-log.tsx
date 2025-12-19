@@ -928,17 +928,18 @@ export default function ConversationLog() {
             </div>
 
             {selectedInteraction?.transcript && (
-              <div>
-                <Label className="mb-2 block flex items-center gap-2">
+              <details className="group">
+                <summary className="cursor-pointer flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
                   <FileText className="h-4 w-4" />
-                  Full Transcript
-                </Label>
-                <div className="bg-muted/50 rounded-lg p-3 max-h-64 overflow-y-auto">
+                  <span>View Full Transcript</span>
+                  <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" />
+                </summary>
+                <div className="bg-muted/50 rounded-lg p-3 max-h-64 overflow-y-auto mt-2">
                   <pre className="text-xs whitespace-pre-wrap font-sans leading-relaxed">
                     {selectedInteraction.transcript}
                   </pre>
                 </div>
-              </div>
+              </details>
             )}
           </div>
 
