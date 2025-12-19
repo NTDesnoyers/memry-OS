@@ -41,6 +41,36 @@ function calculateLinearRegression(data: { x: number; y: number }[]): { slope: n
   return { slope, intercept, rSquared };
 }
 
+// Calculate nice round tick values for axis display
+function calculateNiceTicks(min: number, max: number, targetTickCount: number = 6): { ticks: number[]; niceMin: number; niceMax: number } {
+  if (min === max) return { ticks: [min], niceMin: min, niceMax: max };
+  
+  const range = max - min;
+  const roughStep = range / (targetTickCount - 1);
+  
+  // Find a "nice" step size (1, 2, 5, 10, 20, 50, 100, etc.)
+  const magnitude = Math.pow(10, Math.floor(Math.log10(roughStep)));
+  const normalizedStep = roughStep / magnitude;
+  
+  let niceStep: number;
+  if (normalizedStep <= 1) niceStep = 1 * magnitude;
+  else if (normalizedStep <= 2) niceStep = 2 * magnitude;
+  else if (normalizedStep <= 5) niceStep = 5 * magnitude;
+  else niceStep = 10 * magnitude;
+  
+  // Round min down and max up to nice values
+  const niceMin = Math.floor(min / niceStep) * niceStep;
+  const niceMax = Math.ceil(max / niceStep) * niceStep;
+  
+  // Generate ticks
+  const ticks: number[] = [];
+  for (let tick = niceMin; tick <= niceMax; tick += niceStep) {
+    ticks.push(tick);
+  }
+  
+  return { ticks, niceMin, niceMax };
+}
+
 function parseCSVRow(headers: string[], row: Record<string, string>): MLSProperty | null {
   const prop: any = {};
   
@@ -391,15 +421,39 @@ export default function VisualPricing() {
       }));
   }, [metrics.closedProperties, scatterXAxis]);
   
+  // Calculate nice tick values for the scattergram axes
+  const scatterAxisTicks = useMemo(() => {
+    if (sqftPriceData.length === 0) {
+      return { xTicks: [], yTicks: [], xDomain: [0, 100] as [number, number], yDomain: [0, 100000] as [number, number] };
+    }
+    
+    const xValues = sqftPriceData.map(p => p.xValue);
+    const yValues = sqftPriceData.map(p => p.price);
+    
+    const minX = Math.min(...xValues);
+    const maxX = Math.max(...xValues);
+    const minY = Math.min(...yValues);
+    const maxY = Math.max(...yValues);
+    
+    const xResult = calculateNiceTicks(minX, maxX, 6);
+    const yResult = calculateNiceTicks(minY, maxY, 6);
+    
+    return {
+      xTicks: xResult.ticks,
+      yTicks: yResult.ticks,
+      xDomain: [xResult.niceMin, xResult.niceMax] as [number, number],
+      yDomain: [yResult.niceMin, yResult.niceMax] as [number, number]
+    };
+  }, [sqftPriceData]);
+  
   const regressionLine = useMemo(() => {
     if (sqftPriceData.length < 2) return { data: [], slope: 0, intercept: 0, rSquared: 0 };
     
     const points = sqftPriceData.map(p => ({ x: p.xValue, y: p.price }));
     const { slope, intercept, rSquared } = calculateLinearRegression(points);
     
-    const xValues = sqftPriceData.map(p => p.xValue);
-    const minX = Math.min(...xValues);
-    const maxX = Math.max(...xValues);
+    // Extend the line to the nice domain boundaries
+    const [minX, maxX] = scatterAxisTicks.xDomain;
     
     const lineData = [
       { xValue: minX, trendPrice: slope * minX + intercept },
@@ -407,7 +461,7 @@ export default function VisualPricing() {
     ];
     
     return { data: lineData, slope, intercept, rSquared };
-  }, [sqftPriceData]);
+  }, [sqftPriceData, scatterAxisTicks.xDomain]);
   
   const barChartData = Object.entries(metrics.monthlyClosings || {}).map(([month, count]) => ({
     month,
@@ -766,7 +820,8 @@ export default function VisualPricing() {
                                     <XAxis 
                                       type="number" 
                                       dataKey="xValue" 
-                                      domain={['dataMin - dataMin * 0.05', 'dataMax + dataMax * 0.05']}
+                                      domain={scatterAxisTicks.xDomain}
+                                      ticks={scatterAxisTicks.xTicks}
                                       tickFormatter={(v) => {
                                         if (scatterXAxis === 'acres') return v.toFixed(2);
                                         if (scatterXAxis === 'baths') return v.toFixed(1);
@@ -782,14 +837,15 @@ export default function VisualPricing() {
                                     <YAxis 
                                       type="number" 
                                       dataKey="price" 
-                                      domain={['dataMin - 50000', 'dataMax + 50000']}
+                                      domain={scatterAxisTicks.yDomain}
+                                      ticks={scatterAxisTicks.yTicks}
                                       tickFormatter={(v) => `$${v.toLocaleString()}`}
-                                      width={90}
+                                      width={100}
                                       label={{ 
                                         value: 'Property Price', 
                                         angle: -90, 
                                         position: 'insideLeft', 
-                                        offset: -5,
+                                        offset: -15,
                                         style: { fontWeight: 'bold', fontSize: 14 }
                                       }}
                                     />
