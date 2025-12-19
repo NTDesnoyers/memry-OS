@@ -9,14 +9,14 @@ export default function Dashboard() {
   return (
     <LayoutComponent>
       <div className="min-h-screen bg-background relative overflow-hidden">
-        {/* Background Texture */}
+        {/* Background Texture - hidden on mobile for performance */}
         <div 
-          className="absolute inset-0 opacity-40 mix-blend-multiply pointer-events-none"
+          className="absolute inset-0 opacity-20 mix-blend-multiply pointer-events-none hidden md:block"
           style={{ backgroundImage: `url(${paperBg})`, backgroundSize: 'cover' }}
         />
         
-        <div className="relative z-10 container mx-auto px-4 py-8 max-w-6xl">
-          <header className="flex justify-between items-end mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="relative z-10 container mx-auto px-4 py-6 md:py-8 max-w-6xl">
+          <header className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 md:mb-8">
             <div>
               <h1 className="text-4xl md:text-5xl font-serif font-bold text-primary tracking-tight mb-2">Business Tracker</h1>
               <p className="text-muted-foreground text-lg">Execution Clarity & Performance</p>
@@ -29,7 +29,7 @@ export default function Dashboard() {
             </Link>
           </header>
 
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-lg p-4 mb-8 flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-bottom-5 duration-700">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-lg p-4 mb-6 md:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
             <div className="flex items-center gap-4">
               <div className="p-2 bg-blue-100 rounded-full text-primary">
                 <Workflow className="h-5 w-5" />
@@ -46,7 +46,7 @@ export default function Dashboard() {
             </Link>
           </div>
 
-          <div className="grid md:grid-cols-4 gap-6 mb-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
             <Card className="border-none shadow-sm bg-card/60 backdrop-blur-sm">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-4">
@@ -101,7 +101,7 @@ export default function Dashboard() {
             </Card>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150">
+          <div className="grid md:grid-cols-3 gap-4 md:gap-6">
             <Card className="md:col-span-2 border-none shadow-md bg-card/80 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="font-serif">Current Focus</CardTitle>

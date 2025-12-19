@@ -178,7 +178,8 @@
 @media (max-width: 768px) {
   /* Faster transitions on mobile */
   *, *::before, *::after {
-    transition-duration: 0.15s !important;
+    transition-duration: 0.1s !important;
+    animation-duration: 0.15s !important;
   }
   
   /* Better touch targets - minimum 44px */
@@ -194,22 +195,34 @@
   /* GPU acceleration for smoother scrolling */
   .container,
   main,
-  [role="tabpanel"] {
+  [role="tabpanel"],
+  .overflow-auto,
+  .overflow-y-auto {
     transform: translateZ(0);
     -webkit-overflow-scrolling: touch;
+    will-change: scroll-position;
   }
   
-  /* Reduce heavy background effects on mobile */
-  .fixed.inset-0.opacity-40 {
-    opacity: 0.15 !important;
+  /* Hide heavy background textures on mobile for performance */
+  .absolute.inset-0[style*="backgroundImage"],
+  .fixed.inset-0[style*="backgroundImage"],
+  [class*="mix-blend"] {
+    display: none !important;
+  }
+  
+  /* Reduce backdrop blur on mobile - very expensive */
+  .backdrop-blur-sm,
+  .backdrop-blur {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
   }
   
   /* Better tap feedback */
   button:active,
   [role="button"]:active,
   a:active {
-    transform: scale(0.98);
-    opacity: 0.9;
+    transform: scale(0.97);
+    opacity: 0.85;
   }
   
   /* Prevent text selection on interactive elements */
@@ -219,14 +232,27 @@
     -webkit-tap-highlight-color: transparent;
   }
   
-  /* Smoother cards */
+  /* Smoother cards with GPU layer */
   .card, [class*="Card"] {
     transform: translateZ(0);
+    will-change: transform;
   }
   
-  /* Reduce shadow complexity on mobile */
-  .shadow-lg, .shadow-md {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+  /* Simpler shadows on mobile */
+  .shadow-lg, .shadow-md, .shadow-xl {
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1) !important;
+  }
+  
+  /* Disable expensive animations on cards */
+  .animate-in {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  
+  /* Faster list rendering */
+  ul, ol, [role="list"] {
+    contain: content;
   }
 }
 
