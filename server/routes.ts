@@ -1859,24 +1859,44 @@ Be concise. Take action. Confirm results.`;
         return res.status(400).json({ message: "Fathom API key is required" });
       }
 
-      // Fetch meetings from Fathom API
-      const fathomResponse = await fetch("https://api.fathom.ai/external/v1/meetings?include_summary=true&include_transcript=true&calendar_invitees_domains_type=all", {
-        headers: {
-          "X-Api-Key": apiKey,
-          "Content-Type": "application/json",
-        },
-      });
+      // Fetch all meetings from Fathom API with pagination
+      let allMeetings: any[] = [];
+      let cursor: string | null = null;
+      let pageCount = 0;
+      const maxPages = 50; // Safety limit
 
-      if (!fathomResponse.ok) {
-        const errorText = await fathomResponse.text();
-        return res.status(fathomResponse.status).json({ 
-          message: `Fathom API error: ${fathomResponse.statusText}`,
-          details: errorText
+      do {
+        const url = new URL("https://api.fathom.ai/external/v1/meetings");
+        url.searchParams.set("include_summary", "true");
+        url.searchParams.set("include_transcript", "true");
+        url.searchParams.set("calendar_invitees_domains_type", "all");
+        if (cursor) {
+          url.searchParams.set("cursor", cursor);
+        }
+
+        const fathomResponse = await fetch(url.toString(), {
+          headers: {
+            "X-Api-Key": apiKey,
+            "Content-Type": "application/json",
+          },
         });
-      }
 
-      const fathomData = await fathomResponse.json();
-      const meetings = fathomData.items || fathomData.calls || fathomData.data || [];
+        if (!fathomResponse.ok) {
+          const errorText = await fathomResponse.text();
+          return res.status(fathomResponse.status).json({ 
+            message: `Fathom API error: ${fathomResponse.statusText}`,
+            details: errorText
+          });
+        }
+
+        const fathomData = await fathomResponse.json();
+        const pageMeetings = fathomData.items || [];
+        allMeetings = allMeetings.concat(pageMeetings);
+        cursor = fathomData.next_cursor || null;
+        pageCount++;
+      } while (cursor && pageCount < maxPages);
+
+      const meetings = allMeetings;
       
       if (!Array.isArray(meetings)) {
         return res.status(400).json({ message: "Unexpected response format from Fathom" });
