@@ -12,8 +12,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { DollarSign, Save, Plus, FileText, BarChart3, Clock, Phone, Calculator, Play, Pause, RotateCcw, ChevronLeft, ChevronRight, CalendarIcon, History, TrendingUp } from "lucide-react";
+import { DollarSign, Save, Plus, FileText, BarChart3, Clock, Phone, Calculator, Play, Pause, RotateCcw, ChevronLeft, ChevronRight, CalendarIcon, History, TrendingUp, Upload, FileSpreadsheet, X, Check, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
+import * as XLSX from "xlsx";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -163,6 +164,191 @@ export default function BusinessTracker() {
     actualCloseDate: new Date(),
     isReferral: false,
     personId: "",
+  });
+
+  // Spreadsheet Upload State
+  type ParsedDeal = {
+    address: string;
+    side: "buyer" | "seller";
+    value: number;
+    commissionPercent: number;
+    actualGCI: number;
+    actualCloseDate: Date;
+    isReferral: boolean;
+    clientName?: string;
+    isValid: boolean;
+    errors: string[];
+  };
+
+  const [showSpreadsheetDialog, setShowSpreadsheetDialog] = useState(false);
+  const [parsedDeals, setParsedDeals] = useState<ParsedDeal[]>([]);
+  const [isParsingFile, setIsParsingFile] = useState(false);
+  const [columnMappings, setColumnMappings] = useState<Record<string, string>>({});
+  const [rawHeaders, setRawHeaders] = useState<string[]>([]);
+  const [rawData, setRawData] = useState<Record<string, unknown>[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const knownColumnMappings: Record<string, string[]> = {
+    address: ["address", "property address", "prop address", "street", "property"],
+    side: ["side", "buy/sell", "type", "transaction type", "buyer/seller"],
+    value: ["value", "sale price", "sp", "sales price", "price", "sold price", "close price"],
+    commissionPercent: ["commission", "comm %", "commission %", "comm", "rate"],
+    actualGCI: ["gci", "gross commission", "commission earned", "agent commission"],
+    actualCloseDate: ["close date", "coe", "closing date", "date", "close", "closed date"],
+    isReferral: ["referral", "is referral", "referred"],
+    clientName: ["client", "client name", "name", "buyer name", "seller name"],
+  };
+
+  const parseSpreadsheetFile = async (file: File) => {
+    setIsParsingFile(true);
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet) as Record<string, unknown>[];
+      
+      if (jsonData.length === 0) {
+        toast.error("Spreadsheet appears to be empty");
+        setIsParsingFile(false);
+        return;
+      }
+
+      const headers = Object.keys(jsonData[0] || {});
+      setRawHeaders(headers);
+      setRawData(jsonData);
+
+      // Auto-detect column mappings
+      const detectedMappings: Record<string, string> = {};
+      for (const [field, aliases] of Object.entries(knownColumnMappings)) {
+        for (const header of headers) {
+          if (aliases.some(alias => header.toLowerCase().includes(alias.toLowerCase()))) {
+            detectedMappings[field] = header;
+            break;
+          }
+        }
+      }
+      setColumnMappings(detectedMappings);
+
+      // Parse deals with detected mappings
+      parseDealsWithMappings(jsonData, detectedMappings);
+    } catch (error) {
+      toast.error("Failed to read spreadsheet file");
+      console.error(error);
+    }
+    setIsParsingFile(false);
+  };
+
+  const parseDealsWithMappings = (data: Record<string, unknown>[], mappings: Record<string, string>) => {
+    const parsed: ParsedDeal[] = data.map((row) => {
+      const errors: string[] = [];
+      
+      const address = mappings.address ? String(row[mappings.address] || "") : "";
+      const sideRaw = mappings.side ? String(row[mappings.side] || "").toLowerCase() : "";
+      const side: "buyer" | "seller" = sideRaw.includes("sell") ? "seller" : "buyer";
+      
+      const valueRaw = mappings.value ? row[mappings.value] : 0;
+      const value = typeof valueRaw === "number" ? valueRaw : parseInt(String(valueRaw).replace(/[^0-9.-]/g, "")) || 0;
+      
+      const commRaw = mappings.commissionPercent ? row[mappings.commissionPercent] : 3;
+      const commissionPercent = typeof commRaw === "number" ? commRaw : parseFloat(String(commRaw).replace(/[^0-9.]/g, "")) || 3;
+      
+      const gciRaw = mappings.actualGCI ? row[mappings.actualGCI] : null;
+      const actualGCI = gciRaw ? (typeof gciRaw === "number" ? gciRaw : parseInt(String(gciRaw).replace(/[^0-9.-]/g, ""))) : Math.round(value * (commissionPercent / 100));
+      
+      let actualCloseDate = new Date();
+      if (mappings.actualCloseDate && row[mappings.actualCloseDate]) {
+        const dateVal = row[mappings.actualCloseDate];
+        if (typeof dateVal === "number") {
+          // Excel serial date
+          actualCloseDate = new Date((dateVal - 25569) * 86400 * 1000);
+        } else {
+          actualCloseDate = new Date(String(dateVal));
+        }
+        if (isNaN(actualCloseDate.getTime())) {
+          errors.push("Invalid date");
+          actualCloseDate = new Date();
+        }
+      } else {
+        errors.push("Missing close date");
+      }
+
+      const referralRaw = mappings.isReferral ? row[mappings.isReferral] : false;
+      const isReferral = referralRaw === true || String(referralRaw).toLowerCase() === "yes" || String(referralRaw).toLowerCase() === "true";
+
+      const clientName = mappings.clientName ? String(row[mappings.clientName] || "") : "";
+
+      if (!address && !clientName) errors.push("Missing address/client");
+      if (!value) errors.push("Missing sale price");
+
+      return {
+        address,
+        side,
+        value,
+        commissionPercent,
+        actualGCI,
+        actualCloseDate,
+        isReferral,
+        clientName,
+        isValid: errors.length === 0,
+        errors,
+      };
+    });
+
+    setParsedDeals(parsed);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      parseSpreadsheetFile(file);
+      setShowSpreadsheetDialog(true);
+    }
+  };
+
+  const updateColumnMapping = (field: string, header: string) => {
+    const newMappings = { ...columnMappings, [field]: header };
+    setColumnMappings(newMappings);
+    parseDealsWithMappings(rawData, newMappings);
+  };
+
+  const bulkImportDealsMutation = useMutation({
+    mutationFn: async (deals: ParsedDeal[]) => {
+      const validDeals = deals.filter(d => d.isValid);
+      const results = await Promise.all(
+        validDeals.map(deal => 
+          fetch("/api/deals", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: deal.clientName || deal.address || "Historical Sale",
+              address: deal.address,
+              side: deal.side,
+              type: "sale",
+              stage: "closed",
+              value: deal.value,
+              commissionPercent: deal.commissionPercent,
+              actualGCI: deal.actualGCI,
+              actualCloseDate: deal.actualCloseDate,
+              isReferral: deal.isReferral,
+            }),
+          })
+        )
+      );
+      return results;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+      setShowSpreadsheetDialog(false);
+      setParsedDeals([]);
+      setRawHeaders([]);
+      setRawData([]);
+      setColumnMappings({});
+      toast.success(`Successfully imported ${parsedDeals.filter(d => d.isValid).length} deals`);
+    },
+    onError: () => {
+      toast.error("Failed to import some deals");
+    },
   });
 
   const { data: pieEntries = [] } = useQuery<PieEntry[]>({
@@ -1037,14 +1223,33 @@ export default function BusinessTracker() {
                 <div className="text-center flex-1">
                   <p className="text-sm text-muted-foreground">A transaction has closed! Enter closing details in tan cells.</p>
                 </div>
-                <Button 
-                  onClick={() => setShowHistoricalDealDialog(true)} 
-                  className="gap-1"
-                  data-testid="button-add-historical-deal"
-                >
-                  <History className="h-4 w-4" />
-                  Add Historical Deal
-                </Button>
+                <div className="flex gap-2">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                    accept=".xlsx,.xls,.csv"
+                    className="hidden"
+                    data-testid="input-spreadsheet-upload"
+                  />
+                  <Button 
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()} 
+                    className="gap-1"
+                    data-testid="button-upload-spreadsheet"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Upload Spreadsheet
+                  </Button>
+                  <Button 
+                    onClick={() => setShowHistoricalDealDialog(true)} 
+                    className="gap-1"
+                    data-testid="button-add-historical-deal"
+                  >
+                    <History className="h-4 w-4" />
+                    Add Historical Deal
+                  </Button>
+                </div>
               </div>
               
               <div className="overflow-x-auto">
@@ -1667,6 +1872,144 @@ export default function BusinessTracker() {
               data-testid="button-save-historical-deal"
             >
               {createHistoricalDealMutation.isPending ? "Saving..." : "Add Deal"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Spreadsheet Import Dialog */}
+      <Dialog open={showSpreadsheetDialog} onOpenChange={setShowSpreadsheetDialog}>
+        <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5" />
+              Import Historical Deals from Spreadsheet
+            </DialogTitle>
+            <DialogDescription>
+              Upload a CSV or Excel file with your historical closed transactions. We'll auto-detect columns.
+            </DialogDescription>
+          </DialogHeader>
+
+          {isParsingFile ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+            </div>
+          ) : parsedDeals.length > 0 ? (
+            <div className="flex-1 overflow-hidden flex flex-col gap-4">
+              {/* Column Mapping */}
+              <div className="border rounded-lg p-3">
+                <p className="text-sm font-medium mb-2">Column Mappings (adjust if needed)</p>
+                <div className="grid grid-cols-4 gap-2 text-xs">
+                  {["address", "side", "value", "actualCloseDate", "commissionPercent", "actualGCI", "clientName", "isReferral"].map((field) => (
+                    <div key={field} className="flex flex-col gap-1">
+                      <Label className="text-xs capitalize">{field.replace(/([A-Z])/g, ' $1').trim()}</Label>
+                      <Select
+                        value={columnMappings[field] || ""}
+                        onValueChange={(value) => updateColumnMapping(field, value)}
+                      >
+                        <SelectTrigger className="h-7 text-xs">
+                          <SelectValue placeholder="Not mapped" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Not mapped</SelectItem>
+                          {rawHeaders.map((header) => (
+                            <SelectItem key={header} value={header}>
+                              {header}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Preview Table */}
+              <div className="flex-1 overflow-auto border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50 text-xs">
+                      <TableHead className="w-8"></TableHead>
+                      <TableHead>Address</TableHead>
+                      <TableHead>Side</TableHead>
+                      <TableHead>Sale Price</TableHead>
+                      <TableHead>Close Date</TableHead>
+                      <TableHead>Comm %</TableHead>
+                      <TableHead>GCI</TableHead>
+                      <TableHead>Client</TableHead>
+                      <TableHead>Referral</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {parsedDeals.slice(0, 50).map((deal, idx) => (
+                      <TableRow key={idx} className={`text-xs ${!deal.isValid ? 'bg-red-50' : ''}`}>
+                        <TableCell className="p-1">
+                          {deal.isValid ? (
+                            <Check className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <AlertCircle className="h-4 w-4 text-red-500" title={deal.errors.join(", ")} />
+                          )}
+                        </TableCell>
+                        <TableCell className="max-w-[150px] truncate">{deal.address}</TableCell>
+                        <TableCell>{deal.side}</TableCell>
+                        <TableCell>${deal.value.toLocaleString()}</TableCell>
+                        <TableCell>{format(deal.actualCloseDate, "MM/dd/yyyy")}</TableCell>
+                        <TableCell>{deal.commissionPercent}%</TableCell>
+                        <TableCell className="text-green-700">${deal.actualGCI.toLocaleString()}</TableCell>
+                        <TableCell className="max-w-[100px] truncate">{deal.clientName}</TableCell>
+                        <TableCell>{deal.isReferral ? "Yes" : ""}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Summary */}
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex gap-4">
+                  <span className="text-green-700 flex items-center gap-1">
+                    <Check className="h-4 w-4" />
+                    {parsedDeals.filter(d => d.isValid).length} valid
+                  </span>
+                  {parsedDeals.filter(d => !d.isValid).length > 0 && (
+                    <span className="text-red-600 flex items-center gap-1">
+                      <AlertCircle className="h-4 w-4" />
+                      {parsedDeals.filter(d => !d.isValid).length} with errors (will be skipped)
+                    </span>
+                  )}
+                </div>
+                <div className="text-muted-foreground">
+                  Total GCI: ${parsedDeals.filter(d => d.isValid).reduce((sum, d) => sum + d.actualGCI, 0).toLocaleString()}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <FileSpreadsheet className="h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-muted-foreground mb-2">No data loaded yet</p>
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                <Upload className="h-4 w-4 mr-2" />
+                Choose File
+              </Button>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowSpreadsheetDialog(false);
+              setParsedDeals([]);
+              setRawHeaders([]);
+              setRawData([]);
+              setColumnMappings({});
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => bulkImportDealsMutation.mutate(parsedDeals)}
+              disabled={bulkImportDealsMutation.isPending || parsedDeals.filter(d => d.isValid).length === 0}
+              data-testid="button-import-deals"
+            >
+              {bulkImportDealsMutation.isPending ? "Importing..." : `Import ${parsedDeals.filter(d => d.isValid).length} Deals`}
             </Button>
           </DialogFooter>
         </DialogContent>
