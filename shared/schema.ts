@@ -414,6 +414,8 @@ export type MLSProperty = {
   acres?: number;
   aboveGradeSqft?: number;
   totalSqft?: number;
+  finishedSqft?: number;
+  frontage?: number;
   beds?: number;
   baths?: number;
   yearBuilt?: number;

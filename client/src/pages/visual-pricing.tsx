@@ -12,6 +12,8 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Upload, BarChart3, PieChart, TrendingUp, FileText, Printer, Home, ArrowRight, ChevronRight, DollarSign, Calculator, Target, FileSpreadsheet } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo, useRef } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ScatterChart, Scatter, Cell, ReferenceLine, Line, ComposedChart, Legend } from "recharts";
@@ -72,8 +74,8 @@ function parseCSVRow(headers: string[], row: Record<string, string>): MLSPropert
     const isSqftHeader = header.includes('sqft') || header.includes('sq ft') || header.includes('sf') || 
                          header.includes('square') || header.includes('sqfeet') || header === 'gla' || 
                          header.includes('grossliving') || header.includes('living area');
-    const isAboveGrade = header.includes('above') || header.includes('abv') || header.includes('agla') || 
-                         header.includes('finished');
+    const isAboveGrade = header.includes('above') || header.includes('abv') || header.includes('agla');
+    const isFinished = header.includes('finished') && !header.includes('above');
     const isTotalSqft = header.includes('total') || header.includes('ttl') || header.includes('gross') ||
                         header.includes('living') || header === 'gla';
     
@@ -82,10 +84,16 @@ function parseCSVRow(headers: string[], row: Record<string, string>): MLSPropert
       if (sqftValue && sqftValue > 0) {
         if (isAboveGrade && !prop.aboveGradeSqft) {
           prop.aboveGradeSqft = sqftValue;
+        } else if (isFinished && !prop.finishedSqft) {
+          prop.finishedSqft = sqftValue;
         } else if (!prop.totalSqft) {
           prop.totalSqft = sqftValue;
         }
       }
+    }
+    // Frontage (lot frontage, road frontage, water frontage)
+    if (!prop.frontage && (header.includes('frontage') || header.includes('front ft'))) {
+      prop.frontage = parseFloat(val.replace(/[^0-9.]/g, '')) || undefined;
     }
     // Bedrooms (not in else-if chain since sqft is separate)
     if (!prop.beds && (header === 'beds' || header.includes('bedroom') || header === 'br' || header === 'bedrooms' || header === 'bed')) {
@@ -255,6 +263,12 @@ export default function VisualPricing() {
   const [parseError, setParseError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  // Scattergram options
+  type XAxisOption = 'aboveGradeSqft' | 'totalSqft' | 'finishedSqft' | 'beds' | 'baths' | 'acres' | 'frontage';
+  const [scatterXAxis, setScatterXAxis] = useState<XAxisOption>('aboveGradeSqft');
+  const [showTrendLine, setShowTrendLine] = useState(true);
+  const [showValueBoxes, setShowValueBoxes] = useState(true);
+  
   const { data: reviews = [], isLoading } = useQuery<PricingReview[]>({
     queryKey: ["/api/pricing-reviews"],
   });
@@ -339,30 +353,57 @@ export default function VisualPricing() {
     address: p.address
   })) || [];
   
+  // X-axis option labels and getters
+  const xAxisLabels: Record<XAxisOption, string> = {
+    aboveGradeSqft: 'Above Ground Sq Ft',
+    totalSqft: 'Total Sq Ft',
+    finishedSqft: 'Finished Sq Ft',
+    beds: 'Bedrooms',
+    baths: 'Bathrooms',
+    acres: 'Acres',
+    frontage: 'Frontage'
+  };
+  
+  const getXAxisValue = (p: MLSProperty, axis: XAxisOption): number | null => {
+    switch (axis) {
+      case 'aboveGradeSqft': return p.aboveGradeSqft || null;
+      case 'totalSqft': return p.totalSqft || null;
+      case 'finishedSqft': return p.finishedSqft || null;
+      case 'beds': return p.beds || null;
+      case 'baths': return p.baths || null;
+      case 'acres': return p.acres || null;
+      case 'frontage': return p.frontage || null;
+      default: return null;
+    }
+  };
+  
   const sqftPriceData = useMemo(() => {
     const closedProps = metrics.closedProperties || [];
     return closedProps
-      .filter(p => (p.aboveGradeSqft || p.totalSqft) && p.closePrice)
+      .filter(p => getXAxisValue(p, scatterXAxis) !== null && p.closePrice)
       .map(p => ({
-        sqft: p.aboveGradeSqft || p.totalSqft || 0,  // Prefer above grade sqft
+        xValue: getXAxisValue(p, scatterXAxis) || 0,
         price: p.closePrice || 0,
-        address: p.address || ''
+        address: p.address || '',
+        beds: p.beds,
+        baths: p.baths,
+        sqft: p.aboveGradeSqft || p.totalSqft
       }));
-  }, [metrics.closedProperties]);
+  }, [metrics.closedProperties, scatterXAxis]);
   
   const regressionLine = useMemo(() => {
     if (sqftPriceData.length < 2) return { data: [], slope: 0, intercept: 0, rSquared: 0 };
     
-    const points = sqftPriceData.map(p => ({ x: p.sqft, y: p.price }));
+    const points = sqftPriceData.map(p => ({ x: p.xValue, y: p.price }));
     const { slope, intercept, rSquared } = calculateLinearRegression(points);
     
-    const sqftValues = sqftPriceData.map(p => p.sqft);
-    const minSqft = Math.min(...sqftValues);
-    const maxSqft = Math.max(...sqftValues);
+    const xValues = sqftPriceData.map(p => p.xValue);
+    const minX = Math.min(...xValues);
+    const maxX = Math.max(...xValues);
     
     const lineData = [
-      { sqft: minSqft, trendPrice: slope * minSqft + intercept },
-      { sqft: maxSqft, trendPrice: slope * maxSqft + intercept }
+      { xValue: minX, trendPrice: slope * minX + intercept },
+      { xValue: maxX, trendPrice: slope * maxX + intercept }
     ];
     
     return { data: lineData, slope, intercept, rSquared };
@@ -642,116 +683,191 @@ export default function VisualPricing() {
                   </TabsContent>
                   
                   <TabsContent value="scattergram" className="mt-6">
-                    <Card className="border-none shadow-md">
-                      <CardHeader className="text-center">
-                        <CardTitle className="font-serif text-2xl">Homes in Your Area</CardTitle>
-                        <CardDescription>
-                          Property Price vs. Total Square Feet (TSF); {activeReview?.neighborhood || activeReview?.title}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        {sqftPriceData.length > 0 ? (
-                          <>
-                            <div className="flex items-center justify-center gap-8 mb-4">
-                              <div className="flex items-center gap-2">
-                                <div className="w-4 h-4 rounded-full bg-[#3b82f6]" />
-                                <span className="text-sm">Properties Closed</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="w-8 h-1 bg-[#991b1b] rounded" />
-                                <span className="text-sm text-[#991b1b] font-medium">Fair Market Value</span>
-                              </div>
-                            </div>
-                            <div className="h-[450px]">
-                              <ResponsiveContainer width="100%" height="100%">
-                                <ComposedChart margin={{ top: 20, right: 30, bottom: 60, left: 80 }}>
-                                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />
-                                  <XAxis 
-                                    type="number" 
-                                    dataKey="sqft" 
-                                    domain={['dataMin - 200', 'dataMax + 200']}
-                                    tickFormatter={(v) => v.toLocaleString()}
-                                    label={{ 
-                                      value: 'Total Square Feet', 
-                                      position: 'bottom', 
-                                      offset: 40,
-                                      style: { fontWeight: 'bold', fontSize: 14 }
-                                    }}
-                                  />
-                                  <YAxis 
-                                    type="number" 
-                                    dataKey="price" 
-                                    domain={['dataMin - 50000', 'dataMax + 50000']}
-                                    tickFormatter={(v) => `$${(v/1000000).toFixed(1)}M`}
-                                    label={{ 
-                                      value: 'Property Price', 
-                                      angle: -90, 
-                                      position: 'insideLeft', 
-                                      offset: -10,
-                                      style: { fontWeight: 'bold', fontSize: 14 }
-                                    }}
-                                  />
-                                  <Tooltip 
-                                    content={({ active, payload }) => {
-                                      if (!active || !payload || payload.length === 0) return null;
-                                      const data = payload[0].payload;
-                                      if (data.address) {
-                                        return (
-                                          <div className="bg-white border rounded-lg shadow-lg p-3">
-                                            <p className="font-medium text-sm">{data.address}</p>
-                                            <p className="text-sm text-muted-foreground">
-                                              {data.sqft?.toLocaleString()} sqft
-                                            </p>
-                                            <p className="text-sm font-semibold text-primary">
-                                              ${data.price?.toLocaleString()}
-                                            </p>
-                                          </div>
-                                        );
-                                      }
-                                      return null;
-                                    }}
-                                  />
-                                  <Scatter 
-                                    name="Properties" 
-                                    data={sqftPriceData} 
-                                    fill="#3b82f6"
-                                  >
-                                    {sqftPriceData.map((_, index) => (
-                                      <Cell key={index} fill="#3b82f6" r={8} />
-                                    ))}
-                                  </Scatter>
-                                  <Line 
-                                    name="Fair Market Value"
-                                    data={regressionLine.data}
-                                    type="linear"
-                                    dataKey="trendPrice"
-                                    stroke="#991b1b"
-                                    strokeWidth={3}
-                                    dot={false}
-                                    legendType="none"
-                                  />
-                                </ComposedChart>
-                              </ResponsiveContainer>
-                            </div>
-                            <div className="mt-4 text-center text-sm text-muted-foreground">
-                              <p>
-                                Fair Market Value Line: ${regressionLine.slope.toFixed(2)}/sqft 
-                                {regressionLine.intercept >= 0 ? ' + ' : ' - '}
-                                ${Math.abs(regressionLine.intercept).toLocaleString(undefined, { maximumFractionDigits: 0 })} base
-                              </p>
-                              <p className="text-xs mt-1">
-                                R² = {(regressionLine.rSquared * 100).toFixed(1)}% correlation between size and price
-                              </p>
-                            </div>
-                          </>
-                        ) : (
-                          <div className="text-center py-12 text-muted-foreground">
-                            <p>No properties with square footage data available.</p>
-                            <p className="text-sm mt-2">Make sure your MLS export includes Total SqFt or Above Grade SqFt fields.</p>
+                    <div className="grid lg:grid-cols-[280px_1fr] gap-6">
+                      <Card className="h-fit">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-lg">Scattergram Options</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                          <div className="space-y-3">
+                            <Label className="text-sm font-medium">X-Axis Variable</Label>
+                            <RadioGroup 
+                              value={scatterXAxis} 
+                              onValueChange={(v) => setScatterXAxis(v as XAxisOption)}
+                              className="space-y-2"
+                            >
+                              {(['aboveGradeSqft', 'totalSqft', 'finishedSqft', 'beds', 'baths', 'acres', 'frontage'] as XAxisOption[]).map((option) => (
+                                <div key={option} className="flex items-center space-x-2">
+                                  <RadioGroupItem value={option} id={option} />
+                                  <Label htmlFor={option} className="text-sm font-normal cursor-pointer">
+                                    {xAxisLabels[option]}
+                                  </Label>
+                                </div>
+                              ))}
+                            </RadioGroup>
                           </div>
-                        )}
-                      </CardContent>
-                    </Card>
+                          
+                          <Separator />
+                          
+                          <div className="space-y-3">
+                            <Label className="text-sm font-medium">Display Options</Label>
+                            <div className="space-y-2">
+                              <div className="flex items-center space-x-2">
+                                <Checkbox 
+                                  id="showTrendLine" 
+                                  checked={showTrendLine}
+                                  onCheckedChange={(checked) => setShowTrendLine(checked === true)}
+                                />
+                                <Label htmlFor="showTrendLine" className="text-sm font-normal cursor-pointer">
+                                  Show Trend (Fair Market Value) Line
+                                </Label>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Checkbox 
+                                  id="showValueBoxes" 
+                                  checked={showValueBoxes}
+                                  onCheckedChange={(checked) => setShowValueBoxes(checked === true)}
+                                />
+                                <Label htmlFor="showValueBoxes" className="text-sm font-normal cursor-pointer">
+                                  Show Value Labels on Hover
+                                </Label>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      
+                      <Card className="border-none shadow-md">
+                        <CardHeader className="text-center">
+                          <CardTitle className="font-serif text-2xl">Homes in Your Area</CardTitle>
+                          <CardDescription>
+                            Property Price vs. {xAxisLabels[scatterXAxis]}; {activeReview?.neighborhood || activeReview?.title}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          {sqftPriceData.length > 0 ? (
+                            <>
+                              <div className="flex items-center justify-center gap-8 mb-4">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-4 h-4 rounded-full bg-[#3b82f6]" />
+                                  <span className="text-sm">Properties Closed</span>
+                                </div>
+                                {showTrendLine && (
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-8 h-1 bg-[#991b1b] rounded" />
+                                    <span className="text-sm text-[#991b1b] font-medium">Fair Market Value</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="h-[450px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                  <ComposedChart margin={{ top: 20, right: 30, bottom: 60, left: 80 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e5e5" />
+                                    <XAxis 
+                                      type="number" 
+                                      dataKey="xValue" 
+                                      domain={['dataMin - dataMin * 0.1', 'dataMax + dataMax * 0.1']}
+                                      tickFormatter={(v) => {
+                                        if (scatterXAxis === 'acres' || scatterXAxis === 'baths') return v.toFixed(2);
+                                        return v.toLocaleString();
+                                      }}
+                                      label={{ 
+                                        value: xAxisLabels[scatterXAxis], 
+                                        position: 'bottom', 
+                                        offset: 40,
+                                        style: { fontWeight: 'bold', fontSize: 14 }
+                                      }}
+                                    />
+                                    <YAxis 
+                                      type="number" 
+                                      dataKey="price" 
+                                      domain={['dataMin - 50000', 'dataMax + 50000']}
+                                      tickFormatter={(v) => `$${(v/1000000).toFixed(1)}M`}
+                                      label={{ 
+                                        value: 'Property Price', 
+                                        angle: -90, 
+                                        position: 'insideLeft', 
+                                        offset: -10,
+                                        style: { fontWeight: 'bold', fontSize: 14 }
+                                      }}
+                                    />
+                                    {showValueBoxes && (
+                                      <Tooltip 
+                                        content={({ active, payload }) => {
+                                          if (!active || !payload || payload.length === 0) return null;
+                                          const data = payload[0].payload;
+                                          if (data.address) {
+                                            return (
+                                              <div className="bg-white border rounded-lg shadow-lg p-3">
+                                                <p className="font-medium text-sm">{data.address}</p>
+                                                <p className="text-sm text-muted-foreground">
+                                                  {xAxisLabels[scatterXAxis]}: {
+                                                    scatterXAxis === 'acres' || scatterXAxis === 'baths' 
+                                                      ? data.xValue?.toFixed(2) 
+                                                      : data.xValue?.toLocaleString()
+                                                  }
+                                                </p>
+                                                {data.sqft && (
+                                                  <p className="text-sm text-muted-foreground">
+                                                    {data.sqft.toLocaleString()} sqft
+                                                  </p>
+                                                )}
+                                                <p className="text-sm font-semibold text-primary">
+                                                  ${data.price?.toLocaleString()}
+                                                </p>
+                                              </div>
+                                            );
+                                          }
+                                          return null;
+                                        }}
+                                      />
+                                    )}
+                                    <Scatter 
+                                      name="Properties" 
+                                      data={sqftPriceData} 
+                                      fill="#3b82f6"
+                                    >
+                                      {sqftPriceData.map((_, index) => (
+                                        <Cell key={index} fill="#3b82f6" r={8} />
+                                      ))}
+                                    </Scatter>
+                                    {showTrendLine && (
+                                      <Line 
+                                        name="Fair Market Value"
+                                        data={regressionLine.data}
+                                        type="linear"
+                                        dataKey="trendPrice"
+                                        stroke="#991b1b"
+                                        strokeWidth={3}
+                                        dot={false}
+                                        legendType="none"
+                                      />
+                                    )}
+                                  </ComposedChart>
+                                </ResponsiveContainer>
+                              </div>
+                              {showTrendLine && (
+                                <div className="mt-4 text-center text-sm text-muted-foreground">
+                                  <p>
+                                    Fair Market Value Line: ${regressionLine.slope.toFixed(2)}/{scatterXAxis.includes('Sqft') || scatterXAxis === 'frontage' ? 'unit' : xAxisLabels[scatterXAxis].toLowerCase()} 
+                                    {regressionLine.intercept >= 0 ? ' + ' : ' - '}
+                                    ${Math.abs(regressionLine.intercept).toLocaleString(undefined, { maximumFractionDigits: 0 })} base
+                                  </p>
+                                  <p className="text-xs mt-1">
+                                    R² = {(regressionLine.rSquared * 100).toFixed(1)}% correlation between {xAxisLabels[scatterXAxis].toLowerCase()} and price
+                                  </p>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <div className="text-center py-12 text-muted-foreground">
+                              <p>No properties with {xAxisLabels[scatterXAxis].toLowerCase()} data available.</p>
+                              <p className="text-sm mt-2">Try selecting a different X-axis variable or upload MLS data with this field.</p>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </div>
                   </TabsContent>
                   
                   <TabsContent value="odds" className="mt-6">
