@@ -443,11 +443,11 @@ export default function BusinessTracker() {
                 <h2 className="text-2xl font-serif font-bold">{currentYear} Business Tracker</h2>
               </div>
               
-              {/* 4-Column Layout */}
-              <div className="grid grid-cols-4 gap-3">
+              {/* 4-Column Layout - Horizontal snap scroll on mobile */}
+              <div className="flex md:grid md:grid-cols-4 gap-3 overflow-x-auto snap-x snap-mandatory pb-4 -mx-4 px-4 md:mx-0 md:px-0 md:overflow-visible scrollbar-hide">
                 {/* WARM PROSPECTS */}
                 <div 
-                  className={`bg-blue-100/80 rounded-lg overflow-hidden transition-all ${dragOverStage === "warm" ? "ring-2 ring-blue-500 ring-offset-2" : ""}`}
+                  className={`flex-shrink-0 w-[85vw] md:w-auto snap-center bg-blue-100/80 rounded-lg overflow-hidden transition-all ${dragOverStage === "warm" ? "ring-2 ring-blue-500 ring-offset-2" : ""}`}
                   onDragOver={(e) => handleDragOver(e, "warm")}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, "warm")}
@@ -506,7 +506,7 @@ export default function BusinessTracker() {
                 </div>
 
                 {/* HOT AND ACTIVE + HOT AND CONFUSED */}
-                <div className="space-y-3">
+                <div className="flex-shrink-0 w-[85vw] md:w-auto snap-center space-y-3">
                   {/* Hot and Active */}
                   <div 
                     className={`bg-blue-100/80 rounded-lg overflow-hidden transition-all ${dragOverStage === "hot" ? "ring-2 ring-red-500 ring-offset-2" : ""}`}
@@ -619,7 +619,7 @@ export default function BusinessTracker() {
 
                 {/* UNDER CONTRACT */}
                 <div 
-                  className={`bg-slate-100/80 rounded-lg overflow-hidden transition-all ${dragOverStage === "in_contract" ? "ring-2 ring-slate-500 ring-offset-2" : ""}`}
+                  className={`flex-shrink-0 w-[85vw] md:w-auto snap-center bg-slate-100/80 rounded-lg overflow-hidden transition-all ${dragOverStage === "in_contract" ? "ring-2 ring-slate-500 ring-offset-2" : ""}`}
                   onDragOver={(e) => handleDragOver(e, "in_contract")}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, "in_contract")}
@@ -688,7 +688,7 @@ export default function BusinessTracker() {
 
                 {/* CLOSED TRANSACTIONS */}
                 <div 
-                  className={`bg-slate-100/80 rounded-lg overflow-hidden transition-all ${dragOverStage === "closed" ? "ring-2 ring-green-500 ring-offset-2" : ""}`}
+                  className={`flex-shrink-0 w-[85vw] md:w-auto snap-center bg-slate-100/80 rounded-lg overflow-hidden transition-all ${dragOverStage === "closed" ? "ring-2 ring-green-500 ring-offset-2" : ""}`}
                   onDragOver={(e) => handleDragOver(e, "closed")}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, "closed")}
@@ -743,9 +743,18 @@ export default function BusinessTracker() {
                 </div>
               </div>
 
+              {/* Swipe hint for mobile */}
+              <div className="md:hidden flex justify-center gap-2 mt-2">
+                <div className="w-2 h-2 rounded-full bg-blue-400"></div>
+                <div className="w-2 h-2 rounded-full bg-red-400"></div>
+                <div className="w-2 h-2 rounded-full bg-slate-400"></div>
+                <div className="w-2 h-2 rounded-full bg-green-400"></div>
+                <span className="text-xs text-muted-foreground ml-2">Swipe to see more</span>
+              </div>
+
               {/* Summary Row */}
               <div className="bg-slate-200/80 rounded-lg p-4 mt-4">
-                <div className="grid grid-cols-6 gap-4 text-center text-sm">
+                <div className="grid grid-cols-3 md:grid-cols-6 gap-4 text-center text-sm">
                   <div>
                     <p className="text-xs text-muted-foreground">Warm Sides</p>
                     <p className="font-bold text-lg">{warmDeals.length}</p>
