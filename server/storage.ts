@@ -17,7 +17,8 @@ import {
   type Interaction, type InsertInteraction,
   type AiConversation, type InsertAiConversation,
   type Household, type InsertHousehold,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households
+  type GeneratedDraft, type InsertGeneratedDraft,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt } from "drizzle-orm";
@@ -147,6 +148,15 @@ export interface IStorage {
   createAiConversation(conversation: InsertAiConversation): Promise<AiConversation>;
   updateAiConversation(id: string, conversation: Partial<InsertAiConversation>): Promise<AiConversation | undefined>;
   deleteAiConversation(id: string): Promise<void>;
+  
+  // Generated Drafts
+  getAllGeneratedDrafts(): Promise<GeneratedDraft[]>;
+  getGeneratedDraftsByPerson(personId: string): Promise<GeneratedDraft[]>;
+  getGeneratedDraftsByStatus(status: string): Promise<GeneratedDraft[]>;
+  getGeneratedDraft(id: string): Promise<GeneratedDraft | undefined>;
+  createGeneratedDraft(draft: InsertGeneratedDraft): Promise<GeneratedDraft>;
+  updateGeneratedDraft(id: string, draft: Partial<InsertGeneratedDraft>): Promise<GeneratedDraft | undefined>;
+  deleteGeneratedDraft(id: string): Promise<void>;
   
   // Households
   getAllHouseholds(): Promise<Household[]>;
@@ -794,6 +804,49 @@ export class DatabaseStorage implements IStorage {
       .where(eq(people.id, personId))
       .returning();
     return updated || undefined;
+  }
+  
+  // Generated Drafts
+  async getAllGeneratedDrafts(): Promise<GeneratedDraft[]> {
+    return await db.select().from(generatedDrafts).orderBy(desc(generatedDrafts.createdAt));
+  }
+  
+  async getGeneratedDraftsByPerson(personId: string): Promise<GeneratedDraft[]> {
+    return await db.select().from(generatedDrafts)
+      .where(eq(generatedDrafts.personId, personId))
+      .orderBy(desc(generatedDrafts.createdAt));
+  }
+  
+  async getGeneratedDraftsByStatus(status: string): Promise<GeneratedDraft[]> {
+    return await db.select().from(generatedDrafts)
+      .where(eq(generatedDrafts.status, status))
+      .orderBy(desc(generatedDrafts.createdAt));
+  }
+  
+  async getGeneratedDraft(id: string): Promise<GeneratedDraft | undefined> {
+    const [draft] = await db.select().from(generatedDrafts).where(eq(generatedDrafts.id, id));
+    return draft || undefined;
+  }
+  
+  async createGeneratedDraft(insertDraft: InsertGeneratedDraft): Promise<GeneratedDraft> {
+    const [draft] = await db
+      .insert(generatedDrafts)
+      .values({ ...insertDraft, updatedAt: new Date() })
+      .returning();
+    return draft;
+  }
+  
+  async updateGeneratedDraft(id: string, draft: Partial<InsertGeneratedDraft>): Promise<GeneratedDraft | undefined> {
+    const [updated] = await db
+      .update(generatedDrafts)
+      .set({ ...draft, updatedAt: new Date() })
+      .where(eq(generatedDrafts.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async deleteGeneratedDraft(id: string): Promise<void> {
+    await db.delete(generatedDrafts).where(eq(generatedDrafts.id, id));
   }
 }
 

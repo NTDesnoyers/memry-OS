@@ -2383,7 +2383,7 @@ When analyzing images:
           }
 
           // Create interaction
-          await storage.createInteraction({
+          const newInteraction = await storage.createInteraction({
             type: "meeting",
             source: "fathom",
             title,
@@ -2396,6 +2396,16 @@ When analyzing images:
             participants,
             personId: matchedPersonId, // Auto-matched by email or null
           });
+
+          // Auto-process with AI if transcript available
+          if (transcript && newInteraction.id) {
+            try {
+              const { processInteraction } = await import("./conversation-processor");
+              await processInteraction(newInteraction.id);
+            } catch (aiErr) {
+              console.log("AI processing skipped for meeting:", meetingId, aiErr);
+            }
+          }
 
           imported++;
         } catch (err: any) {
@@ -2764,6 +2774,134 @@ When analyzing images:
         },
         events: categorizedEvents,
       });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============ CONVERSATION INTELLIGENCE API ============
+  
+  // Process an interaction with AI to extract insights
+  app.post("/api/interactions/:id/process", async (req, res) => {
+    try {
+      const { processInteraction } = await import("./conversation-processor");
+      const result = await processInteraction(req.params.id);
+      
+      if (!result.success) {
+        return res.status(400).json({ message: result.error });
+      }
+      
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error processing interaction:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Process all unprocessed interactions
+  app.post("/api/interactions/process-all", async (req, res) => {
+    try {
+      const { processInteraction } = await import("./conversation-processor");
+      const allInteractions = await storage.getAllInteractions();
+      
+      let processed = 0;
+      let skipped = 0;
+      let failed = 0;
+      
+      for (const interaction of allInteractions) {
+        // Skip if already processed
+        const extractedData = interaction.aiExtractedData as any;
+        if (extractedData?.processingStatus === "completed") {
+          skipped++;
+          continue;
+        }
+        
+        // Skip if no transcript/summary
+        if (!interaction.transcript && !interaction.summary) {
+          skipped++;
+          continue;
+        }
+        
+        const result = await processInteraction(interaction.id);
+        if (result.success) {
+          processed++;
+        } else {
+          failed++;
+        }
+      }
+      
+      res.json({
+        success: true,
+        processed,
+        skipped,
+        failed,
+        total: allInteractions.length,
+      });
+    } catch (error: any) {
+      console.error("Error processing all interactions:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get all generated drafts
+  app.get("/api/generated-drafts", async (req, res) => {
+    try {
+      const { status, personId } = req.query;
+      
+      let drafts;
+      if (personId) {
+        drafts = await storage.getGeneratedDraftsByPerson(personId as string);
+      } else if (status) {
+        drafts = await storage.getGeneratedDraftsByStatus(status as string);
+      } else {
+        drafts = await storage.getAllGeneratedDrafts();
+      }
+      
+      res.json(drafts);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get drafts for a specific person
+  app.get("/api/people/:id/drafts", async (req, res) => {
+    try {
+      const drafts = await storage.getGeneratedDraftsByPerson(req.params.id);
+      res.json(drafts);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Update draft status
+  app.patch("/api/generated-drafts/:id", async (req, res) => {
+    try {
+      const draft = await storage.updateGeneratedDraft(req.params.id, req.body);
+      if (!draft) {
+        return res.status(404).json({ message: "Draft not found" });
+      }
+      res.json(draft);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Delete draft
+  app.delete("/api/generated-drafts/:id", async (req, res) => {
+    try {
+      await storage.deleteGeneratedDraft(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Find referral matches for a person
+  app.get("/api/people/:id/referral-matches", async (req, res) => {
+    try {
+      const { findReferralMatches } = await import("./conversation-processor");
+      const matches = await findReferralMatches(req.params.id);
+      res.json(matches);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

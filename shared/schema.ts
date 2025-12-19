@@ -72,6 +72,12 @@ export const people = pgTable("people", {
   isRealtor: boolean("is_realtor").default(false),
   realtorBrokerage: text("realtor_brokerage"),
   receiveNewsletter: boolean("receive_newsletter").default(false),
+  // What this person needs (looking for plumber, contractor, buyer for home, etc.)
+  needs: text("needs").array(),
+  // What this person offers (their profession, services they provide)
+  offers: text("offers").array(),
+  // Profession/Industry for referral matching
+  profession: text("profession"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -625,3 +631,66 @@ export const insertAiConversationSchema = createInsertSchema(aiConversations).om
 
 export type InsertAiConversation = z.infer<typeof insertAiConversationSchema>;
 export type AiConversation = typeof aiConversations.$inferSelect;
+
+// Generated Drafts - AI-generated follow-up content (emails, handwritten notes, etc.)
+export const generatedDrafts = pgTable("generated_drafts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  personId: varchar("person_id").references(() => people.id),
+  interactionId: varchar("interaction_id").references(() => interactions.id),
+  type: text("type").notNull(), // email, handwritten_note, task, referral_intro
+  title: text("title"),
+  content: text("content").notNull(),
+  status: text("status").notNull().default("pending"), // pending, sent, dismissed
+  metadata: jsonb("metadata"), // Additional context (email subject, recipient, etc.)
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertGeneratedDraftSchema = createInsertSchema(generatedDrafts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertGeneratedDraft = z.infer<typeof insertGeneratedDraftSchema>;
+export type GeneratedDraft = typeof generatedDrafts.$inferSelect;
+
+// Relations for Generated Drafts
+export const generatedDraftsRelations = relations(generatedDrafts, ({ one }) => ({
+  person: one(people, {
+    fields: [generatedDrafts.personId],
+    references: [people.id],
+  }),
+  interaction: one(interactions, {
+    fields: [generatedDrafts.interactionId],
+    references: [interactions.id],
+  }),
+}));
+
+// AI Extracted Data structure for type safety
+export type AIExtractedData = {
+  fordUpdates?: {
+    family?: string;
+    occupation?: string;
+    recreation?: string;
+    dreams?: string;
+  };
+  needs?: string[]; // Things this person is looking for
+  offers?: string[]; // Services/skills this person provides
+  actionItems?: string[]; // Tasks that came out of the conversation
+  keyTopics?: string[]; // Main topics discussed
+  sentiment?: "positive" | "neutral" | "negative";
+  nextSteps?: string;
+  referralOpportunities?: string[]; // Potential connections to make
+  buyerCriteria?: {
+    priceRange?: { min?: number; max?: number };
+    beds?: number;
+    baths?: number;
+    areas?: string[];
+    propertyTypes?: string[];
+    mustHaves?: string[];
+  };
+  processingStatus?: "pending" | "completed" | "failed";
+  processedAt?: string;
+};
