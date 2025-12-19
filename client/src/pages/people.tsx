@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Plus, Filter, Phone, Mail, MessageSquare, MapPin, Loader2, Upload, FileSpreadsheet, Check, Sparkles, AlertCircle, X, Tag, Trash2, Download, CheckSquare } from "lucide-react";
+import { Search, Plus, Filter, Phone, Mail, MessageSquare, MapPin, Loader2, Upload, FileSpreadsheet, Check, Sparkles, AlertCircle, X, Tag, Trash2, Download, CheckSquare, Users, Home } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useRef } from "react";
@@ -51,6 +51,10 @@ export default function People() {
   const [bulkSegmentDialogOpen, setBulkSegmentDialogOpen] = useState(false);
   const [bulkSegment, setBulkSegment] = useState("");
   const [segmentFilter, setSegmentFilter] = useState<string>("all");
+  const [householdDialogOpen, setHouseholdDialogOpen] = useState(false);
+  const [householdName, setHouseholdName] = useState("");
+  const [householdAddress, setHouseholdAddress] = useState("");
+  const [selectedHouseholdId, setSelectedHouseholdId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState<Partial<InsertPerson>>({
     name: "",
@@ -491,6 +495,85 @@ export default function People() {
   const { data: people = [], isLoading } = useQuery<Person[]>({
     queryKey: ["/api/people"],
   });
+
+  // Fetch all households
+  interface Household {
+    id: string;
+    name: string;
+    address?: string | null;
+    primaryPersonId?: string | null;
+    members?: Person[];
+  }
+  
+  const { data: households = [] } = useQuery<Household[]>({
+    queryKey: ["/api/households"],
+  });
+
+  // Create/link household mutation
+  const createHouseholdMutation = useMutation({
+    mutationFn: async (data: { name: string; address?: string; memberIds: string[] }) => {
+      const response = await fetch("/api/households", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: data.name,
+          address: data.address,
+          primaryPersonId: data.memberIds[0],
+          memberIds: data.memberIds,
+        }),
+      });
+      if (!response.ok) throw new Error("Failed to create household");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/households"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/people"] });
+      setHouseholdDialogOpen(false);
+      setHouseholdName("");
+      setHouseholdAddress("");
+      setSelectedHouseholdId(null);
+      clearSelection();
+      toast({ title: "Household Created", description: "People linked to household" });
+    },
+  });
+
+  // Link to existing household mutation
+  const linkToHouseholdMutation = useMutation({
+    mutationFn: async ({ householdId, memberIds }: { householdId: string; memberIds: string[] }) => {
+      for (const personId of memberIds) {
+        const response = await fetch(`/api/households/${householdId}/members`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ personId }),
+        });
+        if (!response.ok) throw new Error("Failed to link person to household");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/households"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/people"] });
+      setHouseholdDialogOpen(false);
+      setSelectedHouseholdId(null);
+      clearSelection();
+      toast({ title: "Linked", description: "People added to household" });
+    },
+  });
+
+  const handleLinkToHousehold = () => {
+    const memberIds = Array.from(selectedIds);
+    if (selectedHouseholdId) {
+      linkToHouseholdMutation.mutate({ householdId: selectedHouseholdId, memberIds });
+    } else if (householdName.trim()) {
+      // Create new household with selected people
+      const selectedPeople = people.filter(p => selectedIds.has(p.id));
+      const defaultName = householdName || selectedPeople.map(p => p.name.split(' ').pop()).join(' & ') + ' Household';
+      createHouseholdMutation.mutate({
+        name: defaultName,
+        address: householdAddress || undefined,
+        memberIds,
+      });
+    }
+  };
 
   // Create person mutation
   const createPersonMutation = useMutation({
@@ -1087,6 +1170,79 @@ export default function People() {
                 />
                 <Button onClick={handleBulkSegmentChange} className="w-full" disabled={!bulkSegment.trim()}>
                   Apply to {selectedIds.size} people
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+          
+          <Dialog open={householdDialogOpen} onOpenChange={setHouseholdDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/20 gap-2">
+                <Users className="h-4 w-4" /> Household
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Link to Household</DialogTitle>
+                <DialogDescription>
+                  Group {selectedIds.size} selected people into a household for de-duplicated mailings
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                {households.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Add to Existing Household</Label>
+                    <div className="flex gap-2 flex-wrap">
+                      {households.map(h => (
+                        <Button 
+                          key={h.id}
+                          variant={selectedHouseholdId === h.id ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            setSelectedHouseholdId(h.id);
+                            setHouseholdName("");
+                          }}
+                        >
+                          <Home className="h-3 w-3 mr-1" /> {h.name}
+                        </Button>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground my-2">
+                      <div className="h-px flex-1 bg-border" />
+                      <span>or create new</span>
+                      <div className="h-px flex-1 bg-border" />
+                    </div>
+                  </div>
+                )}
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="householdName">Household Name</Label>
+                    <Input
+                      id="householdName"
+                      placeholder="e.g., Cohen-Davis Household"
+                      value={householdName}
+                      onChange={(e) => {
+                        setHouseholdName(e.target.value);
+                        setSelectedHouseholdId(null);
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="householdAddress">Mailing Address (optional)</Label>
+                    <Input
+                      id="householdAddress"
+                      placeholder="123 Main St, City, ST 12345"
+                      value={householdAddress}
+                      onChange={(e) => setHouseholdAddress(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <Button 
+                  onClick={handleLinkToHousehold} 
+                  className="w-full"
+                  disabled={!selectedHouseholdId && !householdName.trim()}
+                >
+                  {selectedHouseholdId ? "Add to Household" : "Create Household"}
                 </Button>
               </div>
             </DialogContent>
