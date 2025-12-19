@@ -1851,5 +1851,125 @@ Be concise. Take action. Confirm results.`;
     }
   });
 
+  // Fathom API Integration - Import meetings
+  app.post("/api/integrations/fathom/import", async (req, res) => {
+    try {
+      const { apiKey } = req.body;
+      if (!apiKey) {
+        return res.status(400).json({ message: "Fathom API key is required" });
+      }
+
+      // Fetch meetings from Fathom API
+      const fathomResponse = await fetch("https://api.fathom.video/v1/calls", {
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!fathomResponse.ok) {
+        const errorText = await fathomResponse.text();
+        return res.status(fathomResponse.status).json({ 
+          message: `Fathom API error: ${fathomResponse.statusText}`,
+          details: errorText
+        });
+      }
+
+      const fathomData = await fathomResponse.json();
+      const meetings = fathomData.calls || fathomData.data || fathomData || [];
+      
+      if (!Array.isArray(meetings)) {
+        return res.status(400).json({ message: "Unexpected response format from Fathom" });
+      }
+
+      let imported = 0;
+      let skipped = 0;
+      const errors: string[] = [];
+
+      for (const meeting of meetings) {
+        try {
+          // Check if already imported (by external ID)
+          const existingInteractions = await storage.getAllInteractions();
+          const alreadyExists = existingInteractions.some(
+            i => i.externalId === meeting.id || i.externalId === meeting.call_id
+          );
+          
+          if (alreadyExists) {
+            skipped++;
+            continue;
+          }
+
+          // Parse meeting data
+          const meetingId = meeting.id || meeting.call_id;
+          const title = meeting.title || meeting.name || "Fathom Meeting";
+          const summary = meeting.summary || meeting.ai_summary || "";
+          const transcript = meeting.transcript || "";
+          const occurredAt = meeting.started_at || meeting.created_at || meeting.date || new Date().toISOString();
+          const duration = meeting.duration_seconds ? Math.round(meeting.duration_seconds / 60) : meeting.duration_minutes || null;
+          const participants = meeting.participants?.map((p: any) => p.name || p.email || p) || [];
+          const externalLink = meeting.share_url || meeting.url || `https://fathom.video/call/${meetingId}`;
+
+          // Create interaction
+          await storage.createInteraction({
+            type: "meeting",
+            source: "fathom",
+            title,
+            summary,
+            transcript,
+            externalLink,
+            externalId: meetingId,
+            duration,
+            occurredAt: new Date(occurredAt),
+            participants,
+            personId: null, // User will need to link to contacts manually
+          });
+
+          imported++;
+        } catch (err: any) {
+          errors.push(`Failed to import meeting: ${err.message}`);
+        }
+      }
+
+      res.json({
+        success: true,
+        imported,
+        skipped,
+        total: meetings.length,
+        errors: errors.length > 0 ? errors : undefined,
+      });
+    } catch (error: any) {
+      console.error("Fathom import error:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Fathom API - Test connection
+  app.post("/api/integrations/fathom/test", async (req, res) => {
+    try {
+      const { apiKey } = req.body;
+      if (!apiKey) {
+        return res.status(400).json({ message: "Fathom API key is required" });
+      }
+
+      const response = await fetch("https://api.fathom.video/v1/calls?limit=1", {
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        res.json({ success: true, message: "Connection successful" });
+      } else {
+        res.status(response.status).json({ 
+          success: false, 
+          message: `Authentication failed: ${response.statusText}` 
+        });
+      }
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error.message });
+    }
+  });
+
   return httpServer;
 }

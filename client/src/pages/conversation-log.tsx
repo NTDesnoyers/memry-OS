@@ -28,7 +28,10 @@ import {
   Check,
   Loader2,
   ChevronRight,
-  Filter
+  Filter,
+  Download,
+  Key,
+  AlertCircle
 } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useToast } from "@/hooks/use-toast";
@@ -65,6 +68,14 @@ export default function ConversationLog() {
     occurredAt: new Date().toISOString().slice(0, 16),
   });
   const [filterType, setFilterType] = useState<string>("all");
+  const [showFathomDialog, setShowFathomDialog] = useState(false);
+  const [fathomApiKey, setFathomApiKey] = useState("");
+  const [fathomImportResult, setFathomImportResult] = useState<{
+    imported: number;
+    skipped: number;
+    total: number;
+    errors?: string[];
+  } | null>(null);
 
   const { data: people = [] } = useQuery<Person[]>({
     queryKey: ["/api/people"],
@@ -107,6 +118,38 @@ export default function ConversationLog() {
       occurredAt: new Date().toISOString().slice(0, 16),
     });
   };
+
+  const fathomImport = useMutation({
+    mutationFn: async (apiKey: string) => {
+      const res = await fetch("/api/integrations/fathom/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to import from Fathom");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setFathomImportResult(data);
+      queryClient.invalidateQueries({ queryKey: ["/api/interactions"] });
+      if (data.imported > 0) {
+        toast({
+          title: "Import Complete",
+          description: `Successfully imported ${data.imported} meetings from Fathom.`,
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Import Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleSubmit = () => {
     if (!selectedType || !selectedPerson) {
@@ -180,14 +223,24 @@ export default function ConversationLog() {
                 Track every conversation. Link Fathom recordings, Granola notes, or log calls manually.
               </p>
             </div>
-            <Button 
-              size="lg" 
-              className="gap-2 shadow-lg" 
-              onClick={() => setShowAddDialog(true)}
-              data-testid="button-add-conversation"
-            >
-              <Plus className="h-4 w-4" /> Log Conversation
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline"
+                className="gap-2" 
+                onClick={() => setShowFathomDialog(true)}
+                data-testid="button-import-fathom"
+              >
+                <Download className="h-4 w-4" /> Import from Fathom
+              </Button>
+              <Button 
+                size="lg" 
+                className="gap-2 shadow-lg" 
+                onClick={() => setShowAddDialog(true)}
+                data-testid="button-add-conversation"
+              >
+                <Plus className="h-4 w-4" /> Log Conversation
+              </Button>
+            </div>
           </header>
 
           <div className="flex gap-4 mb-6">
@@ -487,6 +540,109 @@ export default function ConversationLog() {
                 <>
                   <Check className="h-4 w-4 mr-2" />
                   Save Conversation
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Fathom Import Dialog */}
+      <Dialog open={showFathomDialog} onOpenChange={(open) => {
+        setShowFathomDialog(open);
+        if (!open) {
+          setFathomImportResult(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5" />
+              Import from Fathom
+            </DialogTitle>
+            <DialogDescription>
+              Connect to your Fathom account and import all your meeting recordings and summaries.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="fathom-api-key" className="flex items-center gap-2">
+                <Key className="h-4 w-4" />
+                Fathom API Key
+              </Label>
+              <Input
+                id="fathom-api-key"
+                type="password"
+                placeholder="Enter your Fathom API key..."
+                value={fathomApiKey}
+                onChange={(e) => setFathomApiKey(e.target.value)}
+                data-testid="input-fathom-api-key"
+              />
+              <p className="text-xs text-muted-foreground">
+                Get your API key from{" "}
+                <a 
+                  href="https://fathom.video/settings" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-primary underline"
+                >
+                  Fathom Settings → API Access
+                </a>
+              </p>
+            </div>
+
+            {fathomImportResult && (
+              <div className={`p-4 rounded-lg border ${fathomImportResult.imported > 0 ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+                <div className="flex items-start gap-3">
+                  {fathomImportResult.imported > 0 ? (
+                    <Check className="h-5 w-5 text-green-600 mt-0.5" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+                  )}
+                  <div>
+                    <p className="font-medium">
+                      {fathomImportResult.imported > 0 
+                        ? `Imported ${fathomImportResult.imported} meetings`
+                        : "No new meetings to import"
+                      }
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {fathomImportResult.skipped > 0 && `${fathomImportResult.skipped} already imported. `}
+                      {fathomImportResult.total} total found in Fathom.
+                    </p>
+                    {fathomImportResult.errors && fathomImportResult.errors.length > 0 && (
+                      <p className="text-sm text-red-600 mt-1">
+                        {fathomImportResult.errors.length} errors occurred.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowFathomDialog(false);
+              setFathomImportResult(null);
+            }}>
+              {fathomImportResult ? "Close" : "Cancel"}
+            </Button>
+            <Button 
+              onClick={() => fathomImport.mutate(fathomApiKey)}
+              disabled={fathomImport.isPending || !fathomApiKey.trim()}
+              data-testid="button-fathom-import"
+            >
+              {fathomImport.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Importing...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  Import Meetings
                 </>
               )}
             </Button>
