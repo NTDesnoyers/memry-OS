@@ -571,61 +571,176 @@ export default function PersonProfile() {
                 </CardContent>
               </Card>
 
-              {person.isBuyer && (
+              {(person.isBuyer || isEditing) && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Home className="h-5 w-5" /> Buyer Criteria
+                      <Home className="h-5 w-5" /> Buyer Needs
+                      {isEditing && (
+                        <Badge 
+                          variant={formData.isBuyer ? "default" : "outline"}
+                          className="ml-auto cursor-pointer"
+                          onClick={() => setFormData(prev => ({ ...prev, isBuyer: !prev.isBuyer }))}
+                          data-testid="toggle-is-buyer"
+                        >
+                          {formData.isBuyer ? "Active Buyer" : "Not a Buyer"}
+                        </Badge>
+                      )}
                     </CardTitle>
+                    <CardDescription>This data appears in the "Wants" section of your Haves & Wants email</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div>
-                        <Label className="text-muted-foreground text-xs">Price Range</Label>
-                        <p className="font-medium">
-                          {person.buyerPriceMin && person.buyerPriceMax 
-                            ? `$${person.buyerPriceMin.toLocaleString()} - $${person.buyerPriceMax.toLocaleString()}`
-                            : "—"}
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground text-xs">Beds</Label>
-                        <p className="font-medium">{person.buyerBeds || "—"}</p>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground text-xs">Baths</Label>
-                        <p className="font-medium">{person.buyerBaths || "—"}</p>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground text-xs">Status</Label>
-                        <p className="font-medium">{person.buyerStatus || "—"}</p>
-                      </div>
-                    </div>
-                    {person.buyerAreas && person.buyerAreas.length > 0 && (
-                      <div>
-                        <Label className="text-muted-foreground text-xs">Preferred Areas</Label>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {person.buyerAreas.map((area, i) => (
-                            <Badge key={i} variant="outline">{area}</Badge>
-                          ))}
+                    {isEditing ? (
+                      <>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div>
+                            <Label className="text-xs">Min Price</Label>
+                            <Input 
+                              type="number"
+                              value={formData.buyerPriceMin || ""} 
+                              onChange={(e) => setFormData(prev => ({ ...prev, buyerPriceMin: e.target.value ? parseInt(e.target.value) : null }))}
+                              placeholder="250000"
+                              data-testid="input-buyer-price-min"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Max Price</Label>
+                            <Input 
+                              type="number"
+                              value={formData.buyerPriceMax || ""} 
+                              onChange={(e) => setFormData(prev => ({ ...prev, buyerPriceMax: e.target.value ? parseInt(e.target.value) : null }))}
+                              placeholder="400000"
+                              data-testid="input-buyer-price-max"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Beds</Label>
+                            <Input 
+                              type="number"
+                              value={formData.buyerBeds || ""} 
+                              onChange={(e) => setFormData(prev => ({ ...prev, buyerBeds: e.target.value ? parseInt(e.target.value) : null }))}
+                              placeholder="3"
+                              data-testid="input-buyer-beds"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Baths</Label>
+                            <Input 
+                              type="number"
+                              value={formData.buyerBaths || ""} 
+                              onChange={(e) => setFormData(prev => ({ ...prev, buyerBaths: e.target.value ? parseInt(e.target.value) : null }))}
+                              placeholder="2"
+                              data-testid="input-buyer-baths"
+                            />
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    {person.buyerMustHaves && person.buyerMustHaves.length > 0 && (
-                      <div>
-                        <Label className="text-muted-foreground text-xs">Must Haves</Label>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {person.buyerMustHaves.map((item, i) => (
-                            <Badge key={i} variant="secondary">{item}</Badge>
-                          ))}
+                        <div>
+                          <Label className="text-xs">Preferred Areas (comma-separated)</Label>
+                          <Input 
+                            value={(formData.buyerAreas || []).join(", ")} 
+                            onChange={(e) => setFormData(prev => ({ 
+                              ...prev, 
+                              buyerAreas: e.target.value ? e.target.value.split(",").map(s => s.trim()).filter(Boolean) : []
+                            }))}
+                            placeholder="Downtown, Midtown, Westside"
+                            data-testid="input-buyer-areas"
+                          />
                         </div>
-                      </div>
-                    )}
-                    {person.buyerNotes && (
-                      <div>
-                        <Label className="text-muted-foreground text-xs">Notes</Label>
-                        <p className="text-sm whitespace-pre-wrap">{person.buyerNotes}</p>
-                      </div>
+                        <div>
+                          <Label className="text-xs">Property Types (comma-separated)</Label>
+                          <Input 
+                            value={(formData.buyerPropertyTypes || []).join(", ")} 
+                            onChange={(e) => setFormData(prev => ({ 
+                              ...prev, 
+                              buyerPropertyTypes: e.target.value ? e.target.value.split(",").map(s => s.trim()).filter(Boolean) : []
+                            }))}
+                            placeholder="Single Family, Townhouse, Condo"
+                            data-testid="input-buyer-property-types"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Must Haves (comma-separated)</Label>
+                          <Input 
+                            value={(formData.buyerMustHaves || []).join(", ")} 
+                            onChange={(e) => setFormData(prev => ({ 
+                              ...prev, 
+                              buyerMustHaves: e.target.value ? e.target.value.split(",").map(s => s.trim()).filter(Boolean) : []
+                            }))}
+                            placeholder="Garage, Updated Kitchen, Fenced Yard"
+                            data-testid="input-buyer-must-haves"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Buyer Notes</Label>
+                          <Textarea 
+                            value={formData.buyerNotes || ""} 
+                            onChange={(e) => setFormData(prev => ({ ...prev, buyerNotes: e.target.value }))}
+                            placeholder="Additional notes about what they're looking for..."
+                            data-testid="input-buyer-notes"
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div>
+                            <Label className="text-muted-foreground text-xs">Price Range</Label>
+                            <p className="font-medium">
+                              {person.buyerPriceMin && person.buyerPriceMax 
+                                ? `$${person.buyerPriceMin.toLocaleString()} - $${person.buyerPriceMax.toLocaleString()}`
+                                : "—"}
+                            </p>
+                          </div>
+                          <div>
+                            <Label className="text-muted-foreground text-xs">Beds</Label>
+                            <p className="font-medium">{person.buyerBeds || "—"}</p>
+                          </div>
+                          <div>
+                            <Label className="text-muted-foreground text-xs">Baths</Label>
+                            <p className="font-medium">{person.buyerBaths || "—"}</p>
+                          </div>
+                          <div>
+                            <Label className="text-muted-foreground text-xs">Status</Label>
+                            <p className="font-medium">{person.buyerStatus || "—"}</p>
+                          </div>
+                        </div>
+                        {person.buyerAreas && person.buyerAreas.length > 0 && (
+                          <div>
+                            <Label className="text-muted-foreground text-xs">Preferred Areas</Label>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {person.buyerAreas.map((area, i) => (
+                                <Badge key={i} variant="outline">{area}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {person.buyerPropertyTypes && person.buyerPropertyTypes.length > 0 && (
+                          <div>
+                            <Label className="text-muted-foreground text-xs">Property Types</Label>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {person.buyerPropertyTypes.map((type, i) => (
+                                <Badge key={i} variant="outline">{type}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {person.buyerMustHaves && person.buyerMustHaves.length > 0 && (
+                          <div>
+                            <Label className="text-muted-foreground text-xs">Must Haves</Label>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {person.buyerMustHaves.map((item, i) => (
+                                <Badge key={i} variant="secondary">{item}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {person.buyerNotes && (
+                          <div>
+                            <Label className="text-muted-foreground text-xs">Notes</Label>
+                            <p className="text-sm whitespace-pre-wrap">{person.buyerNotes}</p>
+                          </div>
+                        )}
+                      </>
                     )}
                   </CardContent>
                 </Card>
