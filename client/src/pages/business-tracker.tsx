@@ -8,12 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, Save, Plus, FileText, BarChart3, Clock, Phone, Calculator } from "lucide-react";
+import { DollarSign, Save, Plus, FileText, BarChart3, Clock, Phone, Calculator, Play, Pause, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Link } from "wouter";
-import { type Deal, type Person, type BusinessSettings } from "@shared/schema";
+import { type Deal, type Person, type BusinessSettings, type PieEntry } from "@shared/schema";
 import { toast } from "sonner";
 
 type DealWithPerson = Deal & { person?: Person };
@@ -130,6 +130,169 @@ export default function BusinessTracker() {
   const hotConfusedDeals = dealsWithPeople.filter(d => d.prospectCategory === "hot_confused");
   const underContractDeals = dealsWithPeople.filter(d => d.prospectCategory === "under_contract" || d.stage === "under_contract" || d.stage === "active");
   const closedDeals = dealsWithPeople.filter(d => d.stage === "closed");
+
+  // PIE Time Tracker State
+  const [selectedWeekStart, setSelectedWeekStart] = useState(() => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+    monday.setHours(0, 0, 0, 0);
+    return monday;
+  });
+
+  const [timerType, setTimerType] = useState<"P" | "I" | null>(null);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const { data: pieEntries = [] } = useQuery<PieEntry[]>({
+    queryKey: ["/api/pie-entries"],
+  });
+
+  const createPieEntryMutation = useMutation({
+    mutationFn: async (data: { date: Date; pTime?: number; iTime?: number; eTime?: number }) => {
+      const res = await fetch("/api/pie-entries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create PIE entry");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/pie-entries"] });
+    },
+  });
+
+  const updatePieEntryMutation = useMutation({
+    mutationFn: async ({ id, ...data }: { id: string; pTime?: number; iTime?: number; eTime?: number }) => {
+      const res = await fetch(`/api/pie-entries/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update PIE entry");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/pie-entries"] });
+    },
+  });
+
+  const weekDays = useMemo(() => {
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(selectedWeekStart);
+      day.setDate(selectedWeekStart.getDate() + i);
+      days.push(day);
+    }
+    return days;
+  }, [selectedWeekStart]);
+
+  const getEntryForDate = (date: Date): PieEntry | undefined => {
+    return pieEntries.find(entry => {
+      const entryDate = new Date(entry.date);
+      return entryDate.toDateString() === date.toDateString();
+    });
+  };
+
+  const handlePieTimeChange = (date: Date, field: "pTime" | "iTime", value: number) => {
+    const entry = getEntryForDate(date);
+    const minutes = Math.max(0, value);
+    
+    if (entry) {
+      updatePieEntryMutation.mutate({ id: entry.id, [field]: minutes });
+    } else {
+      createPieEntryMutation.mutate({ date, [field]: minutes });
+    }
+  };
+
+  const navigateWeek = (direction: "prev" | "next") => {
+    setSelectedWeekStart(prev => {
+      const newDate = new Date(prev);
+      newDate.setDate(prev.getDate() + (direction === "next" ? 7 : -7));
+      return newDate;
+    });
+  };
+
+  const goToCurrentWeek = () => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+    monday.setHours(0, 0, 0, 0);
+    setSelectedWeekStart(monday);
+  };
+
+  // Timer functions
+  useEffect(() => {
+    if (isTimerRunning) {
+      timerRef.current = setInterval(() => {
+        setTimerSeconds(prev => prev + 1);
+      }, 1000);
+    } else if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isTimerRunning]);
+
+  const startTimer = (type: "P" | "I") => {
+    setTimerType(type);
+    setTimerSeconds(0);
+    setIsTimerRunning(true);
+  };
+
+  const stopTimer = () => {
+    setIsTimerRunning(false);
+    if (timerType && timerSeconds >= 60) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const minutes = Math.round(timerSeconds / 60);
+      const entry = getEntryForDate(today);
+      const field = timerType === "P" ? "pTime" : "iTime";
+      const currentValue = entry?.[field] || 0;
+      
+      if (entry) {
+        updatePieEntryMutation.mutate({ id: entry.id, [field]: currentValue + minutes });
+      } else {
+        createPieEntryMutation.mutate({ date: today, [field]: minutes });
+      }
+      toast.success(`Added ${minutes} minutes of ${timerType === "P" ? "Prospecting" : "In-Person"} time`);
+    }
+    setTimerType(null);
+    setTimerSeconds(0);
+  };
+
+  const resetTimer = () => {
+    setIsTimerRunning(false);
+    setTimerSeconds(0);
+    setTimerType(null);
+  };
+
+  const formatTimerDisplay = (seconds: number) => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    if (hrs > 0) {
+      return `${hrs}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    }
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const weeklyTotals = useMemo(() => {
+    let pTotal = 0, iTotal = 0;
+    weekDays.forEach(day => {
+      const entry = getEntryForDate(day);
+      if (entry) {
+        pTotal += entry.pTime || 0;
+        iTotal += entry.iTime || 0;
+      }
+    });
+    return { pTotal, iTotal };
+  }, [weekDays, pieEntries]);
 
   const formatPrice = (value: number | null | undefined) => {
     if (!value) return "";
@@ -962,115 +1125,227 @@ export default function BusinessTracker() {
             </TabsContent>
 
             {/* === PIE TRACKER TAB === */}
-            <TabsContent value="pie" className="space-y-4">
-              <p className="text-sm text-muted-foreground text-center">Enter T, I, P time spent for each day that you work. E is auto-calculated.</p>
+            <TabsContent value="pie" className="space-y-6">
+              <div className="text-center space-y-2">
+                <h2 className="text-xl font-serif font-bold">PIE Time Tracker</h2>
+                <p className="text-sm text-muted-foreground">Track your Prospecting and In-Person time. Focus on income-producing activities.</p>
+              </div>
               
-              <div className="grid md:grid-cols-4 gap-6">
-                <div className="md:col-span-3 space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    {["January", "February", "March"].map((month) => (
-                      <Card key={month} className="border">
-                        <CardHeader className="py-2 bg-slate-600 text-white">
-                          <CardTitle className="text-sm font-medium text-center">{month}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-0">
-                          <Table>
-                            <TableHeader>
-                              <TableRow className="text-xs bg-blue-100">
-                                <TableHead className="py-1 w-12">Date</TableHead>
-                                <TableHead className="py-1 w-8">Day</TableHead>
-                                <TableHead className="py-1 w-8 text-center">T</TableHead>
-                                <TableHead className="py-1 w-8 text-center">I</TableHead>
-                                <TableHead className="py-1 w-8 text-center">P</TableHead>
-                                <TableHead className="py-1 w-8 text-center bg-slate-200">E</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              <TableRow>
-                                <TableCell colSpan={6} className="text-center text-muted-foreground py-8 text-xs">
-                                  PIE time logging coming soon
-                                </TableCell>
-                              </TableRow>
-                            </TableBody>
-                          </Table>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
+              <div className="grid md:grid-cols-3 gap-6">
+                {/* Timer Card */}
+                <Card className="border-2 border-primary/20">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Clock className="h-5 w-5" />
+                      Quick Timer
+                    </CardTitle>
+                    <CardDescription>Start a timer and it auto-logs when you stop</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="text-center">
+                      <div className={`text-4xl font-mono font-bold ${isTimerRunning ? "text-green-600" : ""}`}>
+                        {formatTimerDisplay(timerSeconds)}
+                      </div>
+                      {timerType && (
+                        <Badge variant="secondary" className="mt-2">
+                          {timerType === "P" ? "Prospecting" : "In-Person"}
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    {!isTimerRunning && !timerType ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button onClick={() => startTimer("P")} className="bg-blue-600 hover:bg-blue-700" data-testid="button-start-prospecting">
+                          <Play className="h-4 w-4 mr-1" />
+                          Prospecting
+                        </Button>
+                        <Button onClick={() => startTimer("I")} className="bg-green-600 hover:bg-green-700" data-testid="button-start-inperson">
+                          <Play className="h-4 w-4 mr-1" />
+                          In-Person
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={() => isTimerRunning ? setIsTimerRunning(false) : setIsTimerRunning(true)}
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          {isTimerRunning ? <Pause className="h-4 w-4 mr-1" /> : <Play className="h-4 w-4 mr-1" />}
+                          {isTimerRunning ? "Pause" : "Resume"}
+                        </Button>
+                        <Button onClick={stopTimer} variant="default" className="flex-1" data-testid="button-stop-timer">
+                          Save
+                        </Button>
+                        <Button onClick={resetTimer} variant="ghost" size="icon">
+                          <RotateCcw className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
-                <div className="space-y-4">
-                  <Card className="bg-slate-100">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Monthly Summary</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3 text-sm">
-                      <div className="bg-blue-100 p-2 rounded">
-                        <p className="text-xs text-muted-foreground">Month:</p>
-                        <Select defaultValue="january">
-                          <SelectTrigger className="h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map(m => (
-                              <SelectItem key={m} value={m.toLowerCase()}>{m}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                {/* Weekly View */}
+                <Card className="md:col-span-2">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base">Weekly Time Log</CardTitle>
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => navigateWeek("prev")} data-testid="button-prev-week">
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={goToCurrentWeek}>
+                          This Week
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => navigateWeek("next")} data-testid="button-next-week">
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
                       </div>
-                      
-                      <div className="grid grid-cols-3 gap-2 text-center">
-                        <div>
-                          <p className="text-xs text-muted-foreground">"I" Hrs %</p>
-                          <p className="font-bold">--</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">"P" Hrs %</p>
-                          <p className="font-bold">--</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">"E" Hrs %</p>
-                          <p className="font-bold">--</p>
-                        </div>
-                      </div>
-                      
-                      <Separator />
-                      
-                      <div className="grid grid-cols-3 gap-2 text-center">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Avg. "I" Hrs/Day</p>
-                          <p className="font-bold">--</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Avg. "P" Hrs/Day</p>
-                          <p className="font-bold">--</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Avg. "E" Hrs/Day</p>
-                          <p className="font-bold">--</p>
-                        </div>
-                      </div>
-                      
-                      <div className="bg-slate-200 p-2 rounded text-center">
-                        <p className="text-xs text-muted-foreground">Hourly Yield Ratio</p>
-                        <p className="font-bold">-- to 1</p>
-                      </div>
-                      
-                      <div className="bg-blue-50 p-2 rounded">
-                        <p className="text-xs text-muted-foreground text-center">Under Contract for Next Month</p>
-                        <div className="grid grid-cols-2 gap-2 mt-2">
-                          <div className="text-center">
-                            <p className="text-xs">Gross Income:</p>
-                            <p className="font-bold">{formatCurrency(underContractGCI)}</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-xs">"P" time/hour:</p>
-                            <p className="font-bold">--</p>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                    <CardDescription>
+                      {selectedWeekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(selectedWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-24">Day</TableHead>
+                          <TableHead className="text-center w-20">
+                            <div className="flex flex-col items-center">
+                              <span className="text-blue-600 font-bold">P</span>
+                              <span className="text-xs text-muted-foreground">Prospecting</span>
+                            </div>
+                          </TableHead>
+                          <TableHead className="text-center w-20">
+                            <div className="flex flex-col items-center">
+                              <span className="text-green-600 font-bold">I</span>
+                              <span className="text-xs text-muted-foreground">In-Person</span>
+                            </div>
+                          </TableHead>
+                          <TableHead className="text-center w-20">
+                            <div className="flex flex-col items-center">
+                              <span className="text-slate-600 font-bold">E</span>
+                              <span className="text-xs text-muted-foreground">Everything</span>
+                            </div>
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {weekDays.map((day) => {
+                          const entry = getEntryForDate(day);
+                          const isToday = day.toDateString() === new Date().toDateString();
+                          const pTime = entry?.pTime || 0;
+                          const iTime = entry?.iTime || 0;
+                          const eTime = entry?.eTime || 0;
+                          
+                          return (
+                            <TableRow key={day.toISOString()} className={isToday ? "bg-primary/5" : ""}>
+                              <TableCell className="font-medium">
+                                <div className={isToday ? "text-primary font-bold" : ""}>
+                                  {day.toLocaleDateString('en-US', { weekday: 'short' })}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {day.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' })}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={pTime || ""}
+                                  onChange={(e) => handlePieTimeChange(day, "pTime", parseInt(e.target.value) || 0)}
+                                  className="w-16 mx-auto text-center h-8 text-blue-600 font-medium"
+                                  placeholder="0"
+                                  data-testid={`input-ptime-${day.toISOString().split('T')[0]}`}
+                                />
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={iTime || ""}
+                                  onChange={(e) => handlePieTimeChange(day, "iTime", parseInt(e.target.value) || 0)}
+                                  className="w-16 mx-auto text-center h-8 text-green-600 font-medium"
+                                  placeholder="0"
+                                  data-testid={`input-itime-${day.toISOString().split('T')[0]}`}
+                                />
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <div className="w-16 mx-auto h-8 flex items-center justify-center bg-slate-100 rounded text-slate-600 font-medium">
+                                  {eTime || "--"}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                        <TableRow className="bg-slate-50 font-bold">
+                          <TableCell>Weekly Total</TableCell>
+                          <TableCell className="text-center text-blue-600">{weeklyTotals.pTotal} min</TableCell>
+                          <TableCell className="text-center text-green-600">{weeklyTotals.iTotal} min</TableCell>
+                          <TableCell className="text-center text-slate-600">--</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Summary Cards */}
+              <div className="grid md:grid-cols-4 gap-4">
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardContent className="pt-4 text-center">
+                    <p className="text-xs text-blue-600 uppercase font-medium">Prospecting This Week</p>
+                    <p className="text-2xl font-bold text-blue-700">{Math.round(weeklyTotals.pTotal / 60 * 10) / 10} hrs</p>
+                    <p className="text-xs text-muted-foreground">{weeklyTotals.pTotal} minutes</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-green-50 border-green-200">
+                  <CardContent className="pt-4 text-center">
+                    <p className="text-xs text-green-600 uppercase font-medium">In-Person This Week</p>
+                    <p className="text-2xl font-bold text-green-700">{Math.round(weeklyTotals.iTotal / 60 * 10) / 10} hrs</p>
+                    <p className="text-xs text-muted-foreground">{weeklyTotals.iTotal} minutes</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-slate-50 border-slate-200">
+                  <CardContent className="pt-4 text-center">
+                    <p className="text-xs text-slate-600 uppercase font-medium">Income-Producing %</p>
+                    <p className="text-2xl font-bold text-slate-700">
+                      {weeklyTotals.pTotal + weeklyTotals.iTotal > 0 
+                        ? Math.round((weeklyTotals.pTotal + weeklyTotals.iTotal) / (weeklyTotals.pTotal + weeklyTotals.iTotal) * 100)
+                        : "--"}%
+                    </p>
+                    <p className="text-xs text-muted-foreground">P + I time</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-amber-50 border-amber-200">
+                  <CardContent className="pt-4 text-center">
+                    <p className="text-xs text-amber-600 uppercase font-medium">Under Contract GCI</p>
+                    <p className="text-2xl font-bold text-amber-700">{formatCurrency(underContractGCI)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {weeklyTotals.pTotal > 0 
+                        ? `${formatCurrency(underContractGCI / (weeklyTotals.pTotal / 60))}/hr P time`
+                        : "Track time to see $/hr"}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="bg-slate-100 rounded-lg p-4">
+                <h3 className="font-medium mb-2">What is PIE?</h3>
+                <div className="grid md:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="font-bold text-blue-600">P = Prospecting</span>
+                    <p className="text-muted-foreground">Calls, texts, emails to your database. Building relationships with potential clients.</p>
+                  </div>
+                  <div>
+                    <span className="font-bold text-green-600">I = In-Person</span>
+                    <p className="text-muted-foreground">Showings, listing appointments, buyer consultations. Face-to-face client time.</p>
+                  </div>
+                  <div>
+                    <span className="font-bold text-slate-600">E = Everything Else</span>
+                    <p className="text-muted-foreground">Admin, paperwork, marketing, education. Important but not income-producing.</p>
+                  </div>
                 </div>
               </div>
             </TabsContent>
