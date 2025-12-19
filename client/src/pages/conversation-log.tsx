@@ -34,7 +34,8 @@ import {
   Key,
   AlertCircle,
   Edit2,
-  X
+  X,
+  Trash2
 } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useToast } from "@/hooks/use-toast";
@@ -157,6 +158,36 @@ export default function ConversationLog() {
       toast({
         title: "Updated",
         description: "Conversation updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteInteraction = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/interactions/${id}/delete`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to delete interaction");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/interactions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/people"] });
+      setShowEditDialog(false);
+      setSelectedInteraction(null);
+      toast({
+        title: "Deleted",
+        description: "Conversation moved to Recently Deleted. You can restore it from Settings within 30 days.",
       });
     },
     onError: (error: any) => {
@@ -968,24 +999,49 @@ export default function ConversationLog() {
             )}
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
-              Cancel
-            </Button>
+          <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
             <Button 
-              onClick={handleEditSubmit}
-              disabled={updateInteraction.isPending}
-              data-testid="button-edit-save"
+              variant="ghost" 
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={() => {
+                if (selectedInteraction) {
+                  deleteInteraction.mutate(selectedInteraction.id);
+                }
+              }}
+              disabled={deleteInteraction.isPending}
+              data-testid="button-edit-delete"
             >
-              {updateInteraction.isPending ? (
+              {deleteInteraction.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
+                  Deleting...
                 </>
               ) : (
-                "Save Changes"
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </>
               )}
             </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleEditSubmit}
+                disabled={updateInteraction.isPending}
+                data-testid="button-edit-save"
+              >
+                {updateInteraction.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
