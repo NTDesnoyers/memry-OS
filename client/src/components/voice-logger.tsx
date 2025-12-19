@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Mic, Square, Loader2, Send, MessageSquare, Sparkles, X, Bot, User } from "lucide-react";
+import { Mic, Square, Loader2, Send, MessageSquare, Sparkles, X, Bot, User, CheckCircle2, Zap } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -13,9 +13,15 @@ declare global {
   }
 }
 
+interface Action {
+  tool: string;
+  result: string;
+}
+
 interface Message {
   role: "user" | "assistant";
   content: string;
+  actions?: Action[];
 }
 
 export function VoiceLogger() {
@@ -132,7 +138,11 @@ export function VoiceLogger() {
       }
 
       const data = await response.json();
-      const assistantMessage: Message = { role: "assistant", content: data.response };
+      const assistantMessage: Message = { 
+        role: "assistant", 
+        content: data.response,
+        actions: data.actions
+      };
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error("AI error:", error);
@@ -155,6 +165,21 @@ export function VoiceLogger() {
 
   const clearConversation = () => {
     setMessages([]);
+  };
+
+  const formatToolName = (toolName: string): string => {
+    const toolLabels: Record<string, string> = {
+      search_people: "Searched contacts",
+      get_person_details: "Retrieved person details",
+      update_person: "Updated contact",
+      create_person: "Created new contact",
+      log_interaction: "Logged interaction",
+      create_task: "Created task",
+      update_deal_stage: "Updated deal stage",
+      get_hot_warm_lists: "Retrieved Hot/Warm lists",
+      get_todays_tasks: "Retrieved today's tasks"
+    };
+    return toolLabels[toolName] || toolName;
   };
 
   return (
@@ -185,7 +210,7 @@ export function VoiceLogger() {
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Your AI-powered second brain for real estate
+              Agentic AI that can search, update, and create data for you
             </p>
           </DialogHeader>
 
@@ -204,22 +229,44 @@ export function VoiceLogger() {
                   </div>
                   <div className="grid gap-2 text-sm">
                     <button 
-                      onClick={() => sendMessage("What should I focus on this week?")}
+                      onClick={() => sendMessage("Show me my Hot and Warm lists")}
                       className="p-3 text-left rounded-lg border hover:bg-secondary/50 transition-colors"
+                      data-testid="quick-action-hot-warm"
                     >
-                      What should I focus on this week?
+                      <span className="flex items-center gap-2">
+                        <Zap className="h-4 w-4 text-violet-500" />
+                        Show me my Hot and Warm lists
+                      </span>
                     </button>
                     <button 
-                      onClick={() => sendMessage("Help me prepare for my next listing appointment")}
+                      onClick={() => sendMessage("Find Miguel Shaban and show me his details")}
                       className="p-3 text-left rounded-lg border hover:bg-secondary/50 transition-colors"
+                      data-testid="quick-action-find-person"
                     >
-                      Help me prepare for a listing appointment
+                      <span className="flex items-center gap-2">
+                        <Zap className="h-4 w-4 text-violet-500" />
+                        Find Miguel Shaban and show me his details
+                      </span>
                     </button>
                     <button 
-                      onClick={() => sendMessage("Give me ideas for staying in touch with my sphere")}
+                      onClick={() => sendMessage("Log a call with Miguel - we discussed his home search timeline")}
                       className="p-3 text-left rounded-lg border hover:bg-secondary/50 transition-colors"
+                      data-testid="quick-action-log-call"
                     >
-                      Ideas for staying in touch with my sphere
+                      <span className="flex items-center gap-2">
+                        <Zap className="h-4 w-4 text-violet-500" />
+                        Log a call with Miguel about his home search
+                      </span>
+                    </button>
+                    <button 
+                      onClick={() => sendMessage("Create a new contact: John Smith, segment B")}
+                      className="p-3 text-left rounded-lg border hover:bg-secondary/50 transition-colors"
+                      data-testid="quick-action-create-contact"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Zap className="h-4 w-4 text-violet-500" />
+                        Create a new contact: John Smith
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -246,6 +293,20 @@ export function VoiceLogger() {
                         : "bg-secondary"
                     )}
                   >
+                    {message.actions && message.actions.length > 0 && (
+                      <div className="mb-2 pb-2 border-b border-border/50">
+                        <div className="flex items-center gap-1.5 text-xs text-violet-600 font-medium mb-1">
+                          <Zap className="h-3 w-3" />
+                          Actions taken
+                        </div>
+                        {message.actions.map((action, i) => (
+                          <div key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                            <CheckCircle2 className="h-3 w-3 mt-0.5 text-green-500 flex-shrink-0" />
+                            <span>{formatToolName(action.tool)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <p className="whitespace-pre-wrap">{message.content}</p>
                   </div>
                   {message.role === "user" && (

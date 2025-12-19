@@ -485,7 +485,270 @@ Respond with valid JSON only, no other text.`;
     }
   });
 
-  // AI Assistant - general purpose conversational AI
+  // AI Assistant - agentic AI with full CRUD capabilities
+  const aiTools: any[] = [
+    {
+      type: "function",
+      function: {
+        name: "search_people",
+        description: "Search for people/contacts in the database by name, email, segment, or any attribute",
+        parameters: {
+          type: "object",
+          properties: {
+            query: { type: "string", description: "Search term to find people (name, email, company, etc.)" }
+          },
+          required: ["query"]
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "get_person_details",
+        description: "Get full details of a specific person including FORD notes, deals, and activity",
+        parameters: {
+          type: "object",
+          properties: {
+            personId: { type: "string", description: "The ID of the person to retrieve" }
+          },
+          required: ["personId"]
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "update_person",
+        description: "Update a person's information (segment, FORD notes, contact info, buyer needs, etc.)",
+        parameters: {
+          type: "object",
+          properties: {
+            personId: { type: "string", description: "The ID of the person to update" },
+            updates: { 
+              type: "object", 
+              description: "Fields to update: name, email, phone, segment (A/B/C/D), fordFamily, fordOccupation, fordRecreation, fordDreams, notes, isBuyer, buyerAreas, buyerPriceMin, buyerPriceMax, etc."
+            }
+          },
+          required: ["personId", "updates"]
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "create_person",
+        description: "Create a new contact/person in the database",
+        parameters: {
+          type: "object",
+          properties: {
+            name: { type: "string", description: "Full name of the person" },
+            email: { type: "string", description: "Email address" },
+            phone: { type: "string", description: "Phone number" },
+            segment: { type: "string", enum: ["A", "B", "C", "D"], description: "Relationship segment" },
+            notes: { type: "string", description: "Initial notes about this person" }
+          },
+          required: ["name"]
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "log_interaction",
+        description: "Log a conversation, call, meeting, or other interaction with a person",
+        parameters: {
+          type: "object",
+          properties: {
+            personId: { type: "string", description: "The ID of the person interacted with" },
+            type: { type: "string", enum: ["call", "meeting", "email", "text", "in_person", "social"], description: "Type of interaction" },
+            summary: { type: "string", description: "Summary of what was discussed" },
+            fordUpdates: { type: "string", description: "Any FORD updates learned during this interaction" }
+          },
+          required: ["personId", "type", "summary"]
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "create_task",
+        description: "Create a new task or follow-up item",
+        parameters: {
+          type: "object",
+          properties: {
+            title: { type: "string", description: "Task title/description" },
+            personId: { type: "string", description: "Optional: ID of the related person" },
+            dueDate: { type: "string", description: "Due date in ISO format (YYYY-MM-DD)" },
+            priority: { type: "string", enum: ["low", "medium", "high"], description: "Task priority" }
+          },
+          required: ["title"]
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "update_deal_stage",
+        description: "Update a deal's stage (warm, hot, in_contract, closed, lost)",
+        parameters: {
+          type: "object",
+          properties: {
+            personId: { type: "string", description: "The person ID to find their deal" },
+            stage: { type: "string", enum: ["warm", "hot", "hot_confused", "in_contract", "closed", "lost"], description: "New deal stage" }
+          },
+          required: ["personId", "stage"]
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "get_hot_warm_lists",
+        description: "Get the current Hot and Warm lists (people likely to transact soon)",
+        parameters: { type: "object", properties: {} }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "get_todays_tasks",
+        description: "Get tasks due today or overdue",
+        parameters: { type: "object", properties: {} }
+      }
+    }
+  ];
+
+  async function executeAiTool(toolName: string, args: any): Promise<string> {
+    try {
+      switch (toolName) {
+        case "search_people": {
+          const people = await storage.getAllPeople();
+          const query = args.query.toLowerCase();
+          const matches = people.filter(p => 
+            p.name?.toLowerCase().includes(query) ||
+            p.email?.toLowerCase().includes(query) ||
+            p.phone?.includes(query) ||
+            p.segment?.toLowerCase() === query ||
+            p.notes?.toLowerCase().includes(query)
+          ).slice(0, 10);
+          if (matches.length === 0) return `No people found matching "${args.query}"`;
+          return JSON.stringify(matches.map(p => ({
+            id: p.id,
+            name: p.name,
+            email: p.email,
+            phone: p.phone,
+            segment: p.segment,
+            lastContact: p.lastContact
+          })));
+        }
+        
+        case "get_person_details": {
+          const person = await storage.getPerson(args.personId);
+          if (!person) return `Person not found with ID: ${args.personId}`;
+          const deals = await storage.getAllDeals();
+          const personDeals = deals.filter(d => d.personId === args.personId);
+          return JSON.stringify({
+            ...person,
+            deals: personDeals.map(d => ({ id: d.id, stage: d.stage, side: d.side, type: d.type }))
+          });
+        }
+        
+        case "update_person": {
+          const updated = await storage.updatePerson(args.personId, args.updates);
+          if (!updated) return `Failed to update person ${args.personId}`;
+          return `Successfully updated ${updated.name}: ${Object.keys(args.updates).join(", ")}`;
+        }
+        
+        case "create_person": {
+          const newPerson = await storage.createPerson({
+            name: args.name,
+            email: args.email || null,
+            phone: args.phone || null,
+            segment: args.segment || "D",
+            notes: args.notes || null
+          });
+          return `Created new contact: ${newPerson.name} (ID: ${newPerson.id})`;
+        }
+        
+        case "log_interaction": {
+          const interaction = await storage.createInteraction({
+            personId: args.personId,
+            type: args.type,
+            summary: args.summary,
+            occurredAt: new Date()
+          });
+          // Also update last contact date
+          await storage.updatePerson(args.personId, { lastContact: new Date() });
+          // Apply FORD updates if provided
+          if (args.fordUpdates) {
+            const person = await storage.getPerson(args.personId);
+            if (person) {
+              const existingNotes = person.notes || "";
+              await storage.updatePerson(args.personId, { 
+                notes: existingNotes + "\n\n[FORD Update]: " + args.fordUpdates 
+              });
+            }
+          }
+          return `Logged ${args.type} interaction for person. Last contact date updated.`;
+        }
+        
+        case "create_task": {
+          const task = await storage.createTask({
+            title: args.title,
+            personId: args.personId || null,
+            dueDate: args.dueDate ? new Date(args.dueDate) : null,
+            priority: args.priority || "medium",
+            status: "pending"
+          });
+          return `Created task: "${task.title}" ${args.dueDate ? `due ${args.dueDate}` : ""}`;
+        }
+        
+        case "update_deal_stage": {
+          const deals = await storage.getAllDeals();
+          const deal = deals.find(d => d.personId === args.personId && 
+            ["warm", "hot", "hot_active", "hot_confused", "in_contract"].includes(d.stage?.toLowerCase() || ""));
+          if (!deal) return `No active deal found for this person`;
+          await storage.updateDeal(deal.id, { stage: args.stage });
+          return `Updated deal stage to ${args.stage}`;
+        }
+        
+        case "get_hot_warm_lists": {
+          const deals = await storage.getAllDeals();
+          const people = await storage.getAllPeople();
+          const hot = deals.filter(d => d.stage?.toLowerCase() === "hot" || d.stage?.toLowerCase() === "hot_active");
+          const warm = deals.filter(d => d.stage?.toLowerCase() === "warm");
+          const hotPeople = hot.map(d => {
+            const person = people.find(p => p.id === d.personId);
+            return { name: person?.name, side: d.side, lastContact: person?.lastContact };
+          });
+          const warmPeople = warm.map(d => {
+            const person = people.find(p => p.id === d.personId);
+            return { name: person?.name, side: d.side, lastContact: person?.lastContact };
+          });
+          return JSON.stringify({ hot: hotPeople, warm: warmPeople });
+        }
+        
+        case "get_todays_tasks": {
+          const tasks = await storage.getAllTasks();
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const dueTasks = tasks.filter(t => {
+            if (!t.dueDate || t.status === "completed") return false;
+            const due = new Date(t.dueDate);
+            due.setHours(0, 0, 0, 0);
+            return due <= today;
+          });
+          return JSON.stringify(dueTasks.map(t => ({ title: t.title, priority: t.priority, dueDate: t.dueDate })));
+        }
+        
+        default:
+          return `Unknown tool: ${toolName}`;
+      }
+    } catch (error: any) {
+      return `Error executing ${toolName}: ${error.message}`;
+    }
+  }
+
   app.post("/api/ai-assistant", async (req, res) => {
     try {
       const { messages, context } = req.body;
@@ -496,46 +759,95 @@ Respond with valid JSON only, no other text.`;
 
       const openaiClient = getOpenAI();
       
-      const systemPrompt = `You are the Ninja AI Assistant, an intelligent second brain built into Ninja OS - a real estate business operating system following the Ninja Selling methodology.
+      const systemPrompt = `You are the Ninja AI Assistant - an AGENTIC AI with full control to search, view, and modify data in Ninja OS (a real estate business operating system).
 
-Your role is to:
-- Help real estate agents be more productive and successful
-- Answer questions about their business, contacts, deals, and market
-- Provide advice based on Ninja Selling principles (relationship-first, value-driven, helping vs selling)
-- Suggest actions, follow-ups, and strategies
-- Help with email drafts, talking points, and client communications
-- Be concise but thorough - agents are busy
+YOU CAN TAKE ACTION. When the user asks you to do something, USE YOUR TOOLS to actually do it:
+- Search for people by name/email/segment
+- View complete person details including FORD notes and deals
+- Update person information (segment, FORD notes, buyer needs, contact info)
+- Create new contacts
+- Log interactions/conversations
+- Create tasks and follow-ups
+- Update deal stages (warm → hot → in_contract → closed)
+- Get Hot/Warm lists and today's tasks
 
-Current context:
-- User is on: ${context?.pageDescription || context?.currentPage || 'Ninja OS'}
-- App: ${context?.appDescription || 'Real Estate Business Operating System'}
+WORKFLOW:
+1. When user mentions a person, FIRST search for them to get their ID
+2. Then use get_person_details to see their full record
+3. Make the requested changes using update_person, log_interaction, etc.
+4. Confirm what you did
 
-Ninja Selling key principles to reference:
-- Build relationships before transactions
-- FORD: Ask about Family, Occupation, Recreation, Dreams
-- 50 Hot/50 Warm contact strategy
-- Weekly flow: Reviews, Hot/Warm contact, database touches
-- Focus on helping, not selling
-- Consistent daily habits (Ninja Nine)
+Current context: User is on ${context?.pageDescription || context?.currentPage || 'Ninja OS'}
 
-Be helpful, knowledgeable, and supportive. Keep responses concise but valuable.`;
+Ninja Selling principles:
+- Segments: A=monthly contact, B=every 2 months, C=quarterly, D=new (8x8 campaign)
+- FORD: Family, Occupation, Recreation, Dreams - watch for life changes
+- Hot=90 days to transaction, Warm=~12 months
 
-      const completion = await openaiClient.chat.completions.create({
+Be concise. Take action. Confirm results.`;
+
+      const apiMessages: any[] = [
+        { role: "system", content: systemPrompt },
+        ...messages.map((m: any) => ({
+          role: m.role,
+          content: m.content
+        }))
+      ];
+
+      let completion = await openaiClient.chat.completions.create({
         model: "gpt-4o",
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages.map((m: any) => ({
-            role: m.role as "user" | "assistant",
-            content: m.content
-          }))
-        ],
-        max_tokens: 1000,
-        temperature: 0.7,
+        messages: apiMessages,
+        tools: aiTools,
+        tool_choice: "auto",
+        max_tokens: 1500,
+        temperature: 0.3,
       });
 
-      const response = completion.choices[0]?.message?.content || "I'm not sure how to help with that. Could you rephrase?";
+      const actionsExecuted: { tool: string; result: string }[] = [];
       
-      res.json({ response });
+      // Process tool calls in a loop
+      let responseMessage = completion.choices[0]?.message;
+      let iterations = 0;
+      const maxIterations = 5;
+      
+      while (responseMessage?.tool_calls && responseMessage.tool_calls.length > 0 && iterations < maxIterations) {
+        iterations++;
+        
+        // Add assistant's message with tool calls
+        apiMessages.push(responseMessage);
+        
+        // Execute each tool call
+        for (const toolCall of responseMessage.tool_calls) {
+          const args = JSON.parse(toolCall.function.arguments);
+          const result = await executeAiTool(toolCall.function.name, args);
+          actionsExecuted.push({ tool: toolCall.function.name, result });
+          
+          apiMessages.push({
+            role: "tool",
+            tool_call_id: toolCall.id,
+            content: result
+          });
+        }
+        
+        // Get next response
+        completion = await openaiClient.chat.completions.create({
+          model: "gpt-4o",
+          messages: apiMessages,
+          tools: aiTools,
+          tool_choice: "auto",
+          max_tokens: 1500,
+          temperature: 0.3,
+        });
+        
+        responseMessage = completion.choices[0]?.message;
+      }
+
+      const response = responseMessage?.content || "I completed the requested actions.";
+      
+      res.json({ 
+        response,
+        actions: actionsExecuted.length > 0 ? actionsExecuted : undefined
+      });
     } catch (error: any) {
       console.error("AI Assistant error:", error);
       res.status(500).json({ message: error.message || "AI request failed" });
