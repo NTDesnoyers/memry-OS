@@ -751,7 +751,7 @@ Respond with valid JSON only, no other text.`;
 
   app.post("/api/ai-assistant", async (req, res) => {
     try {
-      const { messages, context } = req.body;
+      const { messages, images, context } = req.body;
       
       if (!messages || !Array.isArray(messages)) {
         return res.status(400).json({ message: "Messages array required" });
@@ -784,14 +784,50 @@ Ninja Selling principles:
 - FORD: Family, Occupation, Recreation, Dreams - watch for life changes
 - Hot=90 days to transaction, Warm=~12 months
 
-Be concise. Take action. Confirm results.`;
+Be concise. Take action. Confirm results.
 
+When analyzing images:
+- Describe what you see clearly and concisely
+- If it's a document, screenshot, or business-related image, extract relevant information
+- If it shows contacts or real estate info, offer to help update the database accordingly`;
+
+      // Build messages array, handling images with vision API format
       const apiMessages: any[] = [
         { role: "system", content: systemPrompt },
-        ...messages.map((m: any) => ({
-          role: m.role,
-          content: m.content
-        }))
+        ...messages.map((m: any) => {
+          // Check if this message has images attached
+          if (m.images && Array.isArray(m.images) && m.images.length > 0) {
+            // Build content array with text and images for vision
+            const contentArray: any[] = [];
+            
+            // Add text content if present
+            if (m.content) {
+              contentArray.push({ type: "text", text: m.content });
+            }
+            
+            // Add each image
+            for (const img of m.images) {
+              contentArray.push({
+                type: "image_url",
+                image_url: {
+                  url: img.data, // Base64 data URL
+                  detail: "high"
+                }
+              });
+            }
+            
+            return {
+              role: m.role,
+              content: contentArray
+            };
+          }
+          
+          // Regular text message
+          return {
+            role: m.role,
+            content: m.content
+          };
+        })
       ];
 
       let completion = await openaiClient.chat.completions.create({

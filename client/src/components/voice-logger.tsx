@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Mic, Square, Loader2, Send, MessageSquare, Sparkles, X, Bot, User, CheckCircle2, Zap } from "lucide-react";
+import { Mic, Square, Loader2, Send, MessageSquare, Sparkles, X, Bot, User, CheckCircle2, Zap, Image as ImageIcon, Paperclip } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -18,10 +18,17 @@ interface Action {
   result: string;
 }
 
+interface AttachedImage {
+  data: string;
+  type: string;
+  name?: string;
+}
+
 interface Message {
   role: "user" | "assistant";
   content: string;
   actions?: Action[];
+  images?: AttachedImage[];
 }
 
 export function VoiceLogger() {
@@ -32,10 +39,12 @@ export function VoiceLogger() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [currentPage, setCurrentPage] = useState("");
+  const [attachedImages, setAttachedImages] = useState<AttachedImage[]>([]);
   
   const recognitionRef = useRef<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setCurrentPage(window.location.pathname);
@@ -110,12 +119,58 @@ export function VoiceLogger() {
     return pageContexts[currentPage] || "Ninja OS - Real Estate Business Operating System";
   };
 
-  const sendMessage = async (text: string) => {
-    if (!text.trim() || isProcessing) return;
+  const processFile = useCallback((file: File) => {
+    if (!file.type.startsWith("image/")) {
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const data = e.target?.result as string;
+      setAttachedImages(prev => [...prev, { data, type: file.type, name: file.name }]);
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
     
-    const userMessage: Message = { role: "user", content: text.trim() };
+    const itemsArray = Array.from(items);
+    for (const item of itemsArray) {
+      if (item.type.startsWith("image/")) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) processFile(file);
+        break;
+      }
+    }
+  }, [processFile]);
+
+  const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    const filesArray = Array.from(files);
+    for (const file of filesArray) {
+      processFile(file);
+    }
+    e.target.value = "";
+  }, [processFile]);
+
+  const removeImage = (index: number) => {
+    setAttachedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const sendMessage = async (text: string) => {
+    if ((!text.trim() && attachedImages.length === 0) || isProcessing) return;
+    
+    const userMessage: Message = { 
+      role: "user", 
+      content: text.trim(),
+      images: attachedImages.length > 0 ? [...attachedImages] : undefined
+    };
     setMessages(prev => [...prev, userMessage]);
     setInputText("");
+    setAttachedImages([]);
     setIsProcessing(true);
 
     try {
@@ -124,6 +179,7 @@ export function VoiceLogger() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: [...messages, userMessage],
+          images: userMessage.images,
           context: {
             currentPage: currentPage,
             pageDescription: getPageContext(),
@@ -307,6 +363,18 @@ export function VoiceLogger() {
                         ))}
                       </div>
                     )}
+                    {message.images && message.images.length > 0 && (
+                      <div className="flex gap-2 flex-wrap mb-2">
+                        {message.images.map((img, i) => (
+                          <img 
+                            key={i}
+                            src={img.data} 
+                            alt={img.name || "Attached"} 
+                            className="max-h-32 max-w-[200px] rounded-lg border"
+                          />
+                        ))}
+                      </div>
+                    )}
                     <p className="whitespace-pre-wrap">{message.content}</p>
                   </div>
                   {message.role === "user" && (
@@ -350,6 +418,26 @@ export function VoiceLogger() {
               </div>
             )}
 
+            {attachedImages.length > 0 && (
+              <div className="flex gap-2 flex-wrap">
+                {attachedImages.map((img, i) => (
+                  <div key={i} className="relative group">
+                    <img 
+                      src={img.data} 
+                      alt={img.name || "Attached image"} 
+                      className="h-16 w-16 object-cover rounded-lg border"
+                    />
+                    <button
+                      onClick={() => removeImage(i)}
+                      className="absolute -top-1.5 -right-1.5 h-5 w-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="flex gap-2">
               <Button
                 variant="outline"
@@ -363,13 +451,33 @@ export function VoiceLogger() {
               >
                 {isRecording ? <Square className="h-4 w-4 fill-current" /> : <Mic className="h-4 w-4" />}
               </Button>
+
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                accept="image/*"
+                multiple
+                className="hidden"
+              />
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex-shrink-0"
+                disabled={isProcessing || isRecording}
+                title="Attach image"
+              >
+                <Paperclip className="h-4 w-4" />
+              </Button>
               
               <Textarea
                 ref={inputRef}
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask me anything..."
+                onPaste={handlePaste}
+                placeholder="Ask me anything... (paste images with Ctrl+V)"
                 className="min-h-[44px] max-h-32 resize-none"
                 rows={1}
                 disabled={isProcessing || isRecording}
@@ -378,7 +486,7 @@ export function VoiceLogger() {
               <Button
                 size="icon"
                 onClick={() => sendMessage(inputText)}
-                disabled={!inputText.trim() || isProcessing || isRecording}
+                disabled={(!inputText.trim() && attachedImages.length === 0) || isProcessing || isRecording}
                 className="flex-shrink-0 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700"
               >
                 {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
