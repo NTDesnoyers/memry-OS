@@ -58,7 +58,7 @@ function NavContent({ location, setOpen, userName, userInitials, brokerage }: Na
         <h1 className="text-xl font-serif font-bold tracking-tight text-primary">Ninja OS</h1>
         <p className="text-xs text-muted-foreground mt-1">Operating System</p>
       </div>
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = location === item.href;
           return (
@@ -66,13 +66,13 @@ function NavContent({ location, setOpen, userName, userInitials, brokerage }: Na
               <Button
                 variant={isActive ? "secondary" : "ghost"}
                 className={cn(
-                  "w-full justify-start gap-3 text-base font-normal",
+                  "w-full justify-start gap-3 text-base font-normal h-11 px-3",
                   isActive && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
                 )}
                 onClick={() => setOpen(false)}
               >
-                <item.icon className="h-5 w-5" />
-                {item.name}
+                <item.icon className="h-5 w-5 flex-shrink-0" />
+                <span className="truncate">{item.name}</span>
               </Button>
             </Link>
           );
@@ -122,15 +122,15 @@ export default function LayoutComponent({ children }: { children: React.ReactNod
         <NavContent {...navProps} />
       </aside>
 
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-background border-b px-4 py-3 flex items-center justify-between" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
-        <span className="font-serif font-bold text-primary">Ninja OS</span>
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b px-4 py-2 flex items-center justify-between will-change-transform" style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))' }}>
+        <span className="font-serif font-bold text-primary text-lg">Ninja OS</span>
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <Menu className="h-5 w-5" />
+            <Button variant="ghost" size="icon" className="h-10 w-10">
+              <Menu className="h-6 w-6" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="p-0 w-64">
+          <SheetContent side="left" className="p-0 w-72 will-change-transform">
             <NavContent {...navProps} />
           </SheetContent>
         </Sheet>

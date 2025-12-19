@@ -174,6 +174,81 @@
   }
 }
 
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  /* Faster transitions on mobile */
+  *, *::before, *::after {
+    transition-duration: 0.15s !important;
+  }
+  
+  /* Better touch targets - minimum 44px */
+  button, 
+  [role="button"],
+  a,
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+  }
+  
+  /* GPU acceleration for smoother scrolling */
+  .container,
+  main,
+  [role="tabpanel"] {
+    transform: translateZ(0);
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Reduce heavy background effects on mobile */
+  .fixed.inset-0.opacity-40 {
+    opacity: 0.15 !important;
+  }
+  
+  /* Better tap feedback */
+  button:active,
+  [role="button"]:active,
+  a:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+  }
+  
+  /* Prevent text selection on interactive elements */
+  button, [role="button"] {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Smoother cards */
+  .card, [class*="Card"] {
+    transform: translateZ(0);
+  }
+  
+  /* Reduce shadow complexity on mobile */
+  .shadow-lg, .shadow-md {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+  }
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Smooth scrolling for the whole page */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Prevent overscroll bounce on iOS */
+body {
+  overscroll-behavior: none;
+}
+
 @media print {
   @page {
     margin: 0.5in;
