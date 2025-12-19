@@ -238,11 +238,44 @@ export default function PersonProfile() {
                     </Select>
                   </div>
                 )}
-                {person.segment && (
+                {isEditing ? (
+                  <Select
+                    value={formData.segment || ""}
+                    onValueChange={(value) => handleChange("segment", value)}
+                  >
+                    <SelectTrigger className="h-7 w-auto gap-1 px-2" data-testid="select-segment">
+                      <SelectValue placeholder="Segment" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="A">A - Raving Fan</SelectItem>
+                      <SelectItem value="B">B - Strong</SelectItem>
+                      <SelectItem value="C">C - Network</SelectItem>
+                      <SelectItem value="D">D - Develop</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : person.segment && (
                   <Badge className={getSegmentColor(person.segment)}>{person.segment}</Badge>
                 )}
-                {person.role && (
-                  <span className="text-muted-foreground text-sm">{person.role}</span>
+                {isEditing ? (
+                  <Select
+                    value={formData.role || ""}
+                    onValueChange={(value) => handleChange("role", value)}
+                  >
+                    <SelectTrigger className="h-7 w-auto gap-1 px-2" data-testid="select-role">
+                      <SelectValue placeholder="Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="buyer">Buyer</SelectItem>
+                      <SelectItem value="seller">Seller</SelectItem>
+                      <SelectItem value="renter">Renter</SelectItem>
+                      <SelectItem value="landlord">Landlord</SelectItem>
+                      <SelectItem value="investor">Investor</SelectItem>
+                      <SelectItem value="past_client">Past Client</SelectItem>
+                      <SelectItem value="sphere">Sphere</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : person.role && (
+                  <Badge variant="outline">{person.role}</Badge>
                 )}
               </div>
             </div>
@@ -307,17 +340,8 @@ export default function PersonProfile() {
                       )}
                     </div>
                     <div>
-                      <Label>Segment</Label>
-                      {isEditing ? (
-                        <Input 
-                          value={formData.segment || ""} 
-                          onChange={(e) => handleChange("segment", e.target.value)}
-                          placeholder="A - Advocate, B - Fan, C - Network, D - 8x8..."
-                          data-testid="input-segment"
-                        />
-                      ) : (
-                        <p className="text-lg">{person.segment || "—"}</p>
-                      )}
+                      <Label>Last Contact</Label>
+                      <p className="text-lg">{formatDate(person.lastContact)}</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
