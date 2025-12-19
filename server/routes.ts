@@ -2014,7 +2014,7 @@ Be concise. Take action. Confirm results.`;
     }
   });
 
-  // Auto-match existing unlinked conversations by participant email
+  // Auto-match existing unlinked conversations by participant name or email
   app.post("/api/interactions/auto-match", async (req, res) => {
     try {
       const allInteractions = await storage.getAllInteractions();
@@ -2031,15 +2031,28 @@ Be concise. Take action. Confirm results.`;
           continue;
         }
         
-        // Try to match by participant emails
+        // Try to match by participant name or email
         const participants = interaction.participants || [];
         let matchedPersonId: string | null = null;
         
         for (const participant of participants) {
+          const participantLower = participant.toLowerCase().trim();
+          
           // Check if participant looks like an email
           if (participant.includes('@')) {
             const matchedPerson = allPeople.find(p => 
-              p.email?.toLowerCase() === participant.toLowerCase()
+              p.email?.toLowerCase() === participantLower
+            );
+            if (matchedPerson) {
+              matchedPersonId = matchedPerson.id;
+              break;
+            }
+          } else {
+            // Try matching by name (skip the user's own name - Nathan Desnoyers)
+            if (participantLower === 'nathan desnoyers') continue;
+            
+            const matchedPerson = allPeople.find(p => 
+              p.name.toLowerCase().trim() === participantLower
             );
             if (matchedPerson) {
               matchedPersonId = matchedPerson.id;
