@@ -1497,7 +1497,12 @@ Be helpful, knowledgeable, and supportive. Keep responses concise but valuable.`
   // Create interaction
   app.post("/api/interactions", async (req, res) => {
     try {
-      const data = validate(insertInteractionSchema, req.body);
+      // Convert occurredAt string to Date before validation
+      const body = {
+        ...req.body,
+        occurredAt: req.body.occurredAt ? new Date(req.body.occurredAt) : new Date(),
+      };
+      const data = validate(insertInteractionSchema, body);
       const interaction = await storage.createInteraction(data);
       
       // Update person's lastContact if personId is provided
