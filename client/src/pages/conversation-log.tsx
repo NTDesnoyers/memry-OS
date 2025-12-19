@@ -175,7 +175,12 @@ export default function ConversationLog() {
     let formattedDate: string;
     try {
       const date = new Date(interaction.occurredAt);
-      formattedDate = date.toISOString().slice(0, 16);
+      // Check for Invalid Date
+      if (isNaN(date.getTime())) {
+        formattedDate = new Date().toISOString().slice(0, 16);
+      } else {
+        formattedDate = date.toISOString().slice(0, 16);
+      }
     } catch {
       formattedDate = new Date().toISOString().slice(0, 16);
     }
@@ -193,13 +198,25 @@ export default function ConversationLog() {
   const handleEditSubmit = () => {
     if (!selectedInteraction) return;
     
-    // Handle date - could be string or Date object
+    // Handle date - could be string or Date object, or invalid
     let occurredAtISO: string;
-    if (typeof editForm.occurredAt === 'string') {
-      occurredAtISO = new Date(editForm.occurredAt).toISOString();
-    } else if (editForm.occurredAt instanceof Date) {
-      occurredAtISO = editForm.occurredAt.toISOString();
-    } else {
+    try {
+      let dateValue: Date;
+      if (typeof editForm.occurredAt === 'string' && editForm.occurredAt) {
+        dateValue = new Date(editForm.occurredAt);
+      } else if (editForm.occurredAt instanceof Date) {
+        dateValue = editForm.occurredAt;
+      } else {
+        dateValue = new Date();
+      }
+      
+      // Check if the date is valid
+      if (isNaN(dateValue.getTime())) {
+        dateValue = new Date();
+      }
+      
+      occurredAtISO = dateValue.toISOString();
+    } catch {
       occurredAtISO = new Date().toISOString();
     }
     
