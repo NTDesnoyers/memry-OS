@@ -8,7 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, Save, Plus, FileText, BarChart3, Clock, Phone, Calculator, Play, Pause, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { DollarSign, Save, Plus, FileText, BarChart3, Clock, Phone, Calculator, Play, Pause, RotateCcw, ChevronLeft, ChevronRight, CalendarIcon, History, TrendingUp } from "lucide-react";
+import { format } from "date-fns";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -146,6 +151,20 @@ export default function BusinessTracker() {
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Historical Deal Form State
+  const [showHistoricalDealDialog, setShowHistoricalDealDialog] = useState(false);
+  const [historicalDeal, setHistoricalDeal] = useState({
+    title: "",
+    address: "",
+    side: "buyer" as "buyer" | "seller",
+    value: "",
+    commissionPercent: "3",
+    actualGCI: "",
+    actualCloseDate: new Date(),
+    isReferral: false,
+    personId: "",
+  });
+
   const { data: pieEntries = [] } = useQuery<PieEntry[]>({
     queryKey: ["/api/pie-entries"],
   });
@@ -179,6 +198,68 @@ export default function BusinessTracker() {
       queryClient.invalidateQueries({ queryKey: ["/api/pie-entries"] });
     },
   });
+
+  const createHistoricalDealMutation = useMutation({
+    mutationFn: async (data: {
+      title: string;
+      address: string;
+      side: string;
+      value: number;
+      commissionPercent: number;
+      actualGCI: number;
+      actualCloseDate: Date;
+      isReferral: boolean;
+      personId?: string;
+    }) => {
+      const res = await fetch("/api/deals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...data,
+          type: "sale",
+          stage: "closed",
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to create deal");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+      setShowHistoricalDealDialog(false);
+      setHistoricalDeal({
+        title: "",
+        address: "",
+        side: "buyer",
+        value: "",
+        commissionPercent: "3",
+        actualGCI: "",
+        actualCloseDate: new Date(),
+        isReferral: false,
+        personId: "",
+      });
+      toast.success("Historical deal added");
+    },
+    onError: () => {
+      toast.error("Failed to add deal");
+    },
+  });
+
+  const handleAddHistoricalDeal = () => {
+    const value = parseInt(historicalDeal.value) || 0;
+    const gci = parseInt(historicalDeal.actualGCI) || Math.round(value * (parseFloat(historicalDeal.commissionPercent) / 100));
+    
+    createHistoricalDealMutation.mutate({
+      title: historicalDeal.title || historicalDeal.address || "Historical Sale",
+      address: historicalDeal.address,
+      side: historicalDeal.side,
+      value: value,
+      commissionPercent: parseFloat(historicalDeal.commissionPercent),
+      actualGCI: gci,
+      actualCloseDate: historicalDeal.actualCloseDate,
+      isReferral: historicalDeal.isReferral,
+      personId: historicalDeal.personId || undefined,
+    });
+  };
 
   const weekDays = useMemo(() => {
     const days = [];
@@ -952,8 +1033,18 @@ export default function BusinessTracker() {
 
             {/* === CLOSED TRANSACTIONS TAB === */}
             <TabsContent value="closed" className="space-y-4">
-              <div className="text-center mb-4">
-                <p className="text-sm text-muted-foreground">A transaction has closed! Enter closing details in tan cells.</p>
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-center flex-1">
+                  <p className="text-sm text-muted-foreground">A transaction has closed! Enter closing details in tan cells.</p>
+                </div>
+                <Button 
+                  onClick={() => setShowHistoricalDealDialog(true)} 
+                  className="gap-1"
+                  data-testid="button-add-historical-deal"
+                >
+                  <History className="h-4 w-4" />
+                  Add Historical Deal
+                </Button>
               </div>
               
               <div className="overflow-x-auto">
@@ -1194,6 +1285,31 @@ export default function BusinessTracker() {
                         <Button variant="ghost" size="icon" onClick={() => navigateWeek("prev")} data-testid="button-prev-week">
                           <ChevronLeft className="h-4 w-4" />
                         </Button>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm" className="gap-1" data-testid="button-jump-to-week">
+                              <CalendarIcon className="h-3 w-3" />
+                              Jump to Date
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="center">
+                            <Calendar
+                              mode="single"
+                              selected={selectedWeekStart}
+                              onSelect={(date) => {
+                                if (date) {
+                                  const dayOfWeek = date.getDay();
+                                  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+                                  const monday = new Date(date);
+                                  monday.setDate(date.getDate() + mondayOffset);
+                                  monday.setHours(0, 0, 0, 0);
+                                  setSelectedWeekStart(monday);
+                                }
+                              }}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
                         <Button variant="outline" size="sm" onClick={goToCurrentWeek}>
                           This Week
                         </Button>
@@ -1395,6 +1511,166 @@ export default function BusinessTracker() {
           </Tabs>
         </div>
       </div>
+
+      {/* Historical Deal Dialog */}
+      <Dialog open={showHistoricalDealDialog} onOpenChange={setShowHistoricalDealDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5" />
+              Add Historical Deal
+            </DialogTitle>
+            <DialogDescription>
+              Enter a past closed transaction to track your historical performance and trends.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="close-date">Close Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                      data-testid="button-historical-close-date"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {format(historicalDeal.actualCloseDate, "MMM d, yyyy")}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={historicalDeal.actualCloseDate}
+                      onSelect={(date) => date && setHistoricalDeal(prev => ({ ...prev, actualCloseDate: date }))}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="side">Side</Label>
+                <Select
+                  value={historicalDeal.side}
+                  onValueChange={(value: "buyer" | "seller") => setHistoricalDeal(prev => ({ ...prev, side: value }))}
+                >
+                  <SelectTrigger data-testid="select-historical-side">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="buyer">Buyer</SelectItem>
+                    <SelectItem value="seller">Seller</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="address">Property Address</Label>
+              <Input
+                id="address"
+                placeholder="123 Main St, City, State"
+                value={historicalDeal.address}
+                onChange={(e) => setHistoricalDeal(prev => ({ ...prev, address: e.target.value }))}
+                data-testid="input-historical-address"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="value">Sale Price</Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="value"
+                    placeholder="500,000"
+                    className="pl-7"
+                    value={historicalDeal.value}
+                    onChange={(e) => setHistoricalDeal(prev => ({ ...prev, value: e.target.value.replace(/[^0-9]/g, '') }))}
+                    data-testid="input-historical-value"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="commission">Commission %</Label>
+                <Input
+                  id="commission"
+                  placeholder="3"
+                  value={historicalDeal.commissionPercent}
+                  onChange={(e) => setHistoricalDeal(prev => ({ ...prev, commissionPercent: e.target.value }))}
+                  data-testid="input-historical-commission"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="gci">Actual GCI (optional)</Label>
+              <div className="relative">
+                <DollarSign className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="gci"
+                  placeholder="Auto-calculated from sale price × commission"
+                  className="pl-7"
+                  value={historicalDeal.actualGCI}
+                  onChange={(e) => setHistoricalDeal(prev => ({ ...prev, actualGCI: e.target.value.replace(/[^0-9]/g, '') }))}
+                  data-testid="input-historical-gci"
+                />
+              </div>
+              {historicalDeal.value && !historicalDeal.actualGCI && (
+                <p className="text-xs text-muted-foreground">
+                  Will be calculated as ${(parseInt(historicalDeal.value) * (parseFloat(historicalDeal.commissionPercent) / 100)).toLocaleString()}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="client">Client (optional)</Label>
+              <Select
+                value={historicalDeal.personId}
+                onValueChange={(value) => setHistoricalDeal(prev => ({ ...prev, personId: value }))}
+              >
+                <SelectTrigger data-testid="select-historical-client">
+                  <SelectValue placeholder="Select a client..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {people.map(person => (
+                    <SelectItem key={person.id} value={person.id}>
+                      {person.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <Label htmlFor="referral" className="text-sm">Was this a referral?</Label>
+              <Switch
+                id="referral"
+                checked={historicalDeal.isReferral}
+                onCheckedChange={(checked) => setHistoricalDeal(prev => ({ ...prev, isReferral: checked }))}
+                data-testid="switch-historical-referral"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowHistoricalDealDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAddHistoricalDeal}
+              disabled={createHistoricalDealMutation.isPending}
+              data-testid="button-save-historical-deal"
+            >
+              {createHistoricalDealMutation.isPending ? "Saving..." : "Add Deal"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }
