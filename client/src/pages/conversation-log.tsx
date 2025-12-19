@@ -170,18 +170,39 @@ export default function ConversationLog() {
 
   const openEditDialog = (interaction: Interaction) => {
     setSelectedInteraction(interaction);
+    
+    // Safely format date for datetime-local input
+    let formattedDate: string;
+    try {
+      const date = new Date(interaction.occurredAt);
+      formattedDate = date.toISOString().slice(0, 16);
+    } catch {
+      formattedDate = new Date().toISOString().slice(0, 16);
+    }
+    
     setEditForm({
       type: interaction.type,
       personId: interaction.personId || "",
       summary: interaction.summary || "",
       externalLink: interaction.externalLink || "",
-      occurredAt: new Date(interaction.occurredAt).toISOString().slice(0, 16),
+      occurredAt: formattedDate,
     });
     setShowEditDialog(true);
   };
 
   const handleEditSubmit = () => {
     if (!selectedInteraction) return;
+    
+    // Handle date - could be string or Date object
+    let occurredAtISO: string;
+    if (typeof editForm.occurredAt === 'string') {
+      occurredAtISO = new Date(editForm.occurredAt).toISOString();
+    } else if (editForm.occurredAt instanceof Date) {
+      occurredAtISO = editForm.occurredAt.toISOString();
+    } else {
+      occurredAtISO = new Date().toISOString();
+    }
+    
     updateInteraction.mutate({
       id: selectedInteraction.id,
       updates: {
@@ -189,7 +210,7 @@ export default function ConversationLog() {
         personId: editForm.personId || null,
         summary: editForm.summary || null,
         externalLink: editForm.externalLink || null,
-        occurredAt: new Date(editForm.occurredAt).toISOString(),
+        occurredAt: occurredAtISO,
       },
     });
   };
