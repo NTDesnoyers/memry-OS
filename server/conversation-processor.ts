@@ -283,14 +283,55 @@ export async function processInteraction(interactionId: string): Promise<{
         personUpdates.fordDreams = `${person.fordDreams}\n\n[${new Date().toLocaleDateString()}] ${extractedData.fordUpdates.dreams}`;
       }
 
-      if (extractedData.needs && extractedData.needs.length > 0) {
+      // Helper to flatten nested objects/arrays into string array
+      const flattenToStrings = (obj: any): string[] => {
+        if (!obj) return [];
+        if (Array.isArray(obj)) return obj.filter(x => typeof x === 'string');
+        if (typeof obj === 'object') {
+          const results: string[] = [];
+          for (const value of Object.values(obj)) {
+            if (typeof value === 'string' && value.length > 0) {
+              results.push(value);
+            } else if (Array.isArray(value)) {
+              results.push(...value.filter(x => typeof x === 'string'));
+            }
+          }
+          return results;
+        }
+        return [];
+      };
+
+      // Handle both lowercase and capitalized field names from AI
+      const needsData = (extractedData as any).Needs || extractedData.needs;
+      const offersData = (extractedData as any).Offers || extractedData.offers;
+      
+      const extractedNeeds = flattenToStrings(needsData);
+      if (extractedNeeds.length > 0) {
         const existingNeeds = person.needs || [];
-        personUpdates.needs = Array.from(new Set([...existingNeeds, ...extractedData.needs]));
+        personUpdates.needs = Array.from(new Set([...existingNeeds, ...extractedNeeds]));
       }
 
-      if (extractedData.offers && extractedData.offers.length > 0) {
+      const extractedOffers = flattenToStrings(offersData);
+      if (extractedOffers.length > 0) {
         const existingOffers = person.offers || [];
-        personUpdates.offers = Array.from(new Set([...existingOffers, ...extractedData.offers]));
+        personUpdates.offers = Array.from(new Set([...existingOffers, ...extractedOffers]));
+      }
+      
+      // Also extract profession from Offers if available
+      if (offersData && typeof offersData === 'object') {
+        const professionKeys = ['profession', 'Profession', 'TheirProfessionIndustryExpertise', 'ProfessionIndustryExpertise'];
+        for (const key of professionKeys) {
+          if ((offersData as any)[key]) {
+            const profValue = (offersData as any)[key];
+            if (typeof profValue === 'string' && !person.profession) {
+              personUpdates.profession = profValue;
+              break;
+            } else if (Array.isArray(profValue) && profValue.length > 0 && !person.profession) {
+              personUpdates.profession = profValue[0];
+              break;
+            }
+          }
+        }
       }
 
       if (Object.keys(personUpdates).length > 0) {

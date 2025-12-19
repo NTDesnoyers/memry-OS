@@ -2906,6 +2906,76 @@ When analyzing images:
       res.status(500).json({ message: error.message });
     }
   });
+  
+  // Get all referral opportunities across the network
+  app.get("/api/referral-opportunities", async (req, res) => {
+    try {
+      const allPeople = await storage.getAllPeople();
+      const opportunities: {
+        id: string;
+        personWithNeed: { id: string; name: string; segment: string | null };
+        personWithOffer: { id: string; name: string; segment: string | null; profession: string | null };
+        need: string;
+        offer: string;
+        matchType: "profession" | "offer";
+      }[] = [];
+      
+      const seen = new Set<string>();
+      
+      for (const person of allPeople) {
+        const needs = person.needs || [];
+        
+        for (const need of needs) {
+          const needLower = need.toLowerCase();
+          
+          for (const other of allPeople) {
+            if (other.id === person.id) continue;
+            
+            const offers = other.offers || [];
+            for (const offer of offers) {
+              const offerLower = offer.toLowerCase();
+              if (offerLower.includes(needLower) || needLower.includes(offerLower)) {
+                const key = `${person.id}-${other.id}-${need}-${offer}`;
+                if (!seen.has(key)) {
+                  seen.add(key);
+                  opportunities.push({
+                    id: key,
+                    personWithNeed: { id: person.id, name: person.name, segment: person.segment },
+                    personWithOffer: { id: other.id, name: other.name, segment: other.segment, profession: other.profession },
+                    need,
+                    offer,
+                    matchType: "offer",
+                  });
+                }
+              }
+            }
+            
+            if (other.profession) {
+              const profLower = other.profession.toLowerCase();
+              if (profLower.includes(needLower) || needLower.includes(profLower)) {
+                const key = `${person.id}-${other.id}-${need}-profession`;
+                if (!seen.has(key)) {
+                  seen.add(key);
+                  opportunities.push({
+                    id: key,
+                    personWithNeed: { id: person.id, name: person.name, segment: person.segment },
+                    personWithOffer: { id: other.id, name: other.name, segment: other.segment, profession: other.profession },
+                    need,
+                    offer: other.profession,
+                    matchType: "profession",
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      res.json(opportunities);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
 
   return httpServer;
 }
