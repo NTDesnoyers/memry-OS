@@ -31,7 +31,9 @@ import {
   Filter,
   Download,
   Key,
-  AlertCircle
+  AlertCircle,
+  Edit2,
+  X
 } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useToast } from "@/hooks/use-toast";
@@ -76,6 +78,19 @@ export default function ConversationLog() {
     total: number;
     errors?: string[];
   } | null>(null);
+  
+  // Edit dialog state
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [selectedInteraction, setSelectedInteraction] = useState<Interaction | null>(null);
+  const [editForm, setEditForm] = useState({
+    type: "",
+    personId: "",
+    summary: "",
+    externalLink: "",
+    occurredAt: "",
+  });
+  const [editPersonSearch, setEditPersonSearch] = useState("");
+  const [showEditPersonSearch, setShowEditPersonSearch] = useState(false);
 
   const { data: people = [] } = useQuery<Person[]>({
     queryKey: ["/api/people"],
@@ -117,6 +132,69 @@ export default function ConversationLog() {
       externalLink: "",
       occurredAt: new Date().toISOString().slice(0, 16),
     });
+  };
+
+  const updateInteraction = useMutation({
+    mutationFn: async (data: { id: string; updates: any }) => {
+      const res = await fetch(`/api/interactions/${data.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data.updates),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to update interaction");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/interactions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/people"] });
+      setShowEditDialog(false);
+      setSelectedInteraction(null);
+      toast({
+        title: "Updated",
+        description: "Conversation updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const openEditDialog = (interaction: Interaction) => {
+    setSelectedInteraction(interaction);
+    setEditForm({
+      type: interaction.type,
+      personId: interaction.personId || "",
+      summary: interaction.summary || "",
+      externalLink: interaction.externalLink || "",
+      occurredAt: new Date(interaction.occurredAt).toISOString().slice(0, 16),
+    });
+    setShowEditDialog(true);
+  };
+
+  const handleEditSubmit = () => {
+    if (!selectedInteraction) return;
+    updateInteraction.mutate({
+      id: selectedInteraction.id,
+      updates: {
+        type: editForm.type,
+        personId: editForm.personId || null,
+        summary: editForm.summary || null,
+        externalLink: editForm.externalLink || null,
+        occurredAt: new Date(editForm.occurredAt).toISOString(),
+      },
+    });
+  };
+
+  const getEditSelectedPerson = () => {
+    if (!editForm.personId) return null;
+    return people.find(p => p.id === editForm.personId) || null;
   };
 
   const fathomImport = useMutation({
@@ -301,6 +379,7 @@ export default function ConversationLog() {
                         <Card 
                           key={interaction.id} 
                           className="border-none shadow-sm hover:shadow-md transition-all cursor-pointer"
+                          onClick={() => openEditDialog(interaction)}
                           data-testid={`card-interaction-${interaction.id}`}
                         >
                           <CardContent className="p-4">
@@ -644,6 +723,201 @@ export default function ConversationLog() {
                   <Download className="h-4 w-4 mr-2" />
                   Import Meetings
                 </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Conversation Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={(open) => {
+        setShowEditDialog(open);
+        if (!open) {
+          setSelectedInteraction(null);
+          setShowEditPersonSearch(false);
+        }
+      }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit2 className="h-5 w-5" />
+              Edit Conversation
+            </DialogTitle>
+            <DialogDescription>
+              Update conversation details or assign a contact.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label className="mb-2 block">Type</Label>
+              <div className="grid grid-cols-4 gap-2">
+                {interactionTypes.map(type => {
+                  const TypeIcon = type.icon;
+                  return (
+                    <button
+                      key={type.value}
+                      onClick={() => setEditForm(f => ({ ...f, type: type.value }))}
+                      className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all ${
+                        editForm.type === type.value 
+                          ? 'border-primary bg-primary/5' 
+                          : 'border-muted hover:border-muted-foreground/30'
+                      }`}
+                      data-testid={`button-edit-type-${type.value}`}
+                    >
+                      <TypeIcon className="h-5 w-5" />
+                      <span className="text-xs">{type.label.split(" ")[0]}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <Label className="mb-2 block">Who was this with?</Label>
+              <div className="relative">
+                {(() => {
+                  const editSelectedPerson = getEditSelectedPerson();
+                  return (
+                    <div className="flex items-center gap-2">
+                      {editSelectedPerson ? (
+                        <div 
+                          className="flex items-center gap-2 p-2 bg-secondary rounded-lg flex-1 cursor-pointer hover:bg-secondary/80"
+                          onClick={() => {
+                            setEditForm(f => ({ ...f, personId: "" }));
+                            setShowEditPersonSearch(true);
+                          }}
+                        >
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                              {getInitials(editSelectedPerson.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{editSelectedPerson.name}</p>
+                            {editSelectedPerson.email && (
+                              <p className="text-xs text-muted-foreground">{editSelectedPerson.email}</p>
+                            )}
+                          </div>
+                          <X className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      ) : (
+                        <div className="flex-1">
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              placeholder="Search contacts..."
+                              value={editPersonSearch}
+                              onChange={(e) => {
+                                setEditPersonSearch(e.target.value);
+                                setShowEditPersonSearch(true);
+                              }}
+                              onFocus={() => setShowEditPersonSearch(true)}
+                              className="pl-9"
+                              data-testid="input-edit-person-search"
+                            />
+                          </div>
+                          {showEditPersonSearch && editPersonSearch && (
+                            <Card className="absolute z-10 w-full mt-1 max-h-48 overflow-auto">
+                              <CardContent className="p-1">
+                                {people
+                                  .filter(p => 
+                                    p.name.toLowerCase().includes(editPersonSearch.toLowerCase()) ||
+                                    p.email?.toLowerCase().includes(editPersonSearch.toLowerCase())
+                                  )
+                                  .slice(0, 5)
+                                  .map(person => (
+                                    <button
+                                      key={person.id}
+                                      className="w-full flex items-center gap-2 p-2 hover:bg-secondary rounded transition-colors"
+                                      onClick={() => {
+                                        setEditForm(f => ({ ...f, personId: person.id }));
+                                        setEditPersonSearch("");
+                                        setShowEditPersonSearch(false);
+                                      }}
+                                      data-testid={`button-edit-select-person-${person.id}`}
+                                    >
+                                      <Avatar className="h-8 w-8">
+                                        <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                          {getInitials(person.name)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div className="text-left">
+                                        <p className="font-medium text-sm">{person.name}</p>
+                                        {person.email && (
+                                          <p className="text-xs text-muted-foreground">{person.email}</p>
+                                        )}
+                                      </div>
+                                    </button>
+                                  ))}
+                                {people.filter(p => 
+                                  p.name.toLowerCase().includes(editPersonSearch.toLowerCase()) ||
+                                  p.email?.toLowerCase().includes(editPersonSearch.toLowerCase())
+                                ).length === 0 && (
+                                  <p className="text-sm text-muted-foreground p-2">No contacts found</p>
+                                )}
+                              </CardContent>
+                            </Card>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="edit-date" className="mb-2 block">Date & Time</Label>
+              <Input
+                id="edit-date"
+                type="datetime-local"
+                value={editForm.occurredAt}
+                onChange={(e) => setEditForm(f => ({ ...f, occurredAt: e.target.value }))}
+                data-testid="input-edit-date"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="edit-summary" className="mb-2 block">Summary / Notes</Label>
+              <Textarea
+                id="edit-summary"
+                placeholder="What did you discuss?"
+                value={editForm.summary}
+                onChange={(e) => setEditForm(f => ({ ...f, summary: e.target.value }))}
+                rows={4}
+                data-testid="input-edit-summary"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="edit-link" className="mb-2 block">External Link (optional)</Label>
+              <Input
+                id="edit-link"
+                placeholder="Fathom, Granola, or other link..."
+                value={editForm.externalLink}
+                onChange={(e) => setEditForm(f => ({ ...f, externalLink: e.target.value }))}
+                data-testid="input-edit-link"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleEditSubmit}
+              disabled={updateInteraction.isPending}
+              data-testid="button-edit-save"
+            >
+              {updateInteraction.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
               )}
             </Button>
           </DialogFooter>
