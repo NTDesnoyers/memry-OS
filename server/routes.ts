@@ -1573,8 +1573,29 @@ Be concise. Take action. Confirm results.`;
     }
   });
   
+  // Alias for agent profile (used by Brand Center)
+  app.get("/api/agent-profile", async (req, res) => {
+    try {
+      const profile = await storage.getAgentProfile();
+      res.json(profile || null);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
   // Update/create agent profile
   app.put("/api/profile", async (req, res) => {
+    try {
+      const data = validate(insertAgentProfileSchema, req.body);
+      const profile = await storage.upsertAgentProfile(data);
+      res.json(profile);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Alias for agent profile with POST (used by Brand Center)
+  app.post("/api/agent-profile", async (req, res) => {
     try {
       const data = validate(insertAgentProfileSchema, req.body);
       const profile = await storage.upsertAgentProfile(data);
