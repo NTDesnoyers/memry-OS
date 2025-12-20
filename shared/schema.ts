@@ -82,6 +82,11 @@ export const people = pgTable("people", {
   offers: text("offers").array(),
   // Profession/Industry for referral matching
   profession: text("profession"),
+  // D segment tracking for "develop or delete" workflow
+  segmentEnteredAt: timestamp("segment_entered_at"),
+  contactAttempts: integer("contact_attempts").default(0),
+  contactResponses: integer("contact_responses").default(0),
+  reviewStatus: text("review_status"), // null, 'needs_review', 'keep', 'delete_pending'
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -390,6 +395,37 @@ export const insertEmailCampaignSchema = createInsertSchema(emailCampaigns).omit
 
 export type InsertEmailCampaign = z.infer<typeof insertEmailCampaignSchema>;
 export type EmailCampaign = typeof emailCampaigns.$inferSelect;
+
+// 8x8 Campaigns (8 touches in 8 weeks for D segment contacts)
+export const eightByEightCampaigns = pgTable("eight_by_eight_campaigns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  personId: varchar("person_id").references(() => people.id).notNull(),
+  startedAt: timestamp("started_at").defaultNow().notNull(),
+  currentStep: integer("current_step").default(1).notNull(), // 1-8
+  completedSteps: integer("completed_steps").default(0).notNull(),
+  status: text("status").default("active").notNull(), // active, completed, abandoned
+  // Track each touch: type and completion date
+  touches: jsonb("touches").$type<Array<{
+    step: number;
+    type: 'call' | 'text' | 'email' | 'mail' | 'in_person' | 'social';
+    completedAt?: string;
+    notes?: string;
+  }>>(),
+  outcome: text("outcome"), // 'promoted_to_a', 'promoted_to_b', 'promoted_to_c', 'deleted', 'meeting_booked'
+  outcomeNotes: text("outcome_notes"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertEightByEightCampaignSchema = createInsertSchema(eightByEightCampaigns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertEightByEightCampaign = z.infer<typeof insertEightByEightCampaignSchema>;
+export type EightByEightCampaign = typeof eightByEightCampaigns.$inferSelect;
 
 // Pricing Reviews (Visual Pricing / Focus1st style analysis)
 export const pricingReviews = pgTable("pricing_reviews", {

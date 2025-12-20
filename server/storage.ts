@@ -13,6 +13,7 @@ import {
   type Note, type InsertNote,
   type Listing, type InsertListing,
   type EmailCampaign, type InsertEmailCampaign,
+  type EightByEightCampaign, type InsertEightByEightCampaign,
   type PricingReview, type InsertPricingReview,
   type BusinessSettings, type InsertBusinessSettings,
   type PieEntry, type InsertPieEntry,
@@ -24,7 +25,7 @@ import {
   type GeneratedDraft, type InsertGeneratedDraft,
   type VoiceProfile, type InsertVoiceProfile,
   type SyncLog, type InsertSyncLog,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt } from "drizzle-orm";
@@ -237,6 +238,24 @@ export interface IStorage {
   // Contact Due Calculator
   /** Get contacts due for follow-up based on segment and hot/warm status. */
   getContactsDueForFollowUp(): Promise<ContactDueResult[]>;
+  
+  // 8x8 Campaigns
+  getAll8x8Campaigns(): Promise<EightByEightCampaign[]>;
+  get8x8Campaign(id: string): Promise<EightByEightCampaign | undefined>;
+  get8x8CampaignByPerson(personId: string): Promise<EightByEightCampaign | undefined>;
+  create8x8Campaign(campaign: InsertEightByEightCampaign): Promise<EightByEightCampaign>;
+  update8x8Campaign(id: string, campaign: Partial<InsertEightByEightCampaign>): Promise<EightByEightCampaign | undefined>;
+  delete8x8Campaign(id: string): Promise<void>;
+  
+  // D Contact Review
+  /** Get D contacts that have been in segment for 6+ months without promotion */
+  getStaleDContacts(): Promise<Person[]>;
+  /** Get D contacts with low engagement (3+ attempts, 0 responses) */
+  getLowEngagementDContacts(): Promise<Person[]>;
+  /** Get all D contacts needing review (stale or low engagement) */
+  getDContactsNeedingReview(): Promise<DContactReviewResult[]>;
+  /** Flag a contact for review */
+  flagContactForReview(personId: string, status: string): Promise<Person | undefined>;
 }
 
 /** Result of contact due calculation with reason and days overdue. */
@@ -246,6 +265,16 @@ export type ContactDueResult = {
   daysSinceContact: number;
   daysOverdue: number;
   frequencyDays: number;
+};
+
+/** Result of D contact review analysis */
+export type DContactReviewResult = {
+  person: Person;
+  reason: 'stale' | 'low_engagement' | 'campaign_completed';
+  monthsInSegment: number;
+  contactAttempts: number;
+  contactResponses: number;
+  activeCampaign?: EightByEightCampaign;
 };
 
 export class DatabaseStorage implements IStorage {
@@ -1127,6 +1156,147 @@ export class DatabaseStorage implements IStorage {
     results.sort((a, b) => b.daysOverdue - a.daysOverdue);
     
     return results;
+  }
+  
+  // 8x8 Campaigns
+  async getAll8x8Campaigns(): Promise<EightByEightCampaign[]> {
+    return await db.select().from(eightByEightCampaigns).orderBy(desc(eightByEightCampaigns.createdAt));
+  }
+  
+  async get8x8Campaign(id: string): Promise<EightByEightCampaign | undefined> {
+    const [campaign] = await db.select().from(eightByEightCampaigns).where(eq(eightByEightCampaigns.id, id));
+    return campaign || undefined;
+  }
+  
+  async get8x8CampaignByPerson(personId: string): Promise<EightByEightCampaign | undefined> {
+    const [campaign] = await db.select().from(eightByEightCampaigns)
+      .where(and(
+        eq(eightByEightCampaigns.personId, personId),
+        eq(eightByEightCampaigns.status, 'active')
+      ));
+    return campaign || undefined;
+  }
+  
+  async create8x8Campaign(campaign: InsertEightByEightCampaign): Promise<EightByEightCampaign> {
+    const [created] = await db.insert(eightByEightCampaigns).values(campaign).returning();
+    return created;
+  }
+  
+  async update8x8Campaign(id: string, campaign: Partial<InsertEightByEightCampaign>): Promise<EightByEightCampaign | undefined> {
+    const [updated] = await db.update(eightByEightCampaigns)
+      .set({ ...campaign, updatedAt: new Date() })
+      .where(eq(eightByEightCampaigns.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async delete8x8Campaign(id: string): Promise<void> {
+    await db.delete(eightByEightCampaigns).where(eq(eightByEightCampaigns.id, id));
+  }
+  
+  // D Contact Review
+  async getStaleDContacts(): Promise<Person[]> {
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    
+    const allDContacts = await db.select().from(people)
+      .where(sql`UPPER(SUBSTRING(${people.segment}, 1, 1)) = 'D'`);
+    
+    // Filter to those in segment for 6+ months
+    return allDContacts.filter(p => {
+      if (!p.segmentEnteredAt) {
+        // If no entry date, use createdAt as fallback
+        return p.createdAt < sixMonthsAgo;
+      }
+      return new Date(p.segmentEnteredAt) < sixMonthsAgo;
+    });
+  }
+  
+  async getLowEngagementDContacts(): Promise<Person[]> {
+    return await db.select().from(people)
+      .where(and(
+        sql`UPPER(SUBSTRING(${people.segment}, 1, 1)) = 'D'`,
+        gte(people.contactAttempts, 3),
+        eq(people.contactResponses, 0)
+      ));
+  }
+  
+  async getDContactsNeedingReview(): Promise<DContactReviewResult[]> {
+    const results: DContactReviewResult[] = [];
+    const now = new Date();
+    
+    // Get all D contacts
+    const allDContacts = await db.select().from(people)
+      .where(sql`UPPER(SUBSTRING(${people.segment}, 1, 1)) = 'D'`);
+    
+    // Get completed 8x8 campaigns
+    const completedCampaigns = await db.select().from(eightByEightCampaigns)
+      .where(eq(eightByEightCampaigns.status, 'completed'));
+    const completedPersonIds = new Set(completedCampaigns.map(c => c.personId));
+    
+    // Get active campaigns for reference
+    const activeCampaigns = await db.select().from(eightByEightCampaigns)
+      .where(eq(eightByEightCampaigns.status, 'active'));
+    const activeCampaignMap = new Map(activeCampaigns.map(c => [c.personId, c]));
+    
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    
+    for (const person of allDContacts) {
+      const enteredAt = person.segmentEnteredAt ? new Date(person.segmentEnteredAt) : person.createdAt;
+      const monthsInSegment = Math.floor((now.getTime() - enteredAt.getTime()) / (1000 * 60 * 60 * 24 * 30));
+      
+      // Check for completed campaign
+      if (completedPersonIds.has(person.id)) {
+        results.push({
+          person,
+          reason: 'campaign_completed',
+          monthsInSegment,
+          contactAttempts: person.contactAttempts || 0,
+          contactResponses: person.contactResponses || 0,
+          activeCampaign: undefined,
+        });
+        continue;
+      }
+      
+      // Check for low engagement
+      if ((person.contactAttempts || 0) >= 3 && (person.contactResponses || 0) === 0) {
+        results.push({
+          person,
+          reason: 'low_engagement',
+          monthsInSegment,
+          contactAttempts: person.contactAttempts || 0,
+          contactResponses: person.contactResponses || 0,
+          activeCampaign: activeCampaignMap.get(person.id),
+        });
+        continue;
+      }
+      
+      // Check for stale (6+ months)
+      if (enteredAt < sixMonthsAgo) {
+        results.push({
+          person,
+          reason: 'stale',
+          monthsInSegment,
+          contactAttempts: person.contactAttempts || 0,
+          contactResponses: person.contactResponses || 0,
+          activeCampaign: activeCampaignMap.get(person.id),
+        });
+      }
+    }
+    
+    // Sort by months in segment descending
+    results.sort((a, b) => b.monthsInSegment - a.monthsInSegment);
+    
+    return results;
+  }
+  
+  async flagContactForReview(personId: string, status: string): Promise<Person | undefined> {
+    const [updated] = await db.update(people)
+      .set({ reviewStatus: status, updatedAt: new Date() })
+      .where(eq(people.id, personId))
+      .returning();
+    return updated || undefined;
   }
 }
 
