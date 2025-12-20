@@ -131,6 +131,10 @@ export default function BusinessTracker() {
     queryKey: ["/api/interactions"],
   });
 
+  const { data: households = [] } = useQuery<{ id: string; name: string; members: Person[] }[]>({
+    queryKey: ["/api/households"],
+  });
+
   // Get the most recent contact date for a person
   const getLastContactDate = (personId: string | null): Date | null => {
     if (!personId) return null;
@@ -147,11 +151,65 @@ export default function BusinessTracker() {
     person: people.find(p => p.id === deal.personId)
   }));
 
+  // Group deals by household - consolidate household members into single entries
+  type HouseholdDealGroup = {
+    householdId: string | null;
+    householdName: string | null;
+    deals: DealWithPerson[];
+    members: Person[];
+    primaryDeal: DealWithPerson;
+  };
+
+  const groupDealsByHousehold = (dealsList: DealWithPerson[]): HouseholdDealGroup[] => {
+    const grouped = new Map<string, HouseholdDealGroup>();
+    
+    dealsList.forEach(deal => {
+      const person = deal.person;
+      const householdId = person?.householdId || null;
+      
+      // Use householdId if available, otherwise use personId as unique key
+      const groupKey = householdId || deal.personId || deal.id;
+      
+      if (grouped.has(groupKey)) {
+        const group = grouped.get(groupKey)!;
+        group.deals.push(deal);
+        if (person && !group.members.find(m => m.id === person.id)) {
+          group.members.push(person);
+        }
+      } else {
+        const household = householdId ? households.find(h => h.id === householdId) : null;
+        grouped.set(groupKey, {
+          householdId,
+          householdName: household?.name || null,
+          deals: [deal],
+          members: person ? [person] : [],
+          primaryDeal: deal,
+        });
+      }
+    });
+    
+    return Array.from(grouped.values());
+  };
+
+  // Get display name for a deal group (household name or person name)
+  const getGroupDisplayName = (group: HouseholdDealGroup): string => {
+    if (group.householdName && group.members.length > 1) {
+      return group.householdName;
+    }
+    return group.primaryDeal.person?.name || group.primaryDeal.title || "Unknown";
+  };
+
   const warmDeals = dealsWithPeople.filter(d => d.stage === "warm");
   const hotActiveDeals = dealsWithPeople.filter(d => d.stage === "hot" || d.stage === "hot_active");
   const hotConfusedDeals = dealsWithPeople.filter(d => d.stage === "hot_confused");
   const underContractDeals = dealsWithPeople.filter(d => d.stage === "under_contract" || d.stage === "in_contract" || d.stage === "active");
   const closedDeals = dealsWithPeople.filter(d => d.stage === "closed");
+
+  // Grouped versions for display
+  const warmDealsGrouped = groupDealsByHousehold(warmDeals);
+  const hotActiveDealsGrouped = groupDealsByHousehold(hotActiveDeals);
+  const hotConfusedDealsGrouped = groupDealsByHousehold(hotConfusedDeals);
+  const underContractDealsGrouped = groupDealsByHousehold(underContractDeals);
 
   // PIE Time Tracker State
   const [selectedWeekStart, setSelectedWeekStart] = useState(() => {
@@ -1175,33 +1233,50 @@ export default function BusinessTracker() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {warmDeals.length === 0 ? (
+                        {warmDealsGrouped.length === 0 ? (
                           <TableRow>
                             <TableCell colSpan={6} className="text-center text-muted-foreground py-4 text-xs">
                               No warm prospects
                             </TableCell>
                           </TableRow>
-                        ) : warmDeals.slice(0, 30).map((deal) => {
-                          const lastContact = getLastContactDate(deal.personId);
+                        ) : warmDealsGrouped.slice(0, 30).map((group) => {
+                          const lastContact = group.members.length > 0 
+                            ? group.members.reduce((latest, member) => {
+                                const memberLastContact = getLastContactDate(member.id);
+                                if (!memberLastContact) return latest;
+                                if (!latest) return memberLastContact;
+                                return memberLastContact > latest ? memberLastContact : latest;
+                              }, null as Date | null)
+                            : getLastContactDate(group.primaryDeal.personId);
+                          const totalValue = group.deals.reduce((sum, d) => sum + (d.value || 0), 0);
+                          const totalGCI = group.deals.reduce((sum, d) => sum + calculateGCI(d.value, d.commissionPercent), 0);
+                          const maxPainPleasure = Math.max(...group.deals.map(d => d.painPleasureRating || 0));
                           return (
                             <TableRow 
-                              key={deal.id} 
-                              className={`text-xs hover:bg-blue-200/50 cursor-grab ${draggedDealId === deal.id ? "opacity-50" : ""}`}
+                              key={group.householdId || group.primaryDeal.id} 
+                              className={`text-xs hover:bg-blue-200/50 cursor-grab ${draggedDealId === group.primaryDeal.id ? "opacity-50" : ""}`}
                               draggable
-                              onDragStart={(e) => handleDragStart(e, deal.id)}
+                              onDragStart={(e) => handleDragStart(e, group.primaryDeal.id)}
                               onDragEnd={handleDragEnd}
-                              data-testid={`row-warm-${deal.id}`}
+                              data-testid={`row-warm-${group.householdId || group.primaryDeal.id}`}
                             >
                               <TableCell className="py-1 px-1 text-muted-foreground">
                                 {lastContact ? format(lastContact, "M/d") : "-"}
                               </TableCell>
                               <TableCell className="py-1 px-1">
-                                <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} dealId={deal.id} />
+                                <ClickableName 
+                                  personId={group.primaryDeal.personId} 
+                                  name={getGroupDisplayName(group)} 
+                                  dealId={group.primaryDeal.id} 
+                                />
+                                {group.members.length > 1 && (
+                                  <span className="text-muted-foreground ml-1">({group.members.length})</span>
+                                )}
                               </TableCell>
-                              <TableCell className="py-1 px-1 font-bold text-primary">{deal.painPleasureRating || ""}</TableCell>
-                              <TableCell className="py-1 px-1 text-right">{formatCompact(deal.value)}</TableCell>
-                              <TableCell className="py-1 px-1">{deal.commissionPercent || 3}%</TableCell>
-                              <TableCell className="py-1 px-1 text-right text-green-700 font-medium">{formatCompact(calculateGCI(deal.value, deal.commissionPercent))}</TableCell>
+                              <TableCell className="py-1 px-1 font-bold text-primary">{maxPainPleasure || ""}</TableCell>
+                              <TableCell className="py-1 px-1 text-right">{formatCompact(totalValue)}</TableCell>
+                              <TableCell className="py-1 px-1">{group.primaryDeal.commissionPercent || 3}%</TableCell>
+                              <TableCell className="py-1 px-1 text-right text-green-700 font-medium">{formatCompact(totalGCI)}</TableCell>
                             </TableRow>
                           );
                         })}
@@ -1210,7 +1285,7 @@ export default function BusinessTracker() {
                   </div>
                   <div className="bg-slate-200 p-2 text-xs">
                     <div className="flex justify-between">
-                      <span>Total Potential Sides in Warm List: <strong>{warmDeals.length}</strong></span>
+                      <span>Total Potential Sides in Warm List: <strong>{warmDealsGrouped.length}</strong> {warmDeals.length !== warmDealsGrouped.length && <span className="text-muted-foreground">({warmDeals.length} deals)</span>}</span>
                     </div>
                     <div className="flex justify-between mt-1">
                       <span>Total Potential GCI in Warm List:</span>
@@ -1244,33 +1319,50 @@ export default function BusinessTracker() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {hotActiveDeals.length === 0 ? (
+                          {hotActiveDealsGrouped.length === 0 ? (
                             <TableRow>
                               <TableCell colSpan={6} className="text-center text-muted-foreground py-4 text-xs">
                                 No hot prospects
                               </TableCell>
                             </TableRow>
-                          ) : hotActiveDeals.slice(0, 15).map((deal) => {
-                            const lastContact = getLastContactDate(deal.personId);
+                          ) : hotActiveDealsGrouped.slice(0, 15).map((group) => {
+                            const lastContact = group.members.length > 0 
+                              ? group.members.reduce((latest, member) => {
+                                  const memberLastContact = getLastContactDate(member.id);
+                                  if (!memberLastContact) return latest;
+                                  if (!latest) return memberLastContact;
+                                  return memberLastContact > latest ? memberLastContact : latest;
+                                }, null as Date | null)
+                              : getLastContactDate(group.primaryDeal.personId);
+                            const totalValue = group.deals.reduce((sum, d) => sum + (d.value || 0), 0);
+                            const totalGCI = group.deals.reduce((sum, d) => sum + calculateGCI(d.value, d.commissionPercent), 0);
+                            const maxPainPleasure = Math.max(...group.deals.map(d => d.painPleasureRating || 0));
                             return (
                               <TableRow 
-                                key={deal.id} 
-                                className={`text-xs hover:bg-blue-200/50 cursor-grab ${draggedDealId === deal.id ? "opacity-50" : ""}`}
+                                key={group.householdId || group.primaryDeal.id} 
+                                className={`text-xs hover:bg-blue-200/50 cursor-grab ${draggedDealId === group.primaryDeal.id ? "opacity-50" : ""}`}
                                 draggable
-                                onDragStart={(e) => handleDragStart(e, deal.id)}
+                                onDragStart={(e) => handleDragStart(e, group.primaryDeal.id)}
                                 onDragEnd={handleDragEnd}
-                                data-testid={`row-hot-${deal.id}`}
+                                data-testid={`row-hot-${group.householdId || group.primaryDeal.id}`}
                               >
                                 <TableCell className="py-1 px-1 text-muted-foreground">
                                   {lastContact ? format(lastContact, "M/d") : "-"}
                                 </TableCell>
                                 <TableCell className="py-1 px-1">
-                                  <ClickableName personId={deal.personId} name={deal.person?.name || deal.title} dealId={deal.id} />
+                                  <ClickableName 
+                                    personId={group.primaryDeal.personId} 
+                                    name={getGroupDisplayName(group)} 
+                                    dealId={group.primaryDeal.id} 
+                                  />
+                                  {group.members.length > 1 && (
+                                    <span className="text-muted-foreground ml-1">({group.members.length})</span>
+                                  )}
                                 </TableCell>
-                                <TableCell className="py-1 px-1 font-bold text-primary">{deal.painPleasureRating || ""}</TableCell>
-                                <TableCell className="py-1 px-1 text-right">{formatCompact(deal.value)}</TableCell>
-                                <TableCell className="py-1 px-1">{deal.commissionPercent || 3}%</TableCell>
-                                <TableCell className="py-1 px-1 text-right text-green-700 font-medium">{formatCompact(calculateGCI(deal.value, deal.commissionPercent))}</TableCell>
+                                <TableCell className="py-1 px-1 font-bold text-primary">{maxPainPleasure || ""}</TableCell>
+                                <TableCell className="py-1 px-1 text-right">{formatCompact(totalValue)}</TableCell>
+                                <TableCell className="py-1 px-1">{group.primaryDeal.commissionPercent || 3}%</TableCell>
+                                <TableCell className="py-1 px-1 text-right text-green-700 font-medium">{formatCompact(totalGCI)}</TableCell>
                               </TableRow>
                             );
                           })}
