@@ -693,6 +693,29 @@ export const insertVoiceProfileSchema = createInsertSchema(voiceProfile).omit({
 export type InsertVoiceProfile = z.infer<typeof insertVoiceProfileSchema>;
 export type VoiceProfile = typeof voiceProfile.$inferSelect;
 
+// Sync Logs - Track incoming syncs from local agents
+export const syncLogs = pgTable("sync_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  source: text("source").notNull(), // granola, plaud, imessage, whatsapp
+  syncType: text("sync_type").notNull(), // full, incremental, single
+  status: text("status").notNull().default("pending"), // pending, processing, completed, failed
+  itemsReceived: integer("items_received").default(0),
+  itemsProcessed: integer("items_processed").default(0),
+  itemsFailed: integer("items_failed").default(0),
+  errorMessage: text("error_message"),
+  metadata: jsonb("metadata"), // Any additional sync metadata
+  startedAt: timestamp("started_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const insertSyncLogSchema = createInsertSchema(syncLogs).omit({
+  id: true,
+  startedAt: true,
+});
+
+export type InsertSyncLog = z.infer<typeof insertSyncLogSchema>;
+export type SyncLog = typeof syncLogs.$inferSelect;
+
 // AI Extracted Data structure for type safety
 export type AIExtractedData = {
   fordUpdates?: {

@@ -3334,5 +3334,307 @@ Return ONLY valid JSON, no explanations.`
     }
   });
 
+  // ============ SYNC API ROUTES ============
+  // API endpoints for local sync agents (Granola, Plaud, iMessage, WhatsApp)
+  
+  // Get sync status and logs
+  app.get("/api/sync/logs", async (req, res) => {
+    try {
+      const { source } = req.query;
+      const logs = source 
+        ? await storage.getSyncLogsBySource(source as string)
+        : await storage.getAllSyncLogs();
+      res.json(logs);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Main sync endpoint - receives data from local agents
+  app.post("/api/sync/push", async (req, res) => {
+    try {
+      const { source, syncType, items, metadata } = req.body;
+      
+      if (!source || !["granola", "plaud", "imessage", "whatsapp"].includes(source)) {
+        return res.status(400).json({ message: "Invalid source. Must be one of: granola, plaud, imessage, whatsapp" });
+      }
+      
+      if (!items || !Array.isArray(items)) {
+        return res.status(400).json({ message: "Items array required" });
+      }
+      
+      // Create sync log
+      const syncLog = await storage.createSyncLog({
+        source,
+        syncType: syncType || "incremental",
+        status: "processing",
+        itemsReceived: items.length,
+        itemsProcessed: 0,
+        itemsFailed: 0,
+        metadata: metadata || null,
+      });
+      
+      let processed = 0;
+      let failed = 0;
+      const results: { id: string; status: string; personId?: string; interactionId?: string; error?: string }[] = [];
+      
+      for (const item of items) {
+        try {
+          // Each item should have: externalId, type, content, timestamp, participants
+          const { externalId, type, title, content, summary, transcript, timestamp, participants, duration, personHint } = item;
+          
+          if (!externalId) {
+            results.push({ id: "unknown", status: "failed", error: "Missing externalId" });
+            failed++;
+            continue;
+          }
+          
+          // Check if this interaction already exists (deduplication)
+          const existing = await storage.getInteractionByExternalId(externalId);
+          if (existing) {
+            results.push({ id: externalId, status: "skipped", interactionId: existing.id });
+            processed++;
+            continue;
+          }
+          
+          // Try to match to a person
+          let personId: string | undefined;
+          
+          // Try by phone number from participants
+          if (participants && Array.isArray(participants)) {
+            for (const participant of participants) {
+              if (participant.phone) {
+                const person = await storage.getPersonByPhone(participant.phone);
+                if (person) {
+                  personId = person.id;
+                  break;
+                }
+              }
+              if (participant.email) {
+                const person = await storage.getPersonByEmail(participant.email);
+                if (person) {
+                  personId = person.id;
+                  break;
+                }
+              }
+              if (participant.name) {
+                const matches = await storage.searchPeopleByName(participant.name);
+                if (matches.length === 1) {
+                  personId = matches[0].id;
+                  break;
+                }
+              }
+            }
+          }
+          
+          // Use personHint if provided and no match yet
+          if (!personId && personHint) {
+            if (personHint.id) {
+              personId = personHint.id;
+            } else if (personHint.phone) {
+              const person = await storage.getPersonByPhone(personHint.phone);
+              if (person) personId = person.id;
+            } else if (personHint.email) {
+              const person = await storage.getPersonByEmail(personHint.email);
+              if (person) personId = person.id;
+            } else if (personHint.name) {
+              const matches = await storage.searchPeopleByName(personHint.name);
+              if (matches.length === 1) personId = matches[0].id;
+            }
+          }
+          
+          // Create the interaction
+          const interaction = await storage.createInteraction({
+            personId: personId || null,
+            type: type || "meeting",
+            source,
+            title: title || `${source.charAt(0).toUpperCase() + source.slice(1)} ${type || "interaction"}`,
+            summary: summary || null,
+            transcript: transcript || content || null,
+            externalId,
+            externalLink: item.externalLink || null,
+            duration: duration || null,
+            occurredAt: timestamp ? new Date(timestamp) : new Date(),
+            participants: participants?.map((p: any) => p.name || p.phone || p.email).filter(Boolean) || null,
+            tags: [source],
+            aiExtractedData: null,
+            deletedAt: null,
+          });
+          
+          // Update person's lastContact if we matched
+          if (personId) {
+            await storage.updatePerson(personId, { 
+              lastContact: interaction.occurredAt 
+            });
+          }
+          
+          results.push({ 
+            id: externalId, 
+            status: "created", 
+            personId: personId || undefined,
+            interactionId: interaction.id 
+          });
+          processed++;
+        } catch (itemError: any) {
+          results.push({ id: item.externalId || "unknown", status: "failed", error: itemError.message });
+          failed++;
+        }
+      }
+      
+      // Update sync log
+      await storage.updateSyncLog(syncLog.id, {
+        status: "completed",
+        itemsProcessed: processed,
+        itemsFailed: failed,
+        completedAt: new Date(),
+      });
+      
+      res.json({
+        syncId: syncLog.id,
+        received: items.length,
+        processed,
+        failed,
+        results,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Transcribe audio and create interaction (for Plaud)
+  app.post("/api/sync/transcribe", async (req, res) => {
+    try {
+      const { audioUrl, audioBase64, source, externalId, timestamp, personHint } = req.body;
+      
+      if (!audioUrl && !audioBase64) {
+        return res.status(400).json({ message: "Either audioUrl or audioBase64 required" });
+      }
+      
+      if (!externalId) {
+        return res.status(400).json({ message: "externalId required for deduplication" });
+      }
+      
+      // Check for existing
+      const existing = await storage.getInteractionByExternalId(externalId);
+      if (existing) {
+        return res.json({ 
+          status: "skipped", 
+          message: "Already exists",
+          interactionId: existing.id 
+        });
+      }
+      
+      // Transcribe with Whisper
+      let transcript: string;
+      const openaiClient = getOpenAI();
+      
+      if (audioBase64) {
+        // Decode base64 to buffer
+        const buffer = Buffer.from(audioBase64, 'base64');
+        const tempPath = path.join(uploadDir, `temp_${Date.now()}.m4a`);
+        fs.writeFileSync(tempPath, buffer);
+        
+        const file = fs.createReadStream(tempPath);
+        const transcription = await openaiClient.audio.transcriptions.create({
+          file,
+          model: "whisper-1",
+          response_format: "text",
+        });
+        transcript = transcription;
+        
+        // Clean up temp file
+        fs.unlinkSync(tempPath);
+      } else {
+        // Download from URL
+        const response = await fetch(audioUrl);
+        const buffer = Buffer.from(await response.arrayBuffer());
+        const tempPath = path.join(uploadDir, `temp_${Date.now()}.m4a`);
+        fs.writeFileSync(tempPath, buffer);
+        
+        const file = fs.createReadStream(tempPath);
+        const transcription = await openaiClient.audio.transcriptions.create({
+          file,
+          model: "whisper-1",
+          response_format: "text",
+        });
+        transcript = transcription;
+        
+        fs.unlinkSync(tempPath);
+      }
+      
+      // Try to match person
+      let personId: string | undefined;
+      if (personHint) {
+        if (personHint.id) {
+          personId = personHint.id;
+        } else if (personHint.phone) {
+          const person = await storage.getPersonByPhone(personHint.phone);
+          if (person) personId = person.id;
+        } else if (personHint.name) {
+          const matches = await storage.searchPeopleByName(personHint.name);
+          if (matches.length === 1) personId = matches[0].id;
+        }
+      }
+      
+      // Create interaction
+      const interaction = await storage.createInteraction({
+        personId: personId || null,
+        type: "call",
+        source: source || "plaud",
+        title: `Plaud Recording ${new Date(timestamp || Date.now()).toLocaleDateString()}`,
+        summary: null,
+        transcript,
+        externalId,
+        externalLink: audioUrl || null,
+        duration: null,
+        occurredAt: timestamp ? new Date(timestamp) : new Date(),
+        participants: null,
+        tags: ["plaud", "transcribed"],
+        aiExtractedData: null,
+        deletedAt: null,
+      });
+      
+      // Update person's lastContact if matched
+      if (personId) {
+        await storage.updatePerson(personId, { lastContact: interaction.occurredAt });
+      }
+      
+      res.json({
+        status: "created",
+        interactionId: interaction.id,
+        personId,
+        transcriptLength: transcript.length,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Search people (for local agents to find person matches)
+  app.get("/api/sync/search-person", async (req, res) => {
+    try {
+      const { phone, email, name } = req.query;
+      
+      if (phone) {
+        const person = await storage.getPersonByPhone(phone as string);
+        return res.json({ matches: person ? [person] : [] });
+      }
+      
+      if (email) {
+        const person = await storage.getPersonByEmail(email as string);
+        return res.json({ matches: person ? [person] : [] });
+      }
+      
+      if (name) {
+        const matches = await storage.searchPeopleByName(name as string);
+        return res.json({ matches });
+      }
+      
+      res.json({ matches: [] });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }

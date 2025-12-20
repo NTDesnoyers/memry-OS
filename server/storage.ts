@@ -19,7 +19,8 @@ import {
   type Household, type InsertHousehold,
   type GeneratedDraft, type InsertGeneratedDraft,
   type VoiceProfile, type InsertVoiceProfile,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile
+  type SyncLog, type InsertSyncLog,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt } from "drizzle-orm";
@@ -176,6 +177,18 @@ export interface IStorage {
   updateVoiceProfile(id: string, profile: Partial<InsertVoiceProfile>): Promise<VoiceProfile | undefined>;
   deleteVoiceProfile(id: string): Promise<void>;
   upsertVoicePattern(category: string, value: string, context?: string, source?: string): Promise<VoiceProfile>;
+  
+  // Sync Logs
+  getAllSyncLogs(): Promise<SyncLog[]>;
+  getSyncLogsBySource(source: string): Promise<SyncLog[]>;
+  getSyncLog(id: string): Promise<SyncLog | undefined>;
+  createSyncLog(log: InsertSyncLog): Promise<SyncLog>;
+  updateSyncLog(id: string, log: Partial<InsertSyncLog>): Promise<SyncLog | undefined>;
+  
+  // People search by phone/email for matching
+  getPersonByPhone(phone: string): Promise<Person | undefined>;
+  getPersonByEmail(email: string): Promise<Person | undefined>;
+  searchPeopleByName(name: string): Promise<Person[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -914,6 +927,64 @@ export class DatabaseStorage implements IStorage {
       .values({ category, value, context, source, frequency: 1, updatedAt: new Date() })
       .returning();
     return created;
+  }
+  
+  // Sync Logs
+  async getAllSyncLogs(): Promise<SyncLog[]> {
+    return await db.select().from(syncLogs).orderBy(desc(syncLogs.startedAt));
+  }
+  
+  async getSyncLogsBySource(source: string): Promise<SyncLog[]> {
+    return await db.select().from(syncLogs)
+      .where(eq(syncLogs.source, source))
+      .orderBy(desc(syncLogs.startedAt));
+  }
+  
+  async getSyncLog(id: string): Promise<SyncLog | undefined> {
+    const [log] = await db.select().from(syncLogs).where(eq(syncLogs.id, id));
+    return log || undefined;
+  }
+  
+  async createSyncLog(insertLog: InsertSyncLog): Promise<SyncLog> {
+    const [log] = await db
+      .insert(syncLogs)
+      .values(insertLog)
+      .returning();
+    return log;
+  }
+  
+  async updateSyncLog(id: string, log: Partial<InsertSyncLog>): Promise<SyncLog | undefined> {
+    const [updated] = await db
+      .update(syncLogs)
+      .set(log)
+      .where(eq(syncLogs.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  // People search by phone/email for matching
+  async getPersonByPhone(phone: string): Promise<Person | undefined> {
+    // Normalize phone for matching (strip non-digits)
+    const normalized = phone.replace(/\D/g, '');
+    const allPeople = await db.select().from(people);
+    const match = allPeople.find(p => {
+      if (!p.phone) return false;
+      const pNormalized = p.phone.replace(/\D/g, '');
+      return pNormalized === normalized || pNormalized.endsWith(normalized) || normalized.endsWith(pNormalized);
+    });
+    return match || undefined;
+  }
+  
+  async getPersonByEmail(email: string): Promise<Person | undefined> {
+    const [person] = await db.select().from(people)
+      .where(eq(sql`LOWER(${people.email})`, email.toLowerCase()));
+    return person || undefined;
+  }
+  
+  async searchPeopleByName(name: string): Promise<Person[]> {
+    const lowerName = name.toLowerCase();
+    return await db.select().from(people)
+      .where(sql`LOWER(${people.name}) LIKE ${'%' + lowerName + '%'}`);
   }
 }
 
