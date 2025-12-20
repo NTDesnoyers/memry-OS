@@ -203,6 +203,24 @@ export default function BusinessTracker() {
   const [rawHeaders, setRawHeaders] = useState<string[]>([]);
   const [rawData, setRawData] = useState<Record<string, unknown>[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pieFileInputRef = useRef<HTMLInputElement>(null);
+
+  // PIE Import State
+  type ParsedPieEntry = {
+    date: Date;
+    totalTime: number;
+    iTime: number;
+    pTime: number;
+    eTime: number;
+    isValid: boolean;
+    errors: string[];
+  };
+  const [showPieImportDialog, setShowPieImportDialog] = useState(false);
+  const [parsedPieEntries, setParsedPieEntries] = useState<ParsedPieEntry[]>([]);
+  const [isParsingPieFile, setIsParsingPieFile] = useState(false);
+  const [pieRawHeaders, setPieRawHeaders] = useState<string[]>([]);
+  const [pieColumnMappings, setPieColumnMappings] = useState<Record<string, string>>({});
+  const [pieRawData, setPieRawData] = useState<Record<string, unknown>[]>([]);
 
   const knownColumnMappings: Record<string, string[]> = {
     address: ["address", "property address", "prop address", "street", "property"],
@@ -364,6 +382,150 @@ export default function BusinessTracker() {
     },
     onError: () => {
       toast.error("Failed to import some deals");
+    },
+  });
+
+  // PIE Import Functions
+  const knownPieColumnMappings: Record<string, string[]> = {
+    date: ["date", "day", "dt"],
+    totalTime: ["t", "total", "total time", "all time", "hours", "total hours"],
+    iTime: ["i", "indirect", "i time", "indirectly productive"],
+    pTime: ["p", "productive", "p time", "prospecting"],
+    eTime: ["e", "other", "e time", "everything else"],
+  };
+
+  const parsePieSpreadsheetFile = async (file: File) => {
+    setIsParsingPieFile(true);
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet) as Record<string, unknown>[];
+      
+      if (jsonData.length === 0) {
+        toast.error("Spreadsheet appears to be empty");
+        setIsParsingPieFile(false);
+        return;
+      }
+
+      const headers = Object.keys(jsonData[0] || {});
+      setPieRawHeaders(headers);
+      setPieRawData(jsonData);
+
+      // Auto-detect column mappings
+      const detectedMappings: Record<string, string> = {};
+      for (const [field, aliases] of Object.entries(knownPieColumnMappings)) {
+        for (const header of headers) {
+          if (aliases.some(alias => header.toLowerCase() === alias.toLowerCase() || header.toLowerCase().includes(alias.toLowerCase()))) {
+            detectedMappings[field] = header;
+            break;
+          }
+        }
+      }
+      setPieColumnMappings(detectedMappings);
+      parsePieEntriesWithMappings(jsonData, detectedMappings);
+    } catch (error) {
+      toast.error("Failed to read spreadsheet file");
+      console.error(error);
+    }
+    setIsParsingPieFile(false);
+  };
+
+  const parsePieEntriesWithMappings = (data: Record<string, unknown>[], mappings: Record<string, string>) => {
+    const parsed: ParsedPieEntry[] = data.map((row) => {
+      const errors: string[] = [];
+      
+      // Parse date
+      let date = new Date();
+      if (mappings.date && row[mappings.date]) {
+        const dateVal = row[mappings.date];
+        if (typeof dateVal === "number") {
+          // Excel serial date
+          date = new Date((dateVal - 25569) * 86400 * 1000);
+        } else {
+          date = new Date(String(dateVal));
+        }
+        if (isNaN(date.getTime())) {
+          errors.push("Invalid date");
+          date = new Date();
+        }
+      } else {
+        errors.push("Missing date");
+      }
+
+      // Parse times - convert hours to minutes if values seem like hours (< 24)
+      const parseTime = (val: unknown): number => {
+        if (!val) return 0;
+        const num = typeof val === "number" ? val : parseFloat(String(val).replace(/[^0-9.]/g, "")) || 0;
+        // If value is less than 24, assume it's hours and convert to minutes
+        return num < 24 ? Math.round(num * 60) : num;
+      };
+
+      const totalTime = mappings.totalTime ? parseTime(row[mappings.totalTime]) : 0;
+      const iTime = mappings.iTime ? parseTime(row[mappings.iTime]) : 0;
+      const pTime = mappings.pTime ? parseTime(row[mappings.pTime]) : 0;
+      const eTime = mappings.eTime ? parseTime(row[mappings.eTime]) : (totalTime > 0 ? Math.max(0, totalTime - pTime - iTime) : 0);
+
+      return {
+        date,
+        totalTime,
+        iTime,
+        pTime,
+        eTime,
+        isValid: errors.length === 0 && (totalTime > 0 || pTime > 0 || iTime > 0),
+        errors,
+      };
+    });
+
+    setParsedPieEntries(parsed);
+  };
+
+  const handlePieFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      parsePieSpreadsheetFile(file);
+      setShowPieImportDialog(true);
+    }
+  };
+
+  const updatePieColumnMapping = (field: string, header: string) => {
+    const newMappings = { ...pieColumnMappings, [field]: header };
+    setPieColumnMappings(newMappings);
+    parsePieEntriesWithMappings(pieRawData, newMappings);
+  };
+
+  const bulkImportPieEntriesMutation = useMutation({
+    mutationFn: async (entries: ParsedPieEntry[]) => {
+      const validEntries = entries.filter(e => e.isValid);
+      const results = await Promise.all(
+        validEntries.map(entry => 
+          fetch("/api/pie-entries", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              date: entry.date,
+              totalTime: entry.totalTime,
+              iTime: entry.iTime,
+              pTime: entry.pTime,
+              eTime: entry.eTime,
+            }),
+          })
+        )
+      );
+      return results;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/pie-entries"] });
+      setShowPieImportDialog(false);
+      setParsedPieEntries([]);
+      setPieRawHeaders([]);
+      setPieRawData([]);
+      setPieColumnMappings({});
+      toast.success(`Successfully imported ${parsedPieEntries.filter(e => e.isValid).length} PIE entries`);
+    },
+    onError: () => {
+      toast.error("Failed to import some entries");
     },
   });
 
@@ -1504,9 +1666,29 @@ export default function BusinessTracker() {
 
             {/* === PIE TRACKER TAB === */}
             <TabsContent value="pie" className="space-y-6">
-              <div className="text-center space-y-2">
-                <h2 className="text-xl font-serif font-bold">PIE Time Tracker</h2>
-                <p className="text-sm text-muted-foreground">Track your Prospecting and In-Person time. Focus on income-producing activities.</p>
+              <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                <div className="text-center md:text-left space-y-2">
+                  <h2 className="text-xl font-serif font-bold">PIE Time Tracker</h2>
+                  <p className="text-sm text-muted-foreground">Track your Prospecting and In-Person time. Focus on income-producing activities.</p>
+                </div>
+                <div>
+                  <input
+                    ref={pieFileInputRef}
+                    type="file"
+                    accept=".csv,.xlsx,.xls"
+                    onChange={handlePieFileUpload}
+                    className="hidden"
+                  />
+                  <Button 
+                    variant="outline" 
+                    onClick={() => pieFileInputRef.current?.click()}
+                    className="gap-2"
+                    data-testid="button-import-pie"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Import Historical PIE
+                  </Button>
+                </div>
               </div>
               
               <div className="grid md:grid-cols-3 gap-6">
@@ -2135,6 +2317,138 @@ export default function BusinessTracker() {
               data-testid="button-import-deals"
             >
               {bulkImportDealsMutation.isPending ? "Importing..." : `Import ${parsedDeals.filter(d => d.isValid).length} Deals`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* PIE Import Dialog */}
+      <Dialog open={showPieImportDialog} onOpenChange={setShowPieImportDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Import Historical PIE Time Data</DialogTitle>
+            <DialogDescription>
+              Upload a spreadsheet with your PIE time tracking history. We'll detect column mappings automatically.
+              Time values under 24 are assumed to be hours and will be converted to minutes.
+            </DialogDescription>
+          </DialogHeader>
+
+          {isParsingPieFile ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : parsedPieEntries.length > 0 ? (
+            <div className="space-y-4">
+              {/* Column Mapping */}
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <p className="text-sm font-medium mb-3">Column Mappings</p>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  {["date", "pTime", "iTime", "eTime", "totalTime"].map((field) => (
+                    <div key={field} className="space-y-1">
+                      <label className="text-xs text-muted-foreground">
+                        {field === "date" ? "Date" : 
+                         field === "pTime" ? "P (Productive)" : 
+                         field === "iTime" ? "I (Indirect)" : 
+                         field === "eTime" ? "E (Other)" : "Total"}
+                      </label>
+                      <Select 
+                        value={pieColumnMappings[field] || ""} 
+                        onValueChange={(value) => updatePieColumnMapping(field, value)}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Select..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Not mapped</SelectItem>
+                          {pieRawHeaders.map((header) => (
+                            <SelectItem key={header} value={header}>
+                              {header}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Preview Table */}
+              <div className="flex-1 overflow-auto border rounded-lg max-h-[300px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50 text-xs">
+                      <TableHead className="w-8"></TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>P (min)</TableHead>
+                      <TableHead>I (min)</TableHead>
+                      <TableHead>E (min)</TableHead>
+                      <TableHead>Total (min)</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {parsedPieEntries.slice(0, 50).map((entry, idx) => (
+                      <TableRow key={idx} className={`text-xs ${!entry.isValid ? 'bg-red-50' : ''}`}>
+                        <TableCell className="p-1">
+                          {entry.isValid ? (
+                            <Check className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <AlertCircle className="h-4 w-4 text-red-500" title={entry.errors.join(", ")} />
+                          )}
+                        </TableCell>
+                        <TableCell>{format(entry.date, "MM/dd/yyyy")}</TableCell>
+                        <TableCell>{entry.pTime}</TableCell>
+                        <TableCell>{entry.iTime}</TableCell>
+                        <TableCell>{entry.eTime}</TableCell>
+                        <TableCell>{entry.totalTime}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Summary */}
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex gap-4">
+                  <span className="text-green-700 flex items-center gap-1">
+                    <Check className="h-4 w-4" />
+                    {parsedPieEntries.filter(e => e.isValid).length} valid
+                  </span>
+                  {parsedPieEntries.filter(e => !e.isValid).length > 0 && (
+                    <span className="text-red-600 flex items-center gap-1">
+                      <AlertCircle className="h-4 w-4" />
+                      {parsedPieEntries.filter(e => !e.isValid).length} with errors (will be skipped)
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <FileSpreadsheet className="h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-muted-foreground mb-2">No data loaded yet</p>
+              <Button variant="outline" onClick={() => pieFileInputRef.current?.click()}>
+                <Upload className="h-4 w-4 mr-2" />
+                Choose File
+              </Button>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowPieImportDialog(false);
+              setParsedPieEntries([]);
+              setPieRawHeaders([]);
+              setPieRawData([]);
+              setPieColumnMappings({});
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => bulkImportPieEntriesMutation.mutate(parsedPieEntries)}
+              disabled={bulkImportPieEntriesMutation.isPending || parsedPieEntries.filter(e => e.isValid).length === 0}
+              data-testid="button-import-pie-entries"
+            >
+              {bulkImportPieEntriesMutation.isPending ? "Importing..." : `Import ${parsedPieEntries.filter(e => e.isValid).length} Entries`}
             </Button>
           </DialogFooter>
         </DialogContent>
