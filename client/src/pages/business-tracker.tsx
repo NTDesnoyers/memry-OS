@@ -584,9 +584,9 @@ export default function BusinessTracker() {
               type: "sale",
               stage: "closed",
               value: deal.value,
-              commissionPercent: deal.commissionPercent,
-              actualGCI: deal.actualGCI,
-              actualCloseDate: deal.actualCloseDate,
+              commissionPercent: Math.round(deal.commissionPercent),
+              actualGCI: Math.round(deal.actualGCI),
+              actualCloseDate: deal.actualCloseDate instanceof Date ? deal.actualCloseDate.toISOString() : deal.actualCloseDate,
               isReferral: deal.isReferral,
             }),
           })
