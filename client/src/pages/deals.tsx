@@ -97,15 +97,15 @@ export default function Deals() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title) {
-      toast({
-        title: "Error",
-        description: "Title is required",
-        variant: "destructive",
-      });
-      return;
-    }
-    createDealMutation.mutate(formData as InsertDeal);
+    
+    // Auto-generate title from address or client name
+    const selectedPerson = people.find(p => p.id === formData.personId);
+    const autoTitle = formData.address || selectedPerson?.name || "New Deal";
+    
+    createDealMutation.mutate({ 
+      ...formData, 
+      title: autoTitle 
+    } as InsertDeal);
   };
 
   // Calculate stats
@@ -157,16 +157,6 @@ export default function Deals() {
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div>
-                      <Label htmlFor="title">Title *</Label>
-                      <Input
-                        id="title"
-                        value={formData.title}
-                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                        placeholder="Deal Title"
-                        data-testid="input-title"
-                      />
-                    </div>
                     <div>
                       <Label htmlFor="address">Address</Label>
                       <Input
