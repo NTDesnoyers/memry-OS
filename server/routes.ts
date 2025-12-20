@@ -2307,6 +2307,11 @@ Return ONLY valid JSON, no explanations.`
     }
   });
   
+  // Get processing status (must be before :id route)
+  app.get("/api/interactions/process-status", async (req, res) => {
+    res.json(processingStatus);
+  });
+  
   // Get interactions for a specific person
   app.get("/api/people/:personId/interactions", async (req, res) => {
     try {
@@ -3174,11 +3179,6 @@ Return ONLY valid JSON, no explanations.`
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
-  });
-
-  // Get processing status
-  app.get("/api/interactions/process-status", async (req, res) => {
-    res.json(processingStatus);
   });
 
   // ============ GMAIL INTEGRATION ROUTES ============
