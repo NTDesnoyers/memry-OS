@@ -1929,7 +1929,12 @@ When analyzing images:
   // Create PIE entry
   app.post("/api/pie-entries", async (req, res) => {
     try {
-      const data = validate(insertPieEntrySchema, req.body);
+      // Convert date string to Date object before validation
+      const body = {
+        ...req.body,
+        date: req.body.date ? new Date(req.body.date) : undefined,
+      };
+      const data = validate(insertPieEntrySchema, body);
       const entry = await storage.createPieEntry(data);
       res.status(201).json(entry);
     } catch (error: any) {
