@@ -1,8 +1,42 @@
 import OpenAI from "openai";
 import { storage } from "./storage";
-import type { Interaction, Person, AIExtractedData, InsertGeneratedDraft } from "@shared/schema";
+import type { Interaction, Person, AIExtractedData, InsertGeneratedDraft, VoiceProfile } from "@shared/schema";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// Voice extraction prompt - learns Nathan's speaking patterns
+const VOICE_EXTRACTION_PROMPT = `You are analyzing conversation transcripts to learn Nathan's unique communication style. Your job is to extract patterns that make his voice distinctive.
+
+Look for and extract:
+
+1. **Greetings**: How Nathan opens conversations or emails (e.g., "Hey there!", "Good to see you", "Thanks for jumping on")
+
+2. **Sign-offs**: How Nathan closes conversations or says goodbye (e.g., "Take care!", "Looking forward to it", "Let's do this!")
+
+3. **Expressions**: Unique phrases Nathan uses regularly (e.g., "That's awesome", "Love it", "Here's the deal", "At the end of the day")
+
+4. **Tone Notes**: Observations about his communication style:
+   - Is he formal or casual?
+   - Does he use humor?
+   - How does he show enthusiasm?
+   - Does he use metaphors or analogies?
+   - How does he transition topics?
+
+5. **Compliment Patterns**: How Nathan gives praise or shows appreciation
+
+6. **Question Styles**: How Nathan asks questions or shows interest
+
+Return JSON:
+{
+  "greetings": ["phrase1", "phrase2"],
+  "signoffs": ["phrase1", "phrase2"],
+  "expressions": ["phrase1", "phrase2"],
+  "toneNotes": ["observation1", "observation2"],
+  "complimentPatterns": ["pattern1", "pattern2"],
+  "questionStyles": ["style1", "style2"]
+}
+
+ONLY extract patterns that are clearly Nathan speaking (not the other person). Look for the host/interviewer perspective.`;
 
 const SYSTEM_PROMPT = `You are an intelligent relationship assistant for a real estate professional following the Ninja Selling methodology. Your job is to analyze conversation transcripts and extract valuable relationship intelligence.
 
@@ -116,6 +150,110 @@ Return JSON with the extracted data.`
   }
 }
 
+// Extract Nathan's voice patterns from a transcript
+export async function extractVoicePatterns(
+  transcript: string,
+  source?: string
+): Promise<void> {
+  if (!transcript || transcript.length < 200) {
+    return;
+  }
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: VOICE_EXTRACTION_PROMPT },
+        { 
+          role: "user", 
+          content: `Analyze Nathan's speaking patterns in this conversation:
+
+---
+${transcript.slice(0, 15000)}
+---
+
+Extract patterns from Nathan's speech only.`
+        }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.3,
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) return;
+
+    const patterns = JSON.parse(content);
+
+    // Store each pattern in the voice profile
+    const categoryMappings = [
+      { key: 'greetings', category: 'greetings' },
+      { key: 'signoffs', category: 'signoffs' },
+      { key: 'expressions', category: 'expressions' },
+      { key: 'toneNotes', category: 'tone_notes' },
+      { key: 'complimentPatterns', category: 'compliment_patterns' },
+      { key: 'questionStyles', category: 'question_styles' },
+    ];
+
+    for (const { key, category } of categoryMappings) {
+      const values = patterns[key];
+      if (Array.isArray(values)) {
+        for (const value of values) {
+          if (typeof value === 'string' && value.length > 0) {
+            await storage.upsertVoicePattern(category, value, 'conversation', source);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error extracting voice patterns:", error);
+  }
+}
+
+// Get the current voice profile for use in draft generation
+export async function getVoiceContext(): Promise<string> {
+  const profiles = await storage.getAllVoiceProfiles();
+  
+  if (profiles.length === 0) {
+    return "";
+  }
+
+  const grouped: Record<string, string[]> = {};
+  for (const p of profiles) {
+    if (!grouped[p.category]) {
+      grouped[p.category] = [];
+    }
+    // Include more frequent patterns first (already sorted by storage)
+    if (grouped[p.category].length < 10) {
+      grouped[p.category].push(p.value);
+    }
+  }
+
+  let context = `\n\n## Nathan's Communication Style (use these patterns to match his voice):\n`;
+  
+  if (grouped.greetings?.length) {
+    context += `\nGreetings he uses: ${grouped.greetings.join(", ")}`;
+  }
+  if (grouped.signoffs?.length) {
+    context += `\nSign-offs he uses: ${grouped.signoffs.join(", ")}`;
+  }
+  if (grouped.expressions?.length) {
+    context += `\nCommon expressions: ${grouped.expressions.join(", ")}`;
+  }
+  if (grouped.tone_notes?.length) {
+    context += `\nTone characteristics: ${grouped.tone_notes.join("; ")}`;
+  }
+  if (grouped.compliment_patterns?.length) {
+    context += `\nHow he gives compliments: ${grouped.compliment_patterns.join("; ")}`;
+  }
+  if (grouped.question_styles?.length) {
+    context += `\nHow he asks questions: ${grouped.question_styles.join("; ")}`;
+  }
+
+  context += `\n\nIMPORTANT: Match Nathan's natural speaking style. Use his typical expressions and tone. The content should sound authentically like him.`;
+  
+  return context;
+}
+
 export async function generateFollowUpDrafts(
   interaction: Interaction,
   person: Person,
@@ -128,13 +266,16 @@ export async function generateFollowUpDrafts(
     return drafts;
   }
 
+  // Get Nathan's voice profile to personalize drafts
+  const voiceContext = await getVoiceContext();
+
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         { 
           role: "system", 
-          content: `You are an assistant helping a real estate professional write thoughtful follow-up communications. Generate genuine, warm content that references specific details from conversations.
+          content: `You are an assistant helping Nathan, a real estate professional, write thoughtful follow-up communications. Generate genuine, warm content that references specific details from conversations.
 
 For each conversation, generate:
 
@@ -164,7 +305,7 @@ Return JSON with:
   "tasks": [
     { "title": "...", "priority": "high/medium/low" }
   ]
-}`
+}${voiceContext}`
         },
         {
           role: "user",
@@ -238,6 +379,7 @@ export async function processInteraction(interactionId: string): Promise<{
   success: boolean;
   extractedData?: AIExtractedData;
   draftsCreated?: number;
+  voicePatternsExtracted?: boolean;
   error?: string;
 }> {
   try {
@@ -250,7 +392,16 @@ export async function processInteraction(interactionId: string): Promise<{
       ? (await storage.getPerson(interaction.personId)) ?? null
       : null;
 
+    // Extract relationship intelligence
     const extractedData = await analyzeConversation(interaction, person);
+    
+    // Also extract Nathan's voice patterns from the transcript
+    const transcript = interaction.transcript || interaction.summary || "";
+    let voicePatternsExtracted = false;
+    if (transcript && transcript.length >= 200) {
+      await extractVoicePatterns(transcript, interaction.title || interactionId);
+      voicePatternsExtracted = true;
+    }
 
     await storage.updateInteraction(interactionId, {
       aiExtractedData: extractedData,
@@ -347,6 +498,7 @@ export async function processInteraction(interactionId: string): Promise<{
         success: true,
         extractedData,
         draftsCreated: drafts.length,
+        voicePatternsExtracted,
       };
     }
 
@@ -354,6 +506,7 @@ export async function processInteraction(interactionId: string): Promise<{
       success: true,
       extractedData,
       draftsCreated: 0,
+      voicePatternsExtracted,
     };
   } catch (error) {
     console.error("Error processing interaction:", error);
