@@ -230,3 +230,25 @@ FORD notes are viewed before calls and handwritten notes. Watch for **changes** 
 - **date-fns**: Date formatting
 - **embla-carousel-react**: Carousel functionality
 - **recharts**: Charts (via shadcn/ui chart component)
+
+## Roadmap
+
+### Completed Features
+- Contact Due Calculator (Hot=weekly, Warm=monthly, A/B/C/D segment-based)
+- D Contact Review system (stale tracking, low engagement detection, 8×8 campaigns)
+- AI Assistant with 9 agentic tools
+- Voice profile learning from conversations
+- Generated drafts (emails, handwritten notes)
+- Sync API for external sources (Granola, Plaud, iMessage, WhatsApp)
+
+### Future Features (Low Priority)
+- **Personal Brand Landing Page**: Custom website integrated with Ninja OS, using voice profile for authentic copy
+- **Lofty API Integration**: Sync leads from Lofty CRM into People database
+
+### Potential Next Features
+- **Weekly Meeting Agenda (WMA) Page**: Dedicated page to complete weekly planning in <10 min
+- **Your 50 List**: Tag and track top 50 priority relationships
+- **Todoist Sync**: Export generated tasks to Todoist (GTD system of record)
+- **Ninja Nine Habit Tracker**: Track daily/weekly Ninja habits with streaks
+- **Mobile-Optimized FORD Logging**: 60-second interaction logging flow
+- **Real Estate Review Workflow**: Annual home equity check-in generator
