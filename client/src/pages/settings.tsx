@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Settings, 
   Plug, 
@@ -18,15 +20,23 @@ import {
   Video,
   Mail,
   MessageCircle,
-  Mic
+  Mic,
+  Upload,
+  FileText,
+  Search,
+  Check,
+  X,
+  Eye,
+  Sparkles
 } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { format, formatDistanceToNow, differenceInDays } from "date-fns";
-import type { Interaction, Person } from "@shared/schema";
+import type { Interaction, Person, HandwrittenNoteUpload } from "@shared/schema";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { getInitials } from "@/lib/utils";
+import { useState, useRef } from "react";
 
 const interactionTypes = [
   { value: "call", label: "Call", icon: Phone, color: "bg-green-50 text-green-700 border-green-200" },
@@ -65,6 +75,9 @@ const settingsLinks = [
 export default function SettingsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [personSearch, setPersonSearch] = useState("");
+  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
 
   const { data: deletedInteractions = [], isLoading: isLoadingDeleted } = useQuery<Interaction[]>({
     queryKey: ["/api/interactions/deleted"],
@@ -73,6 +86,104 @@ export default function SettingsPage() {
   const { data: people = [] } = useQuery<Person[]>({
     queryKey: ["/api/people"],
   });
+
+  const { data: noteUploads = [], isLoading: isLoadingNotes } = useQuery<HandwrittenNoteUpload[]>({
+    queryKey: ["/api/handwritten-notes"],
+  });
+
+  const uploadNote = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("image", file);
+      const res = await fetch("/api/handwritten-notes/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Failed to upload");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/handwritten-notes"] });
+      toast({ title: "Uploaded", description: "Image uploaded. Running OCR..." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const runOCR = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/handwritten-notes/${id}/ocr`, { method: "POST" });
+      if (!res.ok) throw new Error("OCR failed");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/handwritten-notes"] });
+      toast({ title: "OCR Complete", description: "Text extracted from image." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const tagPerson = useMutation({
+    mutationFn: async ({ id, personId }: { id: string; personId: string }) => {
+      const res = await fetch(`/api/handwritten-notes/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ personId, status: "complete" }),
+      });
+      if (!res.ok) throw new Error("Failed to tag");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/handwritten-notes"] });
+      toast({ title: "Tagged", description: "Person linked to note." });
+    },
+  });
+
+  const addToVoiceProfile = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/handwritten-notes/${id}/add-to-voice-profile`, { method: "POST" });
+      if (!res.ok) throw new Error("Failed to add");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/handwritten-notes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/voice-profile"] });
+      toast({ title: "Added", description: "Note added to your voice profile." });
+    },
+  });
+
+  const deleteNote = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/handwritten-notes/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/handwritten-notes"] });
+      toast({ title: "Deleted" });
+    },
+  });
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const result = await uploadNote.mutateAsync(file);
+    // Automatically run OCR after upload
+    if (result?.id) {
+      runOCR.mutate(result.id);
+    }
+    
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const filteredPeople = people.filter(p => 
+    p.name.toLowerCase().includes(personSearch.toLowerCase())
+  );
 
   const restoreInteraction = useMutation({
     mutationFn: async (id: string) => {
@@ -193,6 +304,161 @@ export default function SettingsPage() {
               <p className="text-xs text-muted-foreground mt-2">
                 Send JSON with: type, title, summary, transcript, occurredAt, externalLink, externalId, source
               </p>
+            </CardContent>
+          </Card>
+
+          <Card className="mt-8">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Upload className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Upload Historical Data</CardTitle>
+              </div>
+              <CardDescription>
+                Upload old handwritten notes to train your voice profile. Photos will be processed with OCR.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center mb-4">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  data-testid="input-note-upload"
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadNote.isPending || runOCR.isPending}
+                  className="gap-2"
+                  data-testid="button-upload-note"
+                >
+                  {uploadNote.isPending || runOCR.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {uploadNote.isPending ? "Uploading..." : "Processing OCR..."}
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4" /> Upload Handwritten Note Photo
+                    </>
+                  )}
+                </Button>
+                <p className="text-sm text-muted-foreground mt-2">
+                  JPG, PNG, or HEIC photos of handwritten notes
+                </p>
+              </div>
+
+              {isLoadingNotes ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                </div>
+              ) : noteUploads.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No notes uploaded yet. Upload photos of your handwritten notes to train your voice.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {noteUploads.map((note) => {
+                    const taggedPerson = note.personId ? people.find(p => p.id === note.personId) : null;
+                    
+                    return (
+                      <div key={note.id} className="border rounded-lg p-3" data-testid={`note-upload-${note.id}`}>
+                        <div className="flex items-start gap-3">
+                          <div className="w-16 h-16 bg-muted rounded overflow-hidden shrink-0">
+                            <img 
+                              src={note.imageUrl} 
+                              alt="Note" 
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge 
+                                variant="outline" 
+                                className={
+                                  note.status === "complete" 
+                                    ? "bg-green-50 text-green-700 border-green-200"
+                                    : note.status === "pending_tag"
+                                    ? "bg-amber-50 text-amber-700 border-amber-200"
+                                    : "bg-gray-50 text-gray-700 border-gray-200"
+                                }
+                              >
+                                {note.status === "complete" ? "Complete" : 
+                                 note.status === "pending_tag" ? "Needs Tagging" : "Processing"}
+                              </Badge>
+                              {note.recipientName && (
+                                <span className="text-sm">To: {note.recipientName}</span>
+                              )}
+                            </div>
+                            
+                            {note.ocrText && (
+                              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                                {note.ocrText}
+                              </p>
+                            )}
+                            
+                            {taggedPerson && (
+                              <div className="flex items-center gap-1 mb-2">
+                                <Avatar className="h-5 w-5">
+                                  <AvatarFallback className="text-xs">{getInitials(taggedPerson.name)}</AvatarFallback>
+                                </Avatar>
+                                <span className="text-sm font-medium">{taggedPerson.name}</span>
+                              </div>
+                            )}
+                            
+                            <div className="flex flex-wrap gap-2">
+                              {note.status === "pending_ocr" && (
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => runOCR.mutate(note.id)}
+                                  disabled={runOCR.isPending}
+                                >
+                                  <Eye className="h-3 w-3 mr-1" /> Run OCR
+                                </Button>
+                              )}
+                              
+                              {note.status === "pending_tag" && note.ocrText && (
+                                <Select onValueChange={(personId) => tagPerson.mutate({ id: note.id, personId })}>
+                                  <SelectTrigger className="w-40 h-8 text-sm">
+                                    <SelectValue placeholder="Tag person..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {people.slice(0, 20).map(p => (
+                                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                              
+                              {note.ocrText && note.status !== "complete" && (
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => addToVoiceProfile.mutate(note.id)}
+                                  disabled={addToVoiceProfile.isPending}
+                                >
+                                  <Sparkles className="h-3 w-3 mr-1" /> Add to Voice
+                                </Button>
+                              )}
+                              
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                className="text-red-500"
+                                onClick={() => deleteNote.mutate(note.id)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
 

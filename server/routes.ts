@@ -3906,5 +3906,176 @@ Return ONLY valid JSON, no explanations.`
     }
   });
 
+  // ===== HANDWRITTEN NOTE UPLOADS =====
+  
+  // Get all handwritten note uploads
+  app.get("/api/handwritten-notes", async (req, res) => {
+    try {
+      const { status } = req.query;
+      let uploads;
+      if (status) {
+        uploads = await storage.getHandwrittenNoteUploadsByStatus(status as string);
+      } else {
+        uploads = await storage.getAllHandwrittenNoteUploads();
+      }
+      res.json(uploads);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Upload a handwritten note image
+  app.post("/api/handwritten-notes/upload", upload.single("image"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file provided" });
+      }
+      
+      const imageUrl = `/uploads/${req.file.filename}`;
+      
+      const noteUpload = await storage.createHandwrittenNoteUpload({
+        imageUrl,
+        status: "pending_ocr",
+      });
+      
+      res.json(noteUpload);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Run OCR on a handwritten note
+  app.post("/api/handwritten-notes/:id/ocr", async (req, res) => {
+    try {
+      const noteUpload = await storage.getHandwrittenNoteUpload(req.params.id);
+      if (!noteUpload) {
+        return res.status(404).json({ message: "Note upload not found" });
+      }
+      
+      // Read the image file and convert to base64
+      const imagePath = path.join(process.cwd(), noteUpload.imageUrl);
+      if (!fs.existsSync(imagePath)) {
+        return res.status(404).json({ message: "Image file not found" });
+      }
+      
+      const imageBuffer = fs.readFileSync(imagePath);
+      const base64Image = imageBuffer.toString("base64");
+      const mimeType = noteUpload.imageUrl.endsWith(".png") ? "image/png" : "image/jpeg";
+      
+      // Use OpenAI Vision to extract text
+      const client = getOpenAI();
+      const response = await client.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `This is a handwritten thank-you note or personal note. Please extract:
+1. The full text of the note exactly as written
+2. The recipient's first name (if visible, usually after "Dear" or at the top)
+
+Respond in JSON format:
+{
+  "text": "the full transcribed text of the note",
+  "recipientName": "the recipient's first name or null if not found"
+}`
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:${mimeType};base64,${base64Image}`
+                }
+              }
+            ]
+          }
+        ],
+        max_tokens: 1000,
+      });
+      
+      const content = response.choices[0]?.message?.content || "";
+      let ocrText = content;
+      let recipientName = null;
+      
+      // Try to parse JSON response
+      try {
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          ocrText = parsed.text || content;
+          recipientName = parsed.recipientName || null;
+        }
+      } catch {
+        // Keep raw content if JSON parse fails
+      }
+      
+      // Update the note upload with OCR results
+      const updated = await storage.updateHandwrittenNoteUpload(req.params.id, {
+        ocrText,
+        recipientName,
+        status: "pending_tag",
+      });
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Update a handwritten note (tag person, etc.)
+  app.patch("/api/handwritten-notes/:id", async (req, res) => {
+    try {
+      const updated = await storage.updateHandwrittenNoteUpload(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ message: "Note upload not found" });
+      }
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Delete a handwritten note upload
+  app.delete("/api/handwritten-notes/:id", async (req, res) => {
+    try {
+      await storage.deleteHandwrittenNoteUpload(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Add handwritten note text to voice profile
+  app.post("/api/handwritten-notes/:id/add-to-voice-profile", async (req, res) => {
+    try {
+      const noteUpload = await storage.getHandwrittenNoteUpload(req.params.id);
+      if (!noteUpload) {
+        return res.status(404).json({ message: "Note upload not found" });
+      }
+      
+      if (!noteUpload.ocrText) {
+        return res.status(400).json({ message: "Note has not been processed with OCR yet" });
+      }
+      
+      // Add the note text as a voice profile pattern
+      const pattern = await storage.upsertVoicePattern(
+        "handwritten_notes",
+        noteUpload.ocrText,
+        "handwritten_note",
+        `handwritten_note_${noteUpload.id}`
+      );
+      
+      // Mark as complete
+      await storage.updateHandwrittenNoteUpload(req.params.id, {
+        status: "complete",
+      });
+      
+      res.json({ success: true, pattern });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }
