@@ -25,7 +25,8 @@ import {
   type GeneratedDraft, type InsertGeneratedDraft,
   type VoiceProfile, type InsertVoiceProfile,
   type SyncLog, type InsertSyncLog,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs
+  type HandwrittenNoteUpload, type InsertHandwrittenNoteUpload,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt } from "drizzle-orm";
@@ -256,6 +257,14 @@ export interface IStorage {
   getDContactsNeedingReview(): Promise<DContactReviewResult[]>;
   /** Flag a contact for review */
   flagContactForReview(personId: string, status: string): Promise<Person | undefined>;
+  
+  // Handwritten Note Uploads
+  getAllHandwrittenNoteUploads(): Promise<HandwrittenNoteUpload[]>;
+  getHandwrittenNoteUploadsByStatus(status: string): Promise<HandwrittenNoteUpload[]>;
+  getHandwrittenNoteUpload(id: string): Promise<HandwrittenNoteUpload | undefined>;
+  createHandwrittenNoteUpload(upload: InsertHandwrittenNoteUpload): Promise<HandwrittenNoteUpload>;
+  updateHandwrittenNoteUpload(id: string, upload: Partial<InsertHandwrittenNoteUpload>): Promise<HandwrittenNoteUpload | undefined>;
+  deleteHandwrittenNoteUpload(id: string): Promise<void>;
 }
 
 /** Result of contact due calculation with reason and days overdue. */
@@ -1297,6 +1306,39 @@ export class DatabaseStorage implements IStorage {
       .where(eq(people.id, personId))
       .returning();
     return updated || undefined;
+  }
+  
+  // Handwritten Note Uploads
+  async getAllHandwrittenNoteUploads(): Promise<HandwrittenNoteUpload[]> {
+    return await db.select().from(handwrittenNoteUploads).orderBy(desc(handwrittenNoteUploads.createdAt));
+  }
+  
+  async getHandwrittenNoteUploadsByStatus(status: string): Promise<HandwrittenNoteUpload[]> {
+    return await db.select().from(handwrittenNoteUploads)
+      .where(eq(handwrittenNoteUploads.status, status))
+      .orderBy(desc(handwrittenNoteUploads.createdAt));
+  }
+  
+  async getHandwrittenNoteUpload(id: string): Promise<HandwrittenNoteUpload | undefined> {
+    const [upload] = await db.select().from(handwrittenNoteUploads).where(eq(handwrittenNoteUploads.id, id));
+    return upload || undefined;
+  }
+  
+  async createHandwrittenNoteUpload(upload: InsertHandwrittenNoteUpload): Promise<HandwrittenNoteUpload> {
+    const [created] = await db.insert(handwrittenNoteUploads).values(upload).returning();
+    return created;
+  }
+  
+  async updateHandwrittenNoteUpload(id: string, upload: Partial<InsertHandwrittenNoteUpload>): Promise<HandwrittenNoteUpload | undefined> {
+    const [updated] = await db.update(handwrittenNoteUploads)
+      .set({ ...upload, updatedAt: new Date() })
+      .where(eq(handwrittenNoteUploads.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async deleteHandwrittenNoteUpload(id: string): Promise<void> {
+    await db.delete(handwrittenNoteUploads).where(eq(handwrittenNoteUploads.id, id));
   }
 }
 
