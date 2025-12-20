@@ -17,7 +17,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { Link, useParams } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import type { Person, Call, Meeting, Note, Deal, RealEstateReview, Interaction } from "@shared/schema";
+import type { Person, Call, Meeting, Note, Deal, RealEstateReview, Interaction, Household } from "@shared/schema";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { format } from "date-fns";
 
@@ -61,6 +61,17 @@ export default function PersonProfile() {
   const { data: interactions = [] } = useQuery<Interaction[]>({
     queryKey: [`/api/people/${id}/interactions`],
     enabled: !!id,
+  });
+
+  // Fetch household members if person has a household
+  const { data: householdData } = useQuery<Household & { members: Person[] }>({
+    queryKey: ["/api/households", person?.householdId],
+    queryFn: async () => {
+      const res = await fetch(`/api/households/${person?.householdId}`);
+      if (!res.ok) throw new Error("Failed to fetch household");
+      return res.json();
+    },
+    enabled: !!person?.householdId,
   });
 
   const personCalls = calls.filter(c => c.personId === id);
@@ -402,6 +413,36 @@ export default function PersonProfile() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Household Section */}
+              {householdData && householdData.members.length > 1 && (
+                <Card className="border-primary/20">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Home className="h-4 w-4" /> {householdData.name}
+                    </CardTitle>
+                    <CardDescription>Linked household members</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {householdData.members
+                        .filter(member => member.id !== id)
+                        .map(member => (
+                          <Link key={member.id} href={`/people/${member.id}`}>
+                            <Badge 
+                              variant="secondary" 
+                              className="cursor-pointer hover:bg-primary/20 py-2 px-3"
+                              data-testid={`link-household-member-${member.id}`}
+                            >
+                              {member.name}
+                              {member.segment && <span className="text-muted-foreground ml-2">({member.segment})</span>}
+                            </Badge>
+                          </Link>
+                        ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               <Card>
                 <CardHeader>

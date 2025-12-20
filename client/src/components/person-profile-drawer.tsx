@@ -4,9 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Phone, Mail, MapPin, Building2, Users, Briefcase, Heart, Star, Home, DollarSign, Bed, Bath, X } from "lucide-react";
-import { type Person } from "@shared/schema";
+import { Phone, Mail, MapPin, Building2, Users, Briefcase, Heart, Star, Home, DollarSign, Bed, Bath, X, Link2 } from "lucide-react";
+import { type Person, type Household } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 
 interface PersonProfileDrawerProps {
   personId: string | null;
@@ -23,6 +24,17 @@ export function PersonProfileDrawer({ personId, open, onClose }: PersonProfileDr
       return res.json();
     },
     enabled: !!personId && open,
+  });
+
+  // Fetch household members if person has a household
+  const { data: householdData } = useQuery<Household & { members: Person[] }>({
+    queryKey: ["/api/households", person?.householdId],
+    queryFn: async () => {
+      const res = await fetch(`/api/households/${person?.householdId}`);
+      if (!res.ok) throw new Error("Failed to fetch household");
+      return res.json();
+    },
+    enabled: !!person?.householdId && open,
   });
 
   const formatPrice = (price: number | null | undefined) => {
@@ -89,6 +101,35 @@ export function PersonProfileDrawer({ personId, open, onClose }: PersonProfileDr
                 </div>
               )}
             </div>
+
+            {/* Household Members */}
+            {householdData && householdData.members.length > 1 && (
+              <div className="bg-muted/50 rounded-lg p-3">
+                <div className="flex items-center gap-2 text-sm font-medium mb-2">
+                  <Link2 className="h-4 w-4 text-muted-foreground" />
+                  <span>{householdData.name}</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {householdData.members
+                    .filter(member => member.id !== person.id)
+                    .map(member => (
+                      <Link 
+                        key={member.id} 
+                        href={`/people/${member.id}`}
+                        onClick={onClose}
+                      >
+                        <Badge 
+                          variant="secondary" 
+                          className="cursor-pointer hover:bg-primary/20"
+                          data-testid={`link-household-member-${member.id}`}
+                        >
+                          {member.name}
+                        </Badge>
+                      </Link>
+                    ))}
+                </div>
+              </div>
+            )}
 
             <Separator />
 
