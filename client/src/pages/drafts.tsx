@@ -198,6 +198,8 @@ function DraftCard({
   );
 }
 
+type GmailStatus = { connected: boolean; email?: string };
+
 export default function Drafts() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -212,6 +214,27 @@ export default function Drafts() {
 
   const { data: people = [] } = useQuery<Person[]>({
     queryKey: ["/api/people"],
+  });
+
+  const { data: gmailStatus } = useQuery<GmailStatus>({
+    queryKey: ["/api/gmail/status"],
+  });
+
+  const sendEmailMutation = useMutation({
+    mutationFn: async ({ to, subject, body, draftId }: { to: string; subject: string; body: string; draftId: string }) => {
+      return apiRequest("POST", "/api/gmail/send", { to, subject, body, draftId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/generated-drafts"] });
+      toast({ title: "Email sent successfully!" });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to send email", 
+        description: error.message,
+        variant: "destructive" 
+      });
+    },
   });
 
   const updateDraft = useMutation({
@@ -290,6 +313,24 @@ export default function Drafts() {
   const handleMarkSent = (draft: GeneratedDraft) => {
     const newStatus = draft.type === "task" ? "used" : "sent";
     updateDraft.mutate({ id: draft.id, status: newStatus });
+  };
+
+  const handleSendEmail = (draft: GeneratedDraft) => {
+    const person = getPerson(draft.personId);
+    if (!person?.email) {
+      toast({ 
+        title: "No email address", 
+        description: "This contact doesn't have an email address on file.",
+        variant: "destructive" 
+      });
+      return;
+    }
+    sendEmailMutation.mutate({
+      to: person.email,
+      subject: draft.subject || "Following up on our conversation",
+      body: draft.content,
+      draftId: draft.id
+    });
   };
 
   const stats = {
@@ -412,6 +453,8 @@ export default function Drafts() {
                           onEdit={() => handleEdit(draft)}
                           onDelete={() => deleteDraft.mutate(draft.id)}
                           onCopy={() => handleCopy(draft.content)}
+                          onSendEmail={() => handleSendEmail(draft)}
+                          gmailConnected={gmailStatus?.connected}
                         />
                       ))}
                     </div>
@@ -434,6 +477,8 @@ export default function Drafts() {
                           onEdit={() => handleEdit(draft)}
                           onDelete={() => deleteDraft.mutate(draft.id)}
                           onCopy={() => handleCopy(draft.content)}
+                          onSendEmail={() => handleSendEmail(draft)}
+                          gmailConnected={gmailStatus?.connected}
                         />
                       ))}
                     </div>
