@@ -32,6 +32,25 @@ The AI assistant is fully agentic - it can take actions, not just give advice. U
 
 The AI executes up to 5 sequential tool calls per request, allowing complex multi-step operations like "find Miguel, log a call, and create a follow-up task for next week".
 
+### Voice Profile Learning
+The system learns Nathan's unique communication style from conversation transcripts. It extracts:
+- **Greetings**: How Nathan opens conversations ("Hey there!", "How's it going?")
+- **Sign-offs**: How he closes conversations
+- **Expressions**: Common phrases he uses ("That's awesome", "Definitely", "All right")
+- **Tone Notes**: Observations about his style (casual, enthusiastic, conversational)
+- **Compliment Patterns**: How he gives praise
+- **Question Styles**: How he asks questions and shows interest
+
+This voice profile is used when generating emails, handwritten notes, and marketing content to sound authentically like Nathan rather than generic AI-generated content.
+
+### AI-Generated Drafts
+After processing conversations, the system generates:
+- **Thank-you Emails**: Professional but warm 2-3 paragraph emails
+- **Handwritten Notes**: 2-3 sentences starting with "Thank you/It was great/Congratulations", focused on the other person, ending with a P.S. call to action
+- **Follow-up Tasks**: Action items extracted from conversations
+
+Drafts are stored in the `generated_drafts` table and can be reviewed/edited before sending.
+
 ## Ninja Selling Methodology
 
 Ninja Selling is a relationship-first, process-driven sales system. Agents increase income per hour by focusing on people they know, delivering value, and following consistent daily/weekly habits rather than chasing leads with pressure tactics.
@@ -159,7 +178,7 @@ FORD notes are viewed before calls and handwritten notes. Watch for **changes** 
 - **Database**: PostgreSQL
 - **ORM**: Drizzle ORM with drizzle-kit for migrations
 - **Schema Location**: `shared/schema.ts` (shared between client and server)
-- **Core Tables**: users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns
+- **Core Tables**: users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, interactions, generatedDrafts, voiceProfile
 
 ### Project Structure
 ```

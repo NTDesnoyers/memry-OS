@@ -26,6 +26,57 @@ import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import * as XLSX from "xlsx";
 import * as googleCalendar from "./google-calendar";
+import { processInteraction } from "./conversation-processor";
+
+// Background processing for batch operations
+let processingStatus = {
+  isProcessing: false,
+  totalToProcess: 0,
+  processed: 0,
+  failed: 0,
+  lastError: null as string | null,
+};
+
+async function processAllInBackground(interactionIds: string[]) {
+  if (processingStatus.isProcessing) {
+    console.log("Already processing, skipping new request");
+    return;
+  }
+
+  processingStatus = {
+    isProcessing: true,
+    totalToProcess: interactionIds.length,
+    processed: 0,
+    failed: 0,
+    lastError: null,
+  };
+
+  console.log(`Starting background processing of ${interactionIds.length} interactions...`);
+
+  for (const id of interactionIds) {
+    try {
+      const result = await processInteraction(id);
+      if (result.success) {
+        processingStatus.processed++;
+        console.log(`Processed ${processingStatus.processed}/${processingStatus.totalToProcess}: ${result.draftsCreated || 0} drafts, voice: ${result.voicePatternsExtracted ? 'yes' : 'no'}`);
+      } else {
+        processingStatus.failed++;
+        processingStatus.lastError = result.error || "Unknown error";
+        console.error(`Failed to process ${id}: ${result.error}`);
+      }
+    } catch (error: any) {
+      processingStatus.failed++;
+      processingStatus.lastError = error.message;
+      console.error(`Error processing ${id}:`, error.message);
+    }
+
+    // Small delay to avoid rate limiting
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+
+  console.log(`Background processing complete. Processed: ${processingStatus.processed}, Failed: ${processingStatus.failed}`);
+  processingStatus.isProcessing = false;
+}
 
 // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
 // Lazy initialize to prevent crash when API key is missing
@@ -2975,6 +3026,62 @@ When analyzing images:
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
+  });
+
+  // Voice Profile endpoints
+  app.get("/api/voice-profile", async (req, res) => {
+    try {
+      const { category } = req.query;
+      
+      let profiles;
+      if (category) {
+        profiles = await storage.getVoiceProfilesByCategory(category as string);
+      } else {
+        profiles = await storage.getAllVoiceProfiles();
+      }
+      
+      res.json(profiles);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/voice-profile/:id", async (req, res) => {
+    try {
+      await storage.deleteVoiceProfile(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Process all unprocessed interactions (batch processing)
+  app.post("/api/interactions/process-all", async (req, res) => {
+    try {
+      const allInteractions = await storage.getAllInteractions();
+      
+      // Filter to only unprocessed (no aiExtractedData or status pending)
+      const unprocessed = allInteractions.filter(i => {
+        const data = i.aiExtractedData as any;
+        return !data || !data.processingStatus || data.processingStatus === "pending";
+      });
+
+      res.json({
+        message: `Starting to process ${unprocessed.length} unprocessed interactions`,
+        totalUnprocessed: unprocessed.length,
+        status: "started"
+      });
+
+      // Process in background (don't await)
+      processAllInBackground(unprocessed.map(i => i.id));
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get processing status
+  app.get("/api/interactions/process-status", async (req, res) => {
+    res.json(processingStatus);
   });
 
   return httpServer;
