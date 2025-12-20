@@ -150,7 +150,7 @@ function DayCell({
       onDragOver={onDragOver}
       onDrop={(e) => onDrop(e, date)}
       className={cn(
-        "min-h-[100px] border border-border p-1 transition-colors",
+        "min-h-[80px] md:min-h-[100px] border border-border p-1 transition-colors",
         !isCurrentMonth && "bg-muted/30",
         isCurrentDay && "bg-primary/5 ring-1 ring-primary/20"
       )}
@@ -158,19 +158,19 @@ function DayCell({
     >
       <div
         className={cn(
-          "text-sm font-medium mb-1 h-6 w-6 flex items-center justify-center rounded-full",
+          "text-xs md:text-sm font-medium mb-1 h-5 w-5 md:h-6 md:w-6 flex items-center justify-center rounded-full",
           isCurrentDay && "bg-primary text-primary-foreground",
           !isCurrentMonth && "text-muted-foreground"
         )}
       >
         {format(date, "d")}
       </div>
-      <div className="space-y-1 overflow-hidden">
+      <div className="space-y-0.5 md:space-y-1 overflow-hidden">
         {dayEvents.slice(0, 3).map((event) => (
           <EventItem key={event.id} event={event} onDragStart={onDragStart} compact />
         ))}
         {dayEvents.length > 3 && (
-          <div className="text-xs text-muted-foreground px-2">
+          <div className="text-[10px] md:text-xs text-muted-foreground px-1 md:px-2">
             +{dayEvents.length - 3} more
           </div>
         )}
@@ -200,29 +200,31 @@ function MonthView({
   const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   return (
-    <div>
-      <div className="grid grid-cols-7 border-b">
-        {weekdays.map((day) => (
-          <div
-            key={day}
-            className="text-center py-2 text-sm font-medium text-muted-foreground border-r last:border-r-0"
-          >
-            {day}
-          </div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7">
-        {days.map((day) => (
-          <DayCell
-            key={day.toISOString()}
-            date={day}
-            events={events}
-            currentMonth={currentDate}
-            onDragStart={onDragStart}
-            onDrop={onDrop}
-            onDragOver={onDragOver}
-          />
-        ))}
+    <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+      <div className="min-w-[600px]">
+        <div className="grid grid-cols-7 border-b">
+          {weekdays.map((day) => (
+            <div
+              key={day}
+              className="text-center py-2 text-xs md:text-sm font-medium text-muted-foreground border-r last:border-r-0"
+            >
+              {day}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7">
+          {days.map((day) => (
+            <DayCell
+              key={day.toISOString()}
+              date={day}
+              events={events}
+              currentMonth={currentDate}
+              onDragStart={onDragStart}
+              onDrop={onDrop}
+              onDragOver={onDragOver}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
