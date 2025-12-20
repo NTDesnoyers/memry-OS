@@ -1084,8 +1084,8 @@ export class DatabaseStorage implements IStorage {
         dueReason = 'warm';
         frequencyDays = FREQUENCY.warm;
       } else {
-        // Use segment
-        const segment = person.segment?.toUpperCase();
+        // Use segment (handles formats like "A", "A - Advocate", etc.)
+        const segment = person.segment?.toUpperCase().charAt(0);
         if (segment === 'A') {
           dueReason = 'segment_a';
           frequencyDays = FREQUENCY.segment_a;

@@ -1459,7 +1459,7 @@ When analyzing images:
           title: `Follow up with ${due.person.name}`,
           description: `${reasonLabel} - ${due.daysOverdue} days overdue. Last contact: ${due.daysSinceContact} days ago.`,
           personId: due.person.id,
-          dueDate: new Date().toISOString().split('T')[0],
+          dueDate: new Date(),
           priority: due.dueReason === 'hot' ? 'high' : due.dueReason === 'warm' ? 'medium' : 'low',
         });
         createdTasks.push(task);
