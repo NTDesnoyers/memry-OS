@@ -110,6 +110,9 @@ export default function Deals() {
       type: formData.type || "Buy",
       stage: formData.stage || "Lead",
       value: formData.soldPrice || formData.value || 0,
+      listPrice: formData.listPrice || null,
+      soldPrice: formData.soldPrice || null,
+      source: formData.source || null,
       commissionPercent: formData.commissionPercent || 3,
       notes: formData.notes || null,
       actualCloseDate: formData.closedDate ? new Date(formData.closedDate) : null,
@@ -283,23 +286,13 @@ export default function Deals() {
                       </div>
                       <div>
                         <Label htmlFor="source">Source</Label>
-                        <Select 
-                          value={formData.source || ""} 
-                          onValueChange={(value) => setFormData({ ...formData, source: value })}
-                        >
-                          <SelectTrigger data-testid="select-source">
-                            <SelectValue placeholder="Source" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="sphere">Sphere</SelectItem>
-                            <SelectItem value="referral">Referral</SelectItem>
-                            <SelectItem value="open_house">Open House</SelectItem>
-                            <SelectItem value="sign_call">Sign Call</SelectItem>
-                            <SelectItem value="online_lead">Online Lead</SelectItem>
-                            <SelectItem value="past_client">Past Client</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Input
+                          id="source"
+                          value={formData.source || ""}
+                          onChange={(e) => setFormData({ ...formData, source: e.target.value })}
+                          placeholder="BNI, Referral, Sphere..."
+                          data-testid="input-source"
+                        />
                       </div>
                       <div>
                         <Label htmlFor="listPrice">List Price ($)</Label>
