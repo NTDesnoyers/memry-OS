@@ -2,12 +2,11 @@ import Layout from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BarChart3, TrendingUp, DollarSign, Home, ArrowRight, Loader2, Plus } from "lucide-react";
+import { BarChart3, TrendingUp, DollarSign, Home, ArrowRight, Loader2, Plus, X } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -17,7 +16,7 @@ import type { Deal, InsertDeal, Person } from "@shared/schema";
 export default function Deals() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
   
   const [formData, setFormData] = useState<Partial<InsertDeal> & {
     closedDate?: string;
@@ -65,7 +64,7 @@ export default function Deals() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
-      setDialogOpen(false);
+      setFormOpen(false);
       setFormData({
         title: "",
         address: "",
@@ -128,54 +127,69 @@ export default function Deals() {
               <p className="text-muted-foreground">Pipeline & Transaction Management</p>
             </div>
             
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="gap-2 shadow-md" data-testid="button-add-deal">
-                  <Plus className="h-4 w-4" /> New Deal
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Create New Deal</DialogTitle>
-                </DialogHeader>
+            {!formOpen && (
+              <Button 
+                className="gap-2 shadow-md" 
+                onClick={() => setFormOpen(true)}
+                data-testid="button-add-deal"
+              >
+                <Plus className="h-4 w-4" /> New Deal
+              </Button>
+            )}
+          </header>
+
+          {formOpen && (
+            <Card className="mb-6 border-primary/20">
+              <CardContent className="pt-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold">Add New Deal</h3>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => setFormOpen(false)}
+                    data-testid="button-close-form"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="title">Title *</Label>
-                    <Input
-                      id="title"
-                      value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      placeholder="Deal Title"
-                      data-testid="input-title"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="address">Address</Label>
-                    <Input
-                      id="address"
-                      value={formData.address || ""}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      placeholder="123 Main St"
-                      data-testid="input-address"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="person">Client</Label>
-                    <Select 
-                      value={formData.personId || ""} 
-                      onValueChange={(value) => setFormData({ ...formData, personId: value })}
-                    >
-                      <SelectTrigger data-testid="select-person">
-                        <SelectValue placeholder="Select a client" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {people.map(person => (
-                          <SelectItem key={person.id} value={person.id}>{person.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="title">Title *</Label>
+                      <Input
+                        id="title"
+                        value={formData.title}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        placeholder="Deal Title"
+                        data-testid="input-title"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="address">Address</Label>
+                      <Input
+                        id="address"
+                        value={formData.address || ""}
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                        placeholder="123 Main St"
+                        data-testid="input-address"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="person">Client</Label>
+                      <Select 
+                        value={formData.personId || ""} 
+                        onValueChange={(value) => setFormData({ ...formData, personId: value })}
+                      >
+                        <SelectTrigger data-testid="select-person">
+                          <SelectValue placeholder="Select a client" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {people.map(person => (
+                            <SelectItem key={person.id} value={person.id}>{person.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div>
                       <Label htmlFor="type">Type</Label>
                       <Select 
@@ -210,64 +224,74 @@ export default function Deals() {
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
-                  {formData.stage === "Closed Won" ? (
-                    <>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="closedDate">Closed Date *</Label>
-                          <Input
-                            id="closedDate"
-                            type="date"
-                            value={formData.closedDate || ""}
-                            onChange={(e) => setFormData({ ...formData, closedDate: e.target.value })}
-                            data-testid="input-closed-date"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="source">Source</Label>
-                          <Select 
-                            value={formData.source || ""} 
-                            onValueChange={(value) => setFormData({ ...formData, source: value })}
-                          >
-                            <SelectTrigger data-testid="select-source">
-                              <SelectValue placeholder="Select source" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="sphere">Sphere of Influence</SelectItem>
-                              <SelectItem value="referral">Referral</SelectItem>
-                              <SelectItem value="open_house">Open House</SelectItem>
-                              <SelectItem value="sign_call">Sign Call</SelectItem>
-                              <SelectItem value="online_lead">Online Lead</SelectItem>
-                              <SelectItem value="past_client">Past Client</SelectItem>
-                              <SelectItem value="other">Other</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                    {formData.stage !== "Closed Won" && (
+                      <div>
+                        <Label htmlFor="value">Est. Value ($)</Label>
+                        <Input
+                          id="value"
+                          type="number"
+                          value={formData.value || ""}
+                          onChange={(e) => setFormData({ ...formData, value: e.target.value ? parseInt(e.target.value) : 0 })}
+                          placeholder="450000"
+                          data-testid="input-value"
+                        />
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="listPrice">List Price ($)</Label>
-                          <Input
-                            id="listPrice"
-                            type="number"
-                            value={formData.listPrice || ""}
-                            onChange={(e) => setFormData({ ...formData, listPrice: e.target.value ? parseInt(e.target.value) : 0 })}
-                            placeholder="500000"
-                            data-testid="input-list-price"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="soldPrice">Sold Price ($)</Label>
-                          <Input
-                            id="soldPrice"
-                            type="number"
-                            value={formData.soldPrice || ""}
-                            onChange={(e) => setFormData({ ...formData, soldPrice: e.target.value ? parseInt(e.target.value) : 0, value: e.target.value ? parseInt(e.target.value) : 0 })}
-                            placeholder="495000"
-                            data-testid="input-sold-price"
-                          />
-                        </div>
+                    )}
+                  </div>
+                  
+                  {formData.stage === "Closed Won" && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 pt-2 border-t">
+                      <div>
+                        <Label htmlFor="closedDate">Closed Date</Label>
+                        <Input
+                          id="closedDate"
+                          type="date"
+                          value={formData.closedDate || ""}
+                          onChange={(e) => setFormData({ ...formData, closedDate: e.target.value })}
+                          data-testid="input-closed-date"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="source">Source</Label>
+                        <Select 
+                          value={formData.source || ""} 
+                          onValueChange={(value) => setFormData({ ...formData, source: value })}
+                        >
+                          <SelectTrigger data-testid="select-source">
+                            <SelectValue placeholder="Source" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="sphere">Sphere</SelectItem>
+                            <SelectItem value="referral">Referral</SelectItem>
+                            <SelectItem value="open_house">Open House</SelectItem>
+                            <SelectItem value="sign_call">Sign Call</SelectItem>
+                            <SelectItem value="online_lead">Online Lead</SelectItem>
+                            <SelectItem value="past_client">Past Client</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="listPrice">List Price ($)</Label>
+                        <Input
+                          id="listPrice"
+                          type="number"
+                          value={formData.listPrice || ""}
+                          onChange={(e) => setFormData({ ...formData, listPrice: e.target.value ? parseInt(e.target.value) : 0 })}
+                          placeholder="500000"
+                          data-testid="input-list-price"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="soldPrice">Sold Price ($)</Label>
+                        <Input
+                          id="soldPrice"
+                          type="number"
+                          value={formData.soldPrice || ""}
+                          onChange={(e) => setFormData({ ...formData, soldPrice: e.target.value ? parseInt(e.target.value) : 0, value: e.target.value ? parseInt(e.target.value) : 0 })}
+                          placeholder="495000"
+                          data-testid="input-sold-price"
+                        />
                       </div>
                       <div>
                         <Label htmlFor="commissionPercent">Commission %</Label>
@@ -281,46 +305,33 @@ export default function Deals() {
                           data-testid="input-commission-percent"
                         />
                       </div>
-                    </>
-                  ) : (
-                    <div>
-                      <Label htmlFor="value">Value ($)</Label>
-                      <Input
-                        id="value"
-                        type="number"
-                        value={formData.value || 0}
-                        onChange={(e) => setFormData({ ...formData, value: parseInt(e.target.value) })}
-                        placeholder="450000"
-                        data-testid="input-value"
-                      />
                     </div>
                   )}
-                  <div>
-                    <Label htmlFor="notes">Notes</Label>
-                    <Textarea
-                      id="notes"
-                      value={formData.notes || ""}
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                      placeholder="Additional notes..."
-                      data-testid="input-notes"
-                    />
+
+                  <div className="flex gap-2 pt-2">
+                    <Button 
+                      type="submit" 
+                      disabled={createDealMutation.isPending}
+                      data-testid="button-submit"
+                    >
+                      {createDealMutation.isPending ? (
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</>
+                      ) : (
+                        "Create Deal"
+                      )}
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline"
+                      onClick={() => setFormOpen(false)}
+                    >
+                      Cancel
+                    </Button>
                   </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
-                    disabled={createDealMutation.isPending}
-                    data-testid="button-submit"
-                  >
-                    {createDealMutation.isPending ? (
-                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</>
-                    ) : (
-                      "Create Deal"
-                    )}
-                  </Button>
                 </form>
-              </DialogContent>
-            </Dialog>
-          </header>
+              </CardContent>
+            </Card>
+          )}
 
           <div className="grid md:grid-cols-3 gap-6 mb-8">
             <Card className="border-none shadow-sm bg-card/80">
@@ -372,7 +383,7 @@ export default function Deals() {
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <p className="text-muted-foreground mb-4">No deals yet. Create your first deal to get started!</p>
-                <Button onClick={() => setDialogOpen(true)}>
+                <Button onClick={() => setFormOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" /> New Deal
                 </Button>
               </CardContent>
