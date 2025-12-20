@@ -1265,6 +1265,16 @@ When analyzing images:
     }
   });
   
+  // Get contacts due for follow-up (must be before :id route)
+  app.get("/api/people/due-for-contact", async (req, res) => {
+    try {
+      const dueContacts = await storage.getContactsDueForFollowUp();
+      res.json(dueContacts);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
   // Get person by ID
   app.get("/api/people/:id", async (req, res) => {
     try {
@@ -1425,6 +1435,40 @@ When analyzing images:
     try {
       await storage.deleteTask(req.params.id);
       res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Generate follow-up tasks for overdue contacts
+  app.post("/api/tasks/generate-followup", async (req, res) => {
+    try {
+      const dueContacts = await storage.getContactsDueForFollowUp();
+      const createdTasks = [];
+      
+      for (const due of dueContacts) {
+        const reasonLabel = {
+          hot: 'Hot List (weekly)',
+          warm: 'Warm List (monthly)',
+          segment_a: 'A Contact (monthly)',
+          segment_b: 'B Contact (every 2 months)',
+          segment_c: 'C Contact (quarterly)',
+        }[due.dueReason];
+        
+        const task = await storage.createTask({
+          title: `Follow up with ${due.person.name}`,
+          description: `${reasonLabel} - ${due.daysOverdue} days overdue. Last contact: ${due.daysSinceContact} days ago.`,
+          personId: due.person.id,
+          dueDate: new Date().toISOString().split('T')[0],
+          priority: due.dueReason === 'hot' ? 'high' : due.dueReason === 'warm' ? 'medium' : 'low',
+        });
+        createdTasks.push(task);
+      }
+      
+      res.json({ 
+        message: `Created ${createdTasks.length} follow-up tasks`,
+        tasks: createdTasks 
+      });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
