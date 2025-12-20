@@ -246,9 +246,9 @@ FORD notes are viewed before calls and handwritten notes. Watch for **changes** 
 - **Lofty API Integration**: Sync leads from Lofty CRM into People database
 
 ### Potential Next Features
-- **Weekly Meeting Agenda (WMA) Page**: Dedicated page to complete weekly planning in <10 min
-- **Your 50 List**: Tag and track top 50 priority relationships
+- **Your 50 List**: Tag and track top 50 priority relationships with dedicated view
 - **Todoist Sync**: Export generated tasks to Todoist (GTD system of record)
-- **Ninja Nine Habit Tracker**: Track daily/weekly Ninja habits with streaks
 - **Mobile-Optimized FORD Logging**: 60-second interaction logging flow
 - **Real Estate Review Workflow**: Annual home equity check-in generator
+- **Hot/Warm Dashboard Widget**: Quick-glance counts and overdue alerts on main dashboard
+- **Interaction Response Tracking**: Mark interactions as "got response" to power engagement scoring
