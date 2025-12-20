@@ -70,13 +70,68 @@ export default function BusinessTracker() {
     phone: "",
     email: "",
     stage: "warm" as "warm" | "hot",
-    dealType: "buyer" as "buyer" | "seller",
+    relationshipSegment: "buyer" as string,
     estimatedValue: "",
     commissionPercent: "3",
   });
 
+  // Segment options matching Cloze structure
+  const segmentGroups = [
+    {
+      label: "Business Segments",
+      options: [
+        { value: "buyer_seller", label: "Buyer & Seller" },
+        { value: "buyer", label: "Buyer" },
+        { value: "seller", label: "Seller" },
+        { value: "A", label: "A - Advocate" },
+        { value: "B", label: "B - Fan" },
+        { value: "C", label: "C - Network" },
+        { value: "D", label: "D - Develop or Delete" },
+        { value: "renter", label: "Renter" },
+        { value: "landlord", label: "Landlord" },
+        { value: "realtor", label: "Realtor" },
+        { value: "general_database", label: "General Database" },
+        { value: "lead", label: "Lead" },
+      ],
+    },
+    {
+      label: "Personal Segments",
+      options: [
+        { value: "family", label: "Family" },
+        { value: "friend", label: "Friend" },
+      ],
+    },
+  ];
+
+  // Helper to derive deal type and segment from relationship segment
+  const getDealTypeAndSegment = (relationshipSegment: string) => {
+    const buyerSellerTypes = ["buyer", "seller", "buyer_seller", "renter", "landlord"];
+    const segmentTypes = ["A", "B", "C", "D"];
+    
+    let dealType: string | null = null;
+    let segment: string = "D";
+    
+    if (relationshipSegment === "buyer_seller") {
+      dealType = "buyer_seller";
+    } else if (relationshipSegment === "buyer") {
+      dealType = "buyer";
+    } else if (relationshipSegment === "seller") {
+      dealType = "seller";
+    } else if (relationshipSegment === "renter") {
+      dealType = "renter";
+    } else if (relationshipSegment === "landlord") {
+      dealType = "landlord";
+    } else if (segmentTypes.includes(relationshipSegment)) {
+      segment = relationshipSegment;
+    }
+    
+    return { dealType, segment };
+  };
+
   const createProspectMutation = useMutation({
     mutationFn: async (data: typeof newProspect) => {
+      const { dealType, segment } = getDealTypeAndSegment(data.relationshipSegment);
+      
       // First create the person
       const personRes = await fetch("/api/people", {
         method: "POST",
@@ -85,7 +140,8 @@ export default function BusinessTracker() {
           name: data.name,
           phone: data.phone || null,
           email: data.email || null,
-          segment: "D",
+          segment: segment,
+          relationshipType: data.relationshipSegment,
         }),
       });
       if (!personRes.ok) throw new Error("Failed to create person");
@@ -99,7 +155,7 @@ export default function BusinessTracker() {
           personId: person.id,
           title: data.name,
           stage: data.stage,
-          dealType: data.dealType,
+          dealType: dealType || "buyer",
           value: data.estimatedValue ? parseFloat(data.estimatedValue) : null,
           commissionPercent: data.commissionPercent ? parseFloat(data.commissionPercent) : 3,
         }),
@@ -116,7 +172,7 @@ export default function BusinessTracker() {
         phone: "",
         email: "",
         stage: "warm",
-        dealType: "buyer",
+        relationshipSegment: "buyer",
         estimatedValue: "",
         commissionPercent: "3",
       });
@@ -1378,17 +1434,27 @@ export default function BusinessTracker() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label>Type</Label>
+                          <Label>Relationship</Label>
                           <Select
-                            value={newProspect.dealType}
-                            onValueChange={(v) => setNewProspect(p => ({ ...p, dealType: v as "buyer" | "seller" }))}
+                            value={newProspect.relationshipSegment}
+                            onValueChange={(v) => setNewProspect(p => ({ ...p, relationshipSegment: v }))}
                           >
-                            <SelectTrigger data-testid="select-prospect-type">
+                            <SelectTrigger data-testid="select-prospect-segment" className="bg-[#8B4051] text-white border-[#8B4051] hover:bg-[#7a3847]">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="buyer">Buyer</SelectItem>
-                              <SelectItem value="seller">Seller</SelectItem>
+                              {segmentGroups.map((group) => (
+                                <div key={group.label}>
+                                  <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                    {group.label}
+                                  </div>
+                                  {group.options.map((option) => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                      {option.label}
+                                    </SelectItem>
+                                  ))}
+                                </div>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>
