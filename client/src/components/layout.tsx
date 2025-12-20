@@ -35,26 +35,17 @@ import { useQuery } from "@tanstack/react-query";
 
 const navItems = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Calendar", href: "/calendar", icon: Calendar },
-  { name: "Business Tracker", href: "/business-tracker", icon: PieChart },
-  { name: "Phone & Dialer", href: "/phone", icon: Phone },
-  { name: "Meetings", href: "/meetings", icon: Video },
-  { name: "Conversations", href: "/conversations", icon: MessageSquare },
-  { name: "AI Drafts", href: "/drafts", icon: FileEdit },
-  { name: "Voice Profile", href: "/voice-profile", icon: Mic },
-  { name: "Referrals", href: "/referrals", icon: Handshake },
-  { name: "People", href: "/people", icon: Users },
-  { name: "Know Your People", href: "/know-your-people", icon: Sparkles },
-  { name: "D Contact Review", href: "/d-review", icon: UserX },
-  { name: "Relationships (FORD)", href: "/relationships", icon: Repeat },
+  { name: "Flow", href: "/flow", icon: Repeat },
   { name: "Weekly Agenda", href: "/weekly-report", icon: Calendar },
-  { name: "Deals", href: "/deals", icon: BarChart3 },
-  { name: "Visual Pricing", href: "/visual-pricing", icon: BarChart3 },
+  { name: "People", href: "/people", icon: Users },
+  { name: "Business Tracker", href: "/business-tracker", icon: PieChart },
   { name: "Haves & Wants", href: "/haves-wants", icon: Mail },
-  { name: "RE Reviews", href: "/reviews", icon: Home },
+  { name: "Referrals", href: "/referrals", icon: Handshake },
+  { name: "Calendar", href: "/calendar", icon: Calendar },
 ];
 
 const profileMenuItems = [
+  { name: "Voice Profile", href: "/voice-profile", icon: Mic },
   { name: "Brand Center", href: "/brand-center", icon: Palette },
   { name: "Integrations", href: "/integrations", icon: Plug },
   { name: "Automation", href: "/automation", icon: Workflow },

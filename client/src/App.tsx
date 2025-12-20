@@ -29,6 +29,7 @@ import Calendar from "@/pages/calendar";
 import Settings from "@/pages/settings";
 import VoiceProfile from "@/pages/voice-profile";
 import DContactReview from "@/pages/d-contact-review";
+import Flow from "@/pages/flow";
 
 function Router() {
   return (
@@ -42,6 +43,7 @@ function Router() {
       <Route path="/people/new" component={PersonNew} />
       <Route path="/people/:id" component={PersonProfile} />
       <Route path="/relationships" component={Relationships} />
+      <Route path="/flow" component={Flow} />
       <Route path="/deals" component={Deals} />
       <Route path="/reviews" component={Reviews} />
       <Route path="/reviews/:id" component={ReviewDetail} />
