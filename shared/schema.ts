@@ -1,10 +1,14 @@
+/**
+ * Schema module - Drizzle ORM schema definitions and Zod validation types.
+ * Shared between frontend and backend for type safety.
+ */
 import { sql } from "drizzle-orm";
 import { pgTable, text, varchar, timestamp, integer, boolean, jsonb } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Users table (for authentication)
+/** Users table - Authentication credentials. */
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
@@ -19,7 +23,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
-// Households - Group people living at the same address
+/** Households - Groups people living at the same address for mailers. */
 export const households = pgTable("households", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(), // e.g. "Cohen & Davis Household" or auto-generated
@@ -38,7 +42,7 @@ export const insertHouseholdSchema = createInsertSchema(households).omit({
 export type InsertHousehold = z.infer<typeof insertHouseholdSchema>;
 export type Household = typeof households.$inferSelect;
 
-// People (Contacts) - Core entity
+/** People (Contacts) - Core entity with FORD notes, segment (A/B/C/D), buyer needs. */
 export const people = pgTable("people", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
@@ -91,7 +95,7 @@ export const insertPersonSchema = createInsertSchema(people).omit({
 export type InsertPerson = z.infer<typeof insertPersonSchema>;
 export type Person = typeof people.$inferSelect;
 
-// Business Settings (Goals & Fees)
+/** Business Settings - Annual goals, fee structures, split tiers. */
 export const businessSettings = pgTable("business_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   year: integer("year").notNull().default(2025),
@@ -119,7 +123,7 @@ export const insertBusinessSettingsSchema = createInsertSchema(businessSettings)
 export type InsertBusinessSettings = z.infer<typeof insertBusinessSettingsSchema>;
 export type BusinessSettings = typeof businessSettings.$inferSelect;
 
-// Agent Profile (user's personal/business info)
+/** Agent Profile - User's personal and business info (single-user system). */
 export const agentProfile = pgTable("agent_profile", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull().default("Agent Name"),
@@ -162,7 +166,7 @@ export const insertAgentProfileSchema = createInsertSchema(agentProfile).omit({
 export type InsertAgentProfile = z.infer<typeof insertAgentProfileSchema>;
 export type AgentProfile = typeof agentProfile.$inferSelect;
 
-// Deals
+/** Deals - Pipeline management with stages: warm → hot → in_contract → closed. */
 export const deals = pgTable("deals", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   personId: varchar("person_id").references(() => people.id),
@@ -215,7 +219,7 @@ export const insertPieEntrySchema = createInsertSchema(pieEntries).omit({
 export type InsertPieEntry = z.infer<typeof insertPieEntrySchema>;
 export type PieEntry = typeof pieEntries.$inferSelect;
 
-// Tasks
+/** Tasks - Follow-up actions, optionally linked to person/deal. Syncs to Todoist. */
 export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   personId: varchar("person_id").references(() => people.id),
@@ -580,7 +584,7 @@ export const realEstateReviewsRelations = relations(realEstateReviews, ({ one })
   }),
 }));
 
-// Interactions - Calls, Meetings, Texts, Emails with People
+/** Interactions - Unified log of calls, meetings, texts, emails. Stores transcripts for AI processing. */
 export const interactions = pgTable("interactions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   personId: varchar("person_id").references(() => people.id),
@@ -636,7 +640,7 @@ export const insertAiConversationSchema = createInsertSchema(aiConversations).om
 export type InsertAiConversation = z.infer<typeof insertAiConversationSchema>;
 export type AiConversation = typeof aiConversations.$inferSelect;
 
-// Generated Drafts - AI-generated follow-up content (emails, handwritten notes, etc.)
+/** Generated Drafts - AI-generated emails and handwritten notes using user's voice profile. */
 export const generatedDrafts = pgTable("generated_drafts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   personId: varchar("person_id").references(() => people.id),
@@ -693,7 +697,7 @@ export const insertVoiceProfileSchema = createInsertSchema(voiceProfile).omit({
 export type InsertVoiceProfile = z.infer<typeof insertVoiceProfileSchema>;
 export type VoiceProfile = typeof voiceProfile.$inferSelect;
 
-// Sync Logs - Track incoming syncs from local agents
+/** Sync Logs - Tracks incoming data from local sync agents (Granola, Plaud, iMessage, WhatsApp). */
 export const syncLogs = pgTable("sync_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   source: text("source").notNull(), // granola, plaud, imessage, whatsapp

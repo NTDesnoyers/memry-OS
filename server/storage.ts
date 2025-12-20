@@ -1,3 +1,7 @@
+/**
+ * Storage module - Database access layer using Drizzle ORM.
+ * All CRUD operations go through IStorage interface for testability.
+ */
 import { 
   type User, type InsertUser,
   type Person, type InsertPerson,
@@ -25,31 +29,50 @@ import {
 import { db } from "./db";
 import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt } from "drizzle-orm";
 
+/** Storage interface - abstracts database operations for all entities. */
 export interface IStorage {
   // Users
+  /** Get user by ID. Returns undefined if not found. */
   getUser(id: string): Promise<User | undefined>;
+  /** Get user by username. Returns undefined if not found. */
   getUserByUsername(username: string): Promise<User | undefined>;
+  /** Create new user. Returns created user with generated ID. */
   createUser(user: InsertUser): Promise<User>;
   
-  // People
+  // People (Contacts)
+  /** Get all people/contacts. */
   getAllPeople(): Promise<Person[]>;
+  /** Get person by ID. Returns undefined if not found. */
   getPerson(id: string): Promise<Person | undefined>;
+  /** Create new person. Returns created person with generated ID. */
   createPerson(person: InsertPerson): Promise<Person>;
+  /** Update person fields. Returns updated person or undefined if not found. */
   updatePerson(id: string, person: Partial<InsertPerson>): Promise<Person | undefined>;
+  /** Delete person by ID. */
   deletePerson(id: string): Promise<void>;
   
-  // Deals
+  // Deals - Pipeline management (warm → hot → in_contract → closed)
+  /** Get all deals. */
   getAllDeals(): Promise<Deal[]>;
+  /** Get deal by ID. */
   getDeal(id: string): Promise<Deal | undefined>;
+  /** Create deal linked to a person. */
   createDeal(deal: InsertDeal): Promise<Deal>;
+  /** Update deal fields (including stage transitions). */
   updateDeal(id: string, deal: Partial<InsertDeal>): Promise<Deal | undefined>;
+  /** Delete deal by ID. */
   deleteDeal(id: string): Promise<void>;
   
-  // Tasks
+  // Tasks - Follow-up actions (syncs to Todoist)
+  /** Get all tasks. */
   getAllTasks(): Promise<Task[]>;
+  /** Get task by ID. */
   getTask(id: string): Promise<Task | undefined>;
+  /** Create task, optionally linked to a person. */
   createTask(task: InsertTask): Promise<Task>;
+  /** Update task fields (including marking complete). */
   updateTask(id: string, task: Partial<InsertTask>): Promise<Task | undefined>;
+  /** Delete task by ID. */
   deleteTask(id: string): Promise<void>;
   
   // Meetings
@@ -95,8 +118,10 @@ export interface IStorage {
   updateEmailCampaign(id: string, campaign: Partial<InsertEmailCampaign>): Promise<EmailCampaign | undefined>;
   deleteEmailCampaign(id: string): Promise<void>;
   
-  // Buyer queries
+  // Buyer queries - For Haves & Wants matching
+  /** Get all people marked as buyers. */
   getBuyers(): Promise<Person[]>;
+  /** Get realtors who opted into newsletter. */
   getRealtorsForNewsletter(): Promise<Person[]>;
   
   // Pricing Reviews
@@ -130,18 +155,30 @@ export interface IStorage {
   deleteRealEstateReview(id: string): Promise<void>;
   getTasksByReviewId(reviewId: string): Promise<Task[]>;
   
-  // Interactions
+  // Interactions - Calls, meetings, texts, emails with transcripts
+  /** Get all non-deleted interactions. */
   getAllInteractions(): Promise<Interaction[]>;
+  /** Get soft-deleted interactions (for recovery). */
   getDeletedInteractions(): Promise<Interaction[]>;
+  /** Get all interactions for a specific person. */
   getInteractionsByPerson(personId: string): Promise<Interaction[]>;
+  /** Get interaction by ID. */
   getInteraction(id: string): Promise<Interaction | undefined>;
+  /** Get interaction by external source ID (for deduplication). */
   getInteractionByExternalId(externalId: string): Promise<Interaction | undefined>;
+  /** Create interaction. Auto-updates person's lastContact if linked. */
   createInteraction(interaction: InsertInteraction): Promise<Interaction>;
+  /** Update interaction fields. */
   updateInteraction(id: string, interaction: Partial<InsertInteraction>): Promise<Interaction | undefined>;
+  /** Soft-delete interaction (sets deletedAt, recoverable). */
   softDeleteInteraction(id: string): Promise<Interaction | undefined>;
+  /** Restore soft-deleted interaction. */
   restoreInteraction(id: string): Promise<Interaction | undefined>;
+  /** Permanently delete interaction (no recovery). */
   permanentlyDeleteInteraction(id: string): Promise<void>;
+  /** Delete interactions soft-deleted more than N days ago. Returns count deleted. */
   cleanupOldDeletedInteractions(daysOld: number): Promise<number>;
+  /** Alias for permanentlyDeleteInteraction. */
   deleteInteraction(id: string): Promise<void>;
   
   // AI Conversations
@@ -151,13 +188,20 @@ export interface IStorage {
   updateAiConversation(id: string, conversation: Partial<InsertAiConversation>): Promise<AiConversation | undefined>;
   deleteAiConversation(id: string): Promise<void>;
   
-  // Generated Drafts
+  // Generated Drafts - AI-generated emails and handwritten notes
+  /** Get all generated drafts. */
   getAllGeneratedDrafts(): Promise<GeneratedDraft[]>;
+  /** Get drafts for a specific person. */
   getGeneratedDraftsByPerson(personId: string): Promise<GeneratedDraft[]>;
+  /** Get drafts by status (pending/approved/sent). */
   getGeneratedDraftsByStatus(status: string): Promise<GeneratedDraft[]>;
+  /** Get draft by ID. */
   getGeneratedDraft(id: string): Promise<GeneratedDraft | undefined>;
+  /** Create draft (typically from AI processing). */
   createGeneratedDraft(draft: InsertGeneratedDraft): Promise<GeneratedDraft>;
+  /** Update draft (edit content, change status). */
   updateGeneratedDraft(id: string, draft: Partial<InsertGeneratedDraft>): Promise<GeneratedDraft | undefined>;
+  /** Delete draft by ID. */
   deleteGeneratedDraft(id: string): Promise<void>;
   
   // Households
