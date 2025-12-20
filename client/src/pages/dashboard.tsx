@@ -1,14 +1,119 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight, Calendar, CheckCircle2, Layout, Plus, PieChart, TrendingUp, Users, DollarSign, Workflow, Mic, FileEdit, Sparkles, Loader2 } from "lucide-react";
+import { ArrowRight, Calendar, CheckCircle2, Layout, Plus, PieChart, TrendingUp, Users, DollarSign, Workflow, Mic, FileEdit, Sparkles, Loader2, ListTodo, RefreshCw, AlertCircle, ExternalLink } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import LayoutComponent from "@/components/layout";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 type VoicePattern = { id: string; category: string; value: string; frequency: number };
 type GeneratedDraft = { id: string; status: string; type: string };
 type ProcessingStatus = { isProcessing: boolean; processed: number; totalToProcess: number };
+type Task = { id: string; todoistId: string | null; completed: boolean };
+
+function TodoistWidget() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const { data: status, isLoading: statusLoading } = useQuery<{ connected: boolean; error?: string }>({
+    queryKey: ["/api/todoist/status"],
+  });
+  
+  const { data: tasks = [] } = useQuery<Task[]>({
+    queryKey: ["/api/tasks"],
+  });
+  
+  const syncMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/todoist/sync-tasks");
+      return res.json();
+    },
+    onSuccess: (data: { synced: number; failed: number; total: number }) => {
+      toast({ 
+        title: "Synced to Todoist", 
+        description: `${data.synced} tasks exported successfully` 
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Sync failed", description: error.message, variant: "destructive" });
+    },
+  });
+  
+  const isConnected = status?.connected === true;
+  const unsyncedTasks = tasks.filter(t => !t.completed && !t.todoistId).length;
+  
+  return (
+    <Card className="border-none shadow-md bg-gradient-to-br from-red-50 to-orange-50" data-testid="todoist-widget">
+      <CardHeader className="pb-2">
+        <CardTitle className="font-serif text-lg flex items-center gap-2">
+          <ListTodo className="h-5 w-5 text-red-600" />
+          Todoist
+        </CardTitle>
+        <CardDescription>GTD task management</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {statusLoading ? (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+          </div>
+        ) : isConnected ? (
+          <>
+            <div className="flex items-center justify-between p-3 bg-white/60 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 text-green-600 rounded-full">
+                  <CheckCircle2 className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm">Connected</p>
+                  <p className="text-xs text-muted-foreground">{unsyncedTasks} tasks to sync</p>
+                </div>
+              </div>
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => syncMutation.mutate()}
+                disabled={syncMutation.isPending || unsyncedTasks === 0}
+                className="gap-1"
+                data-testid="button-quick-sync-todoist"
+              >
+                {syncMutation.isPending ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3 w-3" />
+                )}
+                Sync
+              </Button>
+            </div>
+            <a 
+              href="https://todoist.com/app" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Open Todoist <ExternalLink className="h-3 w-3" />
+            </a>
+          </>
+        ) : (
+          <div className="flex items-center gap-3 p-3 bg-white/60 rounded-lg">
+            <div className="p-2 bg-amber-100 text-amber-600 rounded-full">
+              <AlertCircle className="h-4 w-4" />
+            </div>
+            <div className="flex-1">
+              <p className="font-medium text-sm">Not Connected</p>
+              <p className="text-xs text-muted-foreground">Set up in Integrations</p>
+            </div>
+            <Link href="/integrations">
+              <Button size="sm" variant="outline">Connect</Button>
+            </Link>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 function AIStatusWidget() {
   const { data: voicePatterns = [] } = useQuery<VoicePattern[]>({
@@ -220,6 +325,8 @@ export default function Dashboard() {
               </Card>
 
               <AIStatusWidget />
+              
+              <TodoistWidget />
               
               <Card className="border-none shadow-md bg-card/80 backdrop-blur-sm">
                 <CardHeader>

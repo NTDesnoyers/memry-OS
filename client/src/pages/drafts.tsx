@@ -336,32 +336,33 @@ export default function Drafts() {
 
   return (
     <Layout>
-      <div className="p-6 max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
+      <div className="p-4 md:p-6 max-w-6xl mx-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Sparkles className="h-6 w-6 text-amber-500" />
+            <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2">
+              <Sparkles className="h-5 w-5 md:h-6 md:w-6 text-amber-500" />
               AI-Generated Drafts
             </h1>
-            <p className="text-gray-500 mt-1">
-              Review and send follow-up emails, handwritten notes, and tasks generated from your conversations
+            <p className="text-gray-500 mt-1 text-sm md:text-base">
+              Review and send follow-up content from your conversations
             </p>
           </div>
           <Button 
             onClick={() => processAllMutation.mutate()}
             disabled={processAllMutation.isPending}
             data-testid="process-all-btn"
+            className="w-full sm:w-auto"
           >
             {processAllMutation.isPending ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <Sparkles className="h-4 w-4 mr-2" />
             )}
-            Process New Conversations
+            Process Conversations
           </Button>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4 mb-6">
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold">{stats.total}</div>
@@ -395,11 +396,12 @@ export default function Drafts() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-4">
+          <TabsList className="mb-4 flex-wrap h-auto gap-1">
             {draftTypes.map(type => (
-              <TabsTrigger key={type.value} value={type.value} className="flex items-center gap-2">
-                <type.icon className="h-4 w-4" />
-                {type.label}
+              <TabsTrigger key={type.value} value={type.value} className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-3">
+                <type.icon className="h-3 w-3 md:h-4 md:w-4" />
+                <span className="hidden sm:inline">{type.label}</span>
+                <span className="sm:hidden">{type.value === "all" ? "All" : type.value === "email" ? "Email" : type.value === "handwritten_note" ? "Notes" : "Tasks"}</span>
               </TabsTrigger>
             ))}
           </TabsList>

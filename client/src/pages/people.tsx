@@ -769,11 +769,11 @@ export default function People() {
           style={{ backgroundImage: `url(${paperBg})`, backgroundSize: 'cover' }}
         />
         
-        <div className="container mx-auto px-4 py-8 max-w-6xl">
-          <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div className="container mx-auto px-4 py-4 md:py-8 max-w-6xl">
+          <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 md:mb-8">
             <div>
-              <h1 className="text-3xl font-serif font-bold text-primary">People</h1>
-              <p className="text-muted-foreground">Client Intelligence Core</p>
+              <h1 className="text-2xl md:text-3xl font-serif font-bold text-primary">People</h1>
+              <p className="text-muted-foreground text-sm md:text-base">Client Intelligence Core</p>
             </div>
             
             <div className="flex gap-2">
@@ -1014,8 +1014,8 @@ export default function People() {
             </div>
           </header>
 
-          <div className="flex gap-4 mb-6">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mb-6">
+            <div className="flex items-center gap-3 order-2 sm:order-1">
               <Checkbox 
                 checked={filteredPeople.length > 0 && selectedIds.size === filteredPeople.length}
                 onCheckedChange={selectAll}
@@ -1024,13 +1024,13 @@ export default function People() {
               />
               {selectedIds.size > 0 ? (
                 <span className="text-sm font-medium text-primary">
-                  {selectedIds.size} of {filteredPeople.length} selected
+                  {selectedIds.size} of {filteredPeople.length}
                 </span>
               ) : (
-                <span className="text-sm text-muted-foreground">Select all</span>
+                <span className="text-sm text-muted-foreground hidden sm:inline">Select all</span>
               )}
             </div>
-            <div className="relative flex-1">
+            <div className="relative flex-1 order-1 sm:order-2">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input 
                 placeholder="Search people..." 
@@ -1043,14 +1043,14 @@ export default function People() {
             <select
               value={segmentFilter}
               onChange={(e) => setSegmentFilter(e.target.value)}
-              className="h-10 px-3 py-2 rounded-md border border-input bg-background/80 text-sm"
+              className="h-10 px-3 py-2 rounded-md border border-input bg-background/80 text-sm order-3"
               data-testid="select-segment-filter"
             >
-              <option value="all">All Segments</option>
-              <option value="a">A - Advocate</option>
-              <option value="b">B - Fan</option>
-              <option value="c">C - Network</option>
-              <option value="d">D - 8x8</option>
+              <option value="all">All</option>
+              <option value="a">A</option>
+              <option value="b">B</option>
+              <option value="c">C</option>
+              <option value="d">D</option>
               {uniqueSegments.filter(s => !s.toLowerCase().startsWith('a') && !s.toLowerCase().startsWith('b') && !s.toLowerCase().startsWith('c') && !s.toLowerCase().startsWith('d')).map(seg => (
                 <option key={seg} value={seg.toLowerCase()}>{seg}</option>
               ))}
@@ -1135,14 +1135,14 @@ export default function People() {
 
       {/* Floating Action Bar */}
       {selectedIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-primary text-primary-foreground rounded-full shadow-2xl px-6 py-3 flex items-center gap-4 animate-in slide-in-from-bottom-4">
-          <span className="font-medium">{selectedIds.size} selected</span>
+        <div className="fixed bottom-4 md:bottom-6 left-2 right-2 md:left-1/2 md:right-auto md:-translate-x-1/2 z-50 bg-primary text-primary-foreground rounded-full shadow-2xl px-4 md:px-6 py-3 flex items-center justify-center gap-2 md:gap-4 animate-in slide-in-from-bottom-4">
+          <span className="font-medium text-sm md:text-base">{selectedIds.size} selected</span>
           <div className="h-6 w-px bg-primary-foreground/30" />
           
           <Dialog open={bulkSegmentDialogOpen} onOpenChange={setBulkSegmentDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/20 gap-2">
-                <Tag className="h-4 w-4" /> Segment
+              <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/20 gap-1 md:gap-2 px-2 md:px-3">
+                <Tag className="h-4 w-4" /> <span className="hidden sm:inline">Segment</span>
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -1177,8 +1177,8 @@ export default function People() {
           
           <Dialog open={householdDialogOpen} onOpenChange={setHouseholdDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/20 gap-2">
-                <Users className="h-4 w-4" /> Household
+              <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/20 gap-1 md:gap-2 px-2 md:px-3">
+                <Users className="h-4 w-4" /> <span className="hidden sm:inline">Household</span>
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -1248,12 +1248,12 @@ export default function People() {
             </DialogContent>
           </Dialog>
           
-          <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/20 gap-2" onClick={handleExportSelected}>
-            <Download className="h-4 w-4" /> Export
+          <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/20 gap-1 md:gap-2 px-2 md:px-3" onClick={handleExportSelected}>
+            <Download className="h-4 w-4" /> <span className="hidden sm:inline">Export</span>
           </Button>
           
-          <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/20 gap-2" onClick={handleBulkDelete}>
-            <Trash2 className="h-4 w-4" /> Delete
+          <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/20 gap-1 md:gap-2 px-2 md:px-3" onClick={handleBulkDelete}>
+            <Trash2 className="h-4 w-4" /> <span className="hidden sm:inline">Delete</span>
           </Button>
           
           <div className="h-6 w-px bg-primary-foreground/30" />

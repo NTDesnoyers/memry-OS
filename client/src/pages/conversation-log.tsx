@@ -355,42 +355,41 @@ export default function ConversationLog() {
           style={{ backgroundImage: `url(${paperBg})`, backgroundSize: 'cover' }}
         />
         
-        <div className="container mx-auto px-4 py-8 max-w-6xl">
-          <header className="flex justify-between items-end mb-8">
+        <div className="container mx-auto px-4 py-4 md:py-8 max-w-6xl">
+          <header className="flex flex-col md:flex-row justify-between md:items-end gap-4 mb-6 md:mb-8">
             <div>
-              <h1 className="text-3xl font-serif font-bold text-primary flex items-center gap-3" data-testid="page-title">
-                <MessageSquare className="h-8 w-8 text-indigo-600" />
-                Conversation Log
+              <h1 className="text-2xl md:text-3xl font-serif font-bold text-primary flex items-center gap-2 md:gap-3" data-testid="page-title">
+                <MessageSquare className="h-6 w-6 md:h-8 md:w-8 text-indigo-600" />
+                Conversations
               </h1>
-              <p className="text-muted-foreground mt-2">
-                Track every conversation. Link Fathom recordings, Granola notes, or log calls manually.
+              <p className="text-muted-foreground mt-1 md:mt-2 text-sm md:text-base">
+                Track calls, meetings, and messages
               </p>
             </div>
             <div className="flex gap-2">
               <Button 
                 variant="outline"
-                className="gap-2" 
+                className="gap-1 md:gap-2 text-sm" 
                 onClick={() => setShowFathomDialog(true)}
                 data-testid="button-import-fathom"
               >
-                <Download className="h-4 w-4" /> Import from Fathom
+                <Download className="h-4 w-4" /> <span className="hidden sm:inline">Import</span>
               </Button>
               <Button 
-                size="lg" 
-                className="gap-2 shadow-lg" 
+                className="gap-1 md:gap-2 shadow-lg flex-1 sm:flex-none" 
                 onClick={() => setShowAddDialog(true)}
                 data-testid="button-add-conversation"
               >
-                <Plus className="h-4 w-4" /> Log Conversation
+                <Plus className="h-4 w-4" /> Log
               </Button>
             </div>
           </header>
 
-          <div className="flex gap-4 mb-6">
-            <div className="relative flex-1 max-w-md">
+          <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mb-6">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search conversations, transcripts..."
+                placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 bg-background"
@@ -398,9 +397,9 @@ export default function ConversationLog() {
               />
             </div>
             <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-[200px] bg-background" data-testid="select-filter-type">
+              <SelectTrigger className="w-full sm:w-[140px] md:w-[200px] bg-background" data-testid="select-filter-type">
                 <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="All Types" />
+                <SelectValue placeholder="All" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
