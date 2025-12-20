@@ -63,6 +63,70 @@ export default function BusinessTracker() {
   const [draggedDealId, setDraggedDealId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
 
+  // Add new prospect dialog state
+  const [addProspectOpen, setAddProspectOpen] = useState(false);
+  const [newProspect, setNewProspect] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    stage: "warm" as "warm" | "hot",
+    dealType: "buyer" as "buyer" | "seller",
+    estimatedValue: "",
+    commissionPercent: "3",
+  });
+
+  const createProspectMutation = useMutation({
+    mutationFn: async (data: typeof newProspect) => {
+      // First create the person
+      const personRes = await fetch("/api/people", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: data.name,
+          phone: data.phone || null,
+          email: data.email || null,
+          segment: "D",
+        }),
+      });
+      if (!personRes.ok) throw new Error("Failed to create person");
+      const person = await personRes.json();
+
+      // Then create the deal linked to the person
+      const dealRes = await fetch("/api/deals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          personId: person.id,
+          title: data.name,
+          stage: data.stage,
+          dealType: data.dealType,
+          value: data.estimatedValue ? parseFloat(data.estimatedValue) : null,
+          commissionPercent: data.commissionPercent ? parseFloat(data.commissionPercent) : 3,
+        }),
+      });
+      if (!dealRes.ok) throw new Error("Failed to create deal");
+      return dealRes.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/people"] });
+      setAddProspectOpen(false);
+      setNewProspect({
+        name: "",
+        phone: "",
+        email: "",
+        stage: "warm",
+        dealType: "buyer",
+        estimatedValue: "",
+        commissionPercent: "3",
+      });
+      toast.success("Prospect added to tracker");
+    },
+    onError: () => {
+      toast.error("Failed to add prospect");
+    },
+  });
+
   const updateDealStageMutation = useMutation({
     mutationFn: async ({ dealId, stage }: { dealId: string; stage: string }) => {
       const res = await fetch(`/api/deals/${dealId}`, {
@@ -1247,8 +1311,132 @@ export default function BusinessTracker() {
 
             {/* === BUSINESS TRACKER TAB === */}
             <TabsContent value="tracker" className="space-y-4">
-              <div className="text-center mb-4">
+              <div className="flex items-center justify-between mb-4">
+                <div></div>
                 <h2 className="text-2xl font-serif font-bold">{currentYear} Business Tracker</h2>
+                <Dialog open={addProspectOpen} onOpenChange={setAddProspectOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" className="gap-1" data-testid="button-add-prospect">
+                      <Plus className="h-4 w-4" /> Add
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Add New Prospect</DialogTitle>
+                      <DialogDescription>
+                        Add someone to your business tracker
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="prospect-name">Name *</Label>
+                        <Input
+                          id="prospect-name"
+                          value={newProspect.name}
+                          onChange={(e) => setNewProspect(p => ({ ...p, name: e.target.value }))}
+                          placeholder="John Smith"
+                          data-testid="input-prospect-name"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="prospect-phone">Phone</Label>
+                          <Input
+                            id="prospect-phone"
+                            value={newProspect.phone}
+                            onChange={(e) => setNewProspect(p => ({ ...p, phone: e.target.value }))}
+                            placeholder="(555) 123-4567"
+                            data-testid="input-prospect-phone"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="prospect-email">Email</Label>
+                          <Input
+                            id="prospect-email"
+                            type="email"
+                            value={newProspect.email}
+                            onChange={(e) => setNewProspect(p => ({ ...p, email: e.target.value }))}
+                            placeholder="john@email.com"
+                            data-testid="input-prospect-email"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Pipeline Stage</Label>
+                          <Select
+                            value={newProspect.stage}
+                            onValueChange={(v) => setNewProspect(p => ({ ...p, stage: v as "warm" | "hot" }))}
+                          >
+                            <SelectTrigger data-testid="select-prospect-stage">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="warm">Warm</SelectItem>
+                              <SelectItem value="hot">Hot</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Type</Label>
+                          <Select
+                            value={newProspect.dealType}
+                            onValueChange={(v) => setNewProspect(p => ({ ...p, dealType: v as "buyer" | "seller" }))}
+                          >
+                            <SelectTrigger data-testid="select-prospect-type">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="buyer">Buyer</SelectItem>
+                              <SelectItem value="seller">Seller</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="prospect-value">Est. Price</Label>
+                          <Input
+                            id="prospect-value"
+                            type="number"
+                            value={newProspect.estimatedValue}
+                            onChange={(e) => setNewProspect(p => ({ ...p, estimatedValue: e.target.value }))}
+                            placeholder="500000"
+                            data-testid="input-prospect-value"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="prospect-commission">Commission %</Label>
+                          <Input
+                            id="prospect-commission"
+                            type="number"
+                            step="0.1"
+                            value={newProspect.commissionPercent}
+                            onChange={(e) => setNewProspect(p => ({ ...p, commissionPercent: e.target.value }))}
+                            placeholder="3"
+                            data-testid="input-prospect-commission"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button
+                        variant="outline"
+                        onClick={() => setAddProspectOpen(false)}
+                        data-testid="button-cancel-prospect"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={() => createProspectMutation.mutate(newProspect)}
+                        disabled={!newProspect.name || createProspectMutation.isPending}
+                        data-testid="button-save-prospect"
+                      >
+                        {createProspectMutation.isPending ? "Adding..." : "Add Prospect"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
               
               {/* 4-Column Layout - Horizontal snap scroll on mobile */}
