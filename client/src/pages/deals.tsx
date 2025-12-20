@@ -19,14 +19,24 @@ export default function Deals() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   
-  const [formData, setFormData] = useState<Partial<InsertDeal>>({
+  const [formData, setFormData] = useState<Partial<InsertDeal> & {
+    closedDate?: string;
+    source?: string;
+    listPrice?: number;
+    soldPrice?: number;
+    commissionPercent?: number;
+  }>({
     title: "",
     address: "",
     type: "Buy",
     stage: "Lead",
     value: 0,
-    probability: 50,
     notes: "",
+    closedDate: "",
+    source: "",
+    listPrice: 0,
+    soldPrice: 0,
+    commissionPercent: 3,
   });
 
   // Fetch all deals
@@ -62,8 +72,12 @@ export default function Deals() {
         type: "Buy",
         stage: "Lead",
         value: 0,
-        probability: 50,
         notes: "",
+        closedDate: "",
+        source: "",
+        listPrice: 0,
+        soldPrice: 0,
+        commissionPercent: 3,
       });
       toast({
         title: "Success",
@@ -197,17 +211,90 @@ export default function Deals() {
                       </Select>
                     </div>
                   </div>
-                  <div>
-                    <Label htmlFor="value">Value ($)</Label>
-                    <Input
-                      id="value"
-                      type="number"
-                      value={formData.value || 0}
-                      onChange={(e) => setFormData({ ...formData, value: parseInt(e.target.value) })}
-                      placeholder="450000"
-                      data-testid="input-value"
-                    />
-                  </div>
+                  {formData.stage === "Closed Won" ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="closedDate">Closed Date *</Label>
+                          <Input
+                            id="closedDate"
+                            type="date"
+                            value={formData.closedDate || ""}
+                            onChange={(e) => setFormData({ ...formData, closedDate: e.target.value })}
+                            data-testid="input-closed-date"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="source">Source</Label>
+                          <Select 
+                            value={formData.source || ""} 
+                            onValueChange={(value) => setFormData({ ...formData, source: value })}
+                          >
+                            <SelectTrigger data-testid="select-source">
+                              <SelectValue placeholder="Select source" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="sphere">Sphere of Influence</SelectItem>
+                              <SelectItem value="referral">Referral</SelectItem>
+                              <SelectItem value="open_house">Open House</SelectItem>
+                              <SelectItem value="sign_call">Sign Call</SelectItem>
+                              <SelectItem value="online_lead">Online Lead</SelectItem>
+                              <SelectItem value="past_client">Past Client</SelectItem>
+                              <SelectItem value="other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="listPrice">List Price ($)</Label>
+                          <Input
+                            id="listPrice"
+                            type="number"
+                            value={formData.listPrice || ""}
+                            onChange={(e) => setFormData({ ...formData, listPrice: e.target.value ? parseInt(e.target.value) : 0 })}
+                            placeholder="500000"
+                            data-testid="input-list-price"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="soldPrice">Sold Price ($)</Label>
+                          <Input
+                            id="soldPrice"
+                            type="number"
+                            value={formData.soldPrice || ""}
+                            onChange={(e) => setFormData({ ...formData, soldPrice: e.target.value ? parseInt(e.target.value) : 0, value: e.target.value ? parseInt(e.target.value) : 0 })}
+                            placeholder="495000"
+                            data-testid="input-sold-price"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="commissionPercent">Commission %</Label>
+                        <Input
+                          id="commissionPercent"
+                          type="number"
+                          step="0.1"
+                          value={formData.commissionPercent || 3}
+                          onChange={(e) => setFormData({ ...formData, commissionPercent: e.target.value ? parseFloat(e.target.value) : 3 })}
+                          placeholder="3"
+                          data-testid="input-commission-percent"
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div>
+                      <Label htmlFor="value">Value ($)</Label>
+                      <Input
+                        id="value"
+                        type="number"
+                        value={formData.value || 0}
+                        onChange={(e) => setFormData({ ...formData, value: parseInt(e.target.value) })}
+                        placeholder="450000"
+                        data-testid="input-value"
+                      />
+                    </div>
+                  )}
                   <div>
                     <Label htmlFor="notes">Notes</Label>
                     <Textarea
