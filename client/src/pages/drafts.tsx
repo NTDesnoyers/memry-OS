@@ -64,7 +64,9 @@ function DraftCard({
   onMarkSent, 
   onEdit, 
   onDelete, 
-  onCopy 
+  onCopy,
+  onSendEmail,
+  gmailConnected
 }: { 
   draft: GeneratedDraft; 
   person?: Person;
@@ -72,6 +74,8 @@ function DraftCard({
   onEdit: () => void;
   onDelete: () => void;
   onCopy: () => void;
+  onSendEmail?: () => void;
+  gmailConnected?: boolean;
 }) {
   const typeConfig = {
     email: { icon: Mail, label: "Thank-you Email", color: "bg-blue-50 text-blue-700 border-blue-200" },
@@ -135,6 +139,18 @@ function DraftCard({
               </span>
               
               <div className="flex items-center gap-1">
+                {draft.type === "email" && draft.status === "pending" && gmailConnected && person?.email && (
+                  <Button 
+                    size="sm" 
+                    variant="default"
+                    onClick={onSendEmail}
+                    className="h-8 px-3 bg-blue-600 hover:bg-blue-700"
+                    data-testid={`send-email-${draft.id}`}
+                  >
+                    <Mail className="h-4 w-4 mr-1" />
+                    Send
+                  </Button>
+                )}
                 <Button 
                   size="sm" 
                   variant="ghost" 

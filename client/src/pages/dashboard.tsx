@@ -1,9 +1,82 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight, Calendar, CheckCircle2, Layout, Plus, PieChart, TrendingUp, Users, DollarSign, Workflow } from "lucide-react";
+import { ArrowRight, Calendar, CheckCircle2, Layout, Plus, PieChart, TrendingUp, Users, DollarSign, Workflow, Mic, FileEdit, Sparkles, Loader2 } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import LayoutComponent from "@/components/layout";
+import { useQuery } from "@tanstack/react-query";
+
+type VoicePattern = { id: string; category: string; value: string; frequency: number };
+type GeneratedDraft = { id: string; status: string; type: string };
+type ProcessingStatus = { isProcessing: boolean; processed: number; totalToProcess: number };
+
+function AIStatusWidget() {
+  const { data: voicePatterns = [] } = useQuery<VoicePattern[]>({
+    queryKey: ["/api/voice-profile"],
+  });
+  
+  const { data: drafts = [] } = useQuery<GeneratedDraft[]>({
+    queryKey: ["/api/generated-drafts"],
+  });
+  
+  const { data: processingStatus } = useQuery<ProcessingStatus>({
+    queryKey: ["/api/interactions/process-status"],
+    refetchInterval: 5000,
+  });
+  
+  const pendingDrafts = drafts.filter(d => d.status === "pending").length;
+  const isProcessing = processingStatus?.isProcessing;
+  
+  return (
+    <Card className="border-none shadow-md bg-gradient-to-br from-indigo-50 to-purple-50">
+      <CardHeader className="pb-2">
+        <CardTitle className="font-serif text-lg flex items-center gap-2">
+          <Sparkles className="h-5 w-5 text-indigo-600" />
+          AI Assistant
+        </CardTitle>
+        <CardDescription>Learning your style & generating content</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <Link href="/voice-profile">
+          <div className="flex items-center justify-between p-3 bg-white/60 rounded-lg hover:bg-white/80 cursor-pointer transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-indigo-100 text-indigo-600 rounded-full">
+                <Mic className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-medium text-sm">Voice Profile</p>
+                <p className="text-xs text-muted-foreground">{voicePatterns.length} patterns learned</p>
+              </div>
+            </div>
+            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+          </div>
+        </Link>
+        
+        <Link href="/drafts">
+          <div className="flex items-center justify-between p-3 bg-white/60 rounded-lg hover:bg-white/80 cursor-pointer transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 text-purple-600 rounded-full">
+                <FileEdit className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-medium text-sm">AI Drafts</p>
+                <p className="text-xs text-muted-foreground">{pendingDrafts} pending review</p>
+              </div>
+            </div>
+            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+          </div>
+        </Link>
+        
+        {isProcessing && (
+          <div className="flex items-center gap-2 text-xs text-indigo-600 bg-white/60 p-2 rounded">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            Processing conversations...
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function Dashboard() {
   return (
@@ -146,6 +219,8 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
+              <AIStatusWidget />
+              
               <Card className="border-none shadow-md bg-card/80 backdrop-blur-sm">
                 <CardHeader>
                   <CardTitle className="font-serif text-lg">Recent Reports</CardTitle>

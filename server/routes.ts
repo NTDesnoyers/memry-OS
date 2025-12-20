@@ -3084,6 +3084,61 @@ When analyzing images:
     res.json(processingStatus);
   });
 
+  // ============ GMAIL INTEGRATION ROUTES ============
+  // Uses Replit's Gmail connection: connection:conn_google-mail_01KCW4C87PFGRAKYSAWHY140MP
+  
+  const gmailClient = await import("./gmail-client");
+  
+  app.get("/api/gmail/status", async (req, res) => {
+    try {
+      const connected = await gmailClient.isGmailConnected();
+      if (connected) {
+        const profile = await gmailClient.getGmailProfile();
+        res.json({ connected: true, email: profile.emailAddress });
+      } else {
+        res.json({ connected: false });
+      }
+    } catch (error: any) {
+      res.json({ connected: false, error: error.message });
+    }
+  });
+
+  app.post("/api/gmail/send", async (req, res) => {
+    try {
+      const { to, subject, body, draftId } = req.body;
+      
+      if (!to || !subject || !body) {
+        return res.status(400).json({ message: "Missing required fields: to, subject, body" });
+      }
+      
+      const result = await gmailClient.sendEmail({ to, subject, body });
+      
+      // If this was sent from a draft, mark it as sent
+      if (draftId) {
+        await storage.updateGeneratedDraft(draftId, { status: "sent", sentAt: new Date() });
+      }
+      
+      res.json({ success: true, messageId: result.id });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/gmail/draft", async (req, res) => {
+    try {
+      const { to, subject, body } = req.body;
+      
+      if (!to || !subject || !body) {
+        return res.status(400).json({ message: "Missing required fields: to, subject, body" });
+      }
+      
+      const result = await gmailClient.createDraft({ to, subject, body });
+      res.json({ success: true, draftId: result.id });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ============ TODOIST INTEGRATION ROUTES ============
   // Uses Replit's Todoist connection: connection:conn_todoist_01KCW49R8F3ZDFCTZBVPBS2ZFF
   
