@@ -1453,6 +1453,7 @@ When analyzing images:
           segment_a: 'A Contact (monthly)',
           segment_b: 'B Contact (every 2 months)',
           segment_c: 'C Contact (quarterly)',
+          segment_d: 'D Contact (quarterly - review to develop or delete)',
         }[due.dueReason];
         
         const task = await storage.createTask({

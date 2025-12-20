@@ -242,7 +242,7 @@ export interface IStorage {
 /** Result of contact due calculation with reason and days overdue. */
 export type ContactDueResult = {
   person: Person;
-  dueReason: 'hot' | 'warm' | 'segment_a' | 'segment_b' | 'segment_c';
+  dueReason: 'hot' | 'warm' | 'segment_a' | 'segment_b' | 'segment_c' | 'segment_d';
   daysSinceContact: number;
   daysOverdue: number;
   frequencyDays: number;
@@ -1051,6 +1051,7 @@ export class DatabaseStorage implements IStorage {
       segment_a: 30, // monthly
       segment_b: 60, // every 2 months
       segment_c: 90, // quarterly
+      segment_d: 90, // quarterly (develop or delete)
     };
     
     const allPeople = await db.select().from(people);
@@ -1095,8 +1096,10 @@ export class DatabaseStorage implements IStorage {
         } else if (segment === 'C') {
           dueReason = 'segment_c';
           frequencyDays = FREQUENCY.segment_c;
+        } else if (segment === 'D') {
+          dueReason = 'segment_d';
+          frequencyDays = FREQUENCY.segment_d;
         }
-        // D segment and others: skip (8x8 campaign handled separately)
       }
       
       if (!dueReason) continue;
