@@ -2668,15 +2668,15 @@ export default function BusinessTracker() {
                     <div key={field} className="flex flex-col gap-1">
                       <Label className="text-xs capitalize">{field.replace(/([A-Z])/g, ' $1').trim()}</Label>
                       <Select
-                        value={columnMappings[field] || ""}
-                        onValueChange={(value) => updateColumnMapping(field, value)}
+                        value={columnMappings[field] || "__unmapped__"}
+                        onValueChange={(value) => updateColumnMapping(field, value === "__unmapped__" ? "" : value)}
                       >
                         <SelectTrigger className="h-7 text-xs">
                           <SelectValue placeholder="Not mapped" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Not mapped</SelectItem>
-                          {rawHeaders.map((header) => (
+                          <SelectItem value="__unmapped__">Not mapped</SelectItem>
+                          {rawHeaders.filter(h => h && h.trim() !== "").map((header) => (
                             <SelectItem key={header} value={header}>
                               {header}
                             </SelectItem>
@@ -2811,15 +2811,15 @@ export default function BusinessTracker() {
                          field === "eTime" ? "E (Other)" : "Total"}
                       </label>
                       <Select 
-                        value={pieColumnMappings[field] || ""} 
-                        onValueChange={(value) => updatePieColumnMapping(field, value)}
+                        value={pieColumnMappings[field] || "__unmapped__"} 
+                        onValueChange={(value) => updatePieColumnMapping(field, value === "__unmapped__" ? "" : value)}
                       >
                         <SelectTrigger className="h-8 text-xs">
                           <SelectValue placeholder="Select..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Not mapped</SelectItem>
-                          {pieRawHeaders.map((header) => (
+                          <SelectItem value="__unmapped__">Not mapped</SelectItem>
+                          {pieRawHeaders.filter(h => h && h.trim() !== "").map((header) => (
                             <SelectItem key={header} value={header}>
                               {header}
                             </SelectItem>
