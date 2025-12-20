@@ -17,6 +17,8 @@ export default function Deals() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
+  const [clientSearch, setClientSearch] = useState("");
+  const [showClientSuggestions, setShowClientSuggestions] = useState(false);
   
   const [formData, setFormData] = useState<Partial<InsertDeal> & {
     closedDate?: string;
@@ -65,6 +67,7 @@ export default function Deals() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
       setFormOpen(false);
+      setClientSearch("");
       setFormData({
         title: "",
         address: "",
@@ -174,21 +177,48 @@ export default function Deals() {
                         data-testid="input-address"
                       />
                     </div>
-                    <div>
+                    <div className="relative">
                       <Label htmlFor="person">Client</Label>
-                      <Select 
-                        value={formData.personId || ""} 
-                        onValueChange={(value) => setFormData({ ...formData, personId: value })}
-                      >
-                        <SelectTrigger data-testid="select-person">
-                          <SelectValue placeholder="Select a client" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {people.map(person => (
-                            <SelectItem key={person.id} value={person.id}>{person.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Input
+                        id="person"
+                        value={clientSearch}
+                        onChange={(e) => {
+                          setClientSearch(e.target.value);
+                          setShowClientSuggestions(true);
+                          if (!e.target.value) {
+                            setFormData({ ...formData, personId: undefined });
+                          }
+                        }}
+                        onFocus={() => setShowClientSuggestions(true)}
+                        onBlur={() => setTimeout(() => setShowClientSuggestions(false), 200)}
+                        placeholder="Type to search..."
+                        autoComplete="off"
+                        data-testid="input-client"
+                      />
+                      {showClientSuggestions && clientSearch && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-48 overflow-auto">
+                          {people
+                            .filter(p => p.name.toLowerCase().includes(clientSearch.toLowerCase()))
+                            .slice(0, 8)
+                            .map(person => (
+                              <div
+                                key={person.id}
+                                className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                                onMouseDown={() => {
+                                  setFormData({ ...formData, personId: person.id });
+                                  setClientSearch(person.name);
+                                  setShowClientSuggestions(false);
+                                }}
+                                data-testid={`client-option-${person.id}`}
+                              >
+                                {person.name}
+                              </div>
+                            ))}
+                          {people.filter(p => p.name.toLowerCase().includes(clientSearch.toLowerCase())).length === 0 && (
+                            <div className="px-3 py-2 text-sm text-muted-foreground">No matches found</div>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <Label htmlFor="type">Type</Label>
