@@ -126,6 +126,70 @@ export default function PersonProfile() {
     },
   });
 
+  // Quick inline update mutation for segment dropdown
+  const quickUpdateMutation = useMutation({
+    mutationFn: async (data: Partial<Person>) => {
+      const res = await fetch(`/api/people/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/people/${id}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/people"] });
+    },
+  });
+
+  // Segment options matching Cloze structure
+  const segmentGroups = [
+    {
+      label: "Business Segments",
+      options: [
+        { value: "buyer_seller", label: "Buyer & Seller" },
+        { value: "buyer", label: "Buyer" },
+        { value: "seller", label: "Seller" },
+        { value: "A", label: "A - Advocate" },
+        { value: "B", label: "B - Fan" },
+        { value: "C", label: "C - Network" },
+        { value: "D", label: "D - Develop or Delete" },
+        { value: "renter", label: "Renter" },
+        { value: "landlord", label: "Landlord" },
+        { value: "realtor", label: "Realtor" },
+        { value: "general_database", label: "General Database" },
+        { value: "lead", label: "Lead" },
+      ],
+    },
+    {
+      label: "Personal Segments",
+      options: [
+        { value: "family", label: "Family" },
+        { value: "friend", label: "Friend" },
+      ],
+    },
+  ];
+
+  // Get display label for current segment value
+  const getSegmentLabel = (value: string | null | undefined): string => {
+    if (!value) return "Select Relationship";
+    for (const group of segmentGroups) {
+      const option = group.options.find(o => o.value === value);
+      if (option) return option.label;
+    }
+    // Fallback for old A/B/C/D values
+    if (value === "A") return "A - Advocate";
+    if (value === "B") return "B - Fan";
+    if (value === "C") return "C - Network";
+    if (value === "D") return "D - Develop or Delete";
+    return value;
+  };
+
+  const handleQuickSegmentChange = (value: string) => {
+    quickUpdateMutation.mutate({ segment: value, role: value });
+  };
+
   const handleSave = () => {
     updateMutation.mutate(formData);
   };
@@ -250,45 +314,34 @@ export default function PersonProfile() {
                     </Select>
                   </div>
                 )}
-                {isEditing ? (
-                  <Select
-                    value={formData.segment || ""}
-                    onValueChange={(value) => handleChange("segment", value)}
+                <Select
+                  value={person.role || person.segment || ""}
+                  onValueChange={handleQuickSegmentChange}
+                >
+                  <SelectTrigger 
+                    className="h-8 w-auto gap-1 px-3 bg-[#8B4051] text-white border-[#8B4051] hover:bg-[#7a3847] font-medium" 
+                    data-testid="select-relationship-segment"
                   >
-                    <SelectTrigger className="h-7 w-auto gap-1 px-2" data-testid="select-segment">
-                      <SelectValue placeholder="Segment" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="A">A - Raving Fan</SelectItem>
-                      <SelectItem value="B">B - Strong</SelectItem>
-                      <SelectItem value="C">C - Network</SelectItem>
-                      <SelectItem value="D">D - Develop</SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : person.segment && (
-                  <Badge className={getSegmentColor(person.segment)}>{person.segment}</Badge>
-                )}
-                {isEditing ? (
-                  <Select
-                    value={formData.role || ""}
-                    onValueChange={(value) => handleChange("role", value)}
-                  >
-                    <SelectTrigger className="h-7 w-auto gap-1 px-2" data-testid="select-role">
-                      <SelectValue placeholder="Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="buyer">Buyer</SelectItem>
-                      <SelectItem value="seller">Seller</SelectItem>
-                      <SelectItem value="renter">Renter</SelectItem>
-                      <SelectItem value="landlord">Landlord</SelectItem>
-                      <SelectItem value="investor">Investor</SelectItem>
-                      <SelectItem value="past_client">Past Client</SelectItem>
-                      <SelectItem value="sphere">Sphere</SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : person.role && (
-                  <Badge variant="outline">{person.role}</Badge>
-                )}
+                    <SelectValue>{getSegmentLabel(person.role || person.segment)}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <div className="px-2 py-1.5 text-xs font-semibold text-center border-b mb-1">
+                      Change To
+                    </div>
+                    {segmentGroups.map((group) => (
+                      <div key={group.label}>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                          {group.label}
+                        </div>
+                        {group.options.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </div>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <Button 
