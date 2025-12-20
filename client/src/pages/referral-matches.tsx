@@ -18,6 +18,7 @@ import {
   ExternalLink
 } from "lucide-react";
 import { Link } from "wouter";
+import { getInitials, getSegmentColor } from "@/lib/utils";
 
 type ReferralOpportunity = {
   id: string;
@@ -27,24 +28,6 @@ type ReferralOpportunity = {
   offer: string;
   matchType: "profession" | "offer";
 };
-
-function getInitials(name: string): string {
-  const parts = name.split(' ').filter(Boolean);
-  if (parts.length >= 2) {
-    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  }
-  return name.slice(0, 2).toUpperCase();
-}
-
-function getSegmentColor(segment: string | null): string {
-  switch (segment) {
-    case "A": return "bg-green-100 text-green-700 border-green-200";
-    case "B": return "bg-blue-100 text-blue-700 border-blue-200";
-    case "C": return "bg-amber-100 text-amber-700 border-amber-200";
-    case "D": return "bg-gray-100 text-gray-700 border-gray-200";
-    default: return "bg-gray-50 text-gray-500";
-  }
-}
 
 function OpportunityCard({ opportunity }: { opportunity: ReferralOpportunity }) {
   return (

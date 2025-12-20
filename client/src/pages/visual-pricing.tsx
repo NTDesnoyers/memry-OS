@@ -198,7 +198,6 @@ function parseMLSData(csvData: Papa.ParseResult<Record<string, string>>): MLSPro
   if (!csvData.data || csvData.data.length === 0) return [];
   
   const headers = csvData.meta.fields || [];
-  console.log('CSV Headers detected:', headers);
   
   const properties: MLSProperty[] = [];
   
@@ -207,11 +206,6 @@ function parseMLSData(csvData: Papa.ParseResult<Record<string, string>>): MLSPro
     if (prop) {
       properties.push(prop);
     }
-  }
-  
-  console.log(`Parsed ${properties.length} properties from CSV`);
-  if (properties.length > 0) {
-    console.log('Sample property:', properties[0]);
   }
   
   return properties;
@@ -597,7 +591,7 @@ export default function VisualPricing() {
                           <SelectItem value="">No person linked</SelectItem>
                           {people.map((person) => (
                             <SelectItem key={person.id} value={person.id}>
-                              {person.firstName} {person.lastName}
+                              {person.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -703,7 +697,7 @@ export default function VisualPricing() {
                             <p className="text-xs text-muted-foreground">{review.neighborhood || 'No location'}</p>
                             {linkedPerson && (
                               <p className="text-xs text-primary mt-0.5">
-                                For: {linkedPerson.firstName} {linkedPerson.lastName}
+                                For: {linkedPerson.name}
                               </p>
                             )}
                           </button>
@@ -736,7 +730,7 @@ export default function VisualPricing() {
                         <div className="flex items-center gap-2">
                           <User className="h-4 w-4 text-primary" />
                           <span className="text-sm font-medium">
-                            Client: {people.find(p => p.id === activeReview.personId)?.firstName} {people.find(p => p.id === activeReview.personId)?.lastName}
+                            Client: {people.find(p => p.id === activeReview.personId)?.name}
                           </span>
                         </div>
                       )}

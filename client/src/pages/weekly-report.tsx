@@ -356,8 +356,6 @@ export default function WeeklyReport() {
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
-    
     if (values.familyMission) localStorage.setItem("ninja_familyMission", values.familyMission);
     if (values.businessMission) localStorage.setItem("ninja_businessMission", values.businessMission);
     if (values.quarterlyFocus) localStorage.setItem("ninja_quarterlyFocus", values.quarterlyFocus);

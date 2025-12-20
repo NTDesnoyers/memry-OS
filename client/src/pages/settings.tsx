@@ -25,6 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format, formatDistanceToNow, differenceInDays } from "date-fns";
 import type { Interaction, Person } from "@shared/schema";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
+import { getInitials } from "@/lib/utils";
 
 const interactionTypes = [
   { value: "call", label: "Call", icon: Phone, color: "bg-green-50 text-green-700 border-green-200" },
@@ -32,14 +33,6 @@ const interactionTypes = [
   { value: "text", label: "Text", icon: MessageCircle, color: "bg-purple-50 text-purple-700 border-purple-200" },
   { value: "email", label: "Email", icon: Mail, color: "bg-orange-50 text-orange-700 border-orange-200" },
 ];
-
-function getInitials(name: string): string {
-  const parts = name.split(' ').filter(Boolean);
-  if (parts.length >= 2) {
-    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  }
-  return name.slice(0, 2).toUpperCase();
-}
 
 const settingsLinks = [
   {

@@ -28,6 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format, formatDistanceToNow } from "date-fns";
 import type { Person } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { getInitials } from "@/lib/utils";
 import { Link } from "wouter";
 
 type GeneratedDraft = {
@@ -49,14 +50,6 @@ const draftTypes = [
   { value: "handwritten_note", label: "Handwritten Notes", icon: FileText },
   { value: "task", label: "Tasks", icon: CheckSquare },
 ];
-
-function getInitials(name: string): string {
-  const parts = name.split(' ').filter(Boolean);
-  if (parts.length >= 2) {
-    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  }
-  return name.slice(0, 2).toUpperCase();
-}
 
 function DraftCard({ 
   draft, 
