@@ -3084,5 +3084,103 @@ When analyzing images:
     res.json(processingStatus);
   });
 
+  // ============ TODOIST INTEGRATION ROUTES ============
+  // Uses Replit's Todoist connection: connection:conn_todoist_01KCW49R8F3ZDFCTZBVPBS2ZFF
+  
+  const todoistClient = await import("./todoist-client");
+  
+  app.get("/api/todoist/status", async (req, res) => {
+    try {
+      const connected = await todoistClient.isTodoistConnected();
+      res.json({ connected });
+    } catch (error: any) {
+      res.json({ connected: false, error: error.message });
+    }
+  });
+
+  app.get("/api/todoist/projects", async (req, res) => {
+    try {
+      const projects = await todoistClient.getTodoistProjects();
+      res.json(projects);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/todoist/tasks", async (req, res) => {
+    try {
+      const { projectId } = req.query;
+      const tasks = await todoistClient.getTodoistTasks(projectId as string | undefined);
+      res.json(tasks);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/todoist/tasks", async (req, res) => {
+    try {
+      const { content, description, projectId, priority, dueString, labels } = req.body;
+      const task = await todoistClient.createTodoistTask({
+        content,
+        description,
+        projectId,
+        priority,
+        dueString,
+        labels
+      });
+      res.json(task);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/todoist/tasks/:id/complete", async (req, res) => {
+    try {
+      await todoistClient.completeTodoistTask(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Sync Ninja OS tasks to Todoist
+  app.post("/api/todoist/sync-tasks", async (req, res) => {
+    try {
+      const tasks = await storage.getAllTasks();
+      const incompleteTasks = tasks.filter(t => !t.completed);
+      
+      let synced = 0;
+      let failed = 0;
+      
+      for (const task of incompleteTasks) {
+        try {
+          // Only sync tasks that haven't been synced yet (no todoistId)
+          if (!task.todoistId) {
+            const person = task.personId ? await storage.getPerson(task.personId) : null;
+            const description = person ? `Contact: ${person.name}` : undefined;
+            
+            const todoistTask = await todoistClient.createTodoistTask({
+              content: task.title,
+              description: description,
+              dueString: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : undefined,
+              priority: task.priority === "high" ? 4 : task.priority === "medium" ? 3 : 2,
+              labels: ["ninja-os"]
+            });
+            
+            // Update task with todoistId
+            await storage.updateTask(task.id, { todoistId: todoistTask.id });
+            synced++;
+          }
+        } catch (e) {
+          failed++;
+        }
+      }
+      
+      res.json({ synced, failed, total: incompleteTasks.length });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }

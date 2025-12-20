@@ -224,6 +224,7 @@ export const tasks = pgTable("tasks", {
   priority: text("priority"),
   status: text("status").notNull().default('pending'),
   completed: boolean("completed").default(false).notNull(),
+  todoistId: text("todoist_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

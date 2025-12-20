@@ -8,9 +8,100 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
-import { RefreshCw, CheckCircle2, AlertCircle, Link as LinkIcon, Settings, Clock, Eye, Share2, ListTodo, Bot, Video, FileText, Sparkles, Brain, Mic, Mail, Zap, Calendar } from "lucide-react";
+import { RefreshCw, CheckCircle2, AlertCircle, Link as LinkIcon, Settings, Clock, Eye, Share2, ListTodo, Bot, Video, FileText, Sparkles, Brain, Mic, Mail, Zap, Calendar, Loader2 } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+
+function TodoistIntegrationCard() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const { data: status, isLoading: statusLoading } = useQuery<{ connected: boolean; error?: string }>({
+    queryKey: ["/api/todoist/status"],
+  });
+  
+  const syncMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/todoist/sync-tasks");
+      return res.json();
+    },
+    onSuccess: (data: { synced: number; failed: number; total: number }) => {
+      toast({ 
+        title: "Tasks synced to Todoist", 
+        description: `${data.synced} tasks synced, ${data.failed} failed out of ${data.total}` 
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Sync failed", description: error.message, variant: "destructive" });
+    },
+  });
+  
+  const isConnected = status?.connected === true;
+  
+  return (
+    <Card className="border-none shadow-md" data-testid="todoist-integration-card">
+      <CardHeader className="bg-red-50/50 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-full bg-red-600 flex items-center justify-center text-white font-bold">
+            <ListTodo className="h-6 w-6" />
+          </div>
+          <div className="flex-1">
+            <CardTitle className="font-serif">Todoist</CardTitle>
+            <CardDescription>Sync tasks to your Todoist inbox (GTD system)</CardDescription>
+          </div>
+          {statusLoading ? (
+            <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+          ) : isConnected ? (
+            <Badge className="bg-green-100 text-green-700 border-green-200">
+              <CheckCircle2 className="h-3 w-3 mr-1" />
+              Connected
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-gray-500">
+              <AlertCircle className="h-3 w-3 mr-1" />
+              Not Connected
+            </Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="pt-6 space-y-4">
+        {isConnected ? (
+          <>
+            <p className="text-sm text-gray-600">
+              Tasks created in Ninja OS will sync to Todoist with the "ninja-os" label.
+              Following GTD principles, Todoist is your single task inbox.
+            </p>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => syncMutation.mutate()} 
+                disabled={syncMutation.isPending}
+                data-testid="button-sync-todoist"
+              >
+                {syncMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                Sync Tasks Now
+              </Button>
+            </div>
+          </>
+        ) : (
+          <div className="text-sm text-gray-600">
+            <p>Todoist integration is managed through Replit's connections panel.</p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              The connection was set up via Replit integrations. If you see this as disconnected, 
+              the OAuth token may have expired.
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function Integrations() {
   const { toast } = useToast();
@@ -131,38 +222,7 @@ export default function Integrations() {
             </Card>
 
             {/* Todoist Integration */}
-            <Card className="border-none shadow-md">
-              <CardHeader className="bg-red-50/50 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-red-600 flex items-center justify-center text-white font-bold">
-                    <ListTodo className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <CardTitle className="font-serif">Todoist</CardTitle>
-                    <CardDescription>Auto-create tasks from voice dictation</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-6 space-y-4">
-                <div className="space-y-2">
-                  <Label>API Token</Label>
-                  <div className="flex gap-2">
-                    <Input 
-                      type={showTodoistKey ? "text" : "password"} 
-                      value={todoistKey}
-                      onChange={(e) => setTodoistKey(e.target.value)}
-                      placeholder="Start with 'Voice Dictation'..."
-                      className="bg-background/50"
-                    />
-                    <Button variant="outline" size="icon" onClick={() => setShowTodoistKey(!showTodoistKey)}>
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button onClick={() => saveKey("Todoist", todoistKey, "todoist_api_key")}>Save</Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">Found in Todoist Settings → Integrations → Developer</p>
-                </div>
-              </CardContent>
-            </Card>
+            <TodoistIntegrationCard />
 
             {/* OpenAI Integration */}
             <Card className="border-none shadow-md">
