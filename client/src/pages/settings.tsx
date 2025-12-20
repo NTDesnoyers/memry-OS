@@ -17,7 +17,8 @@ import {
   Phone,
   Video,
   Mail,
-  MessageCircle
+  MessageCircle,
+  Mic
 } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -35,6 +36,12 @@ const interactionTypes = [
 ];
 
 const settingsLinks = [
+  {
+    title: "Voice Profile",
+    description: "Your communication style patterns learned from conversations",
+    href: "/voice-profile",
+    icon: Mic,
+  },
   {
     title: "Brand Center",
     description: "Manage your headshot, logos, colors, and branding assets",
