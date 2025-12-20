@@ -142,9 +142,9 @@ export default function Deals() {
   const customSources = Array.from(new Set(
     deals
       .map(d => d.source)
-      .filter((s): s is string => !!s && !defaultSources.includes(s))
+      .filter((s): s is string => !!s && s.trim() !== "" && !defaultSources.includes(s))
   ));
-  const allSources = defaultSources.concat(customSources);
+  const allSources = defaultSources.concat(customSources).filter(s => s && s.trim() !== "");
 
   return (
     <Layout>
@@ -305,7 +305,7 @@ export default function Deals() {
                       <div>
                         <Label htmlFor="source">Source</Label>
                         <Select 
-                          value={showCustomSource ? "__other__" : (formData.source || "")} 
+                          value={showCustomSource ? "__other__" : (formData.source || undefined)} 
                           onValueChange={(value) => {
                             if (value === "__other__") {
                               setShowCustomSource(true);

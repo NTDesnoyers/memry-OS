@@ -1117,7 +1117,7 @@ export default function BusinessTracker() {
   const underContractGCI = underContractDeals.reduce((sum, d) => sum + calculateGCI(d.value, d.commissionPercent), 0);
   const closedGCI = closedDeals.reduce((sum, d) => sum + (d.actualGCI || calculateGCI(d.value, d.commissionPercent)), 0);
   const closedVolume = closedDeals.reduce((sum, d) => sum + (d.value || 0), 0);
-  const goalGCI = settings.annualGciGoal || 200000;
+  const goalGCI = settings.annualGCIGoal || 200000;
 
   return (
     <Layout>
@@ -1167,8 +1167,8 @@ export default function BusinessTracker() {
                           <DollarSign className="absolute left-2 top-2 h-4 w-4" />
                           <Input 
                             className="pl-7 text-lg font-bold bg-transparent border-slate-500 text-white w-40 text-center" 
-                            value={settings.annualGciGoal ? settings.annualGciGoal.toLocaleString() : ""}
-                            onChange={(e) => updateField("annualGciGoal", parseCurrencyInput(e.target.value))}
+                            value={settings.annualGCIGoal ? settings.annualGCIGoal.toLocaleString() : ""}
+                            onChange={(e) => updateField("annualGCIGoal", parseCurrencyInput(e.target.value))}
                             placeholder="200,000"
                             data-testid="input-annual-gci-goal"
                           />
@@ -1308,8 +1308,8 @@ export default function BusinessTracker() {
                               <p className="text-xs text-slate-300">Secondary Split as a %</p>
                               <Input 
                                 className="bg-transparent border-slate-500 text-white text-center"
-                                value={settings.afterCapSplit || ""} 
-                                onChange={(e) => updateField("afterCapSplit", parseFloat(e.target.value) || null)}
+                                value={settings.secondarySplit || ""} 
+                                onChange={(e) => updateField("secondarySplit", parseFloat(e.target.value) || null)}
                                 placeholder="85.00%"
                               />
                               <p className="text-xs text-slate-400 mt-1">Note: If you go to 100% commission once you meet your cap/fair share, enter 100%.</p>
@@ -2711,7 +2711,7 @@ export default function BusinessTracker() {
                           {deal.isValid ? (
                             <Check className="h-4 w-4 text-green-600" />
                           ) : (
-                            <AlertCircle className="h-4 w-4 text-red-500" title={deal.errors.join(", ")} />
+                            <span title={deal.errors.join(", ")}><AlertCircle className="h-4 w-4 text-red-500" /></span>
                           )}
                         </TableCell>
                         <TableCell className="max-w-[150px] truncate">{deal.address}</TableCell>
@@ -2851,7 +2851,7 @@ export default function BusinessTracker() {
                           {entry.isValid ? (
                             <Check className="h-4 w-4 text-green-600" />
                           ) : (
-                            <AlertCircle className="h-4 w-4 text-red-500" title={entry.errors.join(", ")} />
+                            <span title={entry.errors.join(", ")}><AlertCircle className="h-4 w-4 text-red-500" /></span>
                           )}
                         </TableCell>
                         <TableCell>{format(entry.date, "MM/dd/yyyy")}</TableCell>
