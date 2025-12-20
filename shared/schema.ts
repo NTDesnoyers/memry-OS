@@ -756,6 +756,36 @@ export const insertSyncLogSchema = createInsertSchema(syncLogs).omit({
 export type InsertSyncLog = z.infer<typeof insertSyncLogSchema>;
 export type SyncLog = typeof syncLogs.$inferSelect;
 
+/** Handwritten Note Uploads - Scanned notes for voice profile learning. */
+export const handwrittenNoteUploads = pgTable("handwritten_note_uploads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  imageUrl: text("image_url").notNull(),
+  ocrText: text("ocr_text"),
+  recipientName: text("recipient_name"), // First name extracted by OCR
+  personId: varchar("person_id").references(() => people.id),
+  status: text("status").notNull().default("pending_ocr"), // pending_ocr, pending_tag, complete
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertHandwrittenNoteUploadSchema = createInsertSchema(handwrittenNoteUploads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertHandwrittenNoteUpload = z.infer<typeof insertHandwrittenNoteUploadSchema>;
+export type HandwrittenNoteUpload = typeof handwrittenNoteUploads.$inferSelect;
+
+// Relations for Handwritten Note Uploads
+export const handwrittenNoteUploadsRelations = relations(handwrittenNoteUploads, ({ one }) => ({
+  person: one(people, {
+    fields: [handwrittenNoteUploads.personId],
+    references: [people.id],
+  }),
+}));
+
 // AI Extracted Data structure for type safety
 export type AIExtractedData = {
   fordUpdates?: {
