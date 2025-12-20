@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
-import { DollarSign, Save, Plus, FileText, BarChart3, Clock, Phone, Calculator, Play, Pause, RotateCcw, ChevronLeft, ChevronRight, CalendarIcon, History, TrendingUp, Upload, FileSpreadsheet, X, Check, AlertCircle } from "lucide-react";
+import { DollarSign, Save, Plus, FileText, BarChart3, Clock, Phone, Calculator, Play, Pause, RotateCcw, ChevronLeft, ChevronRight, CalendarIcon, History, TrendingUp, Upload, FileSpreadsheet, X, Check, AlertCircle, Camera } from "lucide-react";
 import { format } from "date-fns";
 import * as XLSX from "xlsx";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
@@ -204,6 +204,7 @@ export default function BusinessTracker() {
   const [rawData, setRawData] = useState<Record<string, unknown>[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pieFileInputRef = useRef<HTMLInputElement>(null);
+  const pieScreenshotInputRef = useRef<HTMLInputElement>(null);
 
   // PIE Import State
   type ParsedPieEntry = {
@@ -221,6 +222,7 @@ export default function BusinessTracker() {
   const [pieRawHeaders, setPieRawHeaders] = useState<string[]>([]);
   const [pieColumnMappings, setPieColumnMappings] = useState<Record<string, string>>({});
   const [pieRawData, setPieRawData] = useState<Record<string, unknown>[]>([]);
+  const [pieImportMode, setPieImportMode] = useState<"spreadsheet" | "screenshot">("spreadsheet");
 
   const knownColumnMappings: Record<string, string[]> = {
     address: ["address", "property address", "prop address", "street", "property"],
@@ -484,9 +486,59 @@ export default function BusinessTracker() {
   const handlePieFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setPieImportMode("spreadsheet");
       parsePieSpreadsheetFile(file);
       setShowPieImportDialog(true);
     }
+  };
+
+  const handlePieScreenshotUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setPieImportMode("screenshot");
+    setIsParsingPieFile(true);
+    setShowPieImportDialog(true);
+    setPieRawHeaders([]);
+    setPieColumnMappings({});
+    setPieRawData([]);
+
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const response = await fetch("/api/pie-entries/extract-from-image", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to extract data");
+      }
+
+      const data = await response.json();
+      
+      if (data.entries && Array.isArray(data.entries)) {
+        const parsed: ParsedPieEntry[] = data.entries.map((entry: any) => ({
+          date: new Date(entry.date),
+          pTime: entry.pTime || 0,
+          iTime: entry.iTime || 0,
+          eTime: entry.eTime || 0,
+          totalTime: entry.totalTime || 0,
+          isValid: !isNaN(new Date(entry.date).getTime()),
+          errors: isNaN(new Date(entry.date).getTime()) ? ["Invalid date"] : [],
+        }));
+        setParsedPieEntries(parsed);
+      } else {
+        toast.error("No PIE entries found in the screenshot");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to extract PIE data from screenshot");
+      console.error(error);
+    }
+    
+    setIsParsingPieFile(false);
   };
 
   const updatePieColumnMapping = (field: string, header: string) => {
@@ -1671,7 +1723,7 @@ export default function BusinessTracker() {
                   <h2 className="text-xl font-serif font-bold">PIE Time Tracker</h2>
                   <p className="text-sm text-muted-foreground">Track your Prospecting and In-Person time. Focus on income-producing activities.</p>
                 </div>
-                <div>
+                <div className="flex gap-2">
                   <input
                     ref={pieFileInputRef}
                     type="file"
@@ -1679,14 +1731,30 @@ export default function BusinessTracker() {
                     onChange={handlePieFileUpload}
                     className="hidden"
                   />
+                  <input
+                    ref={pieScreenshotInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePieScreenshotUpload}
+                    className="hidden"
+                  />
                   <Button 
                     variant="outline" 
                     onClick={() => pieFileInputRef.current?.click()}
                     className="gap-2"
-                    data-testid="button-import-pie"
+                    data-testid="button-import-pie-spreadsheet"
                   >
-                    <Upload className="h-4 w-4" />
-                    Import Historical PIE
+                    <FileSpreadsheet className="h-4 w-4" />
+                    <span className="hidden sm:inline">Import from</span> Spreadsheet
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => pieScreenshotInputRef.current?.click()}
+                    className="gap-2"
+                    data-testid="button-import-pie-screenshot"
+                  >
+                    <Camera className="h-4 w-4" />
+                    <span className="hidden sm:inline">Import from</span> Screenshot
                   </Button>
                 </div>
               </div>
@@ -2328,8 +2396,10 @@ export default function BusinessTracker() {
           <DialogHeader>
             <DialogTitle>Import Historical PIE Time Data</DialogTitle>
             <DialogDescription>
-              Upload a spreadsheet with your PIE time tracking history. We'll detect column mappings automatically.
-              Time values under 24 are assumed to be hours and will be converted to minutes.
+              {pieImportMode === "screenshot" 
+                ? "AI is extracting PIE time data from your screenshot. Review the entries below before importing."
+                : "Upload a spreadsheet with your PIE time tracking history. We'll detect column mappings automatically. Time values under 24 are assumed to be hours and will be converted to minutes."
+              }
             </DialogDescription>
           </DialogHeader>
 

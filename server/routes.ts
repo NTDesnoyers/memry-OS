@@ -1965,6 +1965,96 @@ When analyzing images:
     }
   });
 
+  // Extract PIE data from screenshot using AI vision
+  app.post("/api/pie-entries/extract-from-image", upload.single("image"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file provided" });
+      }
+
+      const openai = getOpenAI();
+      const imagePath = req.file.path;
+      const imageBuffer = fs.readFileSync(imagePath);
+      const base64Image = imageBuffer.toString("base64");
+      const mimeType = req.file.mimetype || "image/png";
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: `You are a data extraction assistant. Extract PIE (Productive, Indirect, Everything Else) time tracking data from the provided screenshot.
+
+Return a JSON array of entries with this structure:
+{
+  "entries": [
+    {
+      "date": "YYYY-MM-DD",
+      "pTime": number (minutes of Productive time),
+      "iTime": number (minutes of Indirect time),
+      "eTime": number (minutes of Everything Else time),
+      "totalTime": number (total minutes)
+    }
+  ]
+}
+
+Guidelines:
+- If times are in hours (e.g., "2.5" or "2:30"), convert to minutes
+- P/Productive time = income-producing activities (calls, meetings, prospecting)
+- I/Indirect time = supporting activities (admin, education, planning)
+- E/Everything Else = other work time
+- If a column is missing, use 0 for that value
+- Parse dates in any format and convert to YYYY-MM-DD
+- If totalTime is provided but P/I/E are not, set totalTime and leave others as 0
+
+Return ONLY valid JSON, no explanations.`
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "Extract all PIE time tracking entries from this screenshot. Return as JSON."
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:${mimeType};base64,${base64Image}`
+                }
+              }
+            ]
+          }
+        ],
+        max_tokens: 4000,
+        temperature: 0.1
+      });
+
+      // Clean up uploaded file
+      fs.unlinkSync(imagePath);
+
+      const content = response.choices[0]?.message?.content || "{}";
+      
+      // Try to parse the JSON response
+      let parsed;
+      try {
+        // Remove markdown code blocks if present
+        const cleanContent = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+        parsed = JSON.parse(cleanContent);
+      } catch (parseError) {
+        console.error("Failed to parse AI response:", content);
+        return res.status(400).json({ 
+          message: "Failed to extract data from image. Please try a clearer screenshot.",
+          rawResponse: content
+        });
+      }
+
+      res.json(parsed);
+    } catch (error: any) {
+      console.error("PIE image extraction error:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ==================== AGENT PROFILE ROUTES ====================
   
   // Get agent profile
