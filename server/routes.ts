@@ -735,7 +735,7 @@ Respond with valid JSON only, no other text.`;
         case "search_people": {
           const people = await storage.getAllPeople();
           const query = args.query.toLowerCase().trim();
-          const queryWords = query.split(/\s+/).filter(w => w.length > 0);
+          const queryWords = query.split(/\s+/).filter((w: string) => w.length > 0);
           
           // Fuzzy matching function - handles middle initials, partial names, etc.
           const fuzzyNameMatch = (name: string | null | undefined, searchWords: string[]): boolean => {
@@ -865,9 +865,10 @@ Respond with valid JSON only, no other text.`;
               stage: args.stage || "hot",
               side: args.side || "buyer",
               type: "sale",
-              estimatedPrice: args.estimatedPrice || null,
+              title: `${args.side === "seller" ? "Seller" : "Buyer"} - Deal`,
+              value: args.estimatedPrice || null,
               commissionPercent: args.commissionPercent || null,
-              painPleasure: args.painPleasure || null
+              painPleasureRating: args.painPleasure || null
             });
             return `Created new deal with estimated price $${args.estimatedPrice?.toLocaleString() || 0}, ${args.commissionPercent || 0}% commission`;
           }
@@ -1036,9 +1037,10 @@ When analyzing images:
         
         // Execute each tool call
         for (const toolCall of responseMessage.tool_calls) {
-          const args = JSON.parse(toolCall.function.arguments);
-          const result = await executeAiTool(toolCall.function.name, args);
-          actionsExecuted.push({ tool: toolCall.function.name, result });
+          const tc = toolCall as any;
+          const args = JSON.parse(tc.function.arguments);
+          const result = await executeAiTool(tc.function.name, args);
+          actionsExecuted.push({ tool: tc.function.name, result });
           
           apiMessages.push({
             role: "tool",
