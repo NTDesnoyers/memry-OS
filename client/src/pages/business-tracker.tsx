@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
-import { DollarSign, Save, Plus, FileText, BarChart3, Clock, Phone, Calculator, Play, Pause, RotateCcw, ChevronLeft, ChevronRight, CalendarIcon, History, TrendingUp, Upload, FileSpreadsheet, X, Check, AlertCircle, Camera } from "lucide-react";
+import { DollarSign, Save, Plus, FileText, BarChart3, Clock, Phone, Calculator, Play, Pause, RotateCcw, ChevronLeft, ChevronRight, CalendarIcon, History, TrendingUp, Upload, FileSpreadsheet, X, Check, AlertCircle, Camera, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import * as XLSX from "xlsx";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
@@ -151,19 +151,50 @@ export default function BusinessTracker() {
     person: people.find(p => p.id === deal.personId)
   }));
 
-  // Group deals by household - consolidate household members into single entries
+  // Group ALL deals by household first, then determine which list they belong to
   type HouseholdDealGroup = {
     householdId: string | null;
     householdName: string | null;
     deals: DealWithPerson[];
     members: Person[];
     primaryDeal: DealWithPerson;
+    effectiveStage: string; // The "highest" stage among all household deals
   };
 
-  const groupDealsByHousehold = (dealsList: DealWithPerson[]): HouseholdDealGroup[] => {
+  // Stage priority: closed > under_contract > hot > warm
+  const stagePriority: Record<string, number> = {
+    "closed": 5,
+    "under_contract": 4,
+    "in_contract": 4,
+    "active": 4,
+    "hot": 3,
+    "hot_active": 3,
+    "hot_confused": 2,
+    "warm": 1,
+  };
+
+  const getEffectiveStage = (deals: DealWithPerson[]): string => {
+    let highestPriority = 0;
+    let effectiveStage = "warm";
+    deals.forEach(deal => {
+      const priority = stagePriority[deal.stage || "warm"] || 0;
+      if (priority > highestPriority) {
+        highestPriority = priority;
+        effectiveStage = deal.stage || "warm";
+      }
+    });
+    return effectiveStage;
+  };
+
+  // Group ALL active deals by household
+  const allActiveDeals = dealsWithPeople.filter(d => 
+    ["warm", "hot", "hot_active", "hot_confused", "under_contract", "in_contract", "active"].includes(d.stage || "")
+  );
+
+  const allGroupedByHousehold = (() => {
     const grouped = new Map<string, HouseholdDealGroup>();
     
-    dealsList.forEach(deal => {
+    allActiveDeals.forEach(deal => {
       const person = deal.person;
       const householdId = person?.householdId || null;
       
@@ -176,6 +207,12 @@ export default function BusinessTracker() {
         if (person && !group.members.find(m => m.id === person.id)) {
           group.members.push(person);
         }
+        // Recalculate effective stage
+        group.effectiveStage = getEffectiveStage(group.deals);
+        // Update primary deal to highest stage deal
+        if (stagePriority[deal.stage || "warm"] > stagePriority[group.primaryDeal.stage || "warm"]) {
+          group.primaryDeal = deal;
+        }
       } else {
         const household = householdId ? households.find(h => h.id === householdId) : null;
         grouped.set(groupKey, {
@@ -184,12 +221,13 @@ export default function BusinessTracker() {
           deals: [deal],
           members: person ? [person] : [],
           primaryDeal: deal,
+          effectiveStage: deal.stage || "warm",
         });
       }
     });
     
     return Array.from(grouped.values());
-  };
+  })();
 
   // Get display name for a deal group (household name or person name)
   const getGroupDisplayName = (group: HouseholdDealGroup): string => {
@@ -199,17 +237,22 @@ export default function BusinessTracker() {
     return group.primaryDeal.person?.name || group.primaryDeal.title || "Unknown";
   };
 
+  // Filter grouped deals by effective stage
+  const warmDealsGrouped = allGroupedByHousehold.filter(g => g.effectiveStage === "warm");
+  const hotActiveDealsGrouped = allGroupedByHousehold.filter(g => 
+    g.effectiveStage === "hot" || g.effectiveStage === "hot_active"
+  );
+  const hotConfusedDealsGrouped = allGroupedByHousehold.filter(g => g.effectiveStage === "hot_confused");
+  const underContractDealsGrouped = allGroupedByHousehold.filter(g => 
+    g.effectiveStage === "under_contract" || g.effectiveStage === "in_contract" || g.effectiveStage === "active"
+  );
+
+  // Keep original lists for GCI calculations
   const warmDeals = dealsWithPeople.filter(d => d.stage === "warm");
   const hotActiveDeals = dealsWithPeople.filter(d => d.stage === "hot" || d.stage === "hot_active");
   const hotConfusedDeals = dealsWithPeople.filter(d => d.stage === "hot_confused");
   const underContractDeals = dealsWithPeople.filter(d => d.stage === "under_contract" || d.stage === "in_contract" || d.stage === "active");
   const closedDeals = dealsWithPeople.filter(d => d.stage === "closed");
-
-  // Grouped versions for display
-  const warmDealsGrouped = groupDealsByHousehold(warmDeals);
-  const hotActiveDealsGrouped = groupDealsByHousehold(hotActiveDeals);
-  const hotConfusedDealsGrouped = groupDealsByHousehold(hotConfusedDeals);
-  const underContractDealsGrouped = groupDealsByHousehold(underContractDeals);
 
   // PIE Time Tracker State
   const [selectedWeekStart, setSelectedWeekStart] = useState(() => {
