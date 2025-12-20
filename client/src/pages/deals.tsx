@@ -102,10 +102,20 @@ export default function Deals() {
     const selectedPerson = people.find(p => p.id === formData.personId);
     const autoTitle = formData.address || selectedPerson?.name || "New Deal";
     
-    createDealMutation.mutate({ 
-      ...formData, 
-      title: autoTitle 
-    } as InsertDeal);
+    // Build deal data with only valid schema fields
+    const dealData: InsertDeal = {
+      title: autoTitle,
+      address: formData.address || null,
+      personId: formData.personId || null,
+      type: formData.type || "Buy",
+      stage: formData.stage || "Lead",
+      value: formData.soldPrice || formData.value || 0,
+      commissionPercent: formData.commissionPercent || 3,
+      notes: formData.notes || null,
+      actualCloseDate: formData.closedDate ? new Date(formData.closedDate) : null,
+    };
+    
+    createDealMutation.mutate(dealData);
   };
 
   // Calculate stats
