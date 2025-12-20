@@ -1475,6 +1475,231 @@ When analyzing images:
     }
   });
   
+  // ==================== 8x8 CAMPAIGNS ROUTES ====================
+  
+  // Get all 8x8 campaigns
+  app.get("/api/8x8-campaigns", async (req, res) => {
+    try {
+      const campaigns = await storage.getAll8x8Campaigns();
+      res.json(campaigns);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get 8x8 campaign by ID
+  app.get("/api/8x8-campaigns/:id", async (req, res) => {
+    try {
+      const campaign = await storage.get8x8Campaign(req.params.id);
+      if (!campaign) {
+        return res.status(404).json({ message: "Campaign not found" });
+      }
+      res.json(campaign);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Create 8x8 campaign
+  app.post("/api/8x8-campaigns", async (req, res) => {
+    try {
+      const campaign = await storage.create8x8Campaign(req.body);
+      res.status(201).json(campaign);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Update 8x8 campaign
+  app.patch("/api/8x8-campaigns/:id", async (req, res) => {
+    try {
+      const campaign = await storage.update8x8Campaign(req.params.id, req.body);
+      if (!campaign) {
+        return res.status(404).json({ message: "Campaign not found" });
+      }
+      res.json(campaign);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Record a touch in an 8x8 campaign
+  app.post("/api/8x8-campaigns/:id/touch", async (req, res) => {
+    try {
+      const campaign = await storage.get8x8Campaign(req.params.id);
+      if (!campaign) {
+        return res.status(404).json({ message: "Campaign not found" });
+      }
+      
+      const { type, notes } = req.body;
+      const touches = campaign.touches || [];
+      const newTouch = {
+        step: touches.length + 1,
+        type,
+        completedAt: new Date().toISOString(),
+        notes,
+      };
+      touches.push(newTouch);
+      
+      const isComplete = touches.length >= 8;
+      const updated = await storage.update8x8Campaign(req.params.id, {
+        touches,
+        completedSteps: touches.length,
+        currentStep: Math.min(touches.length + 1, 8),
+        status: isComplete ? 'completed' : 'active',
+        completedAt: isComplete ? new Date() : undefined,
+      });
+      
+      // If completed, flag person for review
+      if (isComplete && campaign.personId) {
+        await storage.flagContactForReview(campaign.personId, 'needs_review');
+      }
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Complete 8x8 campaign with outcome
+  app.post("/api/8x8-campaigns/:id/complete", async (req, res) => {
+    try {
+      const { outcome, outcomeNotes } = req.body;
+      const campaign = await storage.update8x8Campaign(req.params.id, {
+        status: 'completed',
+        outcome,
+        outcomeNotes,
+        completedAt: new Date(),
+      });
+      
+      if (!campaign) {
+        return res.status(404).json({ message: "Campaign not found" });
+      }
+      
+      // Update person based on outcome
+      if (campaign.personId) {
+        if (outcome === 'deleted') {
+          await storage.deletePerson(campaign.personId);
+        } else if (outcome?.startsWith('promoted_to_')) {
+          const newSegment = outcome.replace('promoted_to_', '').toUpperCase();
+          await storage.updatePerson(campaign.personId, { 
+            segment: newSegment,
+            segmentEnteredAt: new Date(),
+            reviewStatus: null,
+          });
+        }
+      }
+      
+      res.json(campaign);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Delete 8x8 campaign
+  app.delete("/api/8x8-campaigns/:id", async (req, res) => {
+    try {
+      await storage.delete8x8Campaign(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // ==================== D CONTACT REVIEW ROUTES ====================
+  
+  // Get D contacts needing review (stale, low engagement, or campaign completed)
+  app.get("/api/d-contacts/review", async (req, res) => {
+    try {
+      const contacts = await storage.getDContactsNeedingReview();
+      res.json(contacts);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get stale D contacts (6+ months in segment)
+  app.get("/api/d-contacts/stale", async (req, res) => {
+    try {
+      const contacts = await storage.getStaleDContacts();
+      res.json(contacts);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get low engagement D contacts
+  app.get("/api/d-contacts/low-engagement", async (req, res) => {
+    try {
+      const contacts = await storage.getLowEngagementDContacts();
+      res.json(contacts);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Generate quarterly D review task
+  app.post("/api/d-contacts/generate-review-task", async (req, res) => {
+    try {
+      const reviewContacts = await storage.getDContactsNeedingReview();
+      
+      if (reviewContacts.length === 0) {
+        return res.json({ message: "No D contacts need review", task: null });
+      }
+      
+      const staleCt = reviewContacts.filter(c => c.reason === 'stale').length;
+      const lowEngagementCt = reviewContacts.filter(c => c.reason === 'low_engagement').length;
+      const campaignCompletedCt = reviewContacts.filter(c => c.reason === 'campaign_completed').length;
+      
+      const task = await storage.createTask({
+        title: `Quarterly D Contact Review (${reviewContacts.length} contacts)`,
+        description: `Review D contacts to develop or delete:\n- ${staleCt} stale (6+ months)\n- ${lowEngagementCt} low engagement (3+ attempts, no response)\n- ${campaignCompletedCt} completed 8x8 campaigns`,
+        dueDate: new Date(),
+        priority: 'medium',
+      });
+      
+      res.json({ 
+        message: `Created D contact review task for ${reviewContacts.length} contacts`,
+        task,
+        summary: { stale: staleCt, lowEngagement: lowEngagementCt, campaignCompleted: campaignCompletedCt }
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Batch update D contacts (promote, keep, or delete)
+  app.post("/api/d-contacts/batch-action", async (req, res) => {
+    try {
+      const { personIds, action, newSegment } = req.body;
+      const results = [];
+      
+      for (const personId of personIds) {
+        if (action === 'delete') {
+          await storage.deletePerson(personId);
+          results.push({ personId, action: 'deleted' });
+        } else if (action === 'promote' && newSegment) {
+          const updated = await storage.updatePerson(personId, {
+            segment: newSegment,
+            segmentEnteredAt: new Date(),
+            reviewStatus: null,
+          });
+          results.push({ personId, action: 'promoted', newSegment });
+        } else if (action === 'keep') {
+          await storage.flagContactForReview(personId, 'keep');
+          results.push({ personId, action: 'kept' });
+        }
+      }
+      
+      res.json({ 
+        message: `Processed ${results.length} contacts`,
+        results 
+      });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
   // ==================== MEETINGS ROUTES ====================
   
   // Get all meetings

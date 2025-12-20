@@ -28,6 +28,7 @@ import ReferralMatches from "@/pages/referral-matches";
 import Calendar from "@/pages/calendar";
 import Settings from "@/pages/settings";
 import VoiceProfile from "@/pages/voice-profile";
+import DContactReview from "@/pages/d-contact-review";
 
 function Router() {
   return (
@@ -56,6 +57,7 @@ function Router() {
       <Route path="/integrations" component={Integrations} />
       <Route path="/settings" component={Settings} />
       <Route path="/voice-profile" component={VoiceProfile} />
+      <Route path="/d-review" component={DContactReview} />
       <Route component={NotFound} />
     </Switch>
   );
