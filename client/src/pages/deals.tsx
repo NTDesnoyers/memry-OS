@@ -19,6 +19,8 @@ export default function Deals() {
   const [formOpen, setFormOpen] = useState(false);
   const [clientSearch, setClientSearch] = useState("");
   const [showClientSuggestions, setShowClientSuggestions] = useState(false);
+  const [showCustomSource, setShowCustomSource] = useState(false);
+  const [customSourceValue, setCustomSourceValue] = useState("");
   
   const [formData, setFormData] = useState<Partial<InsertDeal> & {
     closedDate?: string;
@@ -68,6 +70,8 @@ export default function Deals() {
       queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
       setFormOpen(false);
       setClientSearch("");
+      setShowCustomSource(false);
+      setCustomSourceValue("");
       setFormData({
         title: "",
         address: "",
@@ -102,6 +106,11 @@ export default function Deals() {
     const selectedPerson = people.find(p => p.id === formData.personId);
     const autoTitle = formData.address || selectedPerson?.name || "New Deal";
     
+    // Determine final source value
+    const finalSource = showCustomSource && customSourceValue 
+      ? customSourceValue 
+      : formData.source || null;
+    
     // Build deal data with only valid schema fields
     const dealData: InsertDeal = {
       title: autoTitle,
@@ -112,7 +121,7 @@ export default function Deals() {
       value: formData.soldPrice || formData.value || 0,
       listPrice: formData.listPrice || null,
       soldPrice: formData.soldPrice || null,
-      source: formData.source || null,
+      source: finalSource,
       commissionPercent: formData.commissionPercent || 3,
       notes: formData.notes || null,
       actualCloseDate: formData.closedDate ? new Date(formData.closedDate) : null,
@@ -127,6 +136,15 @@ export default function Deals() {
   const totalVolume = deals
     .filter(d => d.stage === "Closed Won")
     .reduce((sum, deal) => sum + (deal.value || 0), 0);
+
+  // Default sources + unique sources from existing deals
+  const defaultSources = ["Sphere", "Referral", "Past Client", "Open House", "Sign Call", "Online Lead"];
+  const customSources = Array.from(new Set(
+    deals
+      .map(d => d.source)
+      .filter((s): s is string => !!s && !defaultSources.includes(s))
+  ));
+  const allSources = defaultSources.concat(customSources);
 
   return (
     <Layout>
@@ -286,13 +304,39 @@ export default function Deals() {
                       </div>
                       <div>
                         <Label htmlFor="source">Source</Label>
-                        <Input
-                          id="source"
-                          value={formData.source || ""}
-                          onChange={(e) => setFormData({ ...formData, source: e.target.value })}
-                          placeholder="BNI, Referral, Sphere..."
-                          data-testid="input-source"
-                        />
+                        <Select 
+                          value={showCustomSource ? "__other__" : (formData.source || "")} 
+                          onValueChange={(value) => {
+                            if (value === "__other__") {
+                              setShowCustomSource(true);
+                              setFormData({ ...formData, source: "" });
+                            } else {
+                              setShowCustomSource(false);
+                              setCustomSourceValue("");
+                              setFormData({ ...formData, source: value });
+                            }
+                          }}
+                        >
+                          <SelectTrigger data-testid="select-source">
+                            <SelectValue placeholder="Select source" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {allSources.map(source => (
+                              <SelectItem key={source} value={source}>{source}</SelectItem>
+                            ))}
+                            <SelectItem value="__other__">Other...</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {showCustomSource && (
+                          <Input
+                            className="mt-2"
+                            value={customSourceValue}
+                            onChange={(e) => setCustomSourceValue(e.target.value)}
+                            placeholder="Type new source (e.g. BNI)"
+                            autoFocus
+                            data-testid="input-custom-source"
+                          />
+                        )}
                       </div>
                       <div>
                         <Label htmlFor="listPrice">List Price ($)</Label>
