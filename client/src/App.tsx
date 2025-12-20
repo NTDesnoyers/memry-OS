@@ -27,6 +27,7 @@ import Drafts from "@/pages/drafts";
 import ReferralMatches from "@/pages/referral-matches";
 import Calendar from "@/pages/calendar";
 import Settings from "@/pages/settings";
+import VoiceProfile from "@/pages/voice-profile";
 
 function Router() {
   return (
@@ -54,6 +55,7 @@ function Router() {
       <Route path="/automation" component={AutomationHub} />
       <Route path="/integrations" component={Integrations} />
       <Route path="/settings" component={Settings} />
+      <Route path="/voice-profile" component={VoiceProfile} />
       <Route component={NotFound} />
     </Switch>
   );
