@@ -233,7 +233,20 @@ export interface IStorage {
   getPersonByPhone(phone: string): Promise<Person | undefined>;
   getPersonByEmail(email: string): Promise<Person | undefined>;
   searchPeopleByName(name: string): Promise<Person[]>;
+  
+  // Contact Due Calculator
+  /** Get contacts due for follow-up based on segment and hot/warm status. */
+  getContactsDueForFollowUp(): Promise<ContactDueResult[]>;
 }
+
+/** Result of contact due calculation with reason and days overdue. */
+export type ContactDueResult = {
+  person: Person;
+  dueReason: 'hot' | 'warm' | 'segment_a' | 'segment_b' | 'segment_c';
+  daysSinceContact: number;
+  daysOverdue: number;
+  frequencyDays: number;
+};
 
 export class DatabaseStorage implements IStorage {
   // Users
@@ -1029,6 +1042,88 @@ export class DatabaseStorage implements IStorage {
     const lowerName = name.toLowerCase();
     return await db.select().from(people)
       .where(sql`LOWER(${people.name}) LIKE ${'%' + lowerName + '%'}`);
+  }
+  
+  async getContactsDueForFollowUp(): Promise<ContactDueResult[]> {
+    const FREQUENCY = {
+      hot: 7,        // weekly
+      warm: 30,      // monthly
+      segment_a: 30, // monthly
+      segment_b: 60, // every 2 months
+      segment_c: 90, // quarterly
+    };
+    
+    const allPeople = await db.select().from(people);
+    const allDeals = await db.select().from(deals);
+    
+    // Build map of personId -> highest priority deal stage
+    const personDealStage = new Map<string, 'hot' | 'warm'>();
+    for (const deal of allDeals) {
+      if (!deal.personId) continue;
+      const stage = deal.stage?.toLowerCase();
+      if (stage === 'hot') {
+        personDealStage.set(deal.personId, 'hot');
+      } else if (stage === 'warm' && personDealStage.get(deal.personId) !== 'hot') {
+        personDealStage.set(deal.personId, 'warm');
+      }
+    }
+    
+    const now = new Date();
+    const results: ContactDueResult[] = [];
+    
+    for (const person of allPeople) {
+      // Determine contact frequency based on priority: hot > warm > segment
+      let dueReason: ContactDueResult['dueReason'] | null = null;
+      let frequencyDays = 0;
+      
+      const dealStage = personDealStage.get(person.id);
+      if (dealStage === 'hot') {
+        dueReason = 'hot';
+        frequencyDays = FREQUENCY.hot;
+      } else if (dealStage === 'warm') {
+        dueReason = 'warm';
+        frequencyDays = FREQUENCY.warm;
+      } else {
+        // Use segment
+        const segment = person.segment?.toUpperCase();
+        if (segment === 'A') {
+          dueReason = 'segment_a';
+          frequencyDays = FREQUENCY.segment_a;
+        } else if (segment === 'B') {
+          dueReason = 'segment_b';
+          frequencyDays = FREQUENCY.segment_b;
+        } else if (segment === 'C') {
+          dueReason = 'segment_c';
+          frequencyDays = FREQUENCY.segment_c;
+        }
+        // D segment and others: skip (8x8 campaign handled separately)
+      }
+      
+      if (!dueReason) continue;
+      
+      // Calculate days since last contact
+      const lastContact = person.lastContact ? new Date(person.lastContact) : null;
+      const daysSinceContact = lastContact 
+        ? Math.floor((now.getTime() - lastContact.getTime()) / (1000 * 60 * 60 * 24))
+        : 999; // Never contacted = very overdue
+      
+      const daysOverdue = daysSinceContact - frequencyDays;
+      
+      if (daysOverdue > 0) {
+        results.push({
+          person,
+          dueReason,
+          daysSinceContact,
+          daysOverdue,
+          frequencyDays,
+        });
+      }
+    }
+    
+    // Sort by most overdue first
+    results.sort((a, b) => b.daysOverdue - a.daysOverdue);
+    
+    return results;
   }
 }
 
