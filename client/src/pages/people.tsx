@@ -11,15 +11,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { MentionTextarea } from "@/components/mention-textarea";
-import { Search, Plus, Filter, Phone, Mail, MessageSquare, MapPin, Loader2, Upload, FileSpreadsheet, Check, Sparkles, AlertCircle, X, Tag, Trash2, Download, CheckSquare, Users, Home, Heart, Briefcase, Gamepad2, Star, ChevronRight, ChevronLeft, SkipForward, Clock, TrendingDown, ArrowUpRight, UserX, RefreshCw } from "lucide-react";
+import { Search, Plus, Filter, Phone, Mail, MessageSquare, MapPin, Loader2, Upload, FileSpreadsheet, Check, Sparkles, AlertCircle, X, Tag, Trash2, Download, CheckSquare, Users, Home, Heart, Briefcase, Gamepad2, Star, ChevronRight, ChevronLeft, SkipForward, Clock, TrendingDown, ArrowUpRight, UserX, RefreshCw, Brain } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useRef } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import type { Person, InsertPerson } from "@shared/schema";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
+import KnowYourPeopleContent from "@/components/know-your-people-content";
+import DContactReviewContent from "@/components/d-contact-review-content";
 
 interface TransformedPerson {
   name: string;
@@ -764,6 +766,8 @@ export default function People() {
     toast({ title: "Exported", description: `Downloaded ${selectedIds.size} contacts` });
   };
 
+  const [activeTab, setActiveTab] = useState("contacts");
+
   return (
     <Layout>
       <div className="min-h-screen bg-secondary/30 relative">
@@ -773,7 +777,7 @@ export default function People() {
         />
         
         <div className="container mx-auto px-4 py-4 md:py-8 max-w-6xl">
-          <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 md:mb-8">
+          <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
             <div>
               <h1 className="text-2xl md:text-3xl font-serif font-bold text-primary">People</h1>
               <p className="text-muted-foreground text-sm md:text-base">Client Intelligence Core</p>
@@ -1017,50 +1021,64 @@ export default function People() {
             </div>
           </header>
 
-          <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mb-6">
-            <div className="flex items-center gap-3 order-2 sm:order-1">
-              <Checkbox 
-                checked={filteredPeople.length > 0 && selectedIds.size === filteredPeople.length}
-                onCheckedChange={selectAll}
-                data-testid="checkbox-select-all"
-                className="h-5 w-5"
-              />
-              {selectedIds.size > 0 ? (
-                <span className="text-sm font-medium text-primary">
-                  {selectedIds.size} of {filteredPeople.length}
-                </span>
-              ) : (
-                <span className="text-sm text-muted-foreground hidden sm:inline">Select all</span>
-              )}
-            </div>
-            <div className="relative flex-1 order-1 sm:order-2">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search people..." 
-                className="pl-9 bg-background/80"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                data-testid="input-search"
-              />
-            </div>
-            <select
-              value={segmentFilter}
-              onChange={(e) => setSegmentFilter(e.target.value)}
-              className="h-10 px-3 py-2 rounded-md border border-input bg-background/80 text-sm order-3"
-              data-testid="select-segment-filter"
-            >
-              <option value="all">All</option>
-              <option value="a">A</option>
-              <option value="b">B</option>
-              <option value="c">C</option>
-              <option value="d">D</option>
-              {uniqueSegments.filter(s => !s.toLowerCase().startsWith('a') && !s.toLowerCase().startsWith('b') && !s.toLowerCase().startsWith('c') && !s.toLowerCase().startsWith('d')).map(seg => (
-                <option key={seg} value={seg.toLowerCase()}>{seg}</option>
-              ))}
-            </select>
-          </div>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+            <TabsList className="grid w-full grid-cols-3 max-w-md">
+              <TabsTrigger value="contacts" className="gap-1" data-testid="tab-contacts">
+                <Users className="h-4 w-4" /> Contacts
+              </TabsTrigger>
+              <TabsTrigger value="know" className="gap-1" data-testid="tab-know">
+                <Brain className="h-4 w-4" /> Know Your People
+              </TabsTrigger>
+              <TabsTrigger value="d-review" className="gap-1" data-testid="tab-d-review">
+                <UserX className="h-4 w-4" /> D Review
+              </TabsTrigger>
+            </TabsList>
 
-          {isLoading ? (
+            <TabsContent value="contacts" className="mt-4">
+              <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mb-6">
+                <div className="flex items-center gap-3 order-2 sm:order-1">
+                  <Checkbox 
+                    checked={filteredPeople.length > 0 && selectedIds.size === filteredPeople.length}
+                    onCheckedChange={selectAll}
+                    data-testid="checkbox-select-all"
+                    className="h-5 w-5"
+                  />
+                  {selectedIds.size > 0 ? (
+                    <span className="text-sm font-medium text-primary">
+                      {selectedIds.size} of {filteredPeople.length}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-muted-foreground hidden sm:inline">Select all</span>
+                  )}
+                </div>
+                <div className="relative flex-1 order-1 sm:order-2">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="Search people..." 
+                    className="pl-9 bg-background/80"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    data-testid="input-search"
+                  />
+                </div>
+                <select
+                  value={segmentFilter}
+                  onChange={(e) => setSegmentFilter(e.target.value)}
+                  className="h-10 px-3 py-2 rounded-md border border-input bg-background/80 text-sm order-3"
+                  data-testid="select-segment-filter"
+                >
+                  <option value="all">All</option>
+                  <option value="a">A</option>
+                  <option value="b">B</option>
+                  <option value="c">C</option>
+                  <option value="d">D</option>
+                  {uniqueSegments.filter(s => !s.toLowerCase().startsWith('a') && !s.toLowerCase().startsWith('b') && !s.toLowerCase().startsWith('c') && !s.toLowerCase().startsWith('d')).map(seg => (
+                    <option key={seg} value={seg.toLowerCase()}>{seg}</option>
+                  ))}
+                </select>
+              </div>
+
+              {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
@@ -1131,8 +1149,18 @@ export default function People() {
                   </CardContent>
                 </Card>
               ))}
-            </div>
-          )}
+              </div>
+            )}
+            </TabsContent>
+
+            <TabsContent value="know" className="mt-4">
+              <KnowYourPeopleContent />
+            </TabsContent>
+
+            <TabsContent value="d-review" className="mt-4">
+              <DContactReviewContent />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
 
