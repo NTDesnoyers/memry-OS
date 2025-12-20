@@ -13,7 +13,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
-import { DollarSign, Save, Plus, FileText, BarChart3, Clock, Phone, Calculator, Play, Pause, RotateCcw, ChevronLeft, ChevronRight, CalendarIcon, History, TrendingUp, Upload, FileSpreadsheet, X, Check, AlertCircle, Camera, Loader2 } from "lucide-react";
+import { DollarSign, Save, Plus, FileText, BarChart3, Clock, Phone, Calculator, Play, Pause, RotateCcw, ChevronLeft, ChevronRight, CalendarIcon, History, TrendingUp, Upload, FileSpreadsheet, X, Check, AlertCircle, Camera, Loader2, Home, Target } from "lucide-react";
+import DealsContent from "@/components/deals-content";
 import { format } from "date-fns";
 import * as XLSX from "xlsx";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
@@ -1119,6 +1120,8 @@ export default function BusinessTracker() {
   const closedVolume = closedDeals.reduce((sum, d) => sum + (d.value || 0), 0);
   const goalGCI = settings.annualGCIGoal || 200000;
 
+  const [topLevelTab, setTopLevelTab] = useState("goals-tracking");
+
   return (
     <Layout>
       <div className="min-h-screen bg-secondary/30 relative">
@@ -1128,13 +1131,28 @@ export default function BusinessTracker() {
         />
         
         <div className="container mx-auto px-4 py-6 max-w-[1600px]">
-          <header className="flex justify-between items-center mb-6">
+          <header className="flex justify-between items-center mb-4">
             <div>
               <h1 className="text-3xl font-serif font-bold text-primary">Business Tracker</h1>
               <p className="text-muted-foreground text-sm">Ninja Selling Pipeline & Transactions</p>
             </div>
           </header>
 
+          <Tabs value={topLevelTab} onValueChange={setTopLevelTab} className="w-full mb-6">
+            <TabsList className="grid w-full grid-cols-2 max-w-md">
+              <TabsTrigger value="goals-tracking" className="gap-1" data-testid="tab-goals-tracking">
+                <Target className="h-4 w-4" /> Goals & Tracking
+              </TabsTrigger>
+              <TabsTrigger value="deals" className="gap-1" data-testid="tab-deals">
+                <Home className="h-4 w-4" /> Deals
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="deals" className="mt-4">
+              <DealsContent />
+            </TabsContent>
+
+            <TabsContent value="goals-tracking" className="mt-4">
           <Tabs defaultValue="tracker" className="w-full">
             <TabsList className="bg-card/50 backdrop-blur-sm w-full justify-start overflow-x-auto mb-4">
               <TabsTrigger value="goals" className="gap-1"><DollarSign className="h-3 w-3" /> Goals & Fees</TabsTrigger>
@@ -2476,6 +2494,8 @@ export default function BusinessTracker() {
                   </TableBody>
                 </Table>
               </div>
+            </TabsContent>
+          </Tabs>
             </TabsContent>
           </Tabs>
         </div>

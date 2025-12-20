@@ -10,7 +10,6 @@ import People from "@/pages/people";
 import PersonProfile from "@/pages/person-profile";
 import PersonNew from "@/pages/person-new";
 import Relationships from "@/pages/relationships";
-import Deals from "@/pages/deals";
 import Reviews from "@/pages/reviews";
 import ReviewDetail from "@/pages/review-detail";
 import BusinessTracker from "@/pages/business-tracker";
@@ -21,14 +20,12 @@ import Meetings from "@/pages/meetings";
 import HavesWants from "@/pages/haves-wants";
 import VisualPricing from "@/pages/visual-pricing";
 import BrandCenter from "@/pages/brand-center";
-import KnowYourPeople from "@/pages/know-your-people";
 import ConversationLog from "@/pages/conversation-log";
 import Drafts from "@/pages/drafts";
 import ReferralMatches from "@/pages/referral-matches";
 import Calendar from "@/pages/calendar";
 import Settings from "@/pages/settings";
 import VoiceProfile from "@/pages/voice-profile";
-import DContactReview from "@/pages/d-contact-review";
 import Flow from "@/pages/flow";
 
 function Router() {
@@ -44,13 +41,11 @@ function Router() {
       <Route path="/people/:id" component={PersonProfile} />
       <Route path="/relationships" component={Relationships} />
       <Route path="/flow" component={Flow} />
-      <Route path="/deals" component={Deals} />
       <Route path="/reviews" component={Reviews} />
       <Route path="/reviews/:id" component={ReviewDetail} />
       <Route path="/visual-pricing" component={VisualPricing} />
       <Route path="/haves-wants" component={HavesWants} />
       <Route path="/brand-center" component={BrandCenter} />
-      <Route path="/know-your-people" component={KnowYourPeople} />
       <Route path="/conversations" component={ConversationLog} />
       <Route path="/drafts" component={Drafts} />
       <Route path="/referrals" component={ReferralMatches} />
@@ -59,7 +54,6 @@ function Router() {
       <Route path="/integrations" component={Integrations} />
       <Route path="/settings" component={Settings} />
       <Route path="/voice-profile" component={VoiceProfile} />
-      <Route path="/d-review" component={DContactReview} />
       <Route component={NotFound} />
     </Switch>
   );
