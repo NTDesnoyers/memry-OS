@@ -26,7 +26,10 @@ import {
   type VoiceProfile, type InsertVoiceProfile,
   type SyncLog, type InsertSyncLog,
   type HandwrittenNoteUpload, type InsertHandwrittenNoteUpload,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads
+  type ContentTopic, type InsertContentTopic,
+  type ContentIdea, type InsertContentIdea,
+  type ContentCalendarItem, type InsertContentCalendar,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt } from "drizzle-orm";
@@ -265,6 +268,32 @@ export interface IStorage {
   createHandwrittenNoteUpload(upload: InsertHandwrittenNoteUpload): Promise<HandwrittenNoteUpload>;
   updateHandwrittenNoteUpload(id: string, upload: Partial<InsertHandwrittenNoteUpload>): Promise<HandwrittenNoteUpload | undefined>;
   deleteHandwrittenNoteUpload(id: string): Promise<void>;
+  
+  // Content Topics - Recurring themes from conversations
+  getAllContentTopics(): Promise<ContentTopic[]>;
+  getActiveContentTopics(): Promise<ContentTopic[]>;
+  getContentTopic(id: string): Promise<ContentTopic | undefined>;
+  createContentTopic(topic: InsertContentTopic): Promise<ContentTopic>;
+  updateContentTopic(id: string, topic: Partial<InsertContentTopic>): Promise<ContentTopic | undefined>;
+  deleteContentTopic(id: string): Promise<void>;
+  incrementTopicMention(id: string, quote?: string, interactionId?: string): Promise<ContentTopic | undefined>;
+  
+  // Content Ideas - Specific content pieces to create
+  getAllContentIdeas(): Promise<ContentIdea[]>;
+  getContentIdeasByTopic(topicId: string): Promise<ContentIdea[]>;
+  getContentIdeasByStatus(status: string): Promise<ContentIdea[]>;
+  getContentIdea(id: string): Promise<ContentIdea | undefined>;
+  createContentIdea(idea: InsertContentIdea): Promise<ContentIdea>;
+  updateContentIdea(id: string, idea: Partial<InsertContentIdea>): Promise<ContentIdea | undefined>;
+  deleteContentIdea(id: string): Promise<void>;
+  
+  // Content Calendar - Scheduled publishing
+  getAllContentCalendarItems(): Promise<ContentCalendarItem[]>;
+  getContentCalendarByDateRange(start: Date, end: Date): Promise<ContentCalendarItem[]>;
+  getContentCalendarItem(id: string): Promise<ContentCalendarItem | undefined>;
+  createContentCalendarItem(item: InsertContentCalendar): Promise<ContentCalendarItem>;
+  updateContentCalendarItem(id: string, item: Partial<InsertContentCalendar>): Promise<ContentCalendarItem | undefined>;
+  deleteContentCalendarItem(id: string): Promise<void>;
 }
 
 /** Result of contact due calculation with reason and days overdue. */
@@ -1339,6 +1368,144 @@ export class DatabaseStorage implements IStorage {
   
   async deleteHandwrittenNoteUpload(id: string): Promise<void> {
     await db.delete(handwrittenNoteUploads).where(eq(handwrittenNoteUploads.id, id));
+  }
+  
+  // Content Topics
+  async getAllContentTopics(): Promise<ContentTopic[]> {
+    return await db.select().from(contentTopics).orderBy(desc(contentTopics.mentionCount));
+  }
+  
+  async getActiveContentTopics(): Promise<ContentTopic[]> {
+    return await db.select().from(contentTopics)
+      .where(eq(contentTopics.status, 'active'))
+      .orderBy(desc(contentTopics.mentionCount));
+  }
+  
+  async getContentTopic(id: string): Promise<ContentTopic | undefined> {
+    const [topic] = await db.select().from(contentTopics).where(eq(contentTopics.id, id));
+    return topic || undefined;
+  }
+  
+  async createContentTopic(topic: InsertContentTopic): Promise<ContentTopic> {
+    const [created] = await db.insert(contentTopics).values(topic).returning();
+    return created;
+  }
+  
+  async updateContentTopic(id: string, topic: Partial<InsertContentTopic>): Promise<ContentTopic | undefined> {
+    const [updated] = await db.update(contentTopics)
+      .set({ ...topic, updatedAt: new Date() })
+      .where(eq(contentTopics.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async deleteContentTopic(id: string): Promise<void> {
+    await db.delete(contentTopics).where(eq(contentTopics.id, id));
+  }
+  
+  async incrementTopicMention(id: string, quote?: string, interactionId?: string): Promise<ContentTopic | undefined> {
+    const existing = await this.getContentTopic(id);
+    if (!existing) return undefined;
+    
+    const updates: Partial<ContentTopic> = {
+      mentionCount: (existing.mentionCount || 0) + 1,
+      lastMentionedAt: new Date(),
+    };
+    
+    if (quote) {
+      const quotes = existing.sampleQuotes || [];
+      if (quotes.length < 10) {
+        updates.sampleQuotes = [...quotes, quote];
+      }
+    }
+    
+    if (interactionId) {
+      const ids = existing.relatedInteractionIds || [];
+      if (!ids.includes(interactionId)) {
+        updates.relatedInteractionIds = [...ids, interactionId];
+      }
+    }
+    
+    const [updated] = await db.update(contentTopics)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(contentTopics.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  // Content Ideas
+  async getAllContentIdeas(): Promise<ContentIdea[]> {
+    return await db.select().from(contentIdeas).orderBy(desc(contentIdeas.priority), desc(contentIdeas.createdAt));
+  }
+  
+  async getContentIdeasByTopic(topicId: string): Promise<ContentIdea[]> {
+    return await db.select().from(contentIdeas)
+      .where(eq(contentIdeas.topicId, topicId))
+      .orderBy(desc(contentIdeas.priority));
+  }
+  
+  async getContentIdeasByStatus(status: string): Promise<ContentIdea[]> {
+    return await db.select().from(contentIdeas)
+      .where(eq(contentIdeas.status, status))
+      .orderBy(desc(contentIdeas.priority));
+  }
+  
+  async getContentIdea(id: string): Promise<ContentIdea | undefined> {
+    const [idea] = await db.select().from(contentIdeas).where(eq(contentIdeas.id, id));
+    return idea || undefined;
+  }
+  
+  async createContentIdea(idea: InsertContentIdea): Promise<ContentIdea> {
+    const [created] = await db.insert(contentIdeas).values(idea).returning();
+    return created;
+  }
+  
+  async updateContentIdea(id: string, idea: Partial<InsertContentIdea>): Promise<ContentIdea | undefined> {
+    const [updated] = await db.update(contentIdeas)
+      .set({ ...idea, updatedAt: new Date() })
+      .where(eq(contentIdeas.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async deleteContentIdea(id: string): Promise<void> {
+    await db.delete(contentIdeas).where(eq(contentIdeas.id, id));
+  }
+  
+  // Content Calendar
+  async getAllContentCalendarItems(): Promise<ContentCalendarItem[]> {
+    return await db.select().from(contentCalendar).orderBy(contentCalendar.scheduledDate);
+  }
+  
+  async getContentCalendarByDateRange(start: Date, end: Date): Promise<ContentCalendarItem[]> {
+    return await db.select().from(contentCalendar)
+      .where(and(
+        gte(contentCalendar.scheduledDate, start),
+        lte(contentCalendar.scheduledDate, end)
+      ))
+      .orderBy(contentCalendar.scheduledDate);
+  }
+  
+  async getContentCalendarItem(id: string): Promise<ContentCalendarItem | undefined> {
+    const [item] = await db.select().from(contentCalendar).where(eq(contentCalendar.id, id));
+    return item || undefined;
+  }
+  
+  async createContentCalendarItem(item: InsertContentCalendar): Promise<ContentCalendarItem> {
+    const [created] = await db.insert(contentCalendar).values(item).returning();
+    return created;
+  }
+  
+  async updateContentCalendarItem(id: string, item: Partial<InsertContentCalendar>): Promise<ContentCalendarItem | undefined> {
+    const [updated] = await db.update(contentCalendar)
+      .set({ ...item, updatedAt: new Date() })
+      .where(eq(contentCalendar.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async deleteContentCalendarItem(id: string): Promise<void> {
+    await db.delete(contentCalendar).where(eq(contentCalendar.id, id));
   }
 }
 

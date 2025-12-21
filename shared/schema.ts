@@ -812,3 +812,106 @@ export type AIExtractedData = {
   processingStatus?: "pending" | "completed" | "failed";
   processedAt?: string;
 };
+
+/** Content Topics - Recurring themes/pain points mined from conversations. */
+export const contentTopics = pgTable("content_topics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"),
+  category: text("category"), // inspection, financing, negotiation, closing, etc.
+  mentionCount: integer("mention_count").default(1).notNull(),
+  lastMentionedAt: timestamp("last_mentioned_at").defaultNow(),
+  status: text("status").default("active"), // active, archived, content_created
+  sampleQuotes: text("sample_quotes").array(), // Example quotes from conversations
+  relatedInteractionIds: text("related_interaction_ids").array(), // IDs of conversations mentioning this
+  aiSuggestions: jsonb("ai_suggestions").$type<{
+    blogPostIdeas?: string[];
+    videoTopics?: string[];
+    emailTemplates?: string[];
+    socialPosts?: string[];
+    faqQuestions?: string[];
+  }>(),
+  knowledgeLevel: text("knowledge_level"), // null, 'expert', 'learning', 'need_process'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertContentTopicSchema = createInsertSchema(contentTopics).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertContentTopic = z.infer<typeof insertContentTopicSchema>;
+export type ContentTopic = typeof contentTopics.$inferSelect;
+
+/** Content Ideas - Specific content pieces to create, tied to topics. */
+export const contentIdeas = pgTable("content_ideas", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  topicId: varchar("topic_id").references(() => contentTopics.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  contentType: text("content_type").notNull(), // blog, video_short, video_long, podcast, email_newsletter, social, faq
+  status: text("status").default("idea"), // idea, outlined, drafted, published, archived
+  outline: text("outline"),
+  draft: text("draft"),
+  finalContent: text("final_content"),
+  publishedUrl: text("published_url"),
+  publishedAt: timestamp("published_at"),
+  priority: integer("priority").default(0), // Higher = more urgent
+  aiGenerated: boolean("ai_generated").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertContentIdeaSchema = createInsertSchema(contentIdeas).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertContentIdea = z.infer<typeof insertContentIdeaSchema>;
+export type ContentIdea = typeof contentIdeas.$inferSelect;
+
+/** Content Calendar - Scheduled content for publishing. */
+export const contentCalendar = pgTable("content_calendar", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contentIdeaId: varchar("content_idea_id").references(() => contentIdeas.id),
+  title: text("title").notNull(),
+  contentType: text("content_type").notNull(), // blog, video_short, video_long, podcast, email_newsletter, social
+  channel: text("channel"), // youtube, instagram, linkedin, email, website
+  scheduledDate: timestamp("scheduled_date"),
+  status: text("status").default("planned"), // planned, in_progress, ready, published
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertContentCalendarSchema = createInsertSchema(contentCalendar).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertContentCalendar = z.infer<typeof insertContentCalendarSchema>;
+export type ContentCalendarItem = typeof contentCalendar.$inferSelect;
+
+// Relations for Content Intelligence
+export const contentTopicsRelations = relations(contentTopics, ({ many }) => ({
+  ideas: many(contentIdeas),
+}));
+
+export const contentIdeasRelations = relations(contentIdeas, ({ one, many }) => ({
+  topic: one(contentTopics, {
+    fields: [contentIdeas.topicId],
+    references: [contentTopics.id],
+  }),
+  calendarItems: many(contentCalendar),
+}));
+
+export const contentCalendarRelations = relations(contentCalendar, ({ one }) => ({
+  contentIdea: one(contentIdeas, {
+    fields: [contentCalendar.contentIdeaId],
+    references: [contentIdeas.id],
+  }),
+}));
