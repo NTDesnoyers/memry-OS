@@ -16,7 +16,10 @@ import {
   insertPieEntrySchema,
   insertAgentProfileSchema,
   insertRealEstateReviewSchema,
-  insertInteractionSchema
+  insertInteractionSchema,
+  insertContentTopicSchema,
+  insertContentIdeaSchema,
+  insertContentCalendarSchema
 } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import multer from "multer";
@@ -4072,6 +4075,390 @@ Respond in JSON format:
       });
       
       res.json({ success: true, pattern });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // =========================================================================
+  // CONTENT INTELLIGENCE - Topics, Ideas, Calendar
+  // =========================================================================
+  
+  // Content Topics
+  app.get("/api/content-topics", async (req, res) => {
+    try {
+      const status = req.query.status as string | undefined;
+      const topics = status === 'active' 
+        ? await storage.getActiveContentTopics()
+        : await storage.getAllContentTopics();
+      res.json(topics);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.get("/api/content-topics/:id", async (req, res) => {
+    try {
+      const topic = await storage.getContentTopic(req.params.id);
+      if (!topic) {
+        return res.status(404).json({ message: "Topic not found" });
+      }
+      res.json(topic);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.post("/api/content-topics", async (req, res) => {
+    try {
+      const parsed = insertContentTopicSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: fromZodError(parsed.error).message });
+      }
+      const topic = await storage.createContentTopic(parsed.data);
+      res.status(201).json(topic);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.patch("/api/content-topics/:id", async (req, res) => {
+    try {
+      const updated = await storage.updateContentTopic(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ message: "Topic not found" });
+      }
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.post("/api/content-topics/:id/increment", async (req, res) => {
+    try {
+      const { quote, interactionId } = req.body;
+      const updated = await storage.incrementTopicMention(req.params.id, quote, interactionId);
+      if (!updated) {
+        return res.status(404).json({ message: "Topic not found" });
+      }
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.delete("/api/content-topics/:id", async (req, res) => {
+    try {
+      await storage.deleteContentTopic(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Content Ideas
+  app.get("/api/content-ideas", async (req, res) => {
+    try {
+      const { topicId, status } = req.query;
+      let ideas;
+      if (topicId) {
+        ideas = await storage.getContentIdeasByTopic(topicId as string);
+      } else if (status) {
+        ideas = await storage.getContentIdeasByStatus(status as string);
+      } else {
+        ideas = await storage.getAllContentIdeas();
+      }
+      res.json(ideas);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.get("/api/content-ideas/:id", async (req, res) => {
+    try {
+      const idea = await storage.getContentIdea(req.params.id);
+      if (!idea) {
+        return res.status(404).json({ message: "Content idea not found" });
+      }
+      res.json(idea);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.post("/api/content-ideas", async (req, res) => {
+    try {
+      const parsed = insertContentIdeaSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: fromZodError(parsed.error).message });
+      }
+      const idea = await storage.createContentIdea(parsed.data);
+      res.status(201).json(idea);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.patch("/api/content-ideas/:id", async (req, res) => {
+    try {
+      const updated = await storage.updateContentIdea(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ message: "Content idea not found" });
+      }
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.delete("/api/content-ideas/:id", async (req, res) => {
+    try {
+      await storage.deleteContentIdea(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // AI Generate Content Ideas from Topic
+  app.post("/api/content-topics/:id/generate-ideas", async (req, res) => {
+    try {
+      const topic = await storage.getContentTopic(req.params.id);
+      if (!topic) {
+        return res.status(404).json({ message: "Topic not found" });
+      }
+      
+      // Get voice profile for authentic content
+      const voicePatterns = await storage.getAllVoiceProfiles();
+      const voiceContext = voicePatterns.length > 0 
+        ? `Voice style notes: ${voicePatterns.slice(0, 5).map(p => p.value).join('; ')}`
+        : '';
+      
+      const openaiClient = getOpenAI();
+      const response = await openaiClient.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: `You are a content strategist for a real estate professional. Generate content ideas based on topics that have come up in client conversations. The content should educate clients and establish expertise.
+            
+${voiceContext}
+
+For each content type, provide a specific, actionable idea with a compelling title.`
+          },
+          {
+            role: "user",
+            content: `Topic: "${topic.title}"
+Description: ${topic.description || 'N/A'}
+Times mentioned in conversations: ${topic.mentionCount}
+Sample quotes from clients: ${topic.sampleQuotes?.slice(0, 3).join(' | ') || 'None recorded'}
+
+Generate content ideas for:
+1. Blog post (educational, 800-1200 words)
+2. Short-form video (60 seconds, TikTok/Instagram Reels)
+3. Long-form video (5-10 min YouTube)
+4. Email newsletter segment
+5. FAQ entry
+
+Respond in JSON:
+{
+  "ideas": [
+    {"type": "blog", "title": "...", "description": "..."},
+    {"type": "video_short", "title": "...", "description": "..."},
+    {"type": "video_long", "title": "...", "description": "..."},
+    {"type": "email_newsletter", "title": "...", "description": "..."},
+    {"type": "faq", "title": "...", "description": "..."}
+  ]
+}`
+          }
+        ],
+        response_format: { type: "json_object" },
+      });
+      
+      const content = response.choices[0]?.message?.content || "{}";
+      const parsed = JSON.parse(content);
+      
+      // Save ideas to database
+      const createdIdeas = [];
+      for (const idea of parsed.ideas || []) {
+        const created = await storage.createContentIdea({
+          topicId: topic.id,
+          title: idea.title,
+          description: idea.description,
+          contentType: idea.type,
+          aiGenerated: true,
+          priority: topic.mentionCount || 1,
+        });
+        createdIdeas.push(created);
+      }
+      
+      // Update topic with AI suggestions
+      await storage.updateContentTopic(topic.id, {
+        aiSuggestions: {
+          blogPostIdeas: parsed.ideas?.filter((i: any) => i.type === 'blog').map((i: any) => i.title),
+          videoTopics: parsed.ideas?.filter((i: any) => i.type.includes('video')).map((i: any) => i.title),
+          faqQuestions: parsed.ideas?.filter((i: any) => i.type === 'faq').map((i: any) => i.title),
+        }
+      });
+      
+      res.json({ ideas: createdIdeas });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // AI Generate Draft Content
+  app.post("/api/content-ideas/:id/generate-draft", async (req, res) => {
+    try {
+      const idea = await storage.getContentIdea(req.params.id);
+      if (!idea) {
+        return res.status(404).json({ message: "Content idea not found" });
+      }
+      
+      // Get topic for context
+      const topic = idea.topicId ? await storage.getContentTopic(idea.topicId) : null;
+      
+      // Get voice profile
+      const voicePatterns = await storage.getAllVoiceProfiles();
+      const voiceContext = voicePatterns.length > 0 
+        ? voicePatterns.slice(0, 10).map(p => `${p.category}: "${p.value}"`).join('\n')
+        : '';
+      
+      const contentTypePrompts: Record<string, string> = {
+        blog: "Write a blog post (800-1200 words) that educates readers and establishes expertise. Use clear headings, practical examples, and actionable advice.",
+        video_short: "Write a script for a 60-second video. Include hook (first 3 seconds), main point, and call to action. Keep it punchy and engaging.",
+        video_long: "Write a detailed script for a 5-10 minute video. Include intro hook, main sections with talking points, and strong conclusion with CTA.",
+        email_newsletter: "Write an email newsletter section (300-500 words). Conversational tone, practical tips, and gentle call to action.",
+        podcast: "Write talking points and an outline for a 15-20 minute podcast episode. Include intro, 3-4 main discussion points, and outro.",
+        faq: "Write a comprehensive FAQ answer (150-300 words). Be clear, helpful, and thorough.",
+        social: "Write 3-5 social media posts for this topic. Include hashtag suggestions.",
+      };
+      
+      const openaiClient = getOpenAI();
+      const response = await openaiClient.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: `You are a content writer for a real estate professional. Write in their authentic voice based on these patterns:
+
+${voiceContext}
+
+Keep the content professional but warm and approachable. Focus on educating and helping, not selling.`
+          },
+          {
+            role: "user",
+            content: `Create content for:
+Title: "${idea.title}"
+Type: ${idea.contentType}
+Description: ${idea.description || 'N/A'}
+${topic ? `Related Topic: "${topic.title}" (mentioned ${topic.mentionCount} times)` : ''}
+${topic?.sampleQuotes?.length ? `Client quotes about this: ${topic.sampleQuotes.slice(0, 3).join(' | ')}` : ''}
+
+${contentTypePrompts[idea.contentType] || 'Write appropriate content for this format.'}`
+          }
+        ],
+      });
+      
+      const draft = response.choices[0]?.message?.content || "";
+      
+      // Update idea with draft
+      const updated = await storage.updateContentIdea(idea.id, {
+        draft,
+        status: 'drafted',
+      });
+      
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Content Calendar
+  app.get("/api/content-calendar", async (req, res) => {
+    try {
+      const { start, end } = req.query;
+      let items;
+      if (start && end) {
+        items = await storage.getContentCalendarByDateRange(
+          new Date(start as string),
+          new Date(end as string)
+        );
+      } else {
+        items = await storage.getAllContentCalendarItems();
+      }
+      res.json(items);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.get("/api/content-calendar/:id", async (req, res) => {
+    try {
+      const item = await storage.getContentCalendarItem(req.params.id);
+      if (!item) {
+        return res.status(404).json({ message: "Calendar item not found" });
+      }
+      res.json(item);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.post("/api/content-calendar", async (req, res) => {
+    try {
+      const parsed = insertContentCalendarSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: fromZodError(parsed.error).message });
+      }
+      const item = await storage.createContentCalendarItem(parsed.data);
+      res.status(201).json(item);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.patch("/api/content-calendar/:id", async (req, res) => {
+    try {
+      const updated = await storage.updateContentCalendarItem(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ message: "Calendar item not found" });
+      }
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.delete("/api/content-calendar/:id", async (req, res) => {
+    try {
+      await storage.deleteContentCalendarItem(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Schedule content idea to calendar
+  app.post("/api/content-ideas/:id/schedule", async (req, res) => {
+    try {
+      const idea = await storage.getContentIdea(req.params.id);
+      if (!idea) {
+        return res.status(404).json({ message: "Content idea not found" });
+      }
+      
+      const { scheduledDate, channel } = req.body;
+      
+      const calendarItem = await storage.createContentCalendarItem({
+        contentIdeaId: idea.id,
+        title: idea.title,
+        contentType: idea.contentType,
+        channel,
+        scheduledDate: scheduledDate ? new Date(scheduledDate) : null,
+        status: 'planned',
+      });
+      
+      res.status(201).json(calendarItem);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
