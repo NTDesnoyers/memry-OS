@@ -252,3 +252,4 @@ FORD notes are viewed before calls and handwritten notes. Watch for **changes** 
 - **Real Estate Review Workflow**: Annual home equity check-in generator
 - **Hot/Warm Dashboard Widget**: Quick-glance counts and overdue alerts on main dashboard
 - **Interaction Response Tracking**: Mark interactions as "got response" to power engagement scoring
+- **WhatsApp/Beeper Real-Time Sync**: Options include Beeper integration (unified inbox for all messaging apps) or WhatsApp Web bridge for automated sync. Manual export method already works via local-sync-agent.
