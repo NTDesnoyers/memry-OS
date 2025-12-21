@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { storage } from "./storage";
-import type { Interaction, Person, AIExtractedData, InsertGeneratedDraft, VoiceProfile } from "@shared/schema";
+import type { Interaction, Person, AIExtractedData, InsertGeneratedDraft, VoiceProfile, ContentTopic } from "@shared/schema";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -209,6 +209,113 @@ Extract patterns from Nathan's speech only.`
   }
 }
 
+// Content Topic Extraction - identify recurring pain points and questions for content creation
+const CONTENT_TOPIC_PROMPT = `You are analyzing a conversation between a real estate professional and a client. Your job is to identify PAIN POINTS, QUESTIONS, or AREAS OF CONFUSION that would make good content topics.
+
+Look for:
+1. Questions the client asked about the real estate process
+2. Confusion or misunderstandings that needed clarification
+3. Concerns or worries the client expressed
+4. Topics where the professional provided education or explanation
+5. Friction points in the buying/selling process
+
+For each topic found, provide:
+- A clear, specific topic title (e.g., "Understanding Inspection Contingencies", "Closing Cost Confusion")
+- A brief description of the pain point or question
+- A sample quote from the conversation (the client's words)
+- A category (buying, selling, financing, inspection, negotiation, closing, market, investment, other)
+
+Return JSON:
+{
+  "topics": [
+    {
+      "title": "...",
+      "description": "...",
+      "sampleQuote": "...",
+      "category": "..."
+    }
+  ]
+}
+
+Only include topics that represent genuine pain points or areas where education would help. Don't include small talk or casual conversation topics.`;
+
+export async function extractContentTopics(
+  transcript: string,
+  interactionId: string
+): Promise<{ topicsFound: number; newTopics: number }> {
+  if (!transcript || transcript.length < 200) {
+    return { topicsFound: 0, newTopics: 0 };
+  }
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: CONTENT_TOPIC_PROMPT },
+        {
+          role: "user",
+          content: `Analyze this conversation and identify content-worthy pain points and questions:
+
+---
+${transcript.slice(0, 12000)}
+---`
+        }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.3,
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) return { topicsFound: 0, newTopics: 0 };
+
+    const parsed = JSON.parse(content);
+    const topics = parsed.topics || [];
+    
+    let newTopicsCount = 0;
+    
+    // Get existing topics to check for matches
+    const existingTopics = await storage.getAllContentTopics();
+    
+    for (const topic of topics) {
+      if (!topic.title) continue;
+      
+      // Check if a similar topic already exists (fuzzy match)
+      const titleLower = topic.title.toLowerCase();
+      const existingMatch = existingTopics.find(t => 
+        t.title.toLowerCase().includes(titleLower) || 
+        titleLower.includes(t.title.toLowerCase()) ||
+        (t.title.toLowerCase().split(' ').filter(w => w.length > 4).some(w => titleLower.includes(w)))
+      );
+      
+      if (existingMatch) {
+        // Increment mention count and add quote/interactionId
+        await storage.incrementTopicMention(
+          existingMatch.id,
+          topic.sampleQuote,
+          interactionId
+        );
+      } else {
+        // Create new topic
+        await storage.createContentTopic({
+          title: topic.title,
+          description: topic.description,
+          category: topic.category,
+          sampleQuotes: topic.sampleQuote ? [topic.sampleQuote] : [],
+          relatedInteractionIds: [interactionId],
+          mentionCount: 1,
+          status: 'active',
+        });
+        newTopicsCount++;
+      }
+    }
+    
+    return { topicsFound: topics.length, newTopics: newTopicsCount };
+  } catch (error) {
+    console.error("Error extracting content topics:", error);
+    return { topicsFound: 0, newTopics: 0 };
+  }
+}
+
 // Get the current voice profile for use in draft generation
 export async function getVoiceContext(): Promise<string> {
   const profiles = await storage.getAllVoiceProfiles();
@@ -380,6 +487,7 @@ export async function processInteraction(interactionId: string): Promise<{
   extractedData?: AIExtractedData;
   draftsCreated?: number;
   voicePatternsExtracted?: boolean;
+  contentTopicsFound?: number;
   error?: string;
 }> {
   try {
@@ -398,9 +506,15 @@ export async function processInteraction(interactionId: string): Promise<{
     // Also extract Nathan's voice patterns from the transcript
     const transcript = interaction.transcript || interaction.summary || "";
     let voicePatternsExtracted = false;
+    let contentTopicsFound = 0;
+    
     if (transcript && transcript.length >= 200) {
       await extractVoicePatterns(transcript, interaction.title || interactionId);
       voicePatternsExtracted = true;
+      
+      // Extract content topics for Content Intelligence Center
+      const topicResult = await extractContentTopics(transcript, interactionId);
+      contentTopicsFound = topicResult.topicsFound;
     }
 
     await storage.updateInteraction(interactionId, {
@@ -499,6 +613,7 @@ export async function processInteraction(interactionId: string): Promise<{
         extractedData,
         draftsCreated: drafts.length,
         voicePatternsExtracted,
+        contentTopicsFound,
       };
     }
 
@@ -507,6 +622,7 @@ export async function processInteraction(interactionId: string): Promise<{
       extractedData,
       draftsCreated: 0,
       voicePatternsExtracted,
+      contentTopicsFound,
     };
   } catch (error) {
     console.error("Error processing interaction:", error);
