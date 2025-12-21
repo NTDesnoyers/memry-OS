@@ -21,7 +21,8 @@ import {
   FileEdit,
   Handshake,
   Mic,
-  UserX
+  UserX,
+  Lightbulb
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -39,6 +40,7 @@ const navItems = [
   { name: "Weekly Agenda", href: "/weekly-report", icon: Calendar },
   { name: "People", href: "/people", icon: Users },
   { name: "Business Tracker", href: "/business-tracker", icon: PieChart },
+  { name: "Content", href: "/content", icon: Lightbulb },
   { name: "Haves & Wants", href: "/haves-wants", icon: Mail },
   { name: "Referrals", href: "/referrals", icon: Handshake },
   { name: "Calendar", href: "/calendar", icon: Calendar },

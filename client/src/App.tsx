@@ -27,6 +27,7 @@ import Calendar from "@/pages/calendar";
 import Settings from "@/pages/settings";
 import VoiceProfile from "@/pages/voice-profile";
 import Flow from "@/pages/flow";
+import ContentIntelligence from "@/pages/content-intelligence";
 
 function Router() {
   return (
@@ -54,6 +55,7 @@ function Router() {
       <Route path="/integrations" component={Integrations} />
       <Route path="/settings" component={Settings} />
       <Route path="/voice-profile" component={VoiceProfile} />
+      <Route path="/content" component={ContentIntelligence} />
       <Route component={NotFound} />
     </Switch>
   );
