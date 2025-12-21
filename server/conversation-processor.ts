@@ -210,20 +210,25 @@ Extract patterns from Nathan's speech only.`
 }
 
 // Content Topic Extraction - identify recurring pain points and questions for content creation
-const CONTENT_TOPIC_PROMPT = `You are analyzing a conversation between a real estate professional and a client. Your job is to identify PAIN POINTS, QUESTIONS, or AREAS OF CONFUSION that would make good content topics.
+const CONTENT_TOPIC_PROMPT = `You are analyzing a conversation to identify PAIN POINTS, QUESTIONS, FRUSTRATIONS, or AREAS OF CONFUSION that would make good content topics.
 
-Look for:
-1. Questions the client asked about the real estate process
+Look for ANY type of pain point or issue, including but not limited to:
+1. Questions about any process or decision (real estate, life, business, finances, relationships, health, career, etc.)
 2. Confusion or misunderstandings that needed clarification
-3. Concerns or worries the client expressed
-4. Topics where the professional provided education or explanation
-5. Friction points in the buying/selling process
+3. Concerns, worries, fears, or anxieties expressed
+4. Frustrations with systems, processes, or experiences
+5. Challenges or obstacles they're facing
+6. Topics where explanation or education was provided
+7. Life transitions or changes causing stress
+8. Decision-making struggles
+9. Problems they're trying to solve
+10. Goals they're struggling to achieve
 
 For each topic found, provide:
-- A clear, specific topic title (e.g., "Understanding Inspection Contingencies", "Closing Cost Confusion")
+- A clear, specific topic title (e.g., "Work-Life Balance Struggles", "Understanding Inspection Contingencies", "Navigating Career Changes")
 - A brief description of the pain point or question
-- A sample quote from the conversation (the client's words)
-- A category (buying, selling, financing, inspection, negotiation, closing, market, investment, other)
+- A sample quote from the conversation (their actual words)
+- A category (real_estate, career, finance, relationships, health, lifestyle, business, parenting, technology, personal_growth, other)
 
 Return JSON:
 {
@@ -237,7 +242,7 @@ Return JSON:
   ]
 }
 
-Only include topics that represent genuine pain points or areas where education would help. Don't include small talk or casual conversation topics.`;
+Include any genuine pain point where content could help educate, comfort, or guide others with similar issues. Skip small talk and trivial conversation.`;
 
 export async function extractContentTopics(
   transcript: string,

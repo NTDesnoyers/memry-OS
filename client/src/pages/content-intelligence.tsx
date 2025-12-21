@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Layout from "@/components/layout";
 import { Button } from "@/components/ui/button";
@@ -29,8 +29,11 @@ import {
   Edit,
   Trash2,
   Clock,
-  Hash
+  Hash,
+  Pickaxe,
+  RefreshCw
 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import type { ContentTopic, ContentIdea, ContentCalendarItem } from "@shared/schema";
@@ -90,6 +93,52 @@ export default function ContentIntelligence() {
   const { data: calendarItems = [], isLoading: calendarLoading } = useQuery<ContentCalendarItem[]>({
     queryKey: ["/api/content-calendar"],
   });
+
+  // Mining status polling
+  const { data: miningStatus } = useQuery<{
+    isProcessing: boolean;
+    total: number;
+    processed: number;
+    topicsFound: number;
+    newTopics: number;
+  }>({
+    queryKey: ["/api/content-topics/mining-status"],
+    refetchInterval: (query) => query.state.data?.isProcessing ? 2000 : false,
+  });
+
+  const mineAllMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/content-topics/mine-all", {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to start mining");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Mining Started", description: "Analyzing all conversations for content topics..." });
+      queryClient.invalidateQueries({ queryKey: ["/api/content-topics/mining-status"] });
+    },
+    onError: (error: any) => {
+      if (error.message?.includes("409")) {
+        toast({ title: "Already Running", description: "Topic mining is already in progress." });
+      } else {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      }
+    },
+  });
+
+  // Refetch topics when mining completes
+  const prevMiningRef = useRef(miningStatus?.isProcessing);
+  useEffect(() => {
+    if (prevMiningRef.current === true && miningStatus?.isProcessing === false) {
+      queryClient.invalidateQueries({ queryKey: ["/api/content-topics"] });
+      toast({ 
+        title: "Mining Complete", 
+        description: `Found ${miningStatus.topicsFound} topics (${miningStatus.newTopics} new)` 
+      });
+    }
+    prevMiningRef.current = miningStatus?.isProcessing;
+  }, [miningStatus?.isProcessing]);
 
   const createTopicMutation = useMutation({
     mutationFn: async (data: typeof newTopic) => {
@@ -238,11 +287,47 @@ export default function ContentIntelligence() {
               <p className="text-sm text-muted-foreground">
                 Recurring themes from your conversations. Higher mention counts = more relevant content opportunities.
               </p>
-              <Button onClick={() => setShowNewTopicDialog(true)} data-testid="btn-add-topic">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Topic
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={() => mineAllMutation.mutate()} 
+                  disabled={miningStatus?.isProcessing || mineAllMutation.isPending}
+                  variant="outline"
+                  data-testid="btn-mine-all"
+                >
+                  {miningStatus?.isProcessing ? (
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Pickaxe className="h-4 w-4 mr-2" />
+                  )}
+                  {miningStatus?.isProcessing ? "Mining..." : "Mine All Conversations"}
+                </Button>
+                <Button onClick={() => setShowNewTopicDialog(true)} data-testid="btn-add-topic">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Topic
+                </Button>
+              </div>
             </div>
+            
+            {miningStatus?.isProcessing && (
+              <Card className="border-primary/20 bg-primary/5">
+                <CardContent className="py-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">Mining conversations for pain points...</span>
+                    <span className="text-sm text-muted-foreground">
+                      {miningStatus.processed} / {miningStatus.total}
+                    </span>
+                  </div>
+                  <Progress 
+                    value={miningStatus.total > 0 ? (miningStatus.processed / miningStatus.total) * 100 : 0} 
+                    className="h-2"
+                  />
+                  <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
+                    <span>{miningStatus.topicsFound} topics found</span>
+                    <span>{miningStatus.newTopics} new topics created</span>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {topicsLoading ? (
               <div className="flex items-center justify-center py-12">

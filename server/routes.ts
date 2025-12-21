@@ -29,7 +29,7 @@ import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import * as XLSX from "xlsx";
 import * as googleCalendar from "./google-calendar";
-import { processInteraction } from "./conversation-processor";
+import { processInteraction, extractContentTopics } from "./conversation-processor";
 
 // Background processing for batch operations
 let processingStatus = {
@@ -4154,6 +4154,63 @@ Respond in JSON format:
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
+  });
+  
+  // Mine all existing conversations for content topics
+  let topicMiningStatus = {
+    isProcessing: false,
+    total: 0,
+    processed: 0,
+    topicsFound: 0,
+    newTopics: 0,
+  };
+  
+  app.post("/api/content-topics/mine-all", async (req, res) => {
+    if (topicMiningStatus.isProcessing) {
+      return res.status(409).json({ 
+        message: "Topic mining already in progress",
+        status: topicMiningStatus
+      });
+    }
+    
+    // Start mining in background
+    const interactions = await storage.getAllInteractions();
+    const interactionsWithTranscripts = interactions.filter(
+      i => (i.transcript && i.transcript.length >= 200) || (i.summary && i.summary.length >= 200)
+    );
+    
+    topicMiningStatus = {
+      isProcessing: true,
+      total: interactionsWithTranscripts.length,
+      processed: 0,
+      topicsFound: 0,
+      newTopics: 0,
+    };
+    
+    res.json({ 
+      message: "Topic mining started",
+      totalToProcess: interactionsWithTranscripts.length
+    });
+    
+    // Process in background
+    (async () => {
+      for (const interaction of interactionsWithTranscripts) {
+        try {
+          const transcript = interaction.transcript || interaction.summary || "";
+          const result = await extractContentTopics(transcript, interaction.id);
+          topicMiningStatus.topicsFound += result.topicsFound;
+          topicMiningStatus.newTopics += result.newTopics;
+        } catch (error) {
+          console.error(`Error mining topics from interaction ${interaction.id}:`, error);
+        }
+        topicMiningStatus.processed++;
+      }
+      topicMiningStatus.isProcessing = false;
+    })();
+  });
+  
+  app.get("/api/content-topics/mining-status", async (req, res) => {
+    res.json(topicMiningStatus);
   });
   
   // Content Ideas
