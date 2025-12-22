@@ -111,7 +111,7 @@ export function FordTrackerCompact() {
   );
 }
 
-export function FordTrackerWidget() {
+export function FordTrackerWidget({ embedded = false }: { embedded?: boolean }) {
   const { data: interactions = [] } = useQuery<Interaction[]>({
     queryKey: ["/api/interactions"],
   });
@@ -130,6 +130,42 @@ export function FordTrackerWidget() {
   const isOnTrack = weeklyCount >= expectedByNow;
   const daysLeft = 7 - dayOfWeek + 1;
   const perDayNeeded = remaining > 0 ? Math.ceil(remaining / daysLeft) : 0;
+  
+  if (embedded) {
+    return (
+      <div className="space-y-4" data-testid="ford-tracker-embedded">
+        <div className="text-center">
+          <div className="text-4xl font-bold text-emerald-700" data-testid="text-ford-embedded-count">
+            {weeklyCount}
+            <span className="text-xl font-normal text-emerald-600">/{WEEKLY_GOAL}</span>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">households this week</p>
+        </div>
+        
+        <Progress value={percentage} className="h-3" />
+        
+        <div className="flex justify-between text-sm">
+          {isOnTrack ? (
+            <span className="flex items-center gap-1 text-emerald-600">
+              <TrendingUp className="h-4 w-4" />
+              On track!
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 text-amber-600">
+              <Target className="h-4 w-4" />
+              {remaining} to go
+            </span>
+          )}
+          
+          {remaining > 0 && (
+            <span className="text-muted-foreground">
+              ~{perDayNeeded}/day
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  }
   
   return (
     <Card 

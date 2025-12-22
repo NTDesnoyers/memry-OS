@@ -1,194 +1,15 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight, Calendar, CheckCircle2, Layout, Plus, PieChart, TrendingUp, Users, DollarSign, Workflow, Mic, FileEdit, Sparkles, Loader2, ListTodo, RefreshCw, AlertCircle, ExternalLink } from "lucide-react";
+import { ArrowRight, Calendar, CheckCircle2, Plus, Workflow } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import LayoutComponent from "@/components/layout";
-import { FordTrackerWidget } from "@/components/ford-tracker";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-
-type VoicePattern = { id: string; category: string; value: string; frequency: number };
-type GeneratedDraft = { id: string; status: string; type: string };
-type ProcessingStatus = { isProcessing: boolean; processed: number; totalToProcess: number };
-type Task = { id: string; todoistId: string | null; completed: boolean };
-
-function TodoistWidget() {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  
-  const { data: status, isLoading: statusLoading } = useQuery<{ connected: boolean; error?: string }>({
-    queryKey: ["/api/todoist/status"],
-  });
-  
-  const { data: tasks = [] } = useQuery<Task[]>({
-    queryKey: ["/api/tasks"],
-  });
-  
-  const syncMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/todoist/sync-tasks");
-      return res.json();
-    },
-    onSuccess: (data: { synced: number; failed: number; total: number }) => {
-      toast({ 
-        title: "Synced to Todoist", 
-        description: `${data.synced} tasks exported successfully` 
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-    },
-    onError: (error: Error) => {
-      toast({ title: "Sync failed", description: error.message, variant: "destructive" });
-    },
-  });
-  
-  const isConnected = status?.connected === true;
-  const unsyncedTasks = tasks.filter(t => !t.completed && !t.todoistId).length;
-  
-  return (
-    <Card className="border-none shadow-md bg-gradient-to-br from-red-50 to-orange-50" data-testid="todoist-widget">
-      <CardHeader className="pb-2">
-        <CardTitle className="font-serif text-lg flex items-center gap-2">
-          <ListTodo className="h-5 w-5 text-red-600" />
-          Todoist
-        </CardTitle>
-        <CardDescription>GTD task management</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {statusLoading ? (
-          <div className="flex items-center justify-center py-4">
-            <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-          </div>
-        ) : isConnected ? (
-          <>
-            <div className="flex items-center justify-between p-3 bg-white/60 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-100 text-green-600 rounded-full">
-                  <CheckCircle2 className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="font-medium text-sm">Connected</p>
-                  <p className="text-xs text-muted-foreground">{unsyncedTasks} tasks to sync</p>
-                </div>
-              </div>
-              <Button 
-                size="sm" 
-                variant="outline"
-                onClick={() => syncMutation.mutate()}
-                disabled={syncMutation.isPending || unsyncedTasks === 0}
-                className="gap-1"
-                data-testid="button-quick-sync-todoist"
-              >
-                {syncMutation.isPending ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-3 w-3" />
-                )}
-                Sync
-              </Button>
-            </div>
-            <a 
-              href="https://todoist.com/app" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Open Todoist <ExternalLink className="h-3 w-3" />
-            </a>
-          </>
-        ) : (
-          <div className="flex items-center gap-3 p-3 bg-white/60 rounded-lg">
-            <div className="p-2 bg-amber-100 text-amber-600 rounded-full">
-              <AlertCircle className="h-4 w-4" />
-            </div>
-            <div className="flex-1">
-              <p className="font-medium text-sm">Not Connected</p>
-              <p className="text-xs text-muted-foreground">Set up in Integrations</p>
-            </div>
-            <Link href="/integrations">
-              <Button size="sm" variant="outline">Connect</Button>
-            </Link>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function AIStatusWidget() {
-  const { data: voicePatterns = [] } = useQuery<VoicePattern[]>({
-    queryKey: ["/api/voice-profile"],
-  });
-  
-  const { data: drafts = [] } = useQuery<GeneratedDraft[]>({
-    queryKey: ["/api/generated-drafts"],
-  });
-  
-  const { data: processingStatus } = useQuery<ProcessingStatus>({
-    queryKey: ["/api/interactions/process-status"],
-    refetchInterval: 5000,
-  });
-  
-  const pendingDrafts = drafts.filter(d => d.status === "pending").length;
-  const isProcessing = processingStatus?.isProcessing;
-  
-  return (
-    <Card className="border-none shadow-md bg-gradient-to-br from-indigo-50 to-purple-50">
-      <CardHeader className="pb-2">
-        <CardTitle className="font-serif text-lg flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-indigo-600" />
-          AI Assistant
-        </CardTitle>
-        <CardDescription>Learning your style & generating content</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <Link href="/voice-profile">
-          <div className="flex items-center justify-between p-3 bg-white/60 rounded-lg hover:bg-white/80 cursor-pointer transition-colors">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-indigo-100 text-indigo-600 rounded-full">
-                <Mic className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="font-medium text-sm">Voice Profile</p>
-                <p className="text-xs text-muted-foreground">{voicePatterns.length} patterns learned</p>
-              </div>
-            </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground" />
-          </div>
-        </Link>
-        
-        <Link href="/drafts">
-          <div className="flex items-center justify-between p-3 bg-white/60 rounded-lg hover:bg-white/80 cursor-pointer transition-colors">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 text-purple-600 rounded-full">
-                <FileEdit className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="font-medium text-sm">AI Drafts</p>
-                <p className="text-xs text-muted-foreground">{pendingDrafts} pending review</p>
-              </div>
-            </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground" />
-          </div>
-        </Link>
-        
-        {isProcessing && (
-          <div className="flex items-center gap-2 text-xs text-indigo-600 bg-white/60 p-2 rounded">
-            <Loader2 className="h-3 w-3 animate-spin" />
-            Processing conversations...
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
+import { DashboardWidgetGrid } from "@/components/dashboard-widgets";
 
 export default function Dashboard() {
   return (
     <LayoutComponent>
       <div className="min-h-screen bg-background relative overflow-hidden">
-        {/* Background Texture - hidden on mobile for performance */}
         <div 
           className="absolute inset-0 opacity-20 mix-blend-multiply pointer-events-none hidden md:block"
           style={{ backgroundImage: `url(${paperBg})`, backgroundSize: 'cover' }}
@@ -225,62 +46,9 @@ export default function Dashboard() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
-            <Card className="border-none shadow-sm bg-card/60 backdrop-blur-sm">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-green-100 text-green-700 rounded-full">
-                    <DollarSign className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">GCI YTD</p>
-                    <h3 className="text-2xl font-bold font-serif">$142,500</h3>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-none shadow-sm bg-card/60 backdrop-blur-sm">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-blue-100 text-blue-700 rounded-full">
-                    <TrendingUp className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Closed Units</p>
-                    <h3 className="text-2xl font-bold font-serif">12</h3>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-none shadow-sm bg-card/60 backdrop-blur-sm">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-purple-100 text-purple-700 rounded-full">
-                    <Users className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">New Contacts</p>
-                    <h3 className="text-2xl font-bold font-serif">84</h3>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-none shadow-sm bg-card/60 backdrop-blur-sm">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-amber-100 text-amber-700 rounded-full">
-                    <PieChart className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Productive Hrs</p>
-                    <h3 className="text-2xl font-bold font-serif">24.5</h3>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <DashboardWidgetGrid />
 
-          <div className="grid md:grid-cols-3 gap-4 md:gap-6">
+          <div className="grid md:grid-cols-3 gap-4 md:gap-6 mt-6">
             <Card className="md:col-span-2 border-none shadow-md bg-card/80 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="font-serif">Current Focus</CardTitle>
@@ -324,12 +92,6 @@ export default function Dashboard() {
                   </div>
                 </CardContent>
               </Card>
-
-              <FordTrackerWidget />
-              
-              <AIStatusWidget />
-              
-              <TodoistWidget />
               
               <Card className="border-none shadow-md bg-card/80 backdrop-blur-sm">
                 <CardHeader>
