@@ -95,7 +95,7 @@ async function fetchMeetings(apiKey: string, createdAfter?: string): Promise<any
   return allMeetings;
 }
 
-async function syncMeeting(meeting: any): Promise<{ success: boolean; action: string }> {
+async function syncMeeting(meeting: any): Promise<{ success: boolean; action: string; interactionId?: string }> {
   const externalId = generateExternalId(meeting);
   
   const existing = await storage.getInteractionByExternalId(externalId);
@@ -141,7 +141,7 @@ async function syncMeeting(meeting: any): Promise<{ success: boolean; action: st
   
   const occurredAt = meeting.created_at || meeting.recording_start_time || new Date().toISOString();
   
-  await storage.createInteraction({
+  const newInteraction = await storage.createInteraction({
     externalId,
     personId,
     type: "meeting",
@@ -155,7 +155,7 @@ async function syncMeeting(meeting: any): Promise<{ success: boolean; action: st
     externalLink: meeting.share_url || meeting.url,
   });
   
-  return { success: true, action: "created" };
+  return { success: true, action: "created", interactionId: newInteraction.id };
 }
 
 export async function runFathomSync(): Promise<{ synced: number; failed: number; message?: string }> {
@@ -182,17 +182,38 @@ export async function runFathomSync(): Promise<{ synced: number; failed: number;
     
     let synced = 0;
     let failed = 0;
+    const newInteractionIds: string[] = [];
     
     for (const meeting of meetings) {
       try {
         const result = await syncMeeting(meeting);
         if (result.action === "created") {
           synced++;
+          if (result.interactionId) {
+            newInteractionIds.push(result.interactionId);
+          }
           console.log(`[Fathom Sync] Synced: ${meeting.title || "Untitled"}`);
         }
       } catch (error: any) {
         failed++;
         console.error(`[Fathom Sync] Failed to sync meeting:`, error.message);
+      }
+    }
+    
+    // Auto-process all newly synced meetings to generate follow-ups
+    if (newInteractionIds.length > 0) {
+      console.log(`[Fathom Sync] Processing ${newInteractionIds.length} new meetings for follow-ups...`);
+      for (const interactionId of newInteractionIds) {
+        try {
+          const processResult = await processInteraction(interactionId);
+          if (processResult.success) {
+            console.log(`[Fathom Sync] Processed interaction, created ${processResult.draftsCreated || 0} drafts`);
+          } else {
+            console.log(`[Fathom Sync] Processing skipped: ${processResult.error || "unknown reason"}`);
+          }
+        } catch (error: any) {
+          console.error(`[Fathom Sync] Failed to process interaction:`, error.message);
+        }
       }
     }
     
