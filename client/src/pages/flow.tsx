@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { MentionTextarea, getDisplayText } from "@/components/mention-textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
@@ -126,6 +127,188 @@ type GeneratedDraft = {
   updatedAt: string;
 };
 
+function InteractionDetailSheet({ 
+  interaction, 
+  person, 
+  drafts,
+  onClose 
+}: { 
+  interaction: Interaction;
+  person?: Person;
+  drafts: GeneratedDraft[];
+  onClose: () => void;
+}) {
+  const { toast } = useToast();
+  const config = allInteractionTypes.find(t => t.value === interaction.type) || liveFlowTypes[0];
+  const Icon = config.icon;
+  const aiData = interaction.aiExtractedData as AIExtractedDataType | null;
+  
+  const relatedDrafts = drafts.filter(d => d.interactionId === interaction.id);
+  
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: "Copied to clipboard" });
+  };
+
+  const getTypeConfig = (type: string) => {
+    const configs: Record<string, { icon: any; label: string; color: string }> = {
+      email: { icon: Mail, label: "Email", color: "bg-blue-50 text-blue-700 border-blue-200" },
+      handwritten_note: { icon: FileText, label: "Note", color: "bg-amber-50 text-amber-700 border-amber-200" },
+      task: { icon: CheckSquare, label: "Task", color: "bg-green-50 text-green-700 border-green-200" },
+    };
+    return configs[type] || configs.email;
+  };
+  
+  return (
+    <div className="space-y-4" data-testid="interaction-detail-sheet">
+      <div className="flex items-center gap-3 pb-3 border-b">
+        <div className={`p-2 rounded-lg ${config.color.split(' ')[0]}`}>
+          <Icon className={`h-5 w-5 ${config.color.split(' ')[1]}`} />
+        </div>
+        <div className="flex-1">
+          <h3 className="font-semibold">{config.label}</h3>
+          <p className="text-xs text-muted-foreground">
+            {format(new Date(interaction.occurredAt || interaction.createdAt), "MMM d, yyyy 'at' h:mm a")}
+          </p>
+        </div>
+        <Button variant="ghost" size="icon" onClick={onClose} data-testid="button-close-detail">
+          <X className="h-5 w-5" />
+        </Button>
+      </div>
+      
+      {person && (
+        <Link href={`/people/${person.id}`}>
+          <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg" data-testid="link-person-profile">
+            <Avatar className="h-10 w-10">
+              <AvatarFallback className="bg-primary/10 text-primary">
+                {getInitials(person.name)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+              <p className="font-medium">{person.name}</p>
+              <p className="text-xs text-muted-foreground">View profile</p>
+            </div>
+            <ExternalLink className="h-4 w-4 text-muted-foreground" />
+          </div>
+        </Link>
+      )}
+      
+      {interaction.summary && (
+        <div>
+          <h4 className="text-sm font-medium text-muted-foreground mb-2">Summary</h4>
+          <div className="bg-muted/30 p-3 rounded-lg text-sm whitespace-pre-wrap">
+            {getDisplayText(interaction.summary)}
+          </div>
+        </div>
+      )}
+      
+      {aiData?.keyTopics && aiData.keyTopics.length > 0 && (
+        <div>
+          <h4 className="text-sm font-medium text-muted-foreground mb-2">Key Topics</h4>
+          <div className="flex flex-wrap gap-2">
+            {aiData.keyTopics.map((topic, i) => (
+              <Badge key={i} variant="secondary">{topic}</Badge>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {aiData?.actionItems && aiData.actionItems.length > 0 && (
+        <div>
+          <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+            <CheckSquare className="h-4 w-4" />
+            Action Items
+          </h4>
+          <div className="space-y-2">
+            {aiData.actionItems.map((item, i) => (
+              <div key={i} className="flex items-start gap-2 p-2 bg-green-50 rounded-lg text-sm">
+                <Check className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {relatedDrafts.length > 0 && (
+        <div>
+          <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+            <Sparkles className="h-4 w-4" />
+            AI-Generated Follow-ups ({relatedDrafts.length})
+          </h4>
+          <div className="space-y-2">
+            {relatedDrafts.map((draft) => {
+              const draftConfig = getTypeConfig(draft.type);
+              const DraftIcon = draftConfig.icon;
+              return (
+                <div key={draft.id} className="p-3 border rounded-lg" data-testid={`draft-${draft.id}`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`p-1 rounded ${draftConfig.color.split(' ')[0]}`}>
+                      <DraftIcon className={`h-3 w-3 ${draftConfig.color.split(' ')[1]}`} />
+                    </div>
+                    <Badge variant="outline" className={draftConfig.color}>{draftConfig.label}</Badge>
+                    <Badge variant={draft.status === "pending" ? "default" : "secondary"}>
+                      {draft.status}
+                    </Badge>
+                  </div>
+                  <p className="text-sm line-clamp-3 mb-2">{draft.content}</p>
+                  <Button size="sm" variant="outline" onClick={() => copyToClipboard(draft.content)}>
+                    <Copy className="h-3 w-3 mr-1" /> Copy
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      
+      {aiData?.fordUpdates && Object.values(aiData.fordUpdates).some(v => v) && (
+        <div>
+          <h4 className="text-sm font-medium text-muted-foreground mb-2">FORD Updates</h4>
+          <div className="grid grid-cols-2 gap-2">
+            {aiData.fordUpdates.family && (
+              <div className="p-2 bg-pink-50 rounded-lg">
+                <p className="text-xs font-medium text-pink-700">Family</p>
+                <p className="text-sm">{aiData.fordUpdates.family}</p>
+              </div>
+            )}
+            {aiData.fordUpdates.occupation && (
+              <div className="p-2 bg-blue-50 rounded-lg">
+                <p className="text-xs font-medium text-blue-700">Occupation</p>
+                <p className="text-sm">{aiData.fordUpdates.occupation}</p>
+              </div>
+            )}
+            {aiData.fordUpdates.recreation && (
+              <div className="p-2 bg-green-50 rounded-lg">
+                <p className="text-xs font-medium text-green-700">Recreation</p>
+                <p className="text-sm">{aiData.fordUpdates.recreation}</p>
+              </div>
+            )}
+            {aiData.fordUpdates.dreams && (
+              <div className="p-2 bg-purple-50 rounded-lg">
+                <p className="text-xs font-medium text-purple-700">Dreams</p>
+                <p className="text-sm">{aiData.fordUpdates.dreams}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      
+      {interaction.externalLink && (
+        <a 
+          href={interaction.externalLink} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg text-sm text-primary hover:underline"
+        >
+          <ExternalLink className="h-4 w-4" />
+          Open in Fathom/External Source
+        </a>
+      )}
+    </div>
+  );
+}
+
 function InteractionList({ 
   interactions, 
   people, 
@@ -141,6 +324,10 @@ function InteractionList({
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedInteraction, setSelectedInteraction] = useState<Interaction | null>(null);
+  
+  const { data: drafts = [] } = useQuery<GeneratedDraft[]>({
+    queryKey: ["/api/generated-drafts"],
+  });
   
   const getPersonById = (id: string | null) => people.find(p => p.id === id);
   
@@ -242,100 +429,24 @@ function InteractionList({
         );
       })}
       
-      {/* Conversation Detail Dialog */}
-      <Dialog open={!!selectedInteraction} onOpenChange={(open) => !open && setSelectedInteraction(null)}>
-        <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
-          {selectedInteraction && (() => {
-            const person = getPersonById(selectedInteraction.personId);
-            const config = getTypeConfig(selectedInteraction.type);
-            const Icon = config.icon;
-            
-            return (
-              <>
-                <DialogHeader>
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${config.color.split(' ')[0]}`}>
-                      <Icon className={`h-5 w-5 ${config.color.split(' ')[1]}`} />
-                    </div>
-                    <div>
-                      <DialogTitle className="flex items-center gap-2">
-                        {config.label}
-                        {person && <span className="text-muted-foreground font-normal">with {person.name}</span>}
-                      </DialogTitle>
-                      <DialogDescription>
-                        {format(new Date(selectedInteraction.occurredAt || selectedInteraction.createdAt), "MMMM d, yyyy 'at' h:mm a")}
-                      </DialogDescription>
-                    </div>
-                  </div>
-                </DialogHeader>
-                
-                <ScrollArea className="flex-1 pr-4">
-                  <div className="space-y-4">
-                    {selectedInteraction.title && (
-                      <div>
-                        <h4 className="text-sm font-medium text-muted-foreground mb-1">Title</h4>
-                        <p className="text-sm">{selectedInteraction.title}</p>
-                      </div>
-                    )}
-                    
-                    {selectedInteraction.summary && (
-                      <div>
-                        <h4 className="text-sm font-medium text-muted-foreground mb-1">Summary</h4>
-                        <div className="prose prose-sm max-w-none">
-                          <pre className="whitespace-pre-wrap font-sans text-sm bg-muted/50 p-3 rounded-lg">
-                            {getDisplayText(selectedInteraction.summary)}
-                          </pre>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {selectedInteraction.transcript && (
-                      <div>
-                        <h4 className="text-sm font-medium text-muted-foreground mb-1">Transcript</h4>
-                        <div className="prose prose-sm max-w-none">
-                          <pre className="whitespace-pre-wrap font-sans text-sm bg-muted/50 p-3 rounded-lg max-h-80 overflow-auto">
-                            {selectedInteraction.transcript}
-                          </pre>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {selectedInteraction.externalLink && (
-                      <div>
-                        <h4 className="text-sm font-medium text-muted-foreground mb-1">External Link</h4>
-                        <a 
-                          href={selectedInteraction.externalLink} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-sm text-primary hover:underline flex items-center gap-1"
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                          {selectedInteraction.externalLink}
-                        </a>
-                      </div>
-                    )}
-                    
-                    {selectedInteraction.aiExtractedData && Object.keys(selectedInteraction.aiExtractedData as object).length > 0 && (
-                      <AIInsightsSection data={selectedInteraction.aiExtractedData} />
-                    )}
-                  </div>
-                </ScrollArea>
-                
-                <DialogFooter className="mt-4">
-                  {person && (
-                    <Link href={`/people/${person.id}`}>
-                      <Button variant="outline" onClick={() => setSelectedInteraction(null)}>
-                        View {person.name}'s Profile
-                      </Button>
-                    </Link>
-                  )}
-                  <Button onClick={() => setSelectedInteraction(null)}>Close</Button>
-                </DialogFooter>
-              </>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
+      {/* Conversation Detail - Mobile-friendly Drawer */}
+      <Drawer open={!!selectedInteraction} onOpenChange={(open) => !open && setSelectedInteraction(null)}>
+        <DrawerContent className="max-h-[90vh]">
+          <DrawerHeader className="sr-only">
+            <DrawerTitle>Conversation Details</DrawerTitle>
+          </DrawerHeader>
+          <ScrollArea className="p-4 overflow-y-auto max-h-[85vh]">
+            {selectedInteraction && (
+              <InteractionDetailSheet
+                interaction={selectedInteraction}
+                person={getPersonById(selectedInteraction.personId)}
+                drafts={drafts}
+                onClose={() => setSelectedInteraction(null)}
+              />
+            )}
+          </ScrollArea>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }
