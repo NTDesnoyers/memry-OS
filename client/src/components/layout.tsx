@@ -41,7 +41,6 @@ import { useQuery } from "@tanstack/react-query";
 const navItems = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Flow", href: "/flow", icon: Repeat },
-  { name: "Weekly Agenda", href: "/weekly-report", icon: Calendar },
   { name: "People", href: "/people", icon: Users },
   { name: "Business Tracker", href: "/business-tracker", icon: PieChart },
   { name: "Content", href: "/content", icon: Lightbulb },
