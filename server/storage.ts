@@ -29,7 +29,10 @@ import {
   type ContentTopic, type InsertContentTopic,
   type ContentIdea, type InsertContentIdea,
   type ContentCalendarItem, type InsertContentCalendar,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar
+  type ListeningAnalysis, type InsertListeningAnalysis,
+  type CoachingInsight, type InsertCoachingInsight,
+  type ListeningPattern, type InsertListeningPattern,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt } from "drizzle-orm";
@@ -294,6 +297,26 @@ export interface IStorage {
   createContentCalendarItem(item: InsertContentCalendar): Promise<ContentCalendarItem>;
   updateContentCalendarItem(id: string, item: Partial<InsertContentCalendar>): Promise<ContentCalendarItem | undefined>;
   deleteContentCalendarItem(id: string): Promise<void>;
+  
+  // Listening Analysis - NVC + Question-Based Selling
+  getAllListeningAnalysis(): Promise<ListeningAnalysis[]>;
+  getListeningAnalysisByInteraction(interactionId: string): Promise<ListeningAnalysis | undefined>;
+  createListeningAnalysis(analysis: InsertListeningAnalysis): Promise<ListeningAnalysis>;
+  getInteractionsWithTranscripts(): Promise<Interaction[]>;
+  
+  // Coaching Insights
+  getAllCoachingInsights(): Promise<CoachingInsight[]>;
+  getActiveCoachingInsights(): Promise<CoachingInsight[]>;
+  getCoachingInsight(id: string): Promise<CoachingInsight | undefined>;
+  createCoachingInsight(insight: InsertCoachingInsight): Promise<CoachingInsight>;
+  updateCoachingInsight(id: string, insight: Partial<InsertCoachingInsight>): Promise<CoachingInsight | undefined>;
+  deleteCoachingInsight(id: string): Promise<void>;
+  
+  // Listening Patterns
+  getAllListeningPatterns(): Promise<ListeningPattern[]>;
+  getListeningPattern(id: string): Promise<ListeningPattern | undefined>;
+  createListeningPattern(pattern: InsertListeningPattern): Promise<ListeningPattern>;
+  updateListeningPattern(id: string, pattern: Partial<InsertListeningPattern>): Promise<ListeningPattern | undefined>;
 }
 
 /** Result of contact due calculation with reason and days overdue. */
@@ -1506,6 +1529,87 @@ export class DatabaseStorage implements IStorage {
   
   async deleteContentCalendarItem(id: string): Promise<void> {
     await db.delete(contentCalendar).where(eq(contentCalendar.id, id));
+  }
+  
+  // Listening Analysis - NVC + Question-Based Selling
+  async getAllListeningAnalysis(): Promise<ListeningAnalysis[]> {
+    return await db.select().from(listeningAnalysis).orderBy(desc(listeningAnalysis.createdAt));
+  }
+  
+  async getListeningAnalysisByInteraction(interactionId: string): Promise<ListeningAnalysis | undefined> {
+    const [analysis] = await db.select().from(listeningAnalysis)
+      .where(eq(listeningAnalysis.interactionId, interactionId));
+    return analysis || undefined;
+  }
+  
+  async createListeningAnalysis(analysis: InsertListeningAnalysis): Promise<ListeningAnalysis> {
+    const [created] = await db.insert(listeningAnalysis).values(analysis).returning();
+    return created;
+  }
+  
+  async getInteractionsWithTranscripts(): Promise<Interaction[]> {
+    return await db.select().from(interactions)
+      .where(and(
+        isNotNull(interactions.transcript),
+        isNull(interactions.deletedAt)
+      ))
+      .orderBy(desc(interactions.occurredAt));
+  }
+  
+  // Coaching Insights
+  async getAllCoachingInsights(): Promise<CoachingInsight[]> {
+    return await db.select().from(coachingInsights).orderBy(desc(coachingInsights.createdAt));
+  }
+  
+  async getActiveCoachingInsights(): Promise<CoachingInsight[]> {
+    return await db.select().from(coachingInsights)
+      .where(eq(coachingInsights.status, "active"))
+      .orderBy(desc(coachingInsights.confidenceScore));
+  }
+  
+  async getCoachingInsight(id: string): Promise<CoachingInsight | undefined> {
+    const [insight] = await db.select().from(coachingInsights).where(eq(coachingInsights.id, id));
+    return insight || undefined;
+  }
+  
+  async createCoachingInsight(insight: InsertCoachingInsight): Promise<CoachingInsight> {
+    const [created] = await db.insert(coachingInsights).values(insight).returning();
+    return created;
+  }
+  
+  async updateCoachingInsight(id: string, insight: Partial<InsertCoachingInsight>): Promise<CoachingInsight | undefined> {
+    const [updated] = await db.update(coachingInsights)
+      .set({ ...insight, updatedAt: new Date() })
+      .where(eq(coachingInsights.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async deleteCoachingInsight(id: string): Promise<void> {
+    await db.delete(coachingInsights).where(eq(coachingInsights.id, id));
+  }
+  
+  // Listening Patterns
+  async getAllListeningPatterns(): Promise<ListeningPattern[]> {
+    return await db.select().from(listeningPatterns).orderBy(desc(listeningPatterns.frequency));
+  }
+  
+  async getListeningPattern(id: string): Promise<ListeningPattern | undefined> {
+    const [pattern] = await db.select().from(listeningPatterns).where(eq(listeningPatterns.id, id));
+    return pattern || undefined;
+  }
+  
+  async createListeningPattern(pattern: InsertListeningPattern): Promise<ListeningPattern> {
+    const [created] = await db.insert(listeningPatterns).values(pattern).returning();
+    return created;
+  }
+  
+  async updateListeningPattern(id: string, pattern: Partial<InsertListeningPattern>): Promise<ListeningPattern | undefined> {
+    const [updated] = await db.update(listeningPatterns)
+      .set({ ...pattern, updatedAt: new Date() })
+      .where(eq(listeningPatterns.id, id))
+      .returning();
+    return updated || undefined;
   }
 }
 
