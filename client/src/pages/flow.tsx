@@ -176,6 +176,14 @@ function InteractionDetailSheet({
         </Button>
       </div>
       
+      {interaction.summary && (
+        <div className="bg-gradient-to-br from-primary/5 to-primary/10 p-4 rounded-xl border border-primary/20">
+          <p className="text-base leading-relaxed whitespace-pre-wrap">
+            {getDisplayText(interaction.summary)}
+          </p>
+        </div>
+      )}
+      
       {person && (
         <Link href={`/people/${person.id}`}>
           <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg" data-testid="link-person-profile">
@@ -191,15 +199,6 @@ function InteractionDetailSheet({
             <ExternalLink className="h-4 w-4 text-muted-foreground" />
           </div>
         </Link>
-      )}
-      
-      {interaction.summary && (
-        <div>
-          <h4 className="text-sm font-medium text-muted-foreground mb-2">Summary</h4>
-          <div className="bg-muted/30 p-3 rounded-lg text-sm whitespace-pre-wrap">
-            {getDisplayText(interaction.summary)}
-          </div>
-        </div>
       )}
       
       {aiData?.keyTopics && aiData.keyTopics.length > 0 && (
