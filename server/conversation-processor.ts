@@ -150,6 +150,46 @@ Return JSON with the extracted data.`
   }
 }
 
+// Generate a concise summary of the conversation
+async function generateConversationSummary(
+  transcript: string,
+  person: Person | null,
+  extractedData: AIExtractedData
+): Promise<string> {
+  try {
+    const personContext = person ? `with ${person.name}` : "";
+    const keyTopics = extractedData.keyTopics?.join(", ") || "";
+    
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { 
+          role: "system", 
+          content: `You are a concise meeting summarizer. Create a brief, natural summary of this conversation in 2-4 sentences. Focus on the key topics discussed and any important outcomes or next steps. Write in past tense, third person perspective. Do not use bullet points.`
+        },
+        { 
+          role: "user", 
+          content: `Summarize this conversation${personContext}:
+
+Key topics covered: ${keyTopics}
+
+Transcript excerpt:
+${transcript.slice(0, 8000)}
+
+Write a brief 2-4 sentence summary.`
+        }
+      ],
+      temperature: 0.5,
+      max_tokens: 300,
+    });
+
+    return response.choices[0]?.message?.content?.trim() || "";
+  } catch (error) {
+    console.error("Error generating summary:", error);
+    return "";
+  }
+}
+
 // Extract Nathan's voice patterns from a transcript
 export async function extractVoicePatterns(
   transcript: string,
@@ -512,6 +552,7 @@ export async function processInteraction(interactionId: string): Promise<{
     const transcript = interaction.transcript || interaction.summary || "";
     let voicePatternsExtracted = false;
     let contentTopicsFound = 0;
+    let generatedSummary: string | undefined;
     
     if (transcript && transcript.length >= 200) {
       await extractVoicePatterns(transcript, interaction.title || interactionId);
@@ -520,10 +561,16 @@ export async function processInteraction(interactionId: string): Promise<{
       // Extract content topics for Content Intelligence Center
       const topicResult = await extractContentTopics(transcript, interactionId);
       contentTopicsFound = topicResult.topicsFound;
+      
+      // Generate summary if one doesn't exist
+      if (!interaction.summary || interaction.summary.trim().length === 0) {
+        generatedSummary = await generateConversationSummary(transcript, person, extractedData);
+      }
     }
 
     await storage.updateInteraction(interactionId, {
       aiExtractedData: extractedData,
+      ...(generatedSummary && { summary: generatedSummary }),
     });
 
     if (person && extractedData.processingStatus === "completed") {
