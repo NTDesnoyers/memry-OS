@@ -4693,5 +4693,26 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
     }
   });
 
+  // Fathom.video sync routes
+  const { runFathomSync, getFathomSyncStatus } = await import("./fathom-sync");
+  
+  app.get("/api/fathom/status", async (req, res) => {
+    try {
+      const status = getFathomSyncStatus();
+      res.json(status);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.post("/api/fathom/sync", async (req, res) => {
+    try {
+      const result = await runFathomSync();
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }

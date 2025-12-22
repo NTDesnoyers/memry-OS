@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { storage } from "./storage";
+import { startFathomSyncScheduler } from "./fathom-sync";
 
 const app = express();
 const httpServer = createServer(app);
@@ -87,6 +88,9 @@ app.use((req, res, next) => {
   // Run cleanup immediately and then every 24 hours
   runCleanup();
   setInterval(runCleanup, 24 * 60 * 60 * 1000);
+
+  // Start Fathom.video automatic sync scheduler
+  startFathomSyncScheduler();
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
