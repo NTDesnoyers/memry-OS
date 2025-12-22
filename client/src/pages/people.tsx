@@ -1,3 +1,4 @@
+import Layout from "@/components/layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -274,12 +275,13 @@ export default function People() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
-      {/* Top Action Bar */}
-      <div className="h-14 border-b bg-card flex items-center justify-between px-4 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <Users className="h-5 w-5 text-primary" />
-          <h1 className="text-lg font-semibold">People</h1>
+    <Layout>
+      <div className="h-full flex flex-col bg-background overflow-hidden">
+        {/* Top Action Bar */}
+        <div className="h-14 border-b bg-card flex items-center justify-between px-4 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <Users className="h-5 w-5 text-primary" />
+            <h1 className="text-lg font-semibold">People</h1>
           {selectedPerson && (
             <span className="text-muted-foreground">/ {selectedPerson.name}</span>
           )}
@@ -1025,6 +1027,7 @@ export default function People() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </Layout>
   );
 }
