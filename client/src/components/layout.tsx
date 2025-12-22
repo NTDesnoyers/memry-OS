@@ -22,7 +22,8 @@ import {
   Handshake,
   Mic,
   UserX,
-  Lightbulb
+  Lightbulb,
+  Globe
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -39,6 +40,7 @@ const navItems = [
   { name: "Flow", href: "/flow", icon: Repeat },
   { name: "Weekly Agenda", href: "/weekly-report", icon: Calendar },
   { name: "People", href: "/people", icon: Users },
+  { name: "My Sphere", href: "/sphere", icon: Globe },
   { name: "Business Tracker", href: "/business-tracker", icon: PieChart },
   { name: "Content", href: "/content", icon: Lightbulb },
   { name: "Haves & Wants", href: "/haves-wants", icon: Mail },
