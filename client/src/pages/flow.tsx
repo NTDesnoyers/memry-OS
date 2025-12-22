@@ -54,6 +54,64 @@ const autoFlowTypes = [
 
 const allInteractionTypes = [...liveFlowTypes, ...autoFlowTypes];
 
+type AIExtractedDataType = {
+  keyTopics?: string[];
+  actionItems?: string[];
+  fordUpdates?: {
+    family?: string;
+    occupation?: string;
+    recreation?: string;
+    dreams?: string;
+  };
+};
+
+function AIInsightsSection({ data }: { data: unknown }) {
+  const aiData = data as AIExtractedDataType;
+  
+  return (
+    <div>
+      <h4 className="text-sm font-medium text-muted-foreground mb-1">AI Extracted Insights</h4>
+      <div className="bg-muted/50 p-3 rounded-lg text-sm space-y-2">
+        {aiData.keyTopics?.length ? (
+          <div>
+            <span className="font-medium">Key Topics: </span>
+            {aiData.keyTopics.join(", ")}
+          </div>
+        ) : null}
+        {aiData.actionItems?.length ? (
+          <div>
+            <span className="font-medium">Action Items: </span>
+            <ul className="list-disc list-inside">
+              {aiData.actionItems.map((item: string, i: number) => (
+                <li key={i}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        {aiData.fordUpdates && (
+          <div>
+            <span className="font-medium">FORD Updates: </span>
+            <ul className="list-disc list-inside">
+              {aiData.fordUpdates.family && (
+                <li><span className="font-medium">Family:</span> {aiData.fordUpdates.family}</li>
+              )}
+              {aiData.fordUpdates.occupation && (
+                <li><span className="font-medium">Occupation:</span> {aiData.fordUpdates.occupation}</li>
+              )}
+              {aiData.fordUpdates.recreation && (
+                <li><span className="font-medium">Recreation:</span> {aiData.fordUpdates.recreation}</li>
+              )}
+              {aiData.fordUpdates.dreams && (
+                <li><span className="font-medium">Dreams:</span> {aiData.fordUpdates.dreams}</li>
+              )}
+            </ul>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 type GeneratedDraft = {
   id: string;
   personId: string | null;
@@ -81,6 +139,7 @@ function InteractionList({
   onDelete: (id: string) => void;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedInteraction, setSelectedInteraction] = useState<Interaction | null>(null);
   
   const getPersonById = (id: string | null) => people.find(p => p.id === id);
   
@@ -126,7 +185,12 @@ function InteractionList({
         const Icon = config.icon;
         
         return (
-          <Card key={interaction.id} className="hover:shadow-md transition-shadow" data-testid={`interaction-card-${interaction.id}`}>
+          <Card 
+            key={interaction.id} 
+            className="hover:shadow-md transition-shadow cursor-pointer" 
+            data-testid={`interaction-card-${interaction.id}`}
+            onClick={() => setSelectedInteraction(interaction)}
+          >
             <CardContent className="p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex gap-3 flex-1">
@@ -145,7 +209,7 @@ function InteractionList({
                     </div>
                     
                     {person && (
-                      <Link href={`/people/${person.id}`}>
+                      <Link href={`/people/${person.id}`} onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-2 mb-2 hover:underline cursor-pointer">
                           <Avatar className="h-6 w-6">
                             <AvatarFallback className="text-xs bg-slate-100">
@@ -163,7 +227,7 @@ function InteractionList({
                   </div>
                 </div>
                 
-                <div className="flex gap-1 shrink-0">
+                <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(interaction)}>
                     <Edit2 className="h-4 w-4" />
                   </Button>
@@ -176,6 +240,101 @@ function InteractionList({
           </Card>
         );
       })}
+      
+      {/* Conversation Detail Dialog */}
+      <Dialog open={!!selectedInteraction} onOpenChange={(open) => !open && setSelectedInteraction(null)}>
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
+          {selectedInteraction && (() => {
+            const person = getPersonById(selectedInteraction.personId);
+            const config = getTypeConfig(selectedInteraction.type);
+            const Icon = config.icon;
+            
+            return (
+              <>
+                <DialogHeader>
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${config.color.split(' ')[0]}`}>
+                      <Icon className={`h-5 w-5 ${config.color.split(' ')[1]}`} />
+                    </div>
+                    <div>
+                      <DialogTitle className="flex items-center gap-2">
+                        {config.label}
+                        {person && <span className="text-muted-foreground font-normal">with {person.name}</span>}
+                      </DialogTitle>
+                      <DialogDescription>
+                        {format(new Date(selectedInteraction.occurredAt || selectedInteraction.createdAt), "MMMM d, yyyy 'at' h:mm a")}
+                      </DialogDescription>
+                    </div>
+                  </div>
+                </DialogHeader>
+                
+                <ScrollArea className="flex-1 pr-4">
+                  <div className="space-y-4">
+                    {selectedInteraction.title && (
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground mb-1">Title</h4>
+                        <p className="text-sm">{selectedInteraction.title}</p>
+                      </div>
+                    )}
+                    
+                    {selectedInteraction.summary && (
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground mb-1">Summary</h4>
+                        <div className="prose prose-sm max-w-none">
+                          <pre className="whitespace-pre-wrap font-sans text-sm bg-muted/50 p-3 rounded-lg">
+                            {getDisplayText(selectedInteraction.summary)}
+                          </pre>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {selectedInteraction.transcript && (
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground mb-1">Transcript</h4>
+                        <div className="prose prose-sm max-w-none">
+                          <pre className="whitespace-pre-wrap font-sans text-sm bg-muted/50 p-3 rounded-lg max-h-80 overflow-auto">
+                            {selectedInteraction.transcript}
+                          </pre>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {selectedInteraction.externalLink && (
+                      <div>
+                        <h4 className="text-sm font-medium text-muted-foreground mb-1">External Link</h4>
+                        <a 
+                          href={selectedInteraction.externalLink} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-sm text-primary hover:underline flex items-center gap-1"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          {selectedInteraction.externalLink}
+                        </a>
+                      </div>
+                    )}
+                    
+                    {selectedInteraction.aiExtractedData && Object.keys(selectedInteraction.aiExtractedData as object).length > 0 && (
+                      <AIInsightsSection data={selectedInteraction.aiExtractedData} />
+                    )}
+                  </div>
+                </ScrollArea>
+                
+                <DialogFooter className="mt-4">
+                  {person && (
+                    <Link href={`/people/${person.id}`}>
+                      <Button variant="outline" onClick={() => setSelectedInteraction(null)}>
+                        View {person.name}'s Profile
+                      </Button>
+                    </Link>
+                  )}
+                  <Button onClick={() => setSelectedInteraction(null)}>Close</Button>
+                </DialogFooter>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
