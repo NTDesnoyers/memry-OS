@@ -176,11 +176,16 @@ function InteractionDetailSheet({
         </Button>
       </div>
       
-      {interaction.summary && (
-        <div className="bg-gradient-to-br from-primary/5 to-primary/10 p-4 rounded-xl border border-primary/20">
-          <p className="text-base leading-relaxed whitespace-pre-wrap">
+      {interaction.summary ? (
+        <div className="bg-blue-100 border-2 border-blue-400 p-4 rounded-xl">
+          <h4 className="text-sm font-bold text-blue-800 mb-2 uppercase tracking-wide">Conversation Summary</h4>
+          <p className="text-base leading-relaxed whitespace-pre-wrap text-blue-900">
             {getDisplayText(interaction.summary)}
           </p>
+        </div>
+      ) : (
+        <div className="bg-gray-100 p-4 rounded-xl text-gray-500 text-sm">
+          No summary available for this conversation
         </div>
       )}
       
