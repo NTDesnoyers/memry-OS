@@ -4519,5 +4519,179 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
     }
   });
 
+  // Listening Analysis - NVC + Question-Based Selling
+  app.get("/api/listening-analysis", async (req, res) => {
+    try {
+      const analyses = await storage.getAllListeningAnalysis();
+      res.json(analyses);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.get("/api/listening-analysis/interaction/:interactionId", async (req, res) => {
+    try {
+      const analysis = await storage.getListeningAnalysisByInteraction(req.params.interactionId);
+      if (!analysis) {
+        return res.status(404).json({ message: "No listening analysis found for this interaction" });
+      }
+      res.json(analysis);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.post("/api/listening-analysis/analyze", async (req, res) => {
+    try {
+      const { analyzeAllConversationsForListening } = await import("./listening-analyzer");
+      const result = await analyzeAllConversationsForListening();
+      res.json({ 
+        message: `Analyzed ${result.analyzed} conversations, generated ${result.insights} coaching insights`,
+        ...result 
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.post("/api/listening-analysis/analyze-single/:interactionId", async (req, res) => {
+    try {
+      const interaction = await storage.getInteraction(req.params.interactionId);
+      if (!interaction) {
+        return res.status(404).json({ message: "Interaction not found" });
+      }
+      if (!interaction.transcript) {
+        return res.status(400).json({ message: "Interaction has no transcript to analyze" });
+      }
+      
+      const { analyzeListening } = await import("./listening-analyzer");
+      const result = await analyzeListening(interaction.id, interaction.transcript);
+      
+      if (!result) {
+        return res.status(400).json({ message: "Could not analyze this conversation" });
+      }
+      
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Coaching Insights
+  app.get("/api/coaching-insights", async (req, res) => {
+    try {
+      const status = req.query.status as string | undefined;
+      const insights = status === 'active' 
+        ? await storage.getActiveCoachingInsights()
+        : await storage.getAllCoachingInsights();
+      res.json(insights);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.get("/api/coaching-insights/:id", async (req, res) => {
+    try {
+      const insight = await storage.getCoachingInsight(req.params.id);
+      if (!insight) {
+        return res.status(404).json({ message: "Coaching insight not found" });
+      }
+      
+      await storage.updateCoachingInsight(insight.id, {
+        viewCount: (insight.viewCount || 0) + 1
+      });
+      
+      res.json(insight);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.patch("/api/coaching-insights/:id", async (req, res) => {
+    try {
+      const updated = await storage.updateCoachingInsight(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ message: "Coaching insight not found" });
+      }
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.post("/api/coaching-insights/:id/feedback", async (req, res) => {
+    try {
+      const { feedback } = req.body;
+      if (!['accurate', 'not_right', 'tell_me_more'].includes(feedback)) {
+        return res.status(400).json({ message: "Invalid feedback. Use 'accurate', 'not_right', or 'tell_me_more'" });
+      }
+      
+      const updated = await storage.updateCoachingInsight(req.params.id, { userFeedback: feedback });
+      if (!updated) {
+        return res.status(404).json({ message: "Coaching insight not found" });
+      }
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.delete("/api/coaching-insights/:id", async (req, res) => {
+    try {
+      await storage.deleteCoachingInsight(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Listening Patterns
+  app.get("/api/listening-patterns", async (req, res) => {
+    try {
+      const patterns = await storage.getAllListeningPatterns();
+      res.json(patterns);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get aggregate listening stats across all analyzed conversations
+  app.get("/api/listening-analysis/stats", async (req, res) => {
+    try {
+      const analyses = await storage.getAllListeningAnalysis();
+      
+      if (analyses.length === 0) {
+        return res.json({
+          totalAnalyzed: 0,
+          message: "No conversations have been analyzed yet"
+        });
+      }
+      
+      const stats = {
+        totalAnalyzed: analyses.length,
+        avgObservationRatio: analyses.reduce((sum, a) => 
+          sum + ((a.observationCount || 0) / ((a.observationCount || 0) + (a.interpretationCount || 0) + 1)), 0) / analyses.length,
+        avgFeelingAcknowledgments: analyses.reduce((sum, a) => sum + (a.feelingAcknowledgments || 0), 0) / analyses.length,
+        avgNeedClarifications: analyses.reduce((sum, a) => sum + (a.needClarifications || 0), 0) / analyses.length,
+        avgAssumedNeeds: analyses.reduce((sum, a) => sum + (a.assumedNeeds || 0), 0) / analyses.length,
+        avgRequestConfirmations: analyses.reduce((sum, a) => sum + (a.requestConfirmations || 0), 0) / analyses.length,
+        questionBreakdown: {
+          exploratory: analyses.reduce((sum, a) => sum + (a.exploratoryQuestions || 0), 0) / analyses.length,
+          clarifying: analyses.reduce((sum, a) => sum + (a.clarifyingQuestions || 0), 0) / analyses.length,
+          feelingBased: analyses.reduce((sum, a) => sum + (a.feelingQuestions || 0), 0) / analyses.length,
+          needBased: analyses.reduce((sum, a) => sum + (a.needQuestions || 0), 0) / analyses.length,
+          solutionLeading: analyses.reduce((sum, a) => sum + (a.solutionLeadingQuestions || 0), 0) / analyses.length,
+          closed: analyses.reduce((sum, a) => sum + (a.closedQuestions || 0), 0) / analyses.length,
+        },
+        avgDepthScore: analyses.reduce((sum, a) => sum + (a.conversationDepthScore || 0), 0) / analyses.length,
+        avgTrustScore: analyses.reduce((sum, a) => sum + (a.trustBuildingScore || 0), 0) / analyses.length,
+      };
+      
+      res.json(stats);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }
