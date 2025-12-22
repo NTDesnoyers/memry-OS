@@ -1,0 +1,215 @@
+# EXTENSION SPEC — NVC + QUESTION-BASED SELLING INTEGRATION
+## (Applied to Listening Skill Feedback & Pattern-Based Coaching)
+
+This extension embeds **Nonviolent Communication (NVC)** and **Question-Based Selling** principles into:
+- Conversation analysis
+- Listening feedback
+- Coaching insights
+
+The goal is to:
+- Improve empathy and clarity
+- Reduce premature problem-solving
+- Increase trust and openness
+- Train *how* the user listens and responds
+
+This is NOT scripting.
+This is **skill refinement**.
+
+---
+
+## CORE FRAMEWORKS USED (INTERNALLY)
+
+### NVC (Marshall Rosenberg — INTERNAL MODEL ONLY)
+NVC is used as an **analysis lens**, not shown explicitly to the user.
+
+Internal components:
+1. Observation (what happened, without judgment)
+2. Feeling (emotion expressed or implied)
+3. Need (underlying human need)
+4. Request (explicit or implicit ask)
+
+---
+
+### QUESTION-BASED SELLING (INTERNAL MODEL)
+Focuses on:
+- Curiosity before solutions
+- Diagnosis before prescription
+- Questions that expand thinking, not steer outcomes
+
+---
+
+## INTEGRATION POINT 1 — LISTENING SKILL FEEDBACK (FEATURE 7)
+
+### NEW ANALYSIS DIMENSIONS (ADDED)
+
+#### 6) OBSERVATION VS INTERPRETATION
+Detect whether the user:
+- Reflects observable facts (“You mentioned X changed…”)
+- Or jumps to interpretation (“So the problem is…”)
+
+Track:
+- Frequency of neutral observation
+- Frequency of interpretive framing
+
+User-facing language:
+- NEVER say “judgment”
+- Use phrasing like:
+  - “You tend to move quickly from what’s happening to what it means.”
+
+---
+
+#### 7) FEELING ACKNOWLEDGMENT (NVC)
+Detect whether the user:
+- Names or reflects emotion (explicit or implicit)
+- Skips emotion and moves to fixing
+
+Signals:
+- “That sounds stressful.”
+- “It seems like you’re feeling unsure.”
+
+Track:
+- Presence of emotional reflection
+- Placement (before vs after solutions)
+
+---
+
+#### 8) NEED CLARIFICATION (NVC)
+Detect whether the user:
+- Helps surface underlying needs (clarity, certainty, safety, timing, control, reassurance)
+- Or assumes needs without checking
+
+Signals:
+- “What’s most important to you right now?”
+- “What are you hoping this solves?”
+
+---
+
+#### 9) REQUEST SHAPING (NVC)
+Detect whether:
+- The other person makes a request (explicit or implicit)
+- The user confirms the request before responding
+
+Signals:
+- “What would be most helpful right now?”
+- “Are you looking for advice or just to talk this through?”
+
+---
+
+## UPDATED LISTENING FEEDBACK OUTPUT RULES
+
+Listening feedback may now reference:
+- Emotional pacing
+- Curiosity before solutions
+- Clarifying needs before acting
+
+### EXAMPLE OUTPUTS
+- “You often move into problem-solving before checking what the person actually needs.”
+- “When uncertainty shows up, you tend to skip reflecting emotion and go straight to answers.”
+- “Your strongest conversations happen when you clarify what the person is asking for before responding.”
+
+Still:
+- No scores
+- No NVC jargon
+- No sales language
+
+---
+
+## INTEGRATION POINT 2 — QUESTION-BASED SELLING (FEATURE 8)
+
+### QUESTION QUALITY — EXPANDED CLASSIFICATION
+
+Classify user questions into:
+
+1. Exploratory (opens space)
+   - “Can you tell me more about that?”
+2. Clarifying (refines understanding)
+   - “When you say X, what does that look like?”
+3. Feeling-based (NVC-aligned)
+   - “How did that feel when it happened?”
+4. Need-based (NVC-aligned)
+   - “What matters most to you here?”
+5. Solution-leading (premature)
+   - “Have you considered doing X?”
+6. Closed (limits depth)
+   - Yes/No questions
+
+Track:
+- Ratio of exploratory/clarifying vs solution-leading
+- Correlation to depth of response
+
+---
+
+## PATTERN-BASED COACHING — UPDATED OUTPUT TYPES
+
+### A) NVC-ALIGNED MICRO SHIFTS
+AI may suggest *one* small change at a time.
+
+Examples:
+- “Try reflecting what you hear before offering advice.”
+- “Try asking what they need before solving.”
+- “Try naming the emotion you hear and pausing.”
+
+---
+
+### B) QUESTION SWAPS (VERY POWERFUL)
+Format:
+- “When you ask X instead of Y, conversations go deeper.”
+
+Examples:
+- “When you ask ‘What’s worrying you most?’ instead of offering reassurance, people open up more.”
+- “When you ask ‘What would be most helpful right now?’ instead of giving advice, trust increases.”
+
+This is **question-based selling without selling language**.
+
+---
+
+## DELIVERY RULES (UNCHANGED, BUT STRICT)
+
+- Coaching appears ONLY:
+  - In Get Creative
+  - Or when user explicitly asks for coaching
+- NEVER mid-conversation
+- NEVER during execution
+- NEVER as alerts or notifications
+
+---
+
+## LEARNING LOOP — NVC-SENSITIVE
+
+When user responds to coaching:
+- “That’s accurate” → reinforce pattern detection
+- “That’s not right” → reduce weight
+- “Tell me more” → expand with examples
+
+AI should learn:
+- Which NVC-style feedback resonates
+- Which feels intrusive or unhelpful
+
+---
+
+## SAFETY & TRUST GUARDRAILS (CRITICAL)
+
+- NEVER label behavior as:
+  - “Wrong”
+  - “Manipulative”
+  - “Salesy”
+- NEVER imply intent
+- ALWAYS frame as:
+  - Observation
+  - Choice
+  - Option
+
+The system supports **self-awareness**, not correction.
+
+---
+
+## SUMMARY (FOR ENGINEERING)
+
+This extension:
+- Adds NVC and question-based selling as **internal lenses**
+- Improves listening feedback quality
+- Sharpens pattern-based coaching
+- Preserves Ninja philosophy
+- Avoids scripting and manipulation
+
+This is **coaching intelligence**, not persuasion automation.

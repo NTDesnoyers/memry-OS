@@ -733,6 +733,105 @@ export const insertVoiceProfileSchema = createInsertSchema(voiceProfile).omit({
 export type InsertVoiceProfile = z.infer<typeof insertVoiceProfileSchema>;
 export type VoiceProfile = typeof voiceProfile.$inferSelect;
 
+/** Listening Analysis - NVC + Question-Based Selling analysis of conversations. */
+export const listeningAnalysis = pgTable("listening_analysis", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  interactionId: varchar("interaction_id").references(() => interactions.id),
+  // Observation vs Interpretation (NVC lens)
+  observationCount: integer("observation_count").default(0),
+  interpretationCount: integer("interpretation_count").default(0),
+  observationExamples: text("observation_examples").array(),
+  interpretationExamples: text("interpretation_examples").array(),
+  // Feeling Acknowledgment (NVC lens)
+  feelingAcknowledgments: integer("feeling_acknowledgments").default(0),
+  feelingExamples: text("feeling_examples").array(),
+  emotionBeforeSolution: boolean("emotion_before_solution"),
+  // Need Clarification (NVC lens)
+  needClarifications: integer("need_clarifications").default(0),
+  needExamples: text("need_examples").array(),
+  assumedNeeds: integer("assumed_needs").default(0),
+  // Request Shaping (NVC lens)
+  requestConfirmations: integer("request_confirmations").default(0),
+  requestExamples: text("request_examples").array(),
+  // Question Classification
+  exploratoryQuestions: integer("exploratory_questions").default(0),
+  clarifyingQuestions: integer("clarifying_questions").default(0),
+  feelingQuestions: integer("feeling_questions").default(0),
+  needQuestions: integer("need_questions").default(0),
+  solutionLeadingQuestions: integer("solution_leading_questions").default(0),
+  closedQuestions: integer("closed_questions").default(0),
+  questionExamples: jsonb("question_examples"), // { type: question }[]
+  // Overall quality metrics
+  conversationDepthScore: integer("conversation_depth_score"), // 1-10
+  trustBuildingScore: integer("trust_building_score"), // 1-10
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertListeningAnalysisSchema = createInsertSchema(listeningAnalysis).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertListeningAnalysis = z.infer<typeof insertListeningAnalysisSchema>;
+export type ListeningAnalysis = typeof listeningAnalysis.$inferSelect;
+
+// Relations for Listening Analysis
+export const listeningAnalysisRelations = relations(listeningAnalysis, ({ one }) => ({
+  interaction: one(interactions, {
+    fields: [listeningAnalysis.interactionId],
+    references: [interactions.id],
+  }),
+}));
+
+/** Coaching Insights - Pattern-based coaching suggestions derived from listening analysis. */
+export const coachingInsights = pgTable("coaching_insights", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: text("type").notNull(), // micro_shift, question_swap, pattern_observation
+  category: text("category"), // emotional_pacing, curiosity, need_clarification, etc.
+  insight: text("insight").notNull(), // The coaching suggestion
+  originalBehavior: text("original_behavior"), // What the user did
+  suggestedBehavior: text("suggested_behavior"), // What they could try
+  supportingExamples: text("supporting_examples").array(), // Conversation excerpts
+  interactionIds: text("interaction_ids").array(), // Which conversations informed this
+  confidenceScore: integer("confidence_score"), // How confident in this pattern (1-100)
+  status: text("status").notNull().default("active"), // active, dismissed, applied
+  userFeedback: text("user_feedback"), // accurate, not_right, tell_me_more
+  viewCount: integer("view_count").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertCoachingInsightSchema = createInsertSchema(coachingInsights).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertCoachingInsight = z.infer<typeof insertCoachingInsightSchema>;
+export type CoachingInsight = typeof coachingInsights.$inferSelect;
+
+/** Listening Patterns - Aggregate patterns across all conversations for trend analysis. */
+export const listeningPatterns = pgTable("listening_patterns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  patternType: text("pattern_type").notNull(), // observation_vs_interpretation, feeling_acknowledgment, etc.
+  description: text("description").notNull(),
+  frequency: integer("frequency").default(1),
+  trend: text("trend"), // improving, stable, declining
+  lastObserved: timestamp("last_observed"),
+  examples: text("examples").array(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertListeningPatternSchema = createInsertSchema(listeningPatterns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertListeningPattern = z.infer<typeof insertListeningPatternSchema>;
+export type ListeningPattern = typeof listeningPatterns.$inferSelect;
+
 /** Sync Logs - Tracks incoming data from local sync agents (Granola, Plaud, iMessage, WhatsApp). */
 export const syncLogs = pgTable("sync_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
