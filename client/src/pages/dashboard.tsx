@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowRight, Calendar, CheckCircle2, Layout, Plus, PieChart, TrendingUp, Users, DollarSign, Workflow, Mic, FileEdit, Sparkles, Loader2, ListTodo, RefreshCw, AlertCircle, ExternalLink } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import LayoutComponent from "@/components/layout";
+import { FordTrackerWidget } from "@/components/ford-tracker";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -324,6 +325,8 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
+              <FordTrackerWidget />
+              
               <AIStatusWidget />
               
               <TodoistWidget />

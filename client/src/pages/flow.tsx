@@ -1,4 +1,5 @@
 import Layout from "@/components/layout";
+import { FordTrackerCompact } from "@/components/ford-tracker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Phone, Mail, Sparkles, Video, MessageCircle, Send } from "lucide-react";
 import { useState } from "react";
@@ -566,6 +567,7 @@ export default function Flow() {
 
   return (
     <Layout>
+      <FordTrackerCompact />
       <div className="min-h-screen bg-secondary/30">
         <div className="container mx-auto px-4 py-8 max-w-5xl">
           <header className="flex justify-between items-center mb-6">
