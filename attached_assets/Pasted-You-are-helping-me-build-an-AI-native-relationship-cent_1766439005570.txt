@@ -1,0 +1,72 @@
+You are helping me build an AI-native, relationship-centric CRM / second-brain system that I am first using personally, but may later productize.
+
+This is NOT a generic CRM. It is a system of intelligence and reflection designed to:
+- Capture and understand human conversations
+- Improve how I listen, serve, and follow up
+- Surface patterns, needs, and opportunities over time
+- Act as an AI chief of staff and coach for relationship-based work
+
+Use the following operating lenses simultaneously:
+
+1) Bret Victor (HOW to build)
+- Make important work visible.
+- Show state, change, and consequences clearly.
+- Prefer concrete, end-to-end workflows over abstract features.
+- Build interactive, inspectable systems where I can see what the AI “thinks.”
+- Design for learnability: the UI and feedback should teach me how to work better just by using it.
+- Separate domain logic (relationships, conversations, insights) from UI and infrastructure.
+- Favor small, composable modules that can evolve.
+
+2) Daniel Ek (WHAT to prioritize)
+- Obsess over one core job: helping me build stronger relationships that lead to better outcomes (trust, referrals, deals, long-term value).
+- Favor features that compound over time:
+  - Relationship memory
+  - Conversation intelligence
+  - Pattern detection
+  - Skill improvement
+- Avoid feature sprawl. Every feature must strengthen an existing loop.
+- Ship small, testable slices that work end-to-end before expanding.
+
+3) Chetan Puttagunta (HOW to scale later)
+- Go slow to go fast.
+- Optimize for clarity of value and efficiency, not breadth.
+- Design the system so it can:
+  - Work as a full CRM for me
+  - Later function as an intelligence layer on top of other CRMs
+- Sell outcomes, not features, if this is ever productized.
+
+CORE CAPABILITIES ALREADY IN SCOPE:
+- Capture every meaningful conversation (calls, meetings, notes, transcripts).
+- Household-aware relationship tracking (FORD-based).
+- Automate or assist with thoughtful follow-ups, reminders, and service actions.
+- Referral intelligence: who could help whom, and why.
+- Content intelligence: extract recurring pain points, questions, and themes from conversations.
+- AI coaching: help me listen better, ask better questions, and serve needs earlier.
+- Weekly reflection rituals (Ninja-aligned) and daily execution support.
+
+WHAT I WANT YOU TO DO:
+1) Propose a feature roadmap organized by “intelligence layers,” not by standard CRM categories.
+2) Focus on AI-enabled use cases that emerge naturally from conversation and relationship data.
+3) Prioritize features that:
+   - Improve decision-making
+   - Improve relationship quality
+   - Improve my skills (listening, questioning, empathy)
+   - Reduce cognitive load
+4) Avoid generic CRM features unless they directly support the above.
+5) For each proposed feature, explain:
+   - What intelligence it uses
+   - What outcome it improves
+   - Whether it should be fast (daily use) or deep (weekly/monthly reflection)
+6) Suggest an order of implementation that makes sense for a solo user now, but does not block future productization.
+
+ASSUME:
+- This system replaces Close and other tools for me today.
+- Data ownership and trust matter more than growth right now.
+- Mobile is primarily for capture; desktop is for thinking and reflection.
+- The AI should act like a calm chief of staff and coach, not a nag or dashboard.
+
+OUTPUT FORMAT:
+- Start with a short restatement of the core job this system is doing.
+- Then present a phased, AI-enabled feature roadmap (Phase 1 / Phase 2 / Phase 3).
+- Be opinionated. Recommend what NOT to build as well.
+- Keep the focus on compounding intelligence and long-term leverage.

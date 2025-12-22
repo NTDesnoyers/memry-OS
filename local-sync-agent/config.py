@@ -20,6 +20,9 @@ IMESSAGE_DB_PATH = "~/Library/Messages/chat.db"
 # WhatsApp data path (if using WhatsApp Desktop)
 WHATSAPP_DATA_PATH = "~/Library/Application Support/WhatsApp"
 
+# Fathom.video API key (get from fathom.video settings)
+FATHOM_API_KEY = ""  # Set this or pass via --api-key
+
 # Sync settings
 SYNC_INTERVAL_MINUTES = 15  # How often to run automatic sync
 MAX_ITEMS_PER_SYNC = 100    # Maximum items per sync batch

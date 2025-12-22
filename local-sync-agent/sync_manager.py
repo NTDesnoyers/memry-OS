@@ -96,6 +96,26 @@ def run_all_syncs(url: str, sources: List[str] = None, force: bool = False) -> D
         except Exception as e:
             results['whatsapp'] = {"error": str(e)}
     
+    # Fathom.video (requires API key)
+    if 'fathom' in enabled_sources:
+        try:
+            from sync_fathom import FathomSyncAgent
+            from config import FATHOM_API_KEY
+            
+            if FATHOM_API_KEY:
+                print("\n" + "="*50)
+                print("SYNCING FATHOM.VIDEO")
+                print("="*50)
+                
+                agent = FathomSyncAgent(url, FATHOM_API_KEY)
+                results['fathom'] = agent.sync(force=force)
+            else:
+                results['fathom'] = {"skipped": True, "message": "API key not configured in config.py"}
+        except ImportError as e:
+            results['fathom'] = {"error": f"Import error: {e}"}
+        except Exception as e:
+            results['fathom'] = {"error": str(e)}
+    
     return results
 
 
@@ -146,15 +166,15 @@ def main():
 Examples:
   python sync_manager.py                    # Run all syncs once
   python sync_manager.py --daemon           # Run continuously
-  python sync_manager.py --sources granola imessage  # Only specific sources
+  python sync_manager.py --sources granola fathom  # Only specific sources
   python sync_manager.py --force            # Force re-sync all
 
-Available sources: granola, plaud, imessage, whatsapp
+Available sources: granola, plaud, imessage, whatsapp, fathom
         """
     )
     parser.add_argument("--url", default=NINJA_OS_URL, help="Ninja OS URL")
     parser.add_argument("--sources", nargs="+", 
-                        choices=['granola', 'plaud', 'imessage', 'whatsapp'],
+                        choices=['granola', 'plaud', 'imessage', 'whatsapp', 'fathom'],
                         help="Sources to sync (default: all)")
     parser.add_argument("--daemon", action="store_true", help="Run continuously")
     parser.add_argument("--interval", type=int, default=SYNC_INTERVAL_MINUTES,
@@ -169,7 +189,7 @@ Available sources: granola, plaud, imessage, whatsapp
         print("\nYou can find your URL in the Replit webview or after deployment.")
         sys.exit(1)
     
-    sources = args.sources or ['granola', 'plaud', 'imessage', 'whatsapp']
+    sources = args.sources or ['granola', 'plaud', 'imessage', 'whatsapp', 'fathom']
     
     if args.daemon:
         try:

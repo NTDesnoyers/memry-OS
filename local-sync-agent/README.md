@@ -7,6 +7,7 @@ This folder contains Python scripts that run on your Mac to sync data from local
 | Source | What it syncs | Requirements |
 |--------|---------------|--------------|
 | **Granola** | Meeting notes and transcripts | Granola app installed |
+| **Fathom.video** | Zoom/Meet recordings & transcripts | Fathom API key |
 | **Plaud** | Voice recordings (transcribed by Ninja OS) | Audio files from Plaud |
 | **iMessage** | Text conversations | Full Disk Access permission |
 | **WhatsApp** | Chat exports | Manual export from phone |
@@ -54,6 +55,27 @@ Reads from Granola's local cache file.
 ```bash
 python sync_granola.py
 python sync_granola.py --force  # Re-sync all
+```
+
+### Fathom.video
+
+Automatically syncs meeting recordings and transcripts from Fathom.
+
+**Setup:**
+1. Get your API key from [fathom.video](https://fathom.video) > Settings > API
+2. Add to `config.py`:
+   ```python
+   FATHOM_API_KEY = "your_api_key_here"
+   ```
+
+```bash
+python sync_fathom.py --api-key YOUR_KEY
+python sync_fathom.py --api-key YOUR_KEY --force  # Re-sync all
+```
+
+Or via sync_manager (after configuring config.py):
+```bash
+python sync_manager.py --sources fathom
 ```
 
 ### Plaud
