@@ -1,5 +1,6 @@
 import { storage } from "./storage";
 import crypto from "crypto";
+import { processInteraction } from "./conversation-processor";
 
 const FATHOM_API_URL = "https://api.fathom.ai/external/v1";
 const SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
