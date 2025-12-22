@@ -19,7 +19,8 @@ import {
   insertInteractionSchema,
   insertContentTopicSchema,
   insertContentIdeaSchema,
-  insertContentCalendarSchema
+  insertContentCalendarSchema,
+  insertDashboardWidgetSchema
 } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import multer from "multer";
@@ -4709,6 +4710,92 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
     try {
       const result = await runFathomSync();
       res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Dashboard Widgets
+  app.get("/api/dashboard-widgets", async (req, res) => {
+    try {
+      const widgets = await storage.getAllDashboardWidgets();
+      res.json(widgets);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/dashboard-widgets", async (req, res) => {
+    try {
+      const result = insertDashboardWidgetSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: fromZodError(result.error).message });
+      }
+      const widget = await storage.createDashboardWidget(result.data);
+      res.status(201).json(widget);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/dashboard-widgets/:id", async (req, res) => {
+    try {
+      const widget = await storage.updateDashboardWidget(req.params.id, req.body);
+      if (!widget) {
+        return res.status(404).json({ message: "Widget not found" });
+      }
+      res.json(widget);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/dashboard-widgets/:id", async (req, res) => {
+    try {
+      await storage.deleteDashboardWidget(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/dashboard-widgets/positions", async (req, res) => {
+    try {
+      const { widgets } = req.body as { widgets: { id: string; position: number }[] };
+      if (!Array.isArray(widgets)) {
+        return res.status(400).json({ message: "widgets array required" });
+      }
+      await storage.updateDashboardWidgetPositions(widgets);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Initialize default dashboard widgets if none exist
+  app.post("/api/dashboard-widgets/initialize", async (req, res) => {
+    try {
+      const existing = await storage.getAllDashboardWidgets();
+      if (existing.length > 0) {
+        return res.json({ message: "Widgets already exist", widgets: existing });
+      }
+      
+      const defaultWidgets = [
+        { widgetType: 'gci_ytd', title: 'GCI Year-to-Date', position: 0 },
+        { widgetType: 'closed_units', title: 'Closed Units', position: 1 },
+        { widgetType: 'ford_tracker', title: 'FORD Conversations', position: 2 },
+        { widgetType: 'pipeline_value', title: 'Pipeline Value', position: 3 },
+        { widgetType: 'ai_status', title: 'AI Status', position: 4 },
+        { widgetType: 'todoist_tasks', title: 'Today\'s Tasks', position: 5 },
+      ];
+      
+      const created = [];
+      for (const w of defaultWidgets) {
+        const widget = await storage.createDashboardWidget(w);
+        created.push(widget);
+      }
+      
+      res.status(201).json({ message: "Default widgets created", widgets: created });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
