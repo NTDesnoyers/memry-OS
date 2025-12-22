@@ -32,7 +32,8 @@ import {
   type ListeningAnalysis, type InsertListeningAnalysis,
   type CoachingInsight, type InsertCoachingInsight,
   type ListeningPattern, type InsertListeningPattern,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns
+  type DashboardWidget, type InsertDashboardWidget,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt } from "drizzle-orm";
@@ -317,6 +318,14 @@ export interface IStorage {
   getListeningPattern(id: string): Promise<ListeningPattern | undefined>;
   createListeningPattern(pattern: InsertListeningPattern): Promise<ListeningPattern>;
   updateListeningPattern(id: string, pattern: Partial<InsertListeningPattern>): Promise<ListeningPattern | undefined>;
+  
+  // Dashboard Widgets
+  getAllDashboardWidgets(): Promise<DashboardWidget[]>;
+  getDashboardWidget(id: string): Promise<DashboardWidget | undefined>;
+  createDashboardWidget(widget: InsertDashboardWidget): Promise<DashboardWidget>;
+  updateDashboardWidget(id: string, widget: Partial<InsertDashboardWidget>): Promise<DashboardWidget | undefined>;
+  deleteDashboardWidget(id: string): Promise<void>;
+  updateDashboardWidgetPositions(widgets: { id: string; position: number }[]): Promise<void>;
 }
 
 /** Result of contact due calculation with reason and days overdue. */
@@ -1610,6 +1619,43 @@ export class DatabaseStorage implements IStorage {
       .where(eq(listeningPatterns.id, id))
       .returning();
     return updated || undefined;
+  }
+  
+  // Dashboard Widgets
+  async getAllDashboardWidgets(): Promise<DashboardWidget[]> {
+    return await db.select().from(dashboardWidgets)
+      .where(eq(dashboardWidgets.isVisible, true))
+      .orderBy(dashboardWidgets.position);
+  }
+  
+  async getDashboardWidget(id: string): Promise<DashboardWidget | undefined> {
+    const [widget] = await db.select().from(dashboardWidgets).where(eq(dashboardWidgets.id, id));
+    return widget || undefined;
+  }
+  
+  async createDashboardWidget(widget: InsertDashboardWidget): Promise<DashboardWidget> {
+    const [created] = await db.insert(dashboardWidgets).values(widget).returning();
+    return created;
+  }
+  
+  async updateDashboardWidget(id: string, widget: Partial<InsertDashboardWidget>): Promise<DashboardWidget | undefined> {
+    const [updated] = await db.update(dashboardWidgets)
+      .set({ ...widget, updatedAt: new Date() })
+      .where(eq(dashboardWidgets.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async deleteDashboardWidget(id: string): Promise<void> {
+    await db.delete(dashboardWidgets).where(eq(dashboardWidgets.id, id));
+  }
+  
+  async updateDashboardWidgetPositions(widgets: { id: string; position: number }[]): Promise<void> {
+    for (const { id, position } of widgets) {
+      await db.update(dashboardWidgets)
+        .set({ position, updatedAt: new Date() })
+        .where(eq(dashboardWidgets.id, id));
+    }
   }
 }
 

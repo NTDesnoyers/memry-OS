@@ -1014,3 +1014,26 @@ export const contentCalendarRelations = relations(contentCalendar, ({ one }) => 
     references: [contentIdeas.id],
   }),
 }));
+
+/** Dashboard Widgets - User's customizable dashboard widget layout. */
+export const dashboardWidgets = pgTable("dashboard_widgets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  widgetType: text("widget_type").notNull(), // gci_ytd, closed_units, ford_tracker, ai_status, todoist, etc.
+  title: text("title").notNull(),
+  position: integer("position").notNull().default(0), // Order in the grid
+  gridColumn: integer("grid_column").default(1), // Column span (1 or 2)
+  gridRow: integer("grid_row").default(1), // Row span
+  isVisible: boolean("is_visible").default(true),
+  config: jsonb("config").$type<Record<string, unknown>>(), // Widget-specific settings
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertDashboardWidgetSchema = createInsertSchema(dashboardWidgets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertDashboardWidget = z.infer<typeof insertDashboardWidgetSchema>;
+export type DashboardWidget = typeof dashboardWidgets.$inferSelect;
