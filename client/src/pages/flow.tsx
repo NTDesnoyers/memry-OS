@@ -401,16 +401,14 @@ function InteractionList({
                     </div>
                     
                     {person && (
-                      <Link href={`/people/${person.id}`} onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-2 mb-2 hover:underline cursor-pointer">
-                          <Avatar className="h-6 w-6">
-                            <AvatarFallback className="text-xs bg-slate-100">
-                              {getInitials(person.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium text-sm">{person.name}</span>
-                        </div>
-                      </Link>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarFallback className="text-xs bg-slate-100">
+                            {getInitials(person.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium text-sm">{person.name}</span>
+                      </div>
                     )}
                     
                     {interaction.summary && (
