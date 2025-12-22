@@ -26,7 +26,9 @@ import {
   PanelLeftClose,
   PanelLeft,
   Pin,
-  PinOff
+  PinOff,
+  TrendingUp,
+  FileText
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -43,6 +45,8 @@ const navItems = [
   { name: "Flow", href: "/flow", icon: Repeat },
   { name: "People", href: "/people", icon: Users },
   { name: "Business Tracker", href: "/business-tracker", icon: PieChart },
+  { name: "Visual Pricing", href: "/visual-pricing", icon: TrendingUp },
+  { name: "Reviews", href: "/reviews", icon: FileText },
   { name: "Content", href: "/content", icon: Lightbulb },
   { name: "Haves & Wants", href: "/haves-wants", icon: Mail },
   { name: "Referrals", href: "/referrals", icon: Handshake },
