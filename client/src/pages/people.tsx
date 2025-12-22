@@ -1,69 +1,52 @@
-import Layout from "@/components/layout";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
-import { MentionTextarea } from "@/components/mention-textarea";
-import { Search, Plus, Filter, Phone, Mail, MessageSquare, MapPin, Loader2, Upload, FileSpreadsheet, Check, Sparkles, AlertCircle, X, Tag, Trash2, Download, CheckSquare, Users, Home, Heart, Briefcase, Gamepad2, Star, ChevronRight, ChevronLeft, SkipForward, Clock, TrendingDown, ArrowUpRight, UserX, RefreshCw, Brain } from "lucide-react";
-import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
+import { 
+  Search, Phone, Mail, MapPin, Loader2, MessageSquare, 
+  Video, FileText, Plus, Clock, Pencil,
+  Users, Linkedin, Twitter, Facebook, Instagram,
+  Sparkles, PenTool, ListTodo, Activity, CalendarPlus,
+  StickyNote, Heart, Briefcase, Gamepad2, Star, Filter, Upload
+} from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useRef } from "react";
-import { Link, useLocation } from "wouter";
+import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
-import type { Person, InsertPerson } from "@shared/schema";
+import type { Person, InsertPerson, Interaction, GeneratedDraft } from "@shared/schema";
+import { format, formatDistanceToNow } from "date-fns";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import KnowYourPeopleContent from "@/components/know-your-people-content";
-import DContactReviewContent from "@/components/d-contact-review-content";
 
-interface TransformedPerson {
-  name: string;
-  email?: string | null;
-  phone?: string | null;
-  role?: string | null;
-  segment?: string | null;
-  address?: string | null;
-  notes?: string | null;
-}
-
-interface AIMapping {
-  mapping: Record<string, string | string[]>;
-  confidence: number;
-  unmappedHeaders: string[];
+interface TimelineItem {
+  id: string;
+  type: 'interaction' | 'draft' | 'note';
+  title: string;
+  preview: string;
+  date: Date;
+  source?: string | null;
+  data: any;
 }
 
 export default function People() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [segmentFilter, setSegmentFilter] = useState<string>("all");
+  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("timeline");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [parsedData, setParsedData] = useState<TransformedPerson[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [aiMapping, setAiMapping] = useState<AIMapping | null>(null);
-  const [rawCsvData, setRawCsvData] = useState<any[]>([]);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkSegmentDialogOpen, setBulkSegmentDialogOpen] = useState(false);
-  const [bulkSegment, setBulkSegment] = useState("");
-  const [segmentFilter, setSegmentFilter] = useState<string>("all");
-  const [householdDialogOpen, setHouseholdDialogOpen] = useState(false);
-  const [householdName, setHouseholdName] = useState("");
-  const [householdAddress, setHouseholdAddress] = useState("");
-  const [selectedHouseholdId, setSelectedHouseholdId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState<Partial<InsertPerson>>({
     name: "",
-    nickname: "",
     email: "",
     phone: "",
     role: "",
@@ -71,1229 +54,977 @@ export default function People() {
     notes: "",
   });
 
-  const toggleSelect = (id: string, e?: React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    setSelectedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
+  const { data: people = [], isLoading } = useQuery<Person[]>({
+    queryKey: ["/api/people"],
+  });
 
-  const clearSelection = () => {
-    setSelectedIds(new Set());
-  };
+  const { data: selectedPerson, refetch: refetchPerson } = useQuery<Person>({
+    queryKey: [`/api/people/${selectedPersonId}`],
+    enabled: !!selectedPersonId,
+  });
 
-  const detectColumnMapping = (headers: string[]) => {
-    const mapping: Record<string, string | string[]> = {};
-    const lowerHeaders = headers.map(h => h.toLowerCase().trim().replace(/[_\-]/g, ' '));
-    
-    const findHeader = (patterns: string[]) => {
-      for (const pattern of patterns) {
-        const idx = lowerHeaders.findIndex(h => h === pattern || h.includes(pattern));
-        if (idx >= 0) return headers[idx];
-      }
-      return null;
-    };
-    
-    // Name detection - check for First Name + Last Name or Full Name
-    // Extended patterns for various CRM exports
-    const firstNameCol = findHeader(['first name', 'firstname', 'first', 'given name', 'given', 'fname', 'contact first']);
-    const lastNameCol = findHeader(['last name', 'lastname', 'last', 'family name', 'surname', 'lname', 'contact last']);
-    const fullNameCol = findHeader(['full name', 'fullname', 'contact name', 'client name', 'customer name', 'display name', 'person name']);
-    // Avoid matching just "Name" which might be a generic header - check for exact match only
-    const nameExactCol = headers.find(h => h.toLowerCase().trim() === 'name');
-    
-    if (firstNameCol && lastNameCol) {
-      mapping.name = [firstNameCol, lastNameCol];
-    } else if (fullNameCol) {
-      mapping.name = fullNameCol;
-    } else if (nameExactCol) {
-      mapping.name = nameExactCol;
-    } else if (firstNameCol) {
-      // Sometimes only first name is available
-      mapping.name = firstNameCol;
-    }
-    
-    // Household name detection for family/household tracking
-    const householdCol = findHeader(['household name', 'household', 'family name', 'family']);
-    if (householdCol) mapping.household = householdCol;
-    
-    // Email detection - prefer primary email, handle various CRM patterns
-    const emailCol = findHeader(['email', 'e mail', 'email address', 'primary email', 'email1', 'email 1', 'contact email', 'personal email', 'work email', 'main email']);
-    if (emailCol) mapping.email = emailCol;
-    
-    // Phone detection - priority: Mobile > Cell > Home > Work > Phone
-    // Extended for CRM exports like Cloze, Follow Up Boss, etc.
-    const mobileCol = findHeader(['mobile phone', 'mobile', 'cell phone', 'cell', 'mobile number', 'cellphone', 'mobile1', 'phone mobile', 'primary phone']);
-    const homePhoneCol = findHeader(['home phone', 'home', 'phone home', 'personal phone', 'home number']);
-    const workPhoneCol = findHeader(['work phone', 'work', 'business phone', 'office phone', 'phone work', 'office', 'phone business']);
-    const phoneCol = findHeader(['phone', 'phone number', 'telephone', 'tel', 'phone1', 'phone 1', 'main phone', 'contact phone']);
-    const primaryPhone = mobileCol || phoneCol || homePhoneCol || workPhoneCol;
-    if (primaryPhone) mapping.phone = primaryPhone;
-    
-    // Secondary phone for notes
-    const allPhones = [mobileCol, phoneCol, homePhoneCol, workPhoneCol].filter(Boolean);
-    if (allPhones.length > 1) {
-      const secondaryPhone = allPhones.find(p => p !== primaryPhone);
-      if (secondaryPhone) mapping.secondaryPhone = secondaryPhone;
-    }
-    
-    // Address detection - extended patterns including Cloze/CRM format (Home Street, Home City, etc.)
-    const addressCol = findHeader(['address', 'street address', 'street', 'address 1', 'mailing address', 'home address', 'address line 1', 'street1', 'primary address', 'home street', 'business street', 'other street']);
-    const address2Col = findHeader(['address 2', 'address line 2', 'street2', 'apt', 'unit', 'suite']);
-    const cityCol = findHeader(['city', 'town', 'locality', 'home city', 'business city', 'other city']);
-    const stateCol = findHeader(['state', 'province', 'st', 'region', 'home state', 'business state', 'other state']);
-    const zipCol = findHeader(['zip', 'zip code', 'postal code', 'postal', 'zipcode', 'postcode', 'home postal code', 'business postal code', 'other postal code']);
-    const countryCol = findHeader(['country', 'nation', 'home country', 'business country', 'other country']);
-    
-    if (addressCol || cityCol || stateCol || zipCol) {
-      mapping.address = [];
-      if (addressCol) (mapping.address as string[]).push(addressCol);
-      if (address2Col) (mapping.address as string[]).push(address2Col);
-      if (cityCol) (mapping.address as string[]).push(cityCol);
-      if (stateCol) (mapping.address as string[]).push(stateCol);
-      if (zipCol) (mapping.address as string[]).push(zipCol);
-      if (countryCol) (mapping.address as string[]).push(countryCol);
-    }
-    
-    // Company detection - extended
-    const companyCol = findHeader(['company', 'organization', 'business', 'employer', 'company name', 'business name', 'org', 'firm', 'workplace']);
-    if (companyCol) mapping.company = companyCol;
-    
-    // Segment/Category detection - extended for CRM systems
-    // Note: Tags is very common in Cloze and other CRMs
-    const segmentCol = findHeader(['segment', 'category', 'type', 'contact type', 'group', 'status', 'lead status', 'client type', 'pipeline', 'stage', 'label', 'labels']);
-    if (segmentCol) mapping.segment = segmentCol;
-    
-    // Tags detection (separate from category, will be added to notes)
-    const tagsCol = findHeader(['tags', 'tag', 'keywords']);
-    if (tagsCol) mapping.tags = tagsCol;
-    
-    // Headline/Title for professional info
-    const headlineCol = findHeader(['headline', 'professional headline', 'linkedin headline', 'tagline']);
-    if (headlineCol) mapping.headline = headlineCol;
-    
-    // Role/Title detection - extended
-    const roleCol = findHeader(['role', 'title', 'job title', 'position', 'job', 'occupation', 'profession']);
-    if (roleCol) mapping.role = roleCol;
-    
-    // Notes detection - extended
-    const notesCol = findHeader(['notes', 'note', 'comments', 'comment', 'description', 'bio', 'memo', 'details', 'additional info', 'information']);
-    if (notesCol) mapping.notes = notesCol;
-    
-    // Birthday detection - extended
-    const birthdayCol = findHeader(['birthday', 'birth date', 'birthdate', 'dob', 'date of birth', 'bday']);
-    if (birthdayCol) mapping.birthday = birthdayCol;
-    
-    // Spouse/Partner detection - extended
-    const spouseCol = findHeader(['spouse', 'partner', 'spouse name', 'partner name', 'significant other', 'so', 'husband', 'wife']);
-    if (spouseCol) mapping.spouse = spouseCol;
-    
-    // Source/Lead source detection
-    const sourceCol = findHeader(['source', 'lead source', 'referral', 'how found', 'origin', 'campaign']);
-    if (sourceCol) mapping.source = sourceCol;
-    
-    return mapping;
-  };
+  const { data: interactions = [] } = useQuery<Interaction[]>({
+    queryKey: [`/api/people/${selectedPersonId}/interactions`],
+    enabled: !!selectedPersonId,
+  });
 
-  const transformWithMapping = (mapping: Record<string, string | string[]>, rows: any[], allHeaders?: string[]) => {
-    // Get all mapped column names to track which ones we've used
-    const mappedColumns = new Set<string>();
-    Object.values(mapping).forEach(val => {
-      if (Array.isArray(val)) {
-        val.forEach(v => mappedColumns.add(v));
-      } else if (val) {
-        mappedColumns.add(val as string);
-      }
-    });
-    
-    return rows.map((row: any) => {
-      const person: any = {};
-      const headers = allHeaders || Object.keys(row);
-      
-      // Build name from first+last or full name
-      if (mapping.name) {
-        if (Array.isArray(mapping.name)) {
-          person.name = mapping.name.map((h: string) => row[h] || "").join(" ").trim();
-        } else {
-          person.name = row[mapping.name] || "";
-        }
-      }
-      
-      if (mapping.email) person.email = row[mapping.email as string] || null;
-      if (mapping.phone) person.phone = row[mapping.phone as string] || null;
-      if (mapping.segment) person.segment = row[mapping.segment as string] || null;
-      if (mapping.role) person.role = row[mapping.role as string] || null;
-      
-      // Build notes from multiple sources
-      const notesParts: string[] = [];
-      if (mapping.notes && row[mapping.notes as string]) {
-        notesParts.push(row[mapping.notes as string]);
-      }
-      if (mapping.company && row[mapping.company as string]) {
-        notesParts.push(`Company: ${row[mapping.company as string]}`);
-      }
-      if (mapping.address && Array.isArray(mapping.address)) {
-        const addressParts = mapping.address.map((h: string) => row[h] || "").filter(Boolean);
-        if (addressParts.length > 0) {
-          notesParts.push(`Address: ${addressParts.join(", ")}`);
-        }
-      }
-      if (mapping.secondaryPhone && row[mapping.secondaryPhone as string]) {
-        notesParts.push(`Alt Phone: ${row[mapping.secondaryPhone as string]}`);
-      }
-      if (mapping.birthday && row[mapping.birthday as string]) {
-        notesParts.push(`Birthday: ${row[mapping.birthday as string]}`);
-      }
-      if (mapping.spouse && row[mapping.spouse as string]) {
-        notesParts.push(`Spouse: ${row[mapping.spouse as string]}`);
-      }
-      if (mapping.source && row[mapping.source as string]) {
-        notesParts.push(`Source: ${row[mapping.source as string]}`);
-      }
-      if (mapping.household && row[mapping.household as string]) {
-        notesParts.push(`Household: ${row[mapping.household as string]}`);
-      }
-      if (mapping.tags && row[mapping.tags as string]) {
-        notesParts.push(`Tags: ${row[mapping.tags as string]}`);
-      }
-      if (mapping.headline && row[mapping.headline as string]) {
-        notesParts.push(`Headline: ${row[mapping.headline as string]}`);
-      }
-      
-      // Capture ALL unmapped columns with data
-      const unmappedData: string[] = [];
-      headers.forEach(header => {
-        if (!mappedColumns.has(header) && row[header] && String(row[header]).trim()) {
-          const value = String(row[header]).trim();
-          // Skip if value is just whitespace or common empty values
-          if (value && value !== '-' && value !== 'N/A' && value !== 'null' && value !== 'undefined') {
-            unmappedData.push(`${header}: ${value}`);
-          }
-        }
-      });
-      
-      if (unmappedData.length > 0) {
-        notesParts.push("--- Additional Data ---");
-        notesParts.push(...unmappedData);
-      }
-      
-      if (notesParts.length > 0) {
-        person.notes = notesParts.join("\n");
-      }
-      
-      return person;
-    }).filter((p: any) => p.name && p.name.trim());
-  };
+  const { data: drafts = [] } = useQuery<GeneratedDraft[]>({
+    queryKey: [`/api/people/${selectedPersonId}/drafts`],
+    enabled: !!selectedPersonId,
+  });
 
-  const processSpreadsheetData = async (rows: any[]) => {
-    if (rows.length === 0) {
-      setIsAnalyzing(false);
-      toast({
-        title: "No data found",
-        description: "The file appears to be empty",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setRawCsvData(rows);
-    const headers = Object.keys(rows[0]);
-    
-    try {
-      // Try AI mapping first
-      const mapRes = await fetch("/api/ai-map-csv", {
+  const createPersonMutation = useMutation({
+    mutationFn: async (data: Partial<InsertPerson>) => {
+      const res = await fetch("/api/people", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ headers, sampleRows: rows.slice(0, 5) }),
+        body: JSON.stringify(data),
       });
-      
-      if (!mapRes.ok) {
-        throw new Error("AI mapping failed");
-      }
-      
-      const mapping: AIMapping = await mapRes.json();
-      setAiMapping(mapping);
-      
-      const transformRes = await fetch("/api/ai-transform-csv", {
-        method: "POST",
+      if (!res.ok) throw new Error("Failed to create person");
+      return res.json();
+    },
+    onSuccess: (newPerson) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/people"] });
+      setDialogOpen(false);
+      setFormData({ name: "", email: "", phone: "", role: "", segment: "", notes: "" });
+      setSelectedPersonId(newPerson.id);
+      toast({ title: "Person added successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to add person", variant: "destructive" });
+    },
+  });
+
+  const updatePersonMutation = useMutation({
+    mutationFn: async (data: Partial<Person>) => {
+      const res = await fetch(`/api/people/${selectedPersonId}`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mapping: mapping.mapping, rows }),
+        body: JSON.stringify(data),
       });
-      
-      if (!transformRes.ok) {
-        throw new Error("Transform failed");
-      }
-      
-      const { people } = await transformRes.json();
-      setParsedData(people);
-      
-      if (people.length === 0) {
-        toast({
-          title: "No contacts found",
-          description: "Couldn't identify any contacts in the file",
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "File analyzed",
-          description: `Found ${people.length} contacts with ${Math.round(mapping.confidence * 100)}% confidence`,
-        });
-      }
-    } catch (error: any) {
-      console.error("AI mapping error, falling back to basic detection:", error);
-      
-      // Fallback to basic column detection
-      const basicMapping = detectColumnMapping(headers);
-      
-      if (!basicMapping.name) {
-        toast({
-          title: "Could not detect columns",
-          description: "Please ensure your file has a Name or First/Last Name column",
-          variant: "destructive"
-        });
-        setIsAnalyzing(false);
-        return;
-      }
-      
-      const mappedFields = Object.keys(basicMapping).filter(k => basicMapping[k]);
-      setAiMapping({
-        mapping: basicMapping,
-        confidence: 0.7,
-        unmappedHeaders: headers.filter(h => !Object.values(basicMapping).flat().includes(h))
-      });
-      
-      const people = transformWithMapping(basicMapping, rows, headers);
-      setParsedData(people);
-      
-      if (people.length > 0) {
-        toast({
-          title: "File analyzed",
-          description: `Found ${people.length} contacts (basic detection: ${mappedFields.join(", ")})`,
-        });
-      } else {
-        toast({
-          title: "No contacts found",
-          description: "Could not extract contacts from the file",
-          variant: "destructive"
-        });
-      }
+      if (!res.ok) throw new Error("Failed to update person");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/people"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/people/${selectedPersonId}`] });
+      setEditDialogOpen(false);
+      toast({ title: "Person updated successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update person", variant: "destructive" });
+    },
+  });
+
+  const filteredPeople = people
+    .filter(p => {
+      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.phone?.includes(searchQuery);
+      const matchesSegment = segmentFilter === "all" || 
+        p.segment?.toLowerCase().startsWith(segmentFilter.toLowerCase());
+      return matchesSearch && matchesSegment;
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  useEffect(() => {
+    if (!selectedPersonId && filteredPeople.length > 0) {
+      setSelectedPersonId(filteredPeople[0].id);
     }
-    
-    setIsAnalyzing(false);
+  }, [filteredPeople, selectedPersonId]);
+
+  const timelineItems: TimelineItem[] = [
+    ...interactions.map(i => ({
+      id: i.id,
+      type: 'interaction' as const,
+      title: i.title || i.source || 'Conversation',
+      preview: i.summary || i.transcript?.slice(0, 200) || '',
+      date: new Date(i.occurredAt || i.createdAt || Date.now()),
+      source: i.source,
+      data: i,
+    })),
+    ...drafts.map(d => ({
+      id: d.id,
+      type: 'draft' as const,
+      title: d.title || `${d.type} draft`,
+      preview: d.content?.slice(0, 200) || '',
+      date: new Date(d.createdAt || Date.now()),
+      source: d.type,
+      data: d,
+    })),
+  ].sort((a, b) => b.date.getTime() - a.date.getTime());
+
+  const getSegmentColor = (segment: string | null | undefined) => {
+    if (!segment) return "bg-gray-100 text-gray-700 hover:bg-gray-200";
+    const s = segment.toLowerCase();
+    if (s.startsWith("a") || s === "buyer_seller" || s === "advocate") return "bg-purple-100 text-purple-700 hover:bg-purple-200";
+    if (s.startsWith("b") || s === "buyer") return "bg-blue-100 text-blue-700 hover:bg-blue-200";
+    if (s.startsWith("c") || s === "seller") return "bg-green-100 text-green-700 hover:bg-green-200";
+    if (s.startsWith("d")) return "bg-orange-100 text-orange-700 hover:bg-orange-200";
+    return "bg-gray-100 text-gray-700 hover:bg-gray-200";
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const getSourceIcon = (source: string | null | undefined) => {
+    if (!source) return <MessageSquare className="h-4 w-4" />;
+    const s = source.toLowerCase();
+    if (s.includes('email') || s.includes('gmail')) return <Mail className="h-4 w-4" />;
+    if (s.includes('call') || s.includes('phone')) return <Phone className="h-4 w-4" />;
+    if (s.includes('meeting') || s.includes('zoom') || s.includes('video')) return <Video className="h-4 w-4" />;
+    if (s.includes('text') || s.includes('sms') || s.includes('imessage') || s.includes('whatsapp')) return <MessageSquare className="h-4 w-4" />;
+    if (s.includes('granola') || s.includes('note')) return <FileText className="h-4 w-4" />;
+    return <MessageSquare className="h-4 w-4" />;
+  };
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const handlePhoneClick = (phone: string) => {
+    window.location.href = `tel:${phone}`;
+  };
+
+  const handleEmailClick = (email: string) => {
+    window.location.href = `mailto:${email}`;
+  };
+
+  const handleTextClick = (phone: string) => {
+    window.location.href = `sms:${phone}`;
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
 
-    setIsAnalyzing(true);
-    setParsedData([]);
-    setAiMapping(null);
-
-    const ext = file.name.toLowerCase().split('.').pop();
-
-    if (ext === 'xlsx' || ext === 'xls') {
-      // Handle Excel files
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const data = e.target?.result;
-          const workbook = XLSX.read(data, { type: 'array' });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          const rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
-          await processSpreadsheetData(rows);
-        } catch (error) {
-          setIsAnalyzing(false);
-          toast({
-            title: "Error parsing file",
-            description: "Could not read the Excel file",
-            variant: "destructive"
-          });
-        }
-      };
-      reader.onerror = () => {
-        setIsAnalyzing(false);
-        toast({
-          title: "Error reading file",
-          description: "Could not read the file",
-          variant: "destructive"
-        });
-      };
-      reader.readAsArrayBuffer(file);
-    } else {
-      // Handle CSV files with Papa Parse
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    
+    if (fileExtension === 'csv') {
       Papa.parse(file, {
         header: true,
-        skipEmptyLines: true,
-        complete: async (results) => {
-          await processSpreadsheetData(results.data as any[]);
+        complete: (results) => {
+          importContacts(results.data as any[]);
         },
         error: () => {
-          setIsAnalyzing(false);
-          toast({
-            title: "Error parsing file",
-            description: "Please upload a valid spreadsheet file",
-            variant: "destructive"
-          });
+          toast({ title: "Failed to parse CSV file", variant: "destructive" });
         }
       });
+    } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        importContacts(jsonData as any[]);
+      };
+      reader.readAsArrayBuffer(file);
+    }
+    
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
-  const handleImportPeople = async () => {
-    if (parsedData.length === 0) return;
-    
-    setIsUploading(true);
-    setUploadProgress(0);
+  const importContacts = async (data: any[]) => {
     let imported = 0;
-    
-    for (let i = 0; i < parsedData.length; i++) {
-      const person = parsedData[i];
-      
-      if (!person.name) continue;
+    for (const row of data) {
+      const name = row.name || row.Name || row['Full Name'] || `${row['First Name'] || ''} ${row['Last Name'] || ''}`.trim();
+      if (!name) continue;
       
       try {
         await fetch("/api/people", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            name: person.name,
-            email: person.email || null,
-            phone: person.phone || null,
-            role: person.role || null,
-            segment: person.segment || null,
-            address: person.address || null,
-            notes: person.notes || null,
+            name,
+            email: row.email || row.Email || row['E-mail'] || null,
+            phone: row.phone || row.Phone || row['Mobile'] || null,
+            role: row.role || row.Role || row.Title || null,
+            segment: row.segment || row.Segment || null,
           }),
         });
         imported++;
       } catch (e) {
-        console.error("Failed to import:", person);
+        console.error('Failed to import:', row);
       }
-      
-      setUploadProgress(Math.round(((i + 1) / parsedData.length) * 100));
     }
     
-    setIsUploading(false);
     queryClient.invalidateQueries({ queryKey: ["/api/people"] });
     setUploadDialogOpen(false);
-    setParsedData([]);
-    setAiMapping(null);
-    setRawCsvData([]);
-    toast({
-      title: "Import Complete",
-      description: `Successfully imported ${imported} people`,
-    });
+    toast({ title: `Imported ${imported} contacts` });
   };
 
-  // Fetch all people
-  const { data: people = [], isLoading } = useQuery<Person[]>({
-    queryKey: ["/api/people"],
-  });
-
-  // Fetch all households
-  interface Household {
-    id: string;
-    name: string;
-    address?: string | null;
-    primaryPersonId?: string | null;
-    members?: Person[];
-  }
-  
-  const { data: households = [] } = useQuery<Household[]>({
-    queryKey: ["/api/households"],
-  });
-
-  // Create/link household mutation
-  const createHouseholdMutation = useMutation({
-    mutationFn: async (data: { name: string; address?: string; memberIds: string[] }) => {
-      const response = await fetch("/api/households", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: data.name,
-          address: data.address,
-          primaryPersonId: data.memberIds[0],
-          memberIds: data.memberIds,
-        }),
-      });
-      if (!response.ok) throw new Error("Failed to create household");
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/households"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/people"] });
-      setHouseholdDialogOpen(false);
-      setHouseholdName("");
-      setHouseholdAddress("");
-      setSelectedHouseholdId(null);
-      clearSelection();
-      toast({ title: "Household Created", description: "People linked to household" });
-    },
-  });
-
-  // Link to existing household mutation
-  const linkToHouseholdMutation = useMutation({
-    mutationFn: async ({ householdId, memberIds }: { householdId: string; memberIds: string[] }) => {
-      for (const personId of memberIds) {
-        const response = await fetch(`/api/households/${householdId}/members`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ personId }),
-        });
-        if (!response.ok) throw new Error("Failed to link person to household");
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/households"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/people"] });
-      setHouseholdDialogOpen(false);
-      setSelectedHouseholdId(null);
-      clearSelection();
-      toast({ title: "Linked", description: "People added to household" });
-    },
-  });
-
-  const handleLinkToHousehold = () => {
-    const memberIds = Array.from(selectedIds);
-    if (selectedHouseholdId) {
-      linkToHouseholdMutation.mutate({ householdId: selectedHouseholdId, memberIds });
-    } else if (householdName.trim()) {
-      // Create new household with selected people
-      const selectedPeople = people.filter(p => selectedIds.has(p.id));
-      const defaultName = householdName || selectedPeople.map(p => p.name.split(' ').pop()).join(' & ') + ' Household';
-      createHouseholdMutation.mutate({
-        name: defaultName,
-        address: householdAddress || undefined,
-        memberIds,
-      });
-    }
-  };
-
-  // Create person mutation
-  const createPersonMutation = useMutation({
-    mutationFn: async (data: InsertPerson) => {
-      const response = await fetch("/api/people", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to create person");
-      }
-      return response.json();
-    },
-    onSuccess: (person: Person) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/people"] });
-      
-      // If segment indicates Hot or Warm, automatically create a deal so they show in Business Tracker
-      const segment = formData.segment?.toLowerCase() || "";
-      if (segment.includes("hot") || segment.includes("warm")) {
-        const stage = segment.includes("hot") ? "hot" : "warm";
-        fetch("/api/deals", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            personId: person.id,
-            title: person.name,
-            type: "buyer",
-            stage: stage,
-            side: "buyer",
-            painPleasureRating: 3,
-            value: 0,
-            commissionPercent: 3,
-          }),
-        }).then(() => {
-          queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
-        }).catch(e => {
-          console.error("Failed to create deal for hot/warm person:", e);
-        });
-      }
-      
-      setDialogOpen(false);
+  const openEditDialog = () => {
+    if (selectedPerson) {
       setFormData({
-        name: "",
-        email: "",
-        phone: "",
-        role: "",
-        segment: "",
-        notes: "",
+        name: selectedPerson.name || "",
+        email: selectedPerson.email || "",
+        phone: selectedPerson.phone || "",
+        role: selectedPerson.role || "",
+        segment: selectedPerson.segment || "",
+        notes: selectedPerson.notes || "",
+        fordFamily: selectedPerson.fordFamily || "",
+        fordOccupation: selectedPerson.fordOccupation || "",
+        fordRecreation: selectedPerson.fordRecreation || "",
+        fordDreams: selectedPerson.fordDreams || "",
+        address: selectedPerson.address || "",
       });
-      toast({
-        title: "Success",
-        description: segment.includes("hot") || segment.includes("warm") 
-          ? `${person.name} added and will appear in Business Tracker`
-          : "Person added successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name) {
-      toast({
-        title: "Error",
-        description: "Name is required",
-        variant: "destructive",
-      });
-      return;
-    }
-    createPersonMutation.mutate(formData as InsertPerson);
-  };
-
-  const filteredPeople = people.filter((person) => {
-    const matchesSearch = person.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      person.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      person.phone?.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesSegment = segmentFilter === "all" || 
-      (person.segment?.toLowerCase().includes(segmentFilter.toLowerCase()));
-    
-    return matchesSearch && matchesSegment;
-  });
-
-  const uniqueSegments = Array.from(new Set(people.map(p => p.segment).filter(Boolean))) as string[];
-
-  const selectAll = () => {
-    if (selectedIds.size === filteredPeople.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filteredPeople.map(p => p.id)));
+      setEditDialogOpen(true);
     }
   };
-
-  const handleBulkSegmentChange = async () => {
-    if (!bulkSegment.trim()) return;
-    
-    const ids = Array.from(selectedIds);
-    for (const id of ids) {
-      try {
-        await fetch(`/api/people/${id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ segment: bulkSegment }),
-        });
-      } catch (e) {
-        console.error("Failed to update:", id);
-      }
-    }
-    
-    queryClient.invalidateQueries({ queryKey: ["/api/people"] });
-    setBulkSegmentDialogOpen(false);
-    setBulkSegment("");
-    clearSelection();
-    toast({ title: "Updated", description: `Changed segment for ${selectedIds.size} people` });
-  };
-
-  const handleBulkDelete = async () => {
-    const count = selectedIds.size;
-    if (count === 0) {
-      toast({ title: "No selection", description: "Please select people to delete", variant: "destructive" });
-      return;
-    }
-    
-    if (!confirm(`Are you sure you want to delete ${count} people? This cannot be undone.`)) return;
-    
-    const ids = Array.from(selectedIds);
-    let successCount = 0;
-    let failCount = 0;
-    
-    await Promise.all(ids.map(async (id) => {
-      try {
-        const res = await fetch(`/api/people/${id}`, { method: "DELETE" });
-        if (res.ok) {
-          successCount++;
-        } else {
-          failCount++;
-          console.error("Failed to delete:", id, res.status);
-        }
-      } catch (e) {
-        failCount++;
-        console.error("Failed to delete:", id, e);
-      }
-    }));
-    
-    queryClient.invalidateQueries({ queryKey: ["/api/people"] });
-    clearSelection();
-    
-    if (failCount > 0) {
-      toast({ title: "Partial Delete", description: `Deleted ${successCount}, failed ${failCount}`, variant: "destructive" });
-    } else {
-      toast({ title: "Deleted", description: `Removed ${successCount} people` });
-    }
-  };
-
-  const handleExportSelected = () => {
-    const selectedPeople = people.filter(p => selectedIds.has(p.id));
-    const csv = [
-      ["Name", "Email", "Phone", "Segment", "Role", "Notes"],
-      ...selectedPeople.map(p => [
-        p.name,
-        p.email || "",
-        p.phone || "",
-        p.segment || "",
-        p.role || "",
-        (p.notes || "").replace(/\n/g, " ")
-      ])
-    ].map(row => row.map(cell => `"${cell}"`).join(",")).join("\n");
-    
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `contacts-export-${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    
-    toast({ title: "Exported", description: `Downloaded ${selectedIds.size} contacts` });
-  };
-
-  const [activeTab, setActiveTab] = useState("contacts");
 
   return (
-    <Layout>
-      <div className="min-h-screen bg-secondary/30 relative">
-        <div 
-          className="fixed inset-0 opacity-40 mix-blend-multiply pointer-events-none -z-10"
-          style={{ backgroundImage: `url(${paperBg})`, backgroundSize: 'cover' }}
-        />
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
+      {/* Top Action Bar */}
+      <div className="h-14 border-b bg-card flex items-center justify-between px-4 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <Users className="h-5 w-5 text-primary" />
+          <h1 className="text-lg font-semibold">People</h1>
+          {selectedPerson && (
+            <span className="text-muted-foreground">/ {selectedPerson.name}</span>
+          )}
+        </div>
         
-        <div className="container mx-auto px-4 py-4 md:py-8 max-w-6xl">
-          <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-serif font-bold text-primary">People</h1>
-              <p className="text-muted-foreground text-sm md:text-base">Client Intelligence Core</p>
+        {selectedPerson && (
+          <div className="flex items-center gap-1">
+            {selectedPerson.phone && (
+              <>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="gap-1.5"
+                  onClick={() => handlePhoneClick(selectedPerson.phone!)}
+                  data-testid="action-call"
+                >
+                  <Phone className="h-4 w-4" />
+                  <span className="hidden md:inline">Call</span>
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="gap-1.5"
+                  onClick={() => handleTextClick(selectedPerson.phone!)}
+                  data-testid="action-text"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  <span className="hidden md:inline">Text</span>
+                </Button>
+              </>
+            )}
+            {selectedPerson.email && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="gap-1.5"
+                onClick={() => handleEmailClick(selectedPerson.email!)}
+                data-testid="action-email"
+              >
+                <Mail className="h-4 w-4" />
+                <span className="hidden md:inline">Email</span>
+              </Button>
+            )}
+            <Separator orientation="vertical" className="h-6 mx-1" />
+            <Button variant="ghost" size="sm" className="gap-1.5" data-testid="action-compose">
+              <PenTool className="h-4 w-4" />
+              <span className="hidden md:inline">Compose</span>
+            </Button>
+            <Button variant="ghost" size="sm" className="gap-1.5" data-testid="action-meeting">
+              <CalendarPlus className="h-4 w-4" />
+              <span className="hidden md:inline">Book Meeting</span>
+            </Button>
+            <Button variant="ghost" size="sm" className="gap-1.5" data-testid="action-note">
+              <StickyNote className="h-4 w-4" />
+              <span className="hidden md:inline">Note</span>
+            </Button>
+            <Button variant="ghost" size="sm" className="gap-1.5" data-testid="action-todo">
+              <ListTodo className="h-4 w-4" />
+              <span className="hidden md:inline">To Do</span>
+            </Button>
+            <Button variant="ghost" size="sm" className="gap-1.5" data-testid="action-log">
+              <Activity className="h-4 w-4" />
+              <span className="hidden md:inline">Log</span>
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Main 3-Column Layout */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Sidebar - People List */}
+        <div className="w-64 border-r bg-card flex flex-col flex-shrink-0">
+          {/* Search and Filter */}
+          <div className="p-3 space-y-2 border-b">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search people..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 h-9"
+                data-testid="people-search"
+              />
             </div>
-            
-            <div className="flex gap-2">
-              <Dialog open={uploadDialogOpen} onOpenChange={(open) => { 
-                setUploadDialogOpen(open); 
-                if (!open) { 
-                  setParsedData([]); 
-                  setAiMapping(null); 
-                  setRawCsvData([]); 
-                } 
-              }}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="gap-2 shadow-md" data-testid="button-upload-spreadsheet">
-                    <Upload className="h-4 w-4" /> Upload Spreadsheet
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <FileSpreadsheet className="h-5 w-5" /> Import People from Spreadsheet
-                    </DialogTitle>
-                    <DialogDescription className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-purple-500" />
-                      Upload any CRM export - AI will automatically figure out how to map the columns
-                    </DialogDescription>
-                  </DialogHeader>
-                  
-                  <div className="space-y-4">
-                    <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept=".csv,.xlsx,.xls"
-                        onChange={handleFileUpload}
-                        className="hidden"
-                        data-testid="input-file-upload"
-                      />
-                      <Button 
-                        variant="outline" 
-                        onClick={() => fileInputRef.current?.click()}
-                        className="gap-2"
-                        disabled={isAnalyzing}
-                        data-testid="button-select-file"
-                      >
-                        {isAnalyzing ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Analyzing with AI...
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="h-4 w-4" /> Select Spreadsheet
-                          </>
-                        )}
-                      </Button>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Works with CSV, Excel (.xlsx, .xls), and any CRM export
-                      </p>
-                    </div>
+            <div className="flex items-center gap-2">
+              <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+              <select
+                value={segmentFilter}
+                onChange={(e) => setSegmentFilter(e.target.value)}
+                className="flex-1 h-8 text-xs rounded border bg-background px-2"
+                data-testid="people-filter"
+              >
+                <option value="all">All Segments</option>
+                <option value="a">A - Advocates</option>
+                <option value="b">B - Fans</option>
+                <option value="c">C - Network</option>
+                <option value="d">D - Develop</option>
+              </select>
+            </div>
+          </div>
 
-                    {aiMapping && (
-                      <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Sparkles className="h-4 w-4 text-purple-600" />
-                          <span className="font-medium text-purple-800">AI Analysis Complete</span>
-                          <Badge variant="outline" className="ml-auto bg-purple-100 text-purple-700 border-purple-300">
-                            {Math.round(aiMapping.confidence * 100)}% confident
-                          </Badge>
-                        </div>
-                        <div className="text-sm text-purple-700">
-                          Mapped fields: {Object.keys(aiMapping.mapping).filter(k => aiMapping.mapping[k]).join(", ")}
-                        </div>
-                        {aiMapping.unmappedHeaders && aiMapping.unmappedHeaders.length > 0 && (
-                          <div className="text-xs text-purple-600 mt-1">
-                            Skipped columns: {aiMapping.unmappedHeaders.slice(0, 5).join(", ")}
-                            {aiMapping.unmappedHeaders.length > 5 && ` +${aiMapping.unmappedHeaders.length - 5} more`}
-                          </div>
-                        )}
+          {/* People List */}
+          <ScrollArea className="flex-1">
+            {isLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="divide-y">
+                {filteredPeople.map((person) => (
+                  <div
+                    key={person.id}
+                    className={`p-3 cursor-pointer hover:bg-accent/50 transition-colors ${
+                      selectedPersonId === person.id ? 'bg-accent border-l-2 border-l-primary' : ''
+                    }`}
+                    onClick={() => setSelectedPersonId(person.id)}
+                    data-testid={`person-row-${person.id}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 ${
+                        selectedPersonId === person.id ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary'
+                      }`}>
+                        {getInitials(person.name)}
                       </div>
-                    )}
-
-                    {parsedData.length > 0 && (
-                      <>
-                        <div className="border rounded-lg overflow-hidden">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Phone</TableHead>
-                                <TableHead>Email</TableHead>
-                                <TableHead>Notes</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {parsedData.slice(0, 10).map((person, idx) => (
-                                <TableRow key={idx}>
-                                  <TableCell className="font-medium">{person.name}</TableCell>
-                                  <TableCell>{person.phone || "-"}</TableCell>
-                                  <TableCell>{person.email || "-"}</TableCell>
-                                  <TableCell className="text-sm text-muted-foreground truncate max-w-[200px]">
-                                    {person.notes || "-"}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-                        {parsedData.length > 10 && (
-                          <p className="text-sm text-muted-foreground text-center">
-                            ...and {parsedData.length - 10} more
-                          </p>
-                        )}
-                        <div className="flex justify-between items-center">
-                          <p className="text-sm font-medium">{parsedData.length} people ready to import</p>
-                          <Button 
-                            onClick={handleImportPeople} 
-                            disabled={isUploading}
-                            className="gap-2"
-                            data-testid="button-import"
-                          >
-                            {isUploading ? (
-                              <>
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Importing... {uploadProgress}%
-                              </>
-                            ) : (
-                              <>
-                                <Check className="h-4 w-4" /> Import All
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </>
-                    )}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm truncate">{person.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {person.role || person.email || 'No details'}
+                        </p>
+                      </div>
+                      {person.segment && (
+                        <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 flex-shrink-0 ${getSegmentColor(person.segment)}`}>
+                          {person.segment.charAt(0).toUpperCase()}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                </DialogContent>
-              </Dialog>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
 
+          {/* Add Person Button */}
+          <div className="p-2 border-t space-y-2">
+            <div className="flex gap-2">
               <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button className="gap-2 shadow-md" data-testid="button-add-person">
-                    <Plus className="h-4 w-4" /> Add Person
+                  <Button size="sm" className="flex-1 gap-1.5" data-testid="add-person-btn">
+                    <Plus className="h-4 w-4" />
+                    Add Person
                   </Button>
                 </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Add New Person</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label htmlFor="name">Name *</Label>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New Person</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Name *</Label>
                       <Input
-                        id="name"
-                        value={formData.name}
+                        value={formData.name || ""}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        placeholder="Joseph Melody"
+                        placeholder="Full name"
                         data-testid="input-name"
                       />
                     </div>
-                    <div>
-                      <Label htmlFor="nickname">Nickname</Label>
-                      <Input
-                        id="nickname"
-                        value={formData.nickname || ""}
-                        onChange={(e) => setFormData({ ...formData, nickname: e.target.value })}
-                        placeholder="Joe"
-                        data-testid="input-nickname"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email || ""}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="john@example.com"
-                      data-testid="input-email"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="phone">Phone</Label>
-                    <Input
-                      id="phone"
-                      value={formData.phone || ""}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="(555) 123-4567"
-                      data-testid="input-phone"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="role">Role</Label>
-                    <Input
-                      id="role"
-                      value={formData.role || ""}
-                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                      placeholder="Buyer, Seller, Past Client..."
-                      data-testid="input-role"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="segment">Segment</Label>
-                    <Input
-                      id="segment"
-                      value={formData.segment || ""}
-                      onChange={(e) => setFormData({ ...formData, segment: e.target.value })}
-                      placeholder="A - Advocate, B - Fan, C - Network, D - 8x8..."
-                      data-testid="input-segment"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="notes">Notes</Label>
-                    <Textarea
-                      id="notes"
-                      value={formData.notes || ""}
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                      placeholder="Any additional notes..."
-                      data-testid="input-notes"
-                    />
-                  </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
-                    disabled={createPersonMutation.isPending}
-                    data-testid="button-submit"
-                  >
-                    {createPersonMutation.isPending ? (
-                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</>
-                    ) : (
-                      "Add Person"
-                    )}
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
-            </div>
-          </header>
-
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-            <TabsList className="grid w-full grid-cols-3 max-w-md">
-              <TabsTrigger value="contacts" className="gap-1" data-testid="tab-contacts">
-                <Users className="h-4 w-4" /> Contacts
-              </TabsTrigger>
-              <TabsTrigger value="know" className="gap-1" data-testid="tab-know">
-                <Brain className="h-4 w-4" /> Know Your People
-              </TabsTrigger>
-              <TabsTrigger value="d-review" className="gap-1" data-testid="tab-d-review">
-                <UserX className="h-4 w-4" /> D Review
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="contacts" className="mt-4">
-              <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mb-6">
-                <div className="flex items-center gap-3 order-2 sm:order-1">
-                  <Checkbox 
-                    checked={filteredPeople.length > 0 && selectedIds.size === filteredPeople.length}
-                    onCheckedChange={selectAll}
-                    data-testid="checkbox-select-all"
-                    className="h-5 w-5"
-                  />
-                  {selectedIds.size > 0 ? (
-                    <span className="text-sm font-medium text-primary">
-                      {selectedIds.size} of {filteredPeople.length}
-                    </span>
-                  ) : (
-                    <span className="text-sm text-muted-foreground hidden sm:inline">Select all</span>
-                  )}
-                </div>
-                <div className="relative flex-1 order-1 sm:order-2">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input 
-                    placeholder="Search people..." 
-                    className="pl-9 bg-background/80"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    data-testid="input-search"
-                  />
-                </div>
-                <select
-                  value={segmentFilter}
-                  onChange={(e) => setSegmentFilter(e.target.value)}
-                  className="h-10 px-3 py-2 rounded-md border border-input bg-background/80 text-sm order-3"
-                  data-testid="select-segment-filter"
-                >
-                  <option value="all">All</option>
-                  <option value="a">A</option>
-                  <option value="b">B</option>
-                  <option value="c">C</option>
-                  <option value="d">D</option>
-                  {uniqueSegments.filter(s => !s.toLowerCase().startsWith('a') && !s.toLowerCase().startsWith('b') && !s.toLowerCase().startsWith('c') && !s.toLowerCase().startsWith('d')).map(seg => (
-                    <option key={seg} value={seg.toLowerCase()}>{seg}</option>
-                  ))}
-                </select>
-              </div>
-
-              {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : filteredPeople.length === 0 ? (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <p className="text-muted-foreground mb-4">No people found. Add your first contact to get started!</p>
-                <Button onClick={() => setDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" /> Add Person
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 pb-20">
-              {filteredPeople.map((person) => (
-                <Card 
-                  key={person.id} 
-                  className={`border-none shadow-sm hover:shadow-md transition-all bg-card/80 backdrop-blur-sm group cursor-pointer ${selectedIds.has(person.id) ? 'ring-2 ring-primary bg-primary/5' : ''}`} 
-                  data-testid={`card-person-${person.id}`}
-                >
-                  <CardContent className="p-4 flex flex-col md:flex-row items-start md:items-center gap-4 justify-between">
-                    <div className="flex items-center gap-4">
-                      <div onClick={(e) => toggleSelect(person.id, e)} className="flex-shrink-0">
-                        <Checkbox 
-                          checked={selectedIds.has(person.id)}
-                          onCheckedChange={() => toggleSelect(person.id)}
-                          className="h-5 w-5"
-                          data-testid={`checkbox-person-${person.id}`}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Email</Label>
+                        <Input
+                          type="email"
+                          value={formData.email || ""}
+                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          placeholder="email@example.com"
+                          data-testid="input-email"
                         />
                       </div>
-                      <Link href={`/people/${person.id}`} className="flex items-center gap-4 flex-1">
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold flex-shrink-0">
-                          {person.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-lg hover:text-primary transition-colors" data-testid={`text-name-${person.id}`}>{person.name}</h3>
-                          <div className="flex gap-2 items-center text-sm text-muted-foreground">
-                            {person.role && <Badge variant="secondary" className="font-normal">{person.role}</Badge>}
-                            {person.email && (
-                              <><span>•</span>
-                              <span className="flex items-center gap-1"><Mail className="h-3 w-3" /> {person.email}</span></>
-                            )}
-                          </div>
-                        </div>
-                      </Link>
-                    </div>
-                    
-                    <div className="flex flex-col md:flex-row items-start md:items-center gap-4 w-full md:w-auto mt-4 md:mt-0">
-                      {person.segment && (
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Segment</p>
-                          <Badge className={
-                            person.segment.toLowerCase().startsWith("a") ? "bg-purple-100 text-purple-700 hover:bg-purple-200 border-none" :
-                            person.segment.toLowerCase().startsWith("b") ? "bg-blue-100 text-blue-700 hover:bg-blue-200 border-none" :
-                            person.segment.toLowerCase().startsWith("c") ? "bg-green-100 text-green-700 hover:bg-green-200 border-none" :
-                            person.segment.toLowerCase().startsWith("d") ? "bg-orange-100 text-orange-700 hover:bg-orange-200 border-none" :
-                            "bg-gray-100 text-gray-700 hover:bg-gray-200 border-none"
-                          }>{person.segment}</Badge>
-                        </div>
-                      )}
-                      
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {person.phone && <Button size="icon" variant="ghost" className="h-8 w-8"><Phone className="h-4 w-4" /></Button>}
-                        {person.email && <Button size="icon" variant="ghost" className="h-8 w-8"><Mail className="h-4 w-4" /></Button>}
-                        <Button size="icon" variant="ghost" className="h-8 w-8"><MessageSquare className="h-4 w-4" /></Button>
+                      <div className="space-y-2">
+                        <Label>Phone</Label>
+                        <Input
+                          value={formData.phone || ""}
+                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                          placeholder="(555) 123-4567"
+                          data-testid="input-phone"
+                        />
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-              </div>
-            )}
-            </TabsContent>
-
-            <TabsContent value="know" className="mt-4">
-              <KnowYourPeopleContent />
-            </TabsContent>
-
-            <TabsContent value="d-review" className="mt-4">
-              <DContactReviewContent />
-            </TabsContent>
-          </Tabs>
-        </div>
-      </div>
-
-      {/* Floating Action Bar */}
-      {selectedIds.size > 0 && (
-        <div className="fixed bottom-4 md:bottom-6 left-2 right-2 md:left-1/2 md:right-auto md:-translate-x-1/2 z-50 bg-primary text-primary-foreground rounded-full shadow-2xl px-4 md:px-6 py-3 flex items-center justify-center gap-2 md:gap-4 animate-in slide-in-from-bottom-4">
-          <span className="font-medium text-sm md:text-base">{selectedIds.size} selected</span>
-          <div className="h-6 w-px bg-primary-foreground/30" />
-          
-          <Dialog open={bulkSegmentDialogOpen} onOpenChange={setBulkSegmentDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/20 gap-1 md:gap-2 px-2 md:px-3">
-                <Tag className="h-4 w-4" /> <span className="hidden sm:inline">Segment</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Change Segment</DialogTitle>
-                <DialogDescription>Set segment for {selectedIds.size} selected people</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="flex gap-2 flex-wrap">
-                  {["A - Advocate", "B - Fan", "C - Network", "D - 8x8"].map(seg => (
-                    <Button 
-                      key={seg} 
-                      variant={bulkSegment === seg ? "default" : "outline"} 
-                      size="sm"
-                      onClick={() => setBulkSegment(seg)}
-                    >
-                      {seg}
-                    </Button>
-                  ))}
-                </div>
-                <Input 
-                  placeholder="Or type custom segment..." 
-                  value={bulkSegment}
-                  onChange={(e) => setBulkSegment(e.target.value)}
-                />
-                <Button onClick={handleBulkSegmentChange} className="w-full" disabled={!bulkSegment.trim()}>
-                  Apply to {selectedIds.size} people
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-          
-          <Dialog open={householdDialogOpen} onOpenChange={setHouseholdDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/20 gap-1 md:gap-2 px-2 md:px-3">
-                <Users className="h-4 w-4" /> <span className="hidden sm:inline">Household</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Link to Household</DialogTitle>
-                <DialogDescription>
-                  Group {selectedIds.size} selected people into a household for de-duplicated mailings
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                {households.length > 0 && (
-                  <div className="space-y-2">
-                    <Label>Add to Existing Household</Label>
-                    <div className="flex gap-2 flex-wrap">
-                      {households.map(h => (
-                        <Button 
-                          key={h.id}
-                          variant={selectedHouseholdId === h.id ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => {
-                            setSelectedHouseholdId(h.id);
-                            setHouseholdName("");
-                          }}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Role</Label>
+                        <Input
+                          value={formData.role || ""}
+                          onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                          placeholder="Job title"
+                          data-testid="input-role"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Segment</Label>
+                        <select
+                          value={formData.segment || ""}
+                          onChange={(e) => setFormData({ ...formData, segment: e.target.value })}
+                          className="w-full h-9 rounded border bg-background px-3"
+                          data-testid="select-segment"
                         >
-                          <Home className="h-3 w-3 mr-1" /> {h.name}
-                        </Button>
+                          <option value="">Select...</option>
+                          <option value="A">A - Advocate</option>
+                          <option value="B">B - Fan</option>
+                          <option value="C">C - Network</option>
+                          <option value="D">D - Develop</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Notes</Label>
+                      <Textarea
+                        value={formData.notes || ""}
+                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                        placeholder="Any notes about this person..."
+                        data-testid="input-notes"
+                      />
+                    </div>
+                    <Button 
+                      onClick={() => createPersonMutation.mutate(formData)}
+                      disabled={!formData.name || createPersonMutation.isPending}
+                      className="w-full"
+                      data-testid="submit-person"
+                    >
+                      {createPersonMutation.isPending ? "Adding..." : "Add Person"}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+              
+              <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="outline" className="gap-1.5" data-testid="import-btn">
+                    <Upload className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Import Contacts</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <p className="text-sm text-muted-foreground">
+                      Upload a CSV or Excel file with columns like: Name, Email, Phone, Role, Segment
+                    </p>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".csv,.xlsx,.xls"
+                      onChange={handleFileUpload}
+                      className="w-full"
+                    />
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+            <p className="text-xs text-muted-foreground text-center">
+              {filteredPeople.length} people
+            </p>
+          </div>
+        </div>
+
+        {/* Center - Timeline */}
+        <div className="flex-1 flex flex-col min-w-0 bg-secondary/30">
+          {selectedPerson ? (
+            <>
+              {/* Person Header */}
+              <div className="p-4 bg-card border-b">
+                <div className="flex items-start gap-4">
+                  <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl font-bold">
+                    {getInitials(selectedPerson.name)}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-xl font-bold">{selectedPerson.name}</h2>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7"
+                        onClick={openEditDialog}
+                        data-testid="edit-person-btn"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <p className="text-muted-foreground">{selectedPerson.role || 'No role'}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      {selectedPerson.segment && (
+                        <Badge className={`${getSegmentColor(selectedPerson.segment)} border-none`}>
+                          {selectedPerson.segment}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Timeline Tabs */}
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+                <TabsList className="mx-4 mt-4 w-fit">
+                  <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                  <TabsTrigger value="notes">Notes</TabsTrigger>
+                  <TabsTrigger value="files">Files</TabsTrigger>
+                  <TabsTrigger value="todos">To Do</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="timeline" className="flex-1 overflow-auto p-4">
+                  {/* AI Summary */}
+                  {interactions.length > 0 && interactions[0].summary && (
+                    <Card className="mb-4 border-purple-200 bg-purple-50/50">
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-2">
+                          <Sparkles className="h-4 w-4 text-purple-600 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-medium text-purple-800 mb-1">Summary</p>
+                            <p className="text-sm text-purple-700">{interactions[0].summary}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Timeline Items */}
+                  {timelineItems.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No interactions yet</p>
+                      <p className="text-sm mt-1">Conversations and activities will appear here</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {timelineItems.map((item) => (
+                        <Card key={item.id} className="hover:shadow-md transition-shadow" data-testid={`timeline-item-${item.id}`}>
+                          <CardContent className="p-4">
+                            <div className="flex items-start gap-3">
+                              <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                                {getSourceIcon(item.source)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-1">
+                                  <h4 className="font-medium text-sm truncate">{item.title}</h4>
+                                  <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">
+                                    {formatDistanceToNow(item.date, { addSuffix: true })}
+                                  </span>
+                                </div>
+                                {item.preview && (
+                                  <p className="text-sm text-muted-foreground line-clamp-3">
+                                    {item.preview}
+                                  </p>
+                                )}
+                                <div className="flex items-center gap-2 mt-2">
+                                  {item.source && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {item.source}
+                                    </Badge>
+                                  )}
+                                  <span className="text-xs text-muted-foreground">
+                                    {format(item.date, 'MMM d, yyyy')}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
                       ))}
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground my-2">
-                      <div className="h-px flex-1 bg-border" />
-                      <span>or create new</span>
-                      <div className="h-px flex-1 bg-border" />
-                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="notes" className="flex-1 overflow-auto p-4">
+                  <div className="text-center py-12 text-muted-foreground">
+                    <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Notes feature coming soon</p>
                   </div>
-                )}
-                <div className="space-y-3">
-                  <div>
-                    <Label htmlFor="householdName">Household Name</Label>
-                    <Input
-                      id="householdName"
-                      placeholder="e.g., Cohen-Davis Household"
-                      value={householdName}
-                      onChange={(e) => {
-                        setHouseholdName(e.target.value);
-                        setSelectedHouseholdId(null);
-                      }}
-                    />
+                </TabsContent>
+
+                <TabsContent value="files" className="flex-1 overflow-auto p-4">
+                  <div className="text-center py-12 text-muted-foreground">
+                    <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Files feature coming soon</p>
                   </div>
-                  <div>
-                    <Label htmlFor="householdAddress">Mailing Address (optional)</Label>
-                    <Input
-                      id="householdAddress"
-                      placeholder="123 Main St, City, ST 12345"
-                      value={householdAddress}
-                      onChange={(e) => setHouseholdAddress(e.target.value)}
-                    />
+                </TabsContent>
+
+                <TabsContent value="todos" className="flex-1 overflow-auto p-4">
+                  <div className="text-center py-12 text-muted-foreground">
+                    <ListTodo className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>To Do feature coming soon</p>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-muted-foreground">
+              <div className="text-center">
+                <Users className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                <p className="text-lg">Select a person to view their timeline</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right Sidebar - Contact Info & Details */}
+        {selectedPerson && (
+          <div className="w-72 border-l bg-card flex flex-col flex-shrink-0">
+            <ScrollArea className="flex-1">
+              <div className="p-4 space-y-6">
+                {/* Relationship Segment */}
+                <div>
+                  <Button 
+                    className={`w-full justify-center ${getSegmentColor(selectedPerson.segment)}`}
+                    variant="secondary"
+                  >
+                    {selectedPerson.segment || 'Set Relationship'}
+                  </Button>
+                </div>
+
+                {/* Contact Info */}
+                <div>
+                  <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                    Contact Info
+                  </h3>
+                  <div className="space-y-3">
+                    {selectedPerson.phone && (
+                      <div className="flex items-center gap-3">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <div className="flex-1">
+                          <p className="text-sm">{selectedPerson.phone}</p>
+                          <p className="text-xs text-muted-foreground">Mobile</p>
+                        </div>
+                      </div>
+                    )}
+                    {selectedPerson.email && (
+                      <div className="flex items-center gap-3">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <div className="flex-1">
+                          <p className="text-sm truncate">{selectedPerson.email}</p>
+                          <p className="text-xs text-muted-foreground">Email</p>
+                        </div>
+                      </div>
+                    )}
+                    {selectedPerson.address && (
+                      <div className="flex items-start gap-3">
+                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div className="flex-1">
+                          <p className="text-sm">{selectedPerson.address}</p>
+                          <p className="text-xs text-muted-foreground">Address</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <Button 
-                  onClick={handleLinkToHousehold} 
-                  className="w-full"
-                  disabled={!selectedHouseholdId && !householdName.trim()}
-                >
-                  {selectedHouseholdId ? "Add to Household" : "Create Household"}
-                </Button>
+
+                <Separator />
+
+                {/* Social Links */}
+                <div>
+                  <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                    Social
+                  </h3>
+                  <div className="flex gap-2">
+                    {selectedPerson.linkedinUrl && (
+                      <Button variant="outline" size="icon" className="h-8 w-8" asChild>
+                        <a href={selectedPerson.linkedinUrl} target="_blank" rel="noopener noreferrer">
+                          <Linkedin className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    )}
+                    {selectedPerson.facebookUrl && (
+                      <Button variant="outline" size="icon" className="h-8 w-8" asChild>
+                        <a href={selectedPerson.facebookUrl} target="_blank" rel="noopener noreferrer">
+                          <Facebook className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    )}
+                    {selectedPerson.twitterUrl && (
+                      <Button variant="outline" size="icon" className="h-8 w-8" asChild>
+                        <a href={selectedPerson.twitterUrl} target="_blank" rel="noopener noreferrer">
+                          <Twitter className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    )}
+                    {selectedPerson.instagramUrl && (
+                      <Button variant="outline" size="icon" className="h-8 w-8" asChild>
+                        <a href={selectedPerson.instagramUrl} target="_blank" rel="noopener noreferrer">
+                          <Instagram className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    )}
+                    {!selectedPerson.linkedinUrl && !selectedPerson.facebookUrl && 
+                     !selectedPerson.twitterUrl && !selectedPerson.instagramUrl && (
+                      <p className="text-sm text-muted-foreground">No social links</p>
+                    )}
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* At a Glance - FORD Notes */}
+                <div>
+                  <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                    At a Glance
+                  </h3>
+                  <div className="space-y-3">
+                    {selectedPerson.fordFamily && (
+                      <div className="flex items-start gap-3">
+                        <Heart className="h-4 w-4 text-pink-500 mt-0.5" />
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground">Family</p>
+                          <p className="text-sm">{selectedPerson.fordFamily}</p>
+                        </div>
+                      </div>
+                    )}
+                    {selectedPerson.fordOccupation && (
+                      <div className="flex items-start gap-3">
+                        <Briefcase className="h-4 w-4 text-blue-500 mt-0.5" />
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground">Occupation</p>
+                          <p className="text-sm">{selectedPerson.fordOccupation}</p>
+                        </div>
+                      </div>
+                    )}
+                    {selectedPerson.fordRecreation && (
+                      <div className="flex items-start gap-3">
+                        <Gamepad2 className="h-4 w-4 text-green-500 mt-0.5" />
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground">Recreation</p>
+                          <p className="text-sm">{selectedPerson.fordRecreation}</p>
+                        </div>
+                      </div>
+                    )}
+                    {selectedPerson.fordDreams && (
+                      <div className="flex items-start gap-3">
+                        <Star className="h-4 w-4 text-yellow-500 mt-0.5" />
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground">Dreams</p>
+                          <p className="text-sm">{selectedPerson.fordDreams}</p>
+                        </div>
+                      </div>
+                    )}
+                    {!selectedPerson.fordFamily && !selectedPerson.fordOccupation && 
+                     !selectedPerson.fordRecreation && !selectedPerson.fordDreams && (
+                      <p className="text-sm text-muted-foreground">Tap to edit FORD notes</p>
+                    )}
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Details */}
+                <div>
+                  <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                    Details
+                  </h3>
+                  <div className="space-y-2 text-sm">
+                    {selectedPerson.profession && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Profession</span>
+                        <span>{selectedPerson.profession}</span>
+                      </div>
+                    )}
+                    {selectedPerson.realtorBrokerage && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Brokerage</span>
+                        <span>{selectedPerson.realtorBrokerage}</span>
+                      </div>
+                    )}
+                    {selectedPerson.lastContact && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Last Contact</span>
+                        <span>{format(new Date(selectedPerson.lastContact), 'MMM d, yyyy')}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Last Updated</span>
+                      <span>{selectedPerson.updatedAt ? format(new Date(selectedPerson.updatedAt), 'MMM d, yyyy') : 'Unknown'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notes */}
+                {selectedPerson.notes && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                        Notes
+                      </h3>
+                      <p className="text-sm whitespace-pre-wrap">{selectedPerson.notes}</p>
+                    </div>
+                  </>
+                )}
               </div>
-            </DialogContent>
-          </Dialog>
-          
-          <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/20 gap-1 md:gap-2 px-2 md:px-3" onClick={handleExportSelected}>
-            <Download className="h-4 w-4" /> <span className="hidden sm:inline">Export</span>
-          </Button>
-          
-          <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/20 gap-1 md:gap-2 px-2 md:px-3" onClick={handleBulkDelete}>
-            <Trash2 className="h-4 w-4" /> <span className="hidden sm:inline">Delete</span>
-          </Button>
-          
-          <div className="h-6 w-px bg-primary-foreground/30" />
-          
-          <Button variant="ghost" size="icon" className="text-primary-foreground hover:bg-primary-foreground/20 h-8 w-8" onClick={clearSelection}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
-    </Layout>
+            </ScrollArea>
+          </div>
+        )}
+      </div>
+
+      {/* Edit Person Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Person</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Name *</Label>
+                <Input
+                  value={formData.name || ""}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  data-testid="edit-name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Segment</Label>
+                <select
+                  value={formData.segment || ""}
+                  onChange={(e) => setFormData({ ...formData, segment: e.target.value })}
+                  className="w-full h-9 rounded border bg-background px-3"
+                  data-testid="edit-segment"
+                >
+                  <option value="">Select...</option>
+                  <option value="A">A - Advocate</option>
+                  <option value="B">B - Fan</option>
+                  <option value="C">C - Network</option>
+                  <option value="D">D - Develop</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input
+                  type="email"
+                  value={formData.email || ""}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  data-testid="edit-email"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Phone</Label>
+                <Input
+                  value={formData.phone || ""}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  data-testid="edit-phone"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Role</Label>
+                <Input
+                  value={formData.role || ""}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                  data-testid="edit-role"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Address</Label>
+                <Input
+                  value={formData.address || ""}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  data-testid="edit-address"
+                />
+              </div>
+            </div>
+            
+            <Separator />
+            <h4 className="font-medium">FORD Notes</h4>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Heart className="h-4 w-4 text-pink-500" /> Family
+                </Label>
+                <Textarea
+                  value={formData.fordFamily || ""}
+                  onChange={(e) => setFormData({ ...formData, fordFamily: e.target.value })}
+                  placeholder="Spouse, kids, parents..."
+                  data-testid="edit-ford-family"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Briefcase className="h-4 w-4 text-blue-500" /> Occupation
+                </Label>
+                <Textarea
+                  value={formData.fordOccupation || ""}
+                  onChange={(e) => setFormData({ ...formData, fordOccupation: e.target.value })}
+                  placeholder="Job, career, business..."
+                  data-testid="edit-ford-occupation"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Gamepad2 className="h-4 w-4 text-green-500" /> Recreation
+                </Label>
+                <Textarea
+                  value={formData.fordRecreation || ""}
+                  onChange={(e) => setFormData({ ...formData, fordRecreation: e.target.value })}
+                  placeholder="Hobbies, sports, interests..."
+                  data-testid="edit-ford-recreation"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Star className="h-4 w-4 text-yellow-500" /> Dreams
+                </Label>
+                <Textarea
+                  value={formData.fordDreams || ""}
+                  onChange={(e) => setFormData({ ...formData, fordDreams: e.target.value })}
+                  placeholder="Goals, aspirations..."
+                  data-testid="edit-ford-dreams"
+                />
+              </div>
+            </div>
+            
+            <Separator />
+            
+            <div className="space-y-2">
+              <Label>Notes</Label>
+              <Textarea
+                value={formData.notes || ""}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder="General notes..."
+                data-testid="edit-notes"
+              />
+            </div>
+            
+            <Button 
+              onClick={() => updatePersonMutation.mutate(formData)}
+              disabled={!formData.name || updatePersonMutation.isPending}
+              className="w-full"
+              data-testid="save-person"
+            >
+              {updatePersonMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
