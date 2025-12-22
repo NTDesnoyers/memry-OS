@@ -31,12 +31,18 @@ import {
   Clock,
   Hash,
   Pickaxe,
-  RefreshCw
+  RefreshCw,
+  HeartHandshake,
+  ThumbsUp,
+  ThumbsDown,
+  HelpCircle,
+  Brain,
+  ArrowRightLeft
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import type { ContentTopic, ContentIdea, ContentCalendarItem } from "@shared/schema";
+import type { ContentTopic, ContentIdea, ContentCalendarItem, CoachingInsight } from "@shared/schema";
 
 const contentTypeIcons: Record<string, React.ReactNode> = {
   blog: <FileText className="h-4 w-4" />,
@@ -94,6 +100,34 @@ export default function ContentIntelligence() {
     queryKey: ["/api/content-calendar"],
   });
 
+  // Coaching Insights
+  const { data: coachingInsights = [], isLoading: coachingLoading } = useQuery<CoachingInsight[]>({
+    queryKey: ["/api/coaching-insights"],
+  });
+
+  type ListeningStats = {
+    totalAnalyzed: number;
+    avgObservationRatio: number;
+    avgFeelingAcknowledgments: number;
+    avgNeedClarifications: number;
+    avgAssumedNeeds: number;
+    avgRequestConfirmations: number;
+    questionBreakdown: {
+      exploratory: number;
+      clarifying: number;
+      feelingBased: number;
+      needBased: number;
+      solutionLeading: number;
+      closed: number;
+    };
+    avgDepthScore: number;
+    avgTrustScore: number;
+  };
+
+  const { data: listeningStats } = useQuery<ListeningStats>({
+    queryKey: ["/api/listening-analysis/stats"],
+  });
+
   // Mining status polling
   const { data: miningStatus } = useQuery<{
     isProcessing: boolean;
@@ -139,6 +173,58 @@ export default function ContentIntelligence() {
     }
     prevMiningRef.current = miningStatus?.isProcessing;
   }, [miningStatus?.isProcessing]);
+
+  const analyzeListeningMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/listening-analysis/analyze", {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to analyze listening");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: "Analysis Complete", 
+        description: data.message 
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/coaching-insights"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/listening-analysis/stats"] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const coachingFeedbackMutation = useMutation({
+    mutationFn: async ({ id, feedback }: { id: string; feedback: string }) => {
+      const res = await fetch(`/api/coaching-insights/${id}/feedback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feedback }),
+      });
+      if (!res.ok) throw new Error("Failed to submit feedback");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/coaching-insights"] });
+      toast({ title: "Feedback Recorded", description: "Thank you for your feedback!" });
+    },
+  });
+
+  const dismissInsightMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/coaching-insights/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "dismissed" }),
+      });
+      if (!res.ok) throw new Error("Failed to dismiss insight");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/coaching-insights"] });
+    },
+  });
 
   const createTopicMutation = useMutation({
     mutationFn: async (data: typeof newTopic) => {
@@ -267,7 +353,7 @@ export default function ContentIntelligence() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full max-w-md grid-cols-3">
+          <TabsList className="grid w-full max-w-xl grid-cols-4">
             <TabsTrigger value="topics" data-testid="tab-topics">
               <TrendingUp className="h-4 w-4 mr-2" />
               Topics
@@ -279,6 +365,10 @@ export default function ContentIntelligence() {
             <TabsTrigger value="calendar" data-testid="tab-calendar">
               <CalendarIcon className="h-4 w-4 mr-2" />
               Calendar
+            </TabsTrigger>
+            <TabsTrigger value="listening" data-testid="tab-listening">
+              <HeartHandshake className="h-4 w-4 mr-2" />
+              Listening
             </TabsTrigger>
           </TabsList>
 
@@ -601,6 +691,204 @@ export default function ContentIntelligence() {
                 ))}
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="listening" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-semibold">Listening Skill Insights</h3>
+                <p className="text-sm text-muted-foreground">
+                  Pattern-based coaching from your conversations
+                </p>
+              </div>
+              <Button 
+                onClick={() => analyzeListeningMutation.mutate()}
+                disabled={analyzeListeningMutation.isPending}
+                data-testid="btn-analyze-listening"
+              >
+                {analyzeListeningMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Brain className="h-4 w-4 mr-2" />
+                )}
+                Analyze Conversations
+              </Button>
+            </div>
+
+            {listeningStats && listeningStats.totalAnalyzed > 0 && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Your Listening Profile</CardTitle>
+                  <CardDescription>Based on {listeningStats.totalAnalyzed} analyzed conversations</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center p-3 bg-blue-50 rounded-lg">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {(listeningStats.avgObservationRatio * 100).toFixed(0)}%
+                      </div>
+                      <div className="text-xs text-muted-foreground">Observation Focus</div>
+                    </div>
+                    <div className="text-center p-3 bg-pink-50 rounded-lg">
+                      <div className="text-2xl font-bold text-pink-600">
+                        {listeningStats.avgFeelingAcknowledgments.toFixed(1)}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Feeling Acknowledgments</div>
+                    </div>
+                    <div className="text-center p-3 bg-green-50 rounded-lg">
+                      <div className="text-2xl font-bold text-green-600">
+                        {listeningStats.avgDepthScore.toFixed(1)}/10
+                      </div>
+                      <div className="text-xs text-muted-foreground">Conversation Depth</div>
+                    </div>
+                    <div className="text-center p-3 bg-purple-50 rounded-lg">
+                      <div className="text-2xl font-bold text-purple-600">
+                        {listeningStats.avgTrustScore.toFixed(1)}/10
+                      </div>
+                      <div className="text-xs text-muted-foreground">Trust Building</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t">
+                    <h4 className="text-sm font-medium mb-2">Question Types (avg per conversation)</h4>
+                    <div className="grid grid-cols-3 md:grid-cols-6 gap-2 text-xs">
+                      <div className="text-center p-2 bg-emerald-50 rounded">
+                        <div className="font-semibold text-emerald-700">{listeningStats.questionBreakdown.exploratory.toFixed(1)}</div>
+                        <div className="text-muted-foreground">Exploratory</div>
+                      </div>
+                      <div className="text-center p-2 bg-sky-50 rounded">
+                        <div className="font-semibold text-sky-700">{listeningStats.questionBreakdown.clarifying.toFixed(1)}</div>
+                        <div className="text-muted-foreground">Clarifying</div>
+                      </div>
+                      <div className="text-center p-2 bg-rose-50 rounded">
+                        <div className="font-semibold text-rose-700">{listeningStats.questionBreakdown.feelingBased.toFixed(1)}</div>
+                        <div className="text-muted-foreground">Feeling</div>
+                      </div>
+                      <div className="text-center p-2 bg-amber-50 rounded">
+                        <div className="font-semibold text-amber-700">{listeningStats.questionBreakdown.needBased.toFixed(1)}</div>
+                        <div className="text-muted-foreground">Need</div>
+                      </div>
+                      <div className="text-center p-2 bg-orange-50 rounded">
+                        <div className="font-semibold text-orange-700">{listeningStats.questionBreakdown.solutionLeading.toFixed(1)}</div>
+                        <div className="text-muted-foreground">Solution</div>
+                      </div>
+                      <div className="text-center p-2 bg-slate-50 rounded">
+                        <div className="font-semibold text-slate-700">{listeningStats.questionBreakdown.closed.toFixed(1)}</div>
+                        <div className="text-muted-foreground">Closed</div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <div>
+              <h4 className="text-base font-medium mb-3">Coaching Insights</h4>
+              {coachingLoading ? (
+                <div className="text-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
+                </div>
+              ) : coachingInsights.filter(i => i.status === 'active').length === 0 ? (
+                <Card className="border-dashed">
+                  <CardContent className="py-8 text-center">
+                    <HeartHandshake className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                    <p className="text-muted-foreground mb-2">No coaching insights yet</p>
+                    <p className="text-sm text-muted-foreground">
+                      Click "Analyze Conversations" to generate insights from your conversations
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-3">
+                  {coachingInsights.filter(i => i.status === 'active').map((insight) => (
+                    <Card key={insight.id} className="hover:shadow-md transition-shadow" data-testid={`insight-card-${insight.id}`}>
+                      <CardContent className="pt-4">
+                        <div className="flex items-start gap-3">
+                          <div className="mt-0.5">
+                            {insight.type === 'micro_shift' && <ArrowRightLeft className="h-5 w-5 text-blue-500" />}
+                            {insight.type === 'question_swap' && <RefreshCw className="h-5 w-5 text-green-500" />}
+                            {insight.type === 'pattern_observation' && <Eye className="h-5 w-5 text-purple-500" />}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">{insight.insight}</p>
+                            {insight.suggestedBehavior && (
+                              <p className="text-sm text-muted-foreground mt-1">
+                                Try: {insight.suggestedBehavior}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-2 mt-2">
+                              <Badge variant="outline" className="text-xs">
+                                {insight.type === 'micro_shift' ? 'Micro Shift' : 
+                                 insight.type === 'question_swap' ? 'Question Swap' : 'Pattern'}
+                              </Badge>
+                              {insight.category && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {insight.category.replace('_', ' ')}
+                                </Badge>
+                              )}
+                              {insight.confidenceScore && (
+                                <span className="text-xs text-muted-foreground">
+                                  {insight.confidenceScore}% confidence
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between mt-4 pt-3 border-t">
+                          <span className="text-xs text-muted-foreground">Was this helpful?</span>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2"
+                              onClick={() => coachingFeedbackMutation.mutate({ id: insight.id, feedback: 'accurate' })}
+                              disabled={coachingFeedbackMutation.isPending}
+                              data-testid={`feedback-accurate-${insight.id}`}
+                            >
+                              <ThumbsUp className="h-3.5 w-3.5 mr-1" />
+                              Yes
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2"
+                              onClick={() => coachingFeedbackMutation.mutate({ id: insight.id, feedback: 'not_right' })}
+                              disabled={coachingFeedbackMutation.isPending}
+                              data-testid={`feedback-not-right-${insight.id}`}
+                            >
+                              <ThumbsDown className="h-3.5 w-3.5 mr-1" />
+                              No
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2"
+                              onClick={() => coachingFeedbackMutation.mutate({ id: insight.id, feedback: 'tell_me_more' })}
+                              disabled={coachingFeedbackMutation.isPending}
+                              data-testid={`feedback-more-${insight.id}`}
+                            >
+                              <HelpCircle className="h-3.5 w-3.5 mr-1" />
+                              Tell me more
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-muted-foreground hover:text-destructive"
+                              onClick={() => dismissInsightMutation.mutate(insight.id)}
+                              disabled={dismissInsightMutation.isPending}
+                              data-testid={`dismiss-insight-${insight.id}`}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
           </TabsContent>
         </Tabs>
       </div>
