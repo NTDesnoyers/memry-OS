@@ -1,14 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { MessageCircle, TrendingUp, Target } from "lucide-react";
+import { MessageCircle, TrendingUp, Target, Users } from "lucide-react";
 import { startOfWeek, endOfWeek, format, isWithinInterval, parseISO } from "date-fns";
 
 type Interaction = {
   id: string;
+  personId: string | null;
   occurredAt: string;
   type: string;
   deletedAt?: string | null;
+};
+
+type Person = {
+  id: string;
+  householdId: string | null;
 };
 
 const WEEKLY_GOAL = 50;
@@ -20,15 +26,30 @@ function getWeekBounds() {
   return { weekStart, weekEnd };
 }
 
-function countWeeklyConversations(interactions: Interaction[]): number {
+function countWeeklyHouseholds(interactions: Interaction[], people: Person[]): number {
   const { weekStart, weekEnd } = getWeekBounds();
   
-  return interactions.filter(interaction => {
-    if (interaction.deletedAt) return false;
+  const personToHousehold = new Map<string, string>();
+  for (const person of people) {
+    personToHousehold.set(person.id, person.householdId || person.id);
+  }
+  
+  const householdsContactedThisWeek = new Set<string>();
+  
+  for (const interaction of interactions) {
+    if (interaction.deletedAt) continue;
+    if (!interaction.personId) continue;
     
     const interactionDate = parseISO(interaction.occurredAt);
-    return isWithinInterval(interactionDate, { start: weekStart, end: weekEnd });
-  }).length;
+    if (!isWithinInterval(interactionDate, { start: weekStart, end: weekEnd })) {
+      continue;
+    }
+    
+    const householdKey = personToHousehold.get(interaction.personId) || interaction.personId;
+    householdsContactedThisWeek.add(householdKey);
+  }
+  
+  return householdsContactedThisWeek.size;
 }
 
 export function FordTrackerCompact() {
@@ -36,11 +57,17 @@ export function FordTrackerCompact() {
     queryKey: ["/api/interactions"],
   });
   
-  const weeklyCount = countWeeklyConversations(interactions);
+  const { data: people = [] } = useQuery<Person[]>({
+    queryKey: ["/api/people"],
+  });
+  
+  const weeklyCount = countWeeklyHouseholds(interactions, people);
   const percentage = Math.min((weeklyCount / WEEKLY_GOAL) * 100, 100);
   const { weekStart, weekEnd } = getWeekBounds();
   
-  const isOnTrack = weeklyCount >= (WEEKLY_GOAL / 7) * (new Date().getDay() || 7);
+  const dayOfWeek = new Date().getDay() || 7;
+  const expectedByNow = Math.round((WEEKLY_GOAL / 7) * dayOfWeek);
+  const isOnTrack = weeklyCount >= expectedByNow;
   
   return (
     <div 
@@ -49,7 +76,7 @@ export function FordTrackerCompact() {
     >
       <div className="flex items-center gap-2">
         <div className="p-1.5 bg-emerald-100 rounded-full">
-          <MessageCircle className="h-4 w-4 text-emerald-600" />
+          <Users className="h-4 w-4 text-emerald-600" />
         </div>
         <span className="text-sm font-medium text-emerald-800">FORD Conversations</span>
       </div>
@@ -89,7 +116,11 @@ export function FordTrackerWidget() {
     queryKey: ["/api/interactions"],
   });
   
-  const weeklyCount = countWeeklyConversations(interactions);
+  const { data: people = [] } = useQuery<Person[]>({
+    queryKey: ["/api/people"],
+  });
+  
+  const weeklyCount = countWeeklyHouseholds(interactions, people);
   const percentage = Math.min((weeklyCount / WEEKLY_GOAL) * 100, 100);
   const { weekStart, weekEnd } = getWeekBounds();
   const remaining = Math.max(WEEKLY_GOAL - weeklyCount, 0);
@@ -107,11 +138,11 @@ export function FordTrackerWidget() {
     >
       <CardHeader className="pb-2">
         <CardTitle className="font-serif text-lg flex items-center gap-2">
-          <MessageCircle className="h-5 w-5 text-emerald-600" />
+          <Users className="h-5 w-5 text-emerald-600" />
           FORD Tracker
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          {format(weekStart, "MMM d")} - {format(weekEnd, "MMM d")}
+          {format(weekStart, "MMM d")} - {format(weekEnd, "MMM d")} (per household)
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -120,7 +151,7 @@ export function FordTrackerWidget() {
             {weeklyCount}
             <span className="text-xl font-normal text-emerald-600">/{WEEKLY_GOAL}</span>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">conversations this week</p>
+          <p className="text-sm text-muted-foreground mt-1">households contacted this week</p>
         </div>
         
         <Progress value={percentage} className="h-3" />
