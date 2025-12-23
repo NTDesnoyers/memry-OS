@@ -47,6 +47,26 @@ async function getPatternFeedbackScore(patternId: string): Promise<number> {
   return pattern?.userFeedbackScore || 0;
 }
 
+async function ensurePatternExists(patternId: string, intent: string): Promise<void> {
+  const patterns = await storage.getEnabledObserverPatterns();
+  const exists = patterns.some(p => {
+    const triggerConditions = p.triggerConditions as any;
+    return triggerConditions?.patternId === patternId;
+  });
+  
+  if (!exists) {
+    await storage.createObserverPattern({
+      patternType: 'suggestion',
+      description: `Auto-created pattern for ${patternId}`,
+      triggerConditions: { patternId, intent },
+      suggestedAction: { type: 'show_suggestion' },
+      isEnabled: true,
+      userFeedbackScore: 0,
+    });
+    console.log(`[${AGENT_NAME}] Created pattern: ${patternId}`);
+  }
+}
+
 async function createSuggestionIfAllowed(
   suggestion: InsertObserverSuggestion
 ): Promise<boolean> {
@@ -55,7 +75,12 @@ async function createSuggestionIfAllowed(
     if (recentlyShown) return false;
     
     const feedbackScore = await getPatternFeedbackScore(suggestion.patternId);
-    if (feedbackScore < -3) return false;
+    if (feedbackScore < -3) {
+      console.log(`[${AGENT_NAME}] Suppressed suggestion (feedback score ${feedbackScore}): ${suggestion.patternId}`);
+      return false;
+    }
+    
+    await ensurePatternExists(suggestion.patternId, suggestion.intent);
   }
   
   await storage.createObserverSuggestion(suggestion);

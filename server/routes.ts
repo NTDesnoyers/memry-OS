@@ -5364,6 +5364,25 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
     }
   });
 
+  app.post("/api/observer/patterns/by-key/:patternId/feedback", async (req, res) => {
+    try {
+      const { delta } = req.body;
+      const patternId = req.params.patternId;
+      const patterns = await storage.getEnabledObserverPatterns();
+      const pattern = patterns.find(p => {
+        const triggerConditions = p.triggerConditions as any;
+        return triggerConditions?.patternId === patternId;
+      });
+      if (!pattern) {
+        return res.status(404).json({ message: "Pattern not found" });
+      }
+      const updated = await storage.updatePatternFeedback(pattern.id, delta || 1);
+      res.json(updated);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Trigger context-aware suggestions (for testing/manual triggers)
   app.post("/api/observer/trigger", async (req, res) => {
     try {

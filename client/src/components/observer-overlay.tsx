@@ -38,7 +38,7 @@ interface SuggestionCardProps {
   suggestion: ObserverSuggestion;
   onAccept: (id: string) => void;
   onSnooze: (id: string) => void;
-  onDismiss: (id: string, feedback?: string) => void;
+  onDismiss: (id: string, feedback?: string, patternId?: string | null) => void;
   isProcessing: boolean;
 }
 
@@ -106,7 +106,7 @@ function SuggestionCard({ suggestion, onAccept, onSnooze, onDismiss, isProcessin
                 size="sm"
                 variant="ghost"
                 className="h-7 w-7 p-0"
-                onClick={() => onDismiss(suggestion.id, "not_helpful")}
+                onClick={() => onDismiss(suggestion.id, "not_helpful", suggestion.patternId)}
                 disabled={isProcessing}
                 data-testid={`feedback-not-helpful-${suggestion.id}`}
               >
@@ -116,7 +116,7 @@ function SuggestionCard({ suggestion, onAccept, onSnooze, onDismiss, isProcessin
                 size="sm"
                 variant="ghost"
                 className="h-7 w-7 p-0"
-                onClick={() => onDismiss(suggestion.id, "not_now")}
+                onClick={() => onDismiss(suggestion.id, "not_now", suggestion.patternId)}
                 disabled={isProcessing}
                 data-testid={`feedback-not-now-${suggestion.id}`}
               >
@@ -175,13 +175,21 @@ export function ObserverOverlay() {
   });
 
   const dismissMutation = useMutation({
-    mutationFn: async ({ id, feedback }: { id: string; feedback?: string }) => {
+    mutationFn: async ({ id, feedback, patternId }: { id: string; feedback?: string; patternId?: string }) => {
       const res = await fetch(`/api/observer/suggestions/${id}/dismiss`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ feedbackNote: feedback }),
       });
       if (!res.ok) throw new Error("Failed to dismiss");
+      
+      if (patternId && feedback === 'not_helpful') {
+        await fetch(`/api/observer/patterns/by-key/${patternId}/feedback`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ delta: -1 }),
+        });
+      }
       return res.json();
     },
     onSuccess: () => {
@@ -197,8 +205,8 @@ export function ObserverOverlay() {
     snoozeMutation.mutate(id);
   };
 
-  const handleDismiss = (id: string, feedback?: string) => {
-    dismissMutation.mutate({ id, feedback });
+  const handleDismiss = (id: string, feedback?: string, patternId?: string | null) => {
+    dismissMutation.mutate({ id, feedback, patternId: patternId || undefined });
   };
 
   const isProcessing = acceptMutation.isPending || snoozeMutation.isPending || dismissMutation.isPending;
