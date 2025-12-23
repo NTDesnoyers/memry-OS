@@ -1067,3 +1067,172 @@ export const insertDashboardWidgetSchema = createInsertSchema(dashboardWidgets).
 
 export type InsertDashboardWidget = z.infer<typeof insertDashboardWidgetSchema>;
 export type DashboardWidget = typeof dashboardWidgets.$inferSelect;
+
+/** Event Types - Central orchestration event type definitions. */
+export const EventCategory = {
+  LEAD: 'lead',
+  RELATIONSHIP: 'relationship',
+  TRANSACTION: 'transaction',
+  COMMUNICATION: 'communication',
+  INTELLIGENCE: 'intelligence',
+} as const;
+
+export const EventType = {
+  // Lead Events
+  LEAD_CREATED: 'lead.created',
+  LEAD_ENRICHED: 'lead.enriched',
+  LEAD_QUALIFIED: 'lead.qualified',
+  LEAD_ASSIGNED: 'lead.assigned',
+  // Relationship Events
+  CONTACT_DUE: 'contact.due',
+  CONTACT_MADE: 'contact.made',
+  FORD_UPDATED: 'ford.updated',
+  SEGMENT_CHANGED: 'segment.changed',
+  // Transaction Events
+  DEAL_CREATED: 'deal.created',
+  DEAL_STAGE_CHANGED: 'deal.stage_changed',
+  DEADLINE_APPROACHING: 'deadline.approaching',
+  CONTRACT_RATIFIED: 'contract.ratified',
+  DEAL_CLOSED: 'deal.closed',
+  // Communication Events
+  TRANSCRIPT_READY: 'transcript.ready',
+  EMAIL_RECEIVED: 'email.received',
+  SMS_RECEIVED: 'sms.received',
+  MEETING_SCHEDULED: 'meeting.scheduled',
+  // Intelligence Events
+  LIFE_EVENT_DETECTED: 'life_event.detected',
+  COACHING_INSIGHT: 'coaching.insight',
+  DRAFT_GENERATED: 'draft.generated',
+} as const;
+
+export type EventCategoryType = typeof EventCategory[keyof typeof EventCategory];
+export type EventTypeValue = typeof EventType[keyof typeof EventType];
+
+/** System Events - Central event log for orchestration layer. */
+export const systemEvents = pgTable("system_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventType: text("event_type").notNull(), // e.g., 'lead.created', 'deal.stage_changed'
+  eventCategory: text("event_category").notNull(), // 'lead', 'relationship', 'transaction', 'communication', 'intelligence'
+  personId: varchar("person_id").references(() => people.id),
+  dealId: varchar("deal_id").references(() => deals.id),
+  sourceEntity: text("source_entity"), // 'interaction', 'deal', 'person', 'life_event_alert', etc.
+  sourceEntityId: varchar("source_entity_id"), // ID of the entity that triggered this event
+  payload: jsonb("payload").$type<Record<string, unknown>>(), // Event-specific data
+  metadata: jsonb("metadata").$type<{
+    triggeredBy?: string; // 'user', 'system', 'agent', 'webhook'
+    agentName?: string; // Which agent (if any) triggered this
+    sourceAction?: string; // What action created this event
+  }>(),
+  processedAt: timestamp("processed_at"), // When agents finished processing
+  processedBy: text("processed_by").array(), // Which agents processed this event
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertSystemEventSchema = createInsertSchema(systemEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSystemEvent = z.infer<typeof insertSystemEventSchema>;
+export type SystemEvent = typeof systemEvents.$inferSelect;
+
+/** Agent Names - Named agents in the orchestration layer. */
+export const AgentName = {
+  LEAD_INTAKE: 'LeadIntakeAgent',
+  NURTURE: 'NurtureAgent',
+  OPS_TRANSACTION: 'OpsTransactionAgent',
+  DATA_CONTEXT: 'DataContextAgent',
+  MARKETING: 'MarketingAgent',
+  LIFE_EVENT: 'LifeEventAgent',
+} as const;
+
+export type AgentNameType = typeof AgentName[keyof typeof AgentName];
+
+/** Agent Action Status - Tracks proposed and executed agent actions. */
+export const AgentActionStatus = {
+  PROPOSED: 'proposed',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+  EXECUTED: 'executed',
+  FAILED: 'failed',
+} as const;
+
+export type AgentActionStatusType = typeof AgentActionStatus[keyof typeof AgentActionStatus];
+
+/** Agent Actions - Actions proposed or taken by agents (with approval workflow). */
+export const agentActions = pgTable("agent_actions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id").references(() => systemEvents.id), // The event that triggered this action
+  agentName: text("agent_name").notNull(), // Which agent proposed this action
+  actionType: text("action_type").notNull(), // 'send_email', 'create_task', 'update_record', etc.
+  riskLevel: text("risk_level").notNull().default('low'), // 'low', 'medium', 'high'
+  status: text("status").notNull().default('proposed'), // 'proposed', 'approved', 'rejected', 'executed', 'failed'
+  personId: varchar("person_id").references(() => people.id),
+  dealId: varchar("deal_id").references(() => deals.id),
+  targetEntity: text("target_entity"), // 'email', 'task', 'sms', 'deal', 'person'
+  targetEntityId: varchar("target_entity_id"), // ID of created/modified entity after execution
+  proposedContent: jsonb("proposed_content").$type<Record<string, unknown>>(), // The action details
+  reasoning: text("reasoning"), // Agent's explanation for why this action
+  approvedBy: text("approved_by"), // 'user' or 'auto' (for low-risk actions)
+  approvedAt: timestamp("approved_at"),
+  executedAt: timestamp("executed_at"),
+  errorMessage: text("error_message"), // If execution failed
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertAgentActionSchema = createInsertSchema(agentActions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAgentAction = z.infer<typeof insertAgentActionSchema>;
+export type AgentAction = typeof agentActions.$inferSelect;
+
+/** Agent Subscriptions - Which agents subscribe to which event types. */
+export const agentSubscriptions = pgTable("agent_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  agentName: text("agent_name").notNull(),
+  eventType: text("event_type").notNull(), // The event type this agent subscribes to
+  priority: integer("priority").default(0), // Higher priority agents process first
+  isActive: boolean("is_active").default(true),
+  config: jsonb("config").$type<Record<string, unknown>>(), // Agent-specific config for this event
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertAgentSubscriptionSchema = createInsertSchema(agentSubscriptions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertAgentSubscription = z.infer<typeof insertAgentSubscriptionSchema>;
+export type AgentSubscription = typeof agentSubscriptions.$inferSelect;
+
+// Relations for Event System
+export const systemEventsRelations = relations(systemEvents, ({ one, many }) => ({
+  person: one(people, {
+    fields: [systemEvents.personId],
+    references: [people.id],
+  }),
+  deal: one(deals, {
+    fields: [systemEvents.dealId],
+    references: [deals.id],
+  }),
+  actions: many(agentActions),
+}));
+
+export const agentActionsRelations = relations(agentActions, ({ one }) => ({
+  event: one(systemEvents, {
+    fields: [agentActions.eventId],
+    references: [systemEvents.id],
+  }),
+  person: one(people, {
+    fields: [agentActions.personId],
+    references: [people.id],
+  }),
+  deal: one(deals, {
+    fields: [agentActions.dealId],
+    references: [deals.id],
+  }),
+}));
