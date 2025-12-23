@@ -1370,6 +1370,15 @@ When analyzing images:
     try {
       const data = validate(insertDealSchema, req.body);
       const deal = await storage.createDeal(data);
+      
+      // Emit deal created event
+      eventBus.emitDealCreated(deal.id, deal.personId, { 
+        title: deal.title, 
+        stage: deal.stage, 
+        type: deal.type,
+        value: deal.value 
+      });
+      
       res.status(201).json(deal);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1379,10 +1388,22 @@ When analyzing images:
   // Update deal
   app.patch("/api/deals/:id", async (req, res) => {
     try {
+      // Get current deal to check for stage changes
+      const currentDeal = await storage.getDeal(req.params.id);
+      if (!currentDeal) {
+        return res.status(404).json({ message: "Deal not found" });
+      }
+      
       const deal = await storage.updateDeal(req.params.id, req.body);
       if (!deal) {
         return res.status(404).json({ message: "Deal not found" });
       }
+      
+      // Emit stage change event if stage changed
+      if (req.body.stage && req.body.stage !== currentDeal.stage) {
+        eventBus.emitDealStageChanged(deal.id, deal.personId, currentDeal.stage, deal.stage);
+      }
+      
       res.json(deal);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -2637,6 +2658,8 @@ Return ONLY valid JSON, no explanations.`
       // Update person's lastContact if personId is provided
       if (data.personId) {
         await storage.updatePerson(data.personId, { lastContact: new Date(data.occurredAt) });
+        // Emit contact made event
+        eventBus.emitContactMade(data.personId, interaction.id, interaction.type);
       }
       
       res.status(201).json(interaction);
@@ -4933,6 +4956,12 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
   app.post("/api/life-event-alerts", async (req, res) => {
     try {
       const alert = await storage.createLifeEventAlert(req.body);
+      
+      // Emit life event detected event
+      if (alert.personId) {
+        eventBus.emitLifeEventDetected(alert.personId, alert.id, alert.eventType, alert.eventCategory);
+      }
+      
       res.status(201).json(alert);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
