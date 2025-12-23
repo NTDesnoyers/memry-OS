@@ -451,6 +451,7 @@ function InteractionList({
   onDelete: (id: string) => void;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [dateFilter, setDateFilter] = useState<string>("all");
   const [selectedInteraction, setSelectedInteraction] = useState<Interaction | null>(null);
   
   const { data: drafts = [] } = useQuery<GeneratedDraft[]>({
@@ -459,8 +460,42 @@ function InteractionList({
   
   const getPersonById = (id: string | null) => people.find(p => p.id === id);
   
+  const getDateFilterCutoff = () => {
+    const now = new Date();
+    switch (dateFilter) {
+      case "today":
+        return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      case "week":
+        const weekAgo = new Date(now);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        return weekAgo;
+      case "month":
+        const monthAgo = new Date(now);
+        monthAgo.setMonth(monthAgo.getMonth() - 1);
+        return monthAgo;
+      case "quarter":
+        const quarterAgo = new Date(now);
+        quarterAgo.setMonth(quarterAgo.getMonth() - 3);
+        return quarterAgo;
+      case "year":
+        const yearAgo = new Date(now);
+        yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+        return yearAgo;
+      default:
+        return null;
+    }
+  };
+  
   const filteredInteractions = interactions
     .filter(i => filterTypes.length === 0 || filterTypes.includes(i.type))
+    .filter(i => {
+      const cutoff = getDateFilterCutoff();
+      if (cutoff) {
+        const interactionDate = new Date(i.occurredAt || i.createdAt);
+        if (interactionDate < cutoff) return false;
+      }
+      return true;
+    })
     .filter(i => {
       if (!searchQuery) return true;
       const person = getPersonById(i.personId);
@@ -484,15 +519,30 @@ function InteractionList({
 
   return (
     <div className="space-y-3">
-      <div className="relative mb-4">
-        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-        <Input 
-          placeholder="Search interactions..." 
-          className="pl-9"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          data-testid="input-search-interactions"
-        />
+      <div className="flex gap-2 mb-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Input 
+            placeholder="Search interactions..." 
+            className="pl-9"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            data-testid="input-search-interactions"
+          />
+        </div>
+        <Select value={dateFilter} onValueChange={setDateFilter}>
+          <SelectTrigger className="w-[160px]" data-testid="select-date-filter">
+            <SelectValue placeholder="Filter by date" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Time</SelectItem>
+            <SelectItem value="today">Today</SelectItem>
+            <SelectItem value="week">Last 7 Days</SelectItem>
+            <SelectItem value="month">Last 30 Days</SelectItem>
+            <SelectItem value="quarter">Last 3 Months</SelectItem>
+            <SelectItem value="year">Last Year</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       
       {filteredInteractions.map((interaction) => {
@@ -518,9 +568,12 @@ function InteractionList({
                       <Badge variant="outline" className={config.color}>
                         {config.label}
                       </Badge>
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <span 
+                        className="text-xs text-muted-foreground flex items-center gap-1"
+                        title={format(new Date(interaction.occurredAt || interaction.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                      >
                         <Clock className="h-3 w-3" />
-                        {formatDistanceToNow(new Date(interaction.occurredAt || interaction.createdAt), { addSuffix: true })}
+                        {format(new Date(interaction.occurredAt || interaction.createdAt), "MMM d, yyyy")}
                       </span>
                     </div>
                     
