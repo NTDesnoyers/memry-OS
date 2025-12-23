@@ -8,7 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Play, MessageSquare, HelpCircle, Lightbulb, Target, TrendingUp, CheckCircle, AlertCircle, Clock, ChevronRight, Sparkles, GraduationCap, RefreshCw } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Loader2, Play, MessageSquare, HelpCircle, Lightbulb, Target, TrendingUp, CheckCircle, AlertCircle, Clock, ChevronRight, Sparkles, GraduationCap, RefreshCw, Headphones, Brain, Mic, Phone, User, Heart, Briefcase, Gamepad2, Star, ArrowRight, BarChart3, Zap, MessageCircle } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -16,6 +17,13 @@ import { useToast } from "@/hooks/use-toast";
 type Person = {
   id: string;
   name: string;
+  phone?: string | null;
+  fordFamily?: string | null;
+  fordOccupation?: string | null;
+  fordRecreation?: string | null;
+  fordDreams?: string | null;
+  profession?: string | null;
+  relationshipSegment?: string | null;
 };
 
 type Interaction = {
@@ -47,35 +55,76 @@ type CoachingAnalysis = {
   analyzedAt: string;
 };
 
+type ListeningAnalysis = {
+  id: string;
+  interactionId: string;
+  observationCount: number;
+  interpretationCount: number;
+  feelingAcknowledgments: number;
+  needClarifications: number;
+  assumedNeeds: number;
+  exploratoryQuestions: number;
+  clarifyingQuestions: number;
+  feelingQuestions: number;
+  needQuestions: number;
+  solutionLeadingQuestions: number;
+  closedQuestions: number;
+  conversationDepthScore: number;
+  trustBuildingScore: number;
+  createdAt: string;
+};
+
+type CoachingInsight = {
+  id: string;
+  type: string;
+  category: string;
+  insight: string;
+  originalBehavior?: string | null;
+  suggestedBehavior?: string | null;
+  confidenceScore: number;
+  status: string;
+  createdAt: string;
+};
+
+type VoiceProfile = {
+  greetings: string[];
+  signoffs: string[];
+  expressions: string[];
+  toneNotes: string[];
+  complimentPatterns: string[];
+  questionStyles: string[];
+};
+
 function getInitials(name: string): string {
   return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
 }
 
-function ScoreGauge({ score, label, color }: { score: number; label: string; color: string }) {
+function ScoreGauge({ score, label, color, size = "medium" }: { score: number; label: string; color: string; size?: "small" | "medium" }) {
+  const dimensions = size === "small" ? { w: 16, h: 16, r: 24, cx: 32, cy: 32, stroke: 6 } : { w: 20, h: 20, r: 32, cx: 40, cy: 40, stroke: 8 };
   return (
     <div className="text-center">
       <div className="relative inline-flex items-center justify-center">
-        <svg className="w-20 h-20 transform -rotate-90">
+        <svg className={`w-${dimensions.w} h-${dimensions.h} transform -rotate-90`} style={{ width: dimensions.w * 4, height: dimensions.h * 4 }}>
           <circle
             className="text-muted stroke-current"
-            strokeWidth="8"
+            strokeWidth={dimensions.stroke}
             fill="transparent"
-            r="32"
-            cx="40"
-            cy="40"
+            r={dimensions.r}
+            cx={dimensions.cx}
+            cy={dimensions.cy}
           />
           <circle
             className={`${color} stroke-current transition-all duration-500`}
-            strokeWidth="8"
+            strokeWidth={dimensions.stroke}
             strokeLinecap="round"
             fill="transparent"
-            r="32"
-            cx="40"
-            cy="40"
-            strokeDasharray={`${score * 2.01} 201`}
+            r={dimensions.r}
+            cx={dimensions.cx}
+            cy={dimensions.cy}
+            strokeDasharray={`${score * (dimensions.r * 2 * Math.PI / 100)} ${dimensions.r * 2 * Math.PI}`}
           />
         </svg>
-        <span className="absolute text-xl font-bold">{score}</span>
+        <span className={`absolute ${size === "small" ? "text-sm" : "text-xl"} font-bold`}>{score}</span>
       </div>
       <p className="text-xs text-muted-foreground mt-1">{label}</p>
     </div>
@@ -86,18 +135,26 @@ function ConversationCard({
   interaction, 
   person, 
   onAnalyze, 
-  isAnalyzing 
+  isAnalyzing,
+  onSelect,
+  isSelected
 }: { 
   interaction: Interaction; 
   person?: Person;
   onAnalyze: () => void;
   isAnalyzing: boolean;
+  onSelect: () => void;
+  isSelected: boolean;
 }) {
   const hasAnalysis = !!interaction.coachingAnalysis;
   const analysis = interaction.coachingAnalysis;
   
   return (
-    <Card className="hover:shadow-md transition-shadow" data-testid={`coaching-card-${interaction.id}`}>
+    <Card 
+      className={`hover:shadow-md transition-all cursor-pointer ${isSelected ? 'ring-2 ring-primary' : ''}`} 
+      data-testid={`coaching-card-${interaction.id}`}
+      onClick={onSelect}
+    >
       <CardContent className="p-4">
         <div className="flex items-start gap-4">
           <div className="flex-1">
@@ -122,19 +179,12 @@ function ConversationCard({
               <p className="text-sm font-medium mb-1">{interaction.title}</p>
             )}
             
-            {interaction.summary && (
-              <p className="text-sm text-muted-foreground line-clamp-2">{interaction.summary}</p>
-            )}
-            
             {hasAnalysis && analysis && (
-              <div className="mt-3 flex items-center gap-4">
+              <div className="mt-2 flex items-center gap-4">
                 <div className="flex items-center gap-1">
                   <div className={`w-2 h-2 rounded-full ${analysis.overallScore >= 80 ? 'bg-green-500' : analysis.overallScore >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`} />
                   <span className="text-sm font-medium">{analysis.overallScore}/100</span>
                 </div>
-                <span className="text-xs text-muted-foreground">
-                  {analysis.improvements.length} areas to improve
-                </span>
               </div>
             )}
           </div>
@@ -142,16 +192,16 @@ function ConversationCard({
           <Button 
             variant={hasAnalysis ? "outline" : "default"}
             size="sm"
-            onClick={onAnalyze}
+            onClick={(e) => { e.stopPropagation(); onAnalyze(); }}
             disabled={isAnalyzing || !interaction.transcript}
             data-testid={`button-analyze-${interaction.id}`}
           >
             {isAnalyzing ? (
-              <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Analyzing...</>
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : hasAnalysis ? (
-              <><RefreshCw className="h-4 w-4 mr-1" /> Re-analyze</>
+              <RefreshCw className="h-4 w-4" />
             ) : (
-              <><Play className="h-4 w-4 mr-1" /> Analyze</>
+              <Play className="h-4 w-4" />
             )}
           </Button>
         </div>
@@ -173,9 +223,6 @@ function AnalysisDetail({ analysis, interaction, person }: { analysis: CoachingA
             {person?.name} - {format(new Date(interaction.occurredAt || interaction.createdAt), "MMM d, yyyy")}
           </p>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Analyzed {formatDistanceToNow(new Date(analysis.analyzedAt), { addSuffix: true })}
-        </p>
       </div>
       
       <div className="grid grid-cols-4 gap-4">
@@ -225,39 +272,12 @@ function AnalysisDetail({ analysis, interaction, person }: { analysis: CoachingA
         </Card>
       </div>
       
-      {analysis.missedOpportunities.length > 0 && (
-        <Card className="bg-red-50 border-red-200">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2 text-red-700">
-              <AlertCircle className="h-4 w-4" />
-              Missed Opportunities
-            </CardTitle>
-            <CardDescription className="text-red-600">
-              Moments where you could have probed deeper
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
-              {analysis.missedOpportunities.map((missed, i) => (
-                <li key={i} className="text-sm flex items-start gap-2">
-                  <span className="text-red-600 mt-1">•</span>
-                  {missed}
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      )}
-      
       <Card className="bg-blue-50 border-blue-200">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm flex items-center gap-2 text-blue-700">
             <HelpCircle className="h-4 w-4" />
             Questions You Could Have Asked
           </CardTitle>
-          <CardDescription className="text-blue-600">
-            Based on the context of this conversation
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
@@ -270,44 +290,370 @@ function AnalysisDetail({ analysis, interaction, person }: { analysis: CoachingA
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function PreCallSummary({ person, interactions }: { person: Person; interactions: Interaction[] }) {
+  const personInteractions = interactions
+    .filter(i => i.personId === person.id)
+    .sort((a, b) => new Date(b.occurredAt || b.createdAt).getTime() - new Date(a.occurredAt || a.createdAt).getTime());
+  
+  const lastInteraction = personInteractions[0];
+  const hasFord = person.fordFamily || person.fordOccupation || person.fordRecreation || person.fordDreams;
+  
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <Avatar className="h-12 w-12">
+          <AvatarFallback className="bg-primary/10 text-lg">
+            {getInitials(person.name)}
+          </AvatarFallback>
+        </Avatar>
+        <div>
+          <h3 className="font-semibold text-lg">{person.name}</h3>
+          <p className="text-sm text-muted-foreground">
+            {person.profession || "No profession recorded"}
+            {person.relationshipSegment && ` • ${person.relationshipSegment}`}
+          </p>
+        </div>
+      </div>
       
-      {analysis.keyMoments.length > 0 && (
-        <Card>
+      {lastInteraction && (
+        <Card className="bg-blue-50 border-blue-200">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Key Moments
+            <CardTitle className="text-sm flex items-center gap-2 text-blue-700">
+              <Clock className="h-4 w-4" />
+              Last Conversation
             </CardTitle>
+            <CardDescription className="text-blue-600">
+              {formatDistanceToNow(new Date(lastInteraction.occurredAt || lastInteraction.createdAt), { addSuffix: true })}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {analysis.keyMoments.map((moment, i) => (
-                <div 
-                  key={i} 
-                  className={`flex items-start gap-3 p-3 rounded-lg ${
-                    moment.type === 'good' ? 'bg-green-50' :
-                    moment.type === 'missed' ? 'bg-red-50' : 'bg-amber-50'
-                  }`}
-                >
-                  {moment.type === 'good' ? (
-                    <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
-                  ) : moment.type === 'missed' ? (
-                    <AlertCircle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
-                  ) : (
-                    <Target className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                  )}
-                  <div>
-                    {moment.timestamp && (
-                      <span className="text-xs text-muted-foreground">{moment.timestamp}</span>
-                    )}
-                    <p className="text-sm">{moment.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <p className="text-sm">{lastInteraction.summary || lastInteraction.title || "No summary available"}</p>
           </CardContent>
         </Card>
       )}
+      
+      {hasFord && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">FORD Notes</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {person.fordFamily && (
+              <div className="flex items-start gap-2">
+                <Heart className="h-4 w-4 text-pink-500 mt-0.5" />
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Family</p>
+                  <p className="text-sm">{person.fordFamily}</p>
+                </div>
+              </div>
+            )}
+            {person.fordOccupation && (
+              <div className="flex items-start gap-2">
+                <Briefcase className="h-4 w-4 text-blue-500 mt-0.5" />
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Occupation</p>
+                  <p className="text-sm">{person.fordOccupation}</p>
+                </div>
+              </div>
+            )}
+            {person.fordRecreation && (
+              <div className="flex items-start gap-2">
+                <Gamepad2 className="h-4 w-4 text-green-500 mt-0.5" />
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Recreation</p>
+                  <p className="text-sm">{person.fordRecreation}</p>
+                </div>
+              </div>
+            )}
+            {person.fordDreams && (
+              <div className="flex items-start gap-2">
+                <Star className="h-4 w-4 text-yellow-500 mt-0.5" />
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Dreams</p>
+                  <p className="text-sm">{person.fordDreams}</p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+      
+      <Card className="bg-purple-50 border-purple-200">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2 text-purple-700">
+            <Lightbulb className="h-4 w-4" />
+            Suggested Talking Points
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ul className="space-y-2 text-sm">
+            {!person.fordFamily && <li className="flex items-center gap-2"><ArrowRight className="h-3 w-3" /> Ask about their family</li>}
+            {!person.fordRecreation && <li className="flex items-center gap-2"><ArrowRight className="h-3 w-3" /> Discover their hobbies</li>}
+            {!person.fordDreams && <li className="flex items-center gap-2"><ArrowRight className="h-3 w-3" /> Explore their goals and dreams</li>}
+            {lastInteraction?.summary && <li className="flex items-center gap-2"><ArrowRight className="h-3 w-3" /> Follow up on: "{lastInteraction.summary.slice(0, 50)}..."</li>}
+            {!lastInteraction && <li className="flex items-center gap-2"><ArrowRight className="h-3 w-3" /> This is your first recorded conversation!</li>}
+          </ul>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function CoachingInsightsTab({ insights }: { insights: CoachingInsight[] }) {
+  const activeInsights = insights.filter(i => i.status === 'active');
+  
+  const groupedInsights = {
+    micro_shift: activeInsights.filter(i => i.type === 'micro_shift'),
+    question_swap: activeInsights.filter(i => i.type === 'question_swap'),
+    pattern_observation: activeInsights.filter(i => i.type === 'pattern_observation'),
+  };
+  
+  if (activeInsights.length === 0) {
+    return (
+      <Card>
+        <CardContent className="p-12 text-center">
+          <Brain className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-lg font-medium">No coaching insights yet</p>
+          <p className="text-sm text-muted-foreground">
+            Analyze more conversations to generate personalized coaching insights
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  return (
+    <div className="space-y-6">
+      {groupedInsights.micro_shift.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Zap className="h-5 w-5 text-yellow-500" />
+              Micro-Shifts
+            </CardTitle>
+            <CardDescription>Small changes that make a big difference</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {groupedInsights.micro_shift.map((insight) => (
+              <div key={insight.id} className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                <p className="text-sm">{insight.insight}</p>
+                {insight.suggestedBehavior && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Try: {insight.suggestedBehavior}
+                  </p>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+      
+      {groupedInsights.question_swap.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-blue-500" />
+              Question Swaps
+            </CardTitle>
+            <CardDescription>Better questions to ask</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {groupedInsights.question_swap.map((insight) => (
+              <div key={insight.id} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm">{insight.insight}</p>
+                {insight.originalBehavior && insight.suggestedBehavior && (
+                  <div className="mt-2 text-xs">
+                    <p className="text-red-600 line-through">{insight.originalBehavior}</p>
+                    <p className="text-green-600">{insight.suggestedBehavior}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+      
+      {groupedInsights.pattern_observation.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-purple-500" />
+              Pattern Observations
+            </CardTitle>
+            <CardDescription>Trends in your conversations</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {groupedInsights.pattern_observation.map((insight) => (
+              <div key={insight.id} className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                <p className="text-sm">{insight.insight}</p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function ListeningSkillsTab({ analyses }: { analyses: ListeningAnalysis[] }) {
+  if (analyses.length === 0) {
+    return (
+      <Card>
+        <CardContent className="p-12 text-center">
+          <Headphones className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-lg font-medium">No listening analysis yet</p>
+          <p className="text-sm text-muted-foreground">
+            Analyze conversations to see your listening patterns
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  const avgDepth = analyses.reduce((sum, a) => sum + a.conversationDepthScore, 0) / analyses.length;
+  const avgTrust = analyses.reduce((sum, a) => sum + a.trustBuildingScore, 0) / analyses.length;
+  const totalExploratory = analyses.reduce((sum, a) => sum + a.exploratoryQuestions, 0);
+  const totalClosed = analyses.reduce((sum, a) => sum + a.closedQuestions, 0);
+  const totalFeelingAck = analyses.reduce((sum, a) => sum + a.feelingAcknowledgments, 0);
+  
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-3xl font-bold text-blue-600">{avgDepth.toFixed(1)}</p>
+            <p className="text-xs text-muted-foreground">Avg Depth Score</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-3xl font-bold text-green-600">{avgTrust.toFixed(1)}</p>
+            <p className="text-xs text-muted-foreground">Avg Trust Score</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-3xl font-bold text-purple-600">{totalExploratory}</p>
+            <p className="text-xs text-muted-foreground">Exploratory Questions</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-3xl font-bold text-pink-600">{totalFeelingAck}</p>
+            <p className="text-xs text-muted-foreground">Feeling Acknowledgments</p>
+          </CardContent>
+        </Card>
+      </div>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Question Types Distribution</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {[
+              { label: "Exploratory", value: totalExploratory, color: "bg-green-500" },
+              { label: "Clarifying", value: analyses.reduce((sum, a) => sum + a.clarifyingQuestions, 0), color: "bg-blue-500" },
+              { label: "Feeling-based", value: analyses.reduce((sum, a) => sum + a.feelingQuestions, 0), color: "bg-pink-500" },
+              { label: "Need-based", value: analyses.reduce((sum, a) => sum + a.needQuestions, 0), color: "bg-purple-500" },
+              { label: "Solution-leading", value: analyses.reduce((sum, a) => sum + a.solutionLeadingQuestions, 0), color: "bg-amber-500" },
+              { label: "Closed", value: totalClosed, color: "bg-gray-500" },
+            ].map(({ label, value, color }) => {
+              const total = analyses.reduce((sum, a) => 
+                sum + a.exploratoryQuestions + a.clarifyingQuestions + a.feelingQuestions + 
+                a.needQuestions + a.solutionLeadingQuestions + a.closedQuestions, 0);
+              const percentage = total > 0 ? (value / total) * 100 : 0;
+              return (
+                <div key={label}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>{label}</span>
+                    <span>{value} ({percentage.toFixed(0)}%)</span>
+                  </div>
+                  <Progress value={percentage} className={`h-2 ${color}`} />
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function VoiceProfileTab({ voiceProfile }: { voiceProfile: VoiceProfile | null }) {
+  if (!voiceProfile) {
+    return (
+      <Card>
+        <CardContent className="p-12 text-center">
+          <Mic className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-lg font-medium">Voice profile not learned yet</p>
+          <p className="text-sm text-muted-foreground">
+            Process more conversations to learn your communication style
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Your Communication Patterns</CardTitle>
+          <CardDescription>Learned from your conversation transcripts</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {voiceProfile.greetings?.length > 0 && (
+            <div>
+              <p className="text-sm font-medium mb-2">Greetings</p>
+              <div className="flex flex-wrap gap-2">
+                {voiceProfile.greetings.map((g, i) => (
+                  <Badge key={i} variant="secondary">"{g}"</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {voiceProfile.signoffs?.length > 0 && (
+            <div>
+              <p className="text-sm font-medium mb-2">Sign-offs</p>
+              <div className="flex flex-wrap gap-2">
+                {voiceProfile.signoffs.map((s, i) => (
+                  <Badge key={i} variant="secondary">"{s}"</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {voiceProfile.expressions?.length > 0 && (
+            <div>
+              <p className="text-sm font-medium mb-2">Expressions</p>
+              <div className="flex flex-wrap gap-2">
+                {voiceProfile.expressions.map((e, i) => (
+                  <Badge key={i} variant="outline">"{e}"</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {voiceProfile.toneNotes?.length > 0 && (
+            <div>
+              <p className="text-sm font-medium mb-2">Tone Observations</p>
+              <ul className="space-y-1">
+                {voiceProfile.toneNotes.map((t, i) => (
+                  <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                    <span>•</span> {t}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -317,6 +663,7 @@ export default function Coaching() {
   const queryClient = useQueryClient();
   const [selectedInteraction, setSelectedInteraction] = useState<Interaction | null>(null);
   const [analyzingId, setAnalyzingId] = useState<string | null>(null);
+  const [selectedPersonForPreCall, setSelectedPersonForPreCall] = useState<Person | null>(null);
   
   const { data: interactions = [], isLoading } = useQuery<Interaction[]>({
     queryKey: ["/api/interactions"],
@@ -324,6 +671,18 @@ export default function Coaching() {
   
   const { data: people = [] } = useQuery<Person[]>({
     queryKey: ["/api/people"],
+  });
+  
+  const { data: listeningAnalyses = [] } = useQuery<ListeningAnalysis[]>({
+    queryKey: ["/api/listening-analysis"],
+  });
+  
+  const { data: coachingInsights = [] } = useQuery<CoachingInsight[]>({
+    queryKey: ["/api/coaching-insights"],
+  });
+  
+  const { data: voiceProfileData } = useQuery<{ greetings: string[]; signoffs: string[]; expressions: string[]; toneNotes: string[]; complimentPatterns: string[]; questionStyles: string[] } | null>({
+    queryKey: ["/api/voice-profile"],
   });
   
   const analyzeMutation = useMutation({
@@ -354,13 +713,14 @@ export default function Coaching() {
     .sort((a, b) => new Date(b.occurredAt || b.createdAt).getTime() - new Date(a.occurredAt || a.createdAt).getTime());
   
   const analyzedConversations = conversationsWithTranscripts.filter(i => i.coachingAnalysis);
-  const unanalyzedConversations = conversationsWithTranscripts.filter(i => !i.coachingAnalysis);
   
   const handleAnalyze = (interaction: Interaction) => {
     setAnalyzingId(interaction.id);
     setSelectedInteraction(interaction);
     analyzeMutation.mutate(interaction.id);
   };
+  
+  const peopleWithPhone = people.filter(p => p.phone);
   
   if (isLoading) {
     return (
@@ -375,126 +735,200 @@ export default function Coaching() {
   return (
     <Layout>
       <div className="min-h-screen bg-secondary/30">
-        <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <div className="container mx-auto px-4 py-8 max-w-7xl">
           <header className="mb-6">
             <h1 className="text-3xl font-serif font-bold text-primary flex items-center gap-3">
               <GraduationCap className="h-8 w-8" />
-              Coaching
+              Coaching Hub
             </h1>
             <p className="text-muted-foreground">
-              Replay and analyze your conversations to improve your questioning and listening skills
+              Improve your questioning, listening, and relationship-building skills
             </p>
           </header>
           
-          <div className="grid lg:grid-cols-5 gap-6">
-            <div className="lg:col-span-2">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Conversations to Review</CardTitle>
-                  <CardDescription>
-                    {conversationsWithTranscripts.length} conversations with transcripts
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <Tabs defaultValue="unanalyzed" className="w-full">
-                    <div className="px-4">
-                      <TabsList className="w-full grid grid-cols-2">
-                        <TabsTrigger value="unanalyzed" data-testid="tab-unanalyzed">
-                          New ({unanalyzedConversations.length})
-                        </TabsTrigger>
-                        <TabsTrigger value="analyzed" data-testid="tab-analyzed">
-                          Reviewed ({analyzedConversations.length})
-                        </TabsTrigger>
-                      </TabsList>
-                    </div>
-                    
-                    <TabsContent value="unanalyzed" className="mt-0">
+          <Tabs defaultValue="replay" className="space-y-6">
+            <TabsList className="grid grid-cols-5 w-full max-w-2xl">
+              <TabsTrigger value="replay" data-testid="tab-replay">
+                <Play className="h-4 w-4 mr-2" />
+                Replay
+              </TabsTrigger>
+              <TabsTrigger value="insights" data-testid="tab-insights">
+                <Lightbulb className="h-4 w-4 mr-2" />
+                Insights
+              </TabsTrigger>
+              <TabsTrigger value="listening" data-testid="tab-listening">
+                <Headphones className="h-4 w-4 mr-2" />
+                Listening
+              </TabsTrigger>
+              <TabsTrigger value="voice" data-testid="tab-voice">
+                <Mic className="h-4 w-4 mr-2" />
+                Voice
+              </TabsTrigger>
+              <TabsTrigger value="precall" data-testid="tab-precall">
+                <Phone className="h-4 w-4 mr-2" />
+                Pre-Call
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="replay">
+              <div className="grid lg:grid-cols-5 gap-6">
+                <div className="lg:col-span-2">
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg">Conversations</CardTitle>
+                      <CardDescription>
+                        {conversationsWithTranscripts.length} with transcripts • {analyzedConversations.length} analyzed
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0">
                       <ScrollArea className="h-[500px]">
                         <div className="p-4 space-y-3">
-                          {unanalyzedConversations.length === 0 ? (
+                          {conversationsWithTranscripts.length === 0 ? (
                             <p className="text-sm text-muted-foreground text-center py-8">
-                              All conversations have been analyzed!
+                              No conversations with transcripts yet
                             </p>
                           ) : (
-                            unanalyzedConversations.map((interaction) => (
+                            conversationsWithTranscripts.map((interaction) => (
                               <ConversationCard
                                 key={interaction.id}
                                 interaction={interaction}
                                 person={getPersonById(interaction.personId)}
                                 onAnalyze={() => handleAnalyze(interaction)}
                                 isAnalyzing={analyzingId === interaction.id}
+                                onSelect={() => setSelectedInteraction(interaction)}
+                                isSelected={selectedInteraction?.id === interaction.id}
                               />
                             ))
                           )}
                         </div>
                       </ScrollArea>
-                    </TabsContent>
-                    
-                    <TabsContent value="analyzed" className="mt-0">
-                      <ScrollArea className="h-[500px]">
-                        <div className="p-4 space-y-3">
-                          {analyzedConversations.length === 0 ? (
+                    </CardContent>
+                  </Card>
+                </div>
+                
+                <div className="lg:col-span-3">
+                  {selectedInteraction?.coachingAnalysis ? (
+                    <Card>
+                      <CardContent className="p-6">
+                        <AnalysisDetail 
+                          analysis={selectedInteraction.coachingAnalysis}
+                          interaction={selectedInteraction}
+                          person={getPersonById(selectedInteraction.personId)}
+                        />
+                      </CardContent>
+                    </Card>
+                  ) : analyzingId ? (
+                    <Card>
+                      <CardContent className="p-12 flex flex-col items-center justify-center">
+                        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+                        <p className="text-lg font-medium">Analyzing conversation...</p>
+                        <p className="text-sm text-muted-foreground">
+                          Reviewing questioning techniques, listening patterns, and FORD coverage
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <Card>
+                      <CardContent className="p-12 flex flex-col items-center justify-center text-center">
+                        <Sparkles className="h-12 w-12 text-muted-foreground mb-4" />
+                        <p className="text-lg font-medium">Select a conversation to analyze</p>
+                        <p className="text-sm text-muted-foreground max-w-md">
+                          Click on any conversation and hit the play button to get AI coaching feedback
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="insights">
+              <CoachingInsightsTab insights={coachingInsights} />
+            </TabsContent>
+            
+            <TabsContent value="listening">
+              <ListeningSkillsTab analyses={listeningAnalyses} />
+            </TabsContent>
+            
+            <TabsContent value="voice">
+              <VoiceProfileTab voiceProfile={voiceProfileData || null} />
+            </TabsContent>
+            
+            <TabsContent value="precall">
+              <div className="grid lg:grid-cols-3 gap-6">
+                <div>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Phone className="h-5 w-5" />
+                        Pre-Call Prep
+                      </CardTitle>
+                      <CardDescription>
+                        Select a contact to see context before calling
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <ScrollArea className="h-[400px]">
+                        <div className="p-4 space-y-2">
+                          {peopleWithPhone.length === 0 ? (
                             <p className="text-sm text-muted-foreground text-center py-8">
-                              No conversations analyzed yet
+                              No contacts with phone numbers
                             </p>
                           ) : (
-                            analyzedConversations.map((interaction) => (
-                              <div 
-                                key={interaction.id}
-                                className="cursor-pointer"
-                                onClick={() => setSelectedInteraction(interaction)}
+                            peopleWithPhone.map((person) => (
+                              <div
+                                key={person.id}
+                                className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                                  selectedPersonForPreCall?.id === person.id 
+                                    ? 'bg-primary/10 border border-primary' 
+                                    : 'bg-muted/50 hover:bg-muted'
+                                }`}
+                                onClick={() => setSelectedPersonForPreCall(person)}
+                                data-testid={`precall-person-${person.id}`}
                               >
-                                <ConversationCard
-                                  interaction={interaction}
-                                  person={getPersonById(interaction.personId)}
-                                  onAnalyze={() => handleAnalyze(interaction)}
-                                  isAnalyzing={analyzingId === interaction.id}
-                                />
+                                <div className="flex items-center gap-3">
+                                  <Avatar className="h-10 w-10">
+                                    <AvatarFallback>{getInitials(person.name)}</AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <p className="font-medium">{person.name}</p>
+                                    <p className="text-xs text-muted-foreground">{person.phone}</p>
+                                  </div>
+                                </div>
                               </div>
                             ))
                           )}
                         </div>
                       </ScrollArea>
-                    </TabsContent>
-                  </Tabs>
-                </CardContent>
-              </Card>
-            </div>
-            
-            <div className="lg:col-span-3">
-              {selectedInteraction?.coachingAnalysis ? (
-                <Card>
-                  <CardContent className="p-6">
-                    <AnalysisDetail 
-                      analysis={selectedInteraction.coachingAnalysis}
-                      interaction={selectedInteraction}
-                      person={getPersonById(selectedInteraction.personId)}
-                    />
-                  </CardContent>
-                </Card>
-              ) : analyzingId ? (
-                <Card>
-                  <CardContent className="p-12 flex flex-col items-center justify-center">
-                    <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-                    <p className="text-lg font-medium">Analyzing conversation...</p>
-                    <p className="text-sm text-muted-foreground">
-                      Our AI is reviewing your questioning techniques, listening patterns, and FORD coverage
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card>
-                  <CardContent className="p-12 flex flex-col items-center justify-center text-center">
-                    <Sparkles className="h-12 w-12 text-muted-foreground mb-4" />
-                    <p className="text-lg font-medium">Select a conversation to analyze</p>
-                    <p className="text-sm text-muted-foreground max-w-md">
-                      Click "Analyze" on any conversation to get AI-powered coaching feedback on your questioning, listening, and relationship-building skills
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </div>
+                    </CardContent>
+                  </Card>
+                </div>
+                
+                <div className="lg:col-span-2">
+                  {selectedPersonForPreCall ? (
+                    <Card>
+                      <CardContent className="p-6">
+                        <PreCallSummary 
+                          person={selectedPersonForPreCall} 
+                          interactions={interactions} 
+                        />
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <Card>
+                      <CardContent className="p-12 flex flex-col items-center justify-center text-center">
+                        <User className="h-12 w-12 text-muted-foreground mb-4" />
+                        <p className="text-lg font-medium">Select a contact</p>
+                        <p className="text-sm text-muted-foreground">
+                          Choose someone from your contacts to see their context before calling
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </Layout>
