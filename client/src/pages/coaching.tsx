@@ -1,6 +1,7 @@
 import Layout from "@/components/layout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation, useSearch } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -552,6 +553,8 @@ function VoiceProfileTab({ voiceProfile }: { voiceProfile: VoiceProfile | null }
 export default function Coaching() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const searchParams = useSearch();
+  const [, setLocation] = useLocation();
   const [selectedInteraction, setSelectedInteraction] = useState<Interaction | null>(null);
   const [analyzingId, setAnalyzingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -559,6 +562,20 @@ export default function Coaching() {
   const { data: interactions = [], isLoading } = useQuery<Interaction[]>({
     queryKey: ["/api/interactions"],
   });
+  
+  useEffect(() => {
+    if (interactions.length > 0 && searchParams) {
+      const params = new URLSearchParams(searchParams);
+      const interactionId = params.get("id");
+      if (interactionId && !selectedInteraction) {
+        const interaction = interactions.find(i => i.id === interactionId);
+        if (interaction) {
+          setSelectedInteraction(interaction);
+          setLocation("/coaching", { replace: true });
+        }
+      }
+    }
+  }, [interactions, searchParams, selectedInteraction, setLocation]);
   
   const { data: people = [] } = useQuery<Person[]>({
     queryKey: ["/api/people"],
