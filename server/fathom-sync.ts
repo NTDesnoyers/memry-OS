@@ -1,6 +1,6 @@
 import { storage } from "./storage";
 import crypto from "crypto";
-import { processInteraction } from "./conversation-processor";
+import { processInteraction, analyzeConversationForCoaching } from "./conversation-processor";
 
 const FATHOM_API_URL = "https://api.fathom.ai/external/v1";
 const SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
@@ -200,16 +200,32 @@ export async function runFathomSync(): Promise<{ synced: number; failed: number;
       }
     }
     
-    // Auto-process all newly synced meetings to generate follow-ups
+    // Auto-process all newly synced meetings to generate follow-ups and coaching analysis
     if (newInteractionIds.length > 0) {
-      console.log(`[Fathom Sync] Processing ${newInteractionIds.length} new meetings for follow-ups...`);
+      console.log(`[Fathom Sync] Processing ${newInteractionIds.length} new meetings for follow-ups and coaching...`);
       for (const interactionId of newInteractionIds) {
         try {
+          // First process for follow-ups
           const processResult = await processInteraction(interactionId);
           if (processResult.success) {
             console.log(`[Fathom Sync] Processed interaction, created ${processResult.draftsCreated || 0} drafts`);
           } else {
             console.log(`[Fathom Sync] Processing skipped: ${processResult.error || "unknown reason"}`);
+          }
+          
+          // Then run coaching analysis if there's a transcript
+          const interaction = await storage.getInteraction(interactionId);
+          if (interaction?.transcript && interaction.transcript.length >= 100 && !interaction.coachingAnalysis) {
+            try {
+              const person = interaction.personId 
+                ? (await storage.getPerson(interaction.personId)) ?? null 
+                : null;
+              const coachingAnalysis = await analyzeConversationForCoaching(interaction, person);
+              await storage.updateInteraction(interactionId, { coachingAnalysis });
+              console.log(`[Fathom Sync] Coaching analysis complete: score ${coachingAnalysis.overallScore}`);
+            } catch (coachingError: any) {
+              console.error(`[Fathom Sync] Coaching analysis failed:`, coachingError.message);
+            }
           }
         } catch (error: any) {
           console.error(`[Fathom Sync] Failed to process interaction:`, error.message);

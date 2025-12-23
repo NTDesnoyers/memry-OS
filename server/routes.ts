@@ -3240,7 +3240,7 @@ Return ONLY valid JSON, no explanations.`
       }
       
       const person = interaction.personId 
-        ? await storage.getPerson(interaction.personId) 
+        ? (await storage.getPerson(interaction.personId)) ?? null
         : null;
       
       const analysis = await analyzeConversationForCoaching(interaction, person);
@@ -3297,6 +3297,59 @@ Return ONLY valid JSON, no explanations.`
       });
     } catch (error: any) {
       console.error("Error processing all interactions:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Batch coaching analysis for all conversations with transcripts
+  app.post("/api/interactions/analyze-all-coaching", async (req, res) => {
+    try {
+      const { analyzeConversationForCoaching } = await import("./conversation-processor");
+      const allInteractions = await storage.getAllInteractions();
+      
+      let analyzed = 0;
+      let skipped = 0;
+      let failed = 0;
+      
+      // Filter to only conversations with transcripts that haven't been analyzed
+      const toAnalyze = allInteractions.filter(i => 
+        i.transcript && 
+        i.transcript.length >= 100 && 
+        !i.coachingAnalysis
+      );
+      
+      console.log(`[Batch Coaching] Starting analysis of ${toAnalyze.length} conversations...`);
+      
+      for (const interaction of toAnalyze) {
+        try {
+          const person = interaction.personId 
+            ? (await storage.getPerson(interaction.personId)) ?? null
+            : null;
+          
+          const analysis = await analyzeConversationForCoaching(interaction, person);
+          await storage.updateInteraction(interaction.id, { coachingAnalysis: analysis });
+          analyzed++;
+          console.log(`[Batch Coaching] Analyzed: ${interaction.title || 'Untitled'} - Score: ${analysis.overallScore}`);
+        } catch (error: any) {
+          failed++;
+          console.error(`[Batch Coaching] Failed to analyze ${interaction.id}:`, error.message);
+        }
+      }
+      
+      skipped = allInteractions.length - toAnalyze.length;
+      
+      console.log(`[Batch Coaching] Complete: ${analyzed} analyzed, ${skipped} skipped, ${failed} failed`);
+      
+      res.json({
+        success: true,
+        analyzed,
+        skipped,
+        failed,
+        total: allInteractions.length,
+        eligibleForAnalysis: toAnalyze.length,
+      });
+    } catch (error: any) {
+      console.error("Error in batch coaching analysis:", error);
       res.status(500).json({ message: error.message });
     }
   });

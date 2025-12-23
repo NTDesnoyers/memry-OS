@@ -769,10 +769,19 @@ export async function analyzeConversationForCoaching(
 ): Promise<CoachingAnalysis> {
   const openai = new OpenAI();
   
+  const fordNotes = person
+    ? [
+        person.fordFamily && `Family: ${person.fordFamily}`,
+        person.fordOccupation && `Occupation: ${person.fordOccupation}`,
+        person.fordRecreation && `Recreation: ${person.fordRecreation}`,
+        person.fordDreams && `Dreams: ${person.fordDreams}`,
+      ].filter(Boolean).join(', ') || 'None recorded'
+    : 'None recorded';
+  
   const personContext = person
     ? `Contact: ${person.name}${person.profession ? ` (${person.profession})` : ''}
-FORD Notes: ${person.fordNotes || 'None recorded'}
-Relationship: ${person.relationshipSegment || 'Unknown'}`
+FORD Notes: ${fordNotes}
+Relationship: ${person.segment || 'Unknown'}`
     : 'Unknown contact';
 
   const prompt = `You are a sales and relationship-building coach analyzing a real estate professional's conversation.
