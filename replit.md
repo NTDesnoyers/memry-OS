@@ -80,3 +80,18 @@ Key features include a Contact Due Calculator, D Contact Review system, AI Assis
 - **Granola**: Meeting notes.
 - **OpenAI/Anthropic/Gemini**: AI processing for voice logs.
 - **Gmail/Google Calendar**: Email and scheduling.
+
+## Feature Roadmap
+
+### Client-Facing AI Chatbot (Future)
+A client-facing AI assistant trained in the user's voice with access to real estate knowledge:
+- **Voice-Trained Model**: Uses learned voice profile to respond authentically
+- **Real Estate Knowledge Base**: Access to market data, property info, and common Q&A
+- **SMS/Phone Integration**: Clients can text a dedicated phone number
+- **Group Chat Visibility**: User sees all client questions and AI responses in real-time
+- **Human Override**: User can step in to correct or add context when needed
+- **Conversation Logging**: All client interactions logged for:
+  - Adding to person's timeline/FORD notes
+  - Training data for model improvement
+  - Quality assurance and follow-up identification
+- **Implementation Considerations**: Twilio for SMS, fine-tuned model, moderation layer
