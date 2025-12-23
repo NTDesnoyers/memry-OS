@@ -31,6 +31,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import * as XLSX from "xlsx";
 import * as googleCalendar from "./google-calendar";
 import { processInteraction, extractContentTopics } from "./conversation-processor";
+import { eventBus } from "./event-bus";
 
 // Background processing for batch operations
 let processingStatus = {
@@ -4953,6 +4954,198 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
   app.delete("/api/life-event-alerts/:id", async (req, res) => {
     try {
       await storage.deleteLifeEventAlert(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============================================
+  // Event Bus & Orchestration Layer Routes
+  // ============================================
+
+  // System Events - Event Log
+  app.get("/api/events", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const events = await storage.getAllSystemEvents(limit);
+      res.json(events);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/events/stats", async (req, res) => {
+    try {
+      const stats = await eventBus.getStats();
+      res.json(stats);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/events/unprocessed", async (req, res) => {
+    try {
+      const events = await storage.getUnprocessedEvents();
+      res.json(events);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/events/category/:category", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const events = await storage.getSystemEventsByCategory(req.params.category, limit);
+      res.json(events);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/events/type/:type", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const events = await storage.getSystemEventsByType(req.params.type, limit);
+      res.json(events);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/events/:id", async (req, res) => {
+    try {
+      const event = await storage.getSystemEvent(req.params.id);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      res.json(event);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/people/:personId/events", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const events = await storage.getSystemEventsByPerson(req.params.personId, limit);
+      res.json(events);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Agent Actions - Approval Workflow
+  app.get("/api/agent-actions", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const actions = await storage.getAllAgentActions(limit);
+      res.json(actions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/agent-actions/pending", async (req, res) => {
+    try {
+      const actions = await storage.getPendingApprovals();
+      res.json(actions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/agent-actions/status/:status", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const actions = await storage.getAgentActionsByStatus(req.params.status, limit);
+      res.json(actions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/agent-actions/agent/:agentName", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const actions = await storage.getAgentActionsByAgent(req.params.agentName, limit);
+      res.json(actions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/agent-actions/:id", async (req, res) => {
+    try {
+      const action = await storage.getAgentAction(req.params.id);
+      if (!action) {
+        return res.status(404).json({ message: "Action not found" });
+      }
+      res.json(action);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/agent-actions/:id/approve", async (req, res) => {
+    try {
+      const action = await storage.approveAgentAction(req.params.id, 'user');
+      if (!action) {
+        return res.status(404).json({ message: "Action not found" });
+      }
+      res.json(action);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/agent-actions/:id/reject", async (req, res) => {
+    try {
+      const action = await storage.rejectAgentAction(req.params.id);
+      if (!action) {
+        return res.status(404).json({ message: "Action not found" });
+      }
+      res.json(action);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/agent-actions/:id/execute", async (req, res) => {
+    try {
+      const { targetEntityId } = req.body;
+      const action = await storage.markAgentActionExecuted(req.params.id, targetEntityId);
+      if (!action) {
+        return res.status(404).json({ message: "Action not found" });
+      }
+      res.json(action);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Agent Subscriptions
+  app.get("/api/agent-subscriptions", async (req, res) => {
+    try {
+      const subscriptions = await storage.getAllAgentSubscriptions();
+      res.json(subscriptions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/agent-subscriptions", async (req, res) => {
+    try {
+      const subscription = await storage.createAgentSubscription(req.body);
+      res.status(201).json(subscription);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/agent-subscriptions/:id", async (req, res) => {
+    try {
+      await storage.deleteAgentSubscription(req.params.id);
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
