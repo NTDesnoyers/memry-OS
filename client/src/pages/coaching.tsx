@@ -558,6 +558,7 @@ export default function Coaching() {
   const [selectedInteraction, setSelectedInteraction] = useState<Interaction | null>(null);
   const [analyzingId, setAnalyzingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isBatchAnalyzing, setIsBatchAnalyzing] = useState(false);
   
   const { data: interactions = [], isLoading } = useQuery<Interaction[]>({
     queryKey: ["/api/interactions"],
@@ -641,6 +642,32 @@ export default function Coaching() {
     analyzeMutation.mutate(interaction.id);
   };
   
+  const handleBatchAnalyze = async () => {
+    setIsBatchAnalyzing(true);
+    try {
+      const response = await apiRequest("POST", "/api/interactions/analyze-all-coaching");
+      const data = await response.json();
+      toast({
+        title: "Batch analysis complete",
+        description: `Analyzed ${data.analyzed} conversations. ${data.failed} failed.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/interactions"] });
+    } catch (error: any) {
+      toast({ title: "Batch analysis failed", description: error.message, variant: "destructive" });
+    } finally {
+      setIsBatchAnalyzing(false);
+    }
+  };
+  
+  const unanalyzedCount = conversationsWithTranscripts.length - analyzedConversations.length;
+  
+  const avgScores = analyzedConversations.length > 0 ? {
+    overall: Math.round(analyzedConversations.reduce((sum, i) => sum + ((i.coachingAnalysis as any)?.overallScore || 0), 0) / analyzedConversations.length),
+    listening: Math.round(analyzedConversations.reduce((sum, i) => sum + ((i.coachingAnalysis as any)?.listeningScore || 0), 0) / analyzedConversations.length),
+    questioning: Math.round(analyzedConversations.reduce((sum, i) => sum + ((i.coachingAnalysis as any)?.questioningScore || 0), 0) / analyzedConversations.length),
+    ford: Math.round(analyzedConversations.reduce((sum, i) => sum + ((i.coachingAnalysis as any)?.fordCoverage || 0), 0) / analyzedConversations.length),
+  } : null;
+  
   if (isLoading) {
     return (
       <Layout>
@@ -656,13 +683,66 @@ export default function Coaching() {
       <div className="min-h-screen bg-secondary/30">
         <div className="px-6 py-6">
           <header className="mb-6">
-            <h1 className="text-3xl font-serif font-bold text-primary flex items-center gap-3">
-              <GraduationCap className="h-8 w-8" />
-              Coaching Hub
-            </h1>
-            <p className="text-muted-foreground">
-              Improve your questioning, listening, and relationship-building skills
-            </p>
+            <div className="flex items-start justify-between">
+              <div>
+                <h1 className="text-3xl font-serif font-bold text-primary flex items-center gap-3">
+                  <GraduationCap className="h-8 w-8" />
+                  Coaching Hub
+                </h1>
+                <p className="text-muted-foreground">
+                  Improve your questioning, listening, and relationship-building skills
+                </p>
+              </div>
+              {unanalyzedCount > 0 && (
+                <Button 
+                  onClick={handleBatchAnalyze} 
+                  disabled={isBatchAnalyzing}
+                  className="gap-2"
+                  data-testid="button-batch-analyze"
+                >
+                  {isBatchAnalyzing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="h-4 w-4" />
+                      Analyze All ({unanalyzedCount})
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+            
+            {avgScores && (
+              <div className="grid grid-cols-4 gap-3 mt-4">
+                <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
+                  <CardContent className="p-4 text-center">
+                    <p className="text-3xl font-bold text-blue-700">{avgScores.overall}</p>
+                    <p className="text-xs text-blue-600 font-medium">Overall Average</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-gradient-to-r from-green-50 to-green-100 border-green-200">
+                  <CardContent className="p-4 text-center">
+                    <p className="text-3xl font-bold text-green-700">{avgScores.listening}</p>
+                    <p className="text-xs text-green-600 font-medium">Listening</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-gradient-to-r from-purple-50 to-purple-100 border-purple-200">
+                  <CardContent className="p-4 text-center">
+                    <p className="text-3xl font-bold text-purple-700">{avgScores.questioning}</p>
+                    <p className="text-xs text-purple-600 font-medium">Questions</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-gradient-to-r from-amber-50 to-amber-100 border-amber-200">
+                  <CardContent className="p-4 text-center">
+                    <p className="text-3xl font-bold text-amber-700">{avgScores.ford}</p>
+                    <p className="text-xs text-amber-600 font-medium">FORD Coverage</p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </header>
           
           <Tabs defaultValue="replay" className="space-y-6">
