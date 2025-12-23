@@ -454,6 +454,35 @@ export const insertPricingReviewSchema = createInsertSchema(pricingReviews).omit
 export type InsertPricingReview = z.infer<typeof insertPricingReviewSchema>;
 export type PricingReview = typeof pricingReviews.$inferSelect;
 
+// Life Event Alerts - tracking life changes that signal real estate needs
+export const lifeEventAlerts = pgTable("life_event_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  personId: varchar("person_id").references(() => people.id),
+  eventType: text("event_type").notNull(), // e.g., "new_baby", "job_change", "engagement"
+  eventCategory: text("event_category").notNull(), // "family", "career", "life_transition", "property"
+  confidence: text("confidence"), // "high", "medium", "low"
+  sourceUrl: text("source_url"), // Link to the social post
+  sourcePlatform: text("source_platform"), // "linkedin", "facebook", "instagram"
+  rawContent: text("raw_content"), // The original post/content that triggered this
+  summary: text("summary"), // AI-generated summary of what was detected
+  suggestedOutreach: text("suggested_outreach"), // AI-generated outreach suggestion
+  status: text("status").default("new"), // "new", "reviewed", "actioned", "dismissed"
+  actionTaken: text("action_taken"), // Notes on what action was taken
+  detectedAt: timestamp("detected_at").defaultNow().notNull(),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertLifeEventAlertSchema = createInsertSchema(lifeEventAlerts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertLifeEventAlert = z.infer<typeof insertLifeEventAlertSchema>;
+export type LifeEventAlert = typeof lifeEventAlerts.$inferSelect;
+
 // MLS Property type for the imported data
 export type MLSProperty = {
   mlsNumber: string;

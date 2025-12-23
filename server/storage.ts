@@ -33,7 +33,8 @@ import {
   type CoachingInsight, type InsertCoachingInsight,
   type ListeningPattern, type InsertListeningPattern,
   type DashboardWidget, type InsertDashboardWidget,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets
+  type LifeEventAlert, type InsertLifeEventAlert,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt } from "drizzle-orm";
@@ -326,6 +327,14 @@ export interface IStorage {
   updateDashboardWidget(id: string, widget: Partial<InsertDashboardWidget>): Promise<DashboardWidget | undefined>;
   deleteDashboardWidget(id: string): Promise<void>;
   updateDashboardWidgetPositions(widgets: { id: string; position: number }[]): Promise<void>;
+  
+  // Life Event Alerts
+  getAllLifeEventAlerts(): Promise<LifeEventAlert[]>;
+  getLifeEventAlert(id: string): Promise<LifeEventAlert | undefined>;
+  getLifeEventAlertsByPerson(personId: string): Promise<LifeEventAlert[]>;
+  createLifeEventAlert(alert: InsertLifeEventAlert): Promise<LifeEventAlert>;
+  updateLifeEventAlert(id: string, alert: Partial<InsertLifeEventAlert>): Promise<LifeEventAlert | undefined>;
+  deleteLifeEventAlert(id: string): Promise<void>;
 }
 
 /** Result of contact due calculation with reason and days overdue. */
@@ -1656,6 +1665,39 @@ export class DatabaseStorage implements IStorage {
         .set({ position, updatedAt: new Date() })
         .where(eq(dashboardWidgets.id, id));
     }
+  }
+  
+  // Life Event Alerts
+  async getAllLifeEventAlerts(): Promise<LifeEventAlert[]> {
+    return await db.select().from(lifeEventAlerts).orderBy(desc(lifeEventAlerts.detectedAt));
+  }
+  
+  async getLifeEventAlert(id: string): Promise<LifeEventAlert | undefined> {
+    const [alert] = await db.select().from(lifeEventAlerts).where(eq(lifeEventAlerts.id, id));
+    return alert || undefined;
+  }
+  
+  async getLifeEventAlertsByPerson(personId: string): Promise<LifeEventAlert[]> {
+    return await db.select().from(lifeEventAlerts)
+      .where(eq(lifeEventAlerts.personId, personId))
+      .orderBy(desc(lifeEventAlerts.detectedAt));
+  }
+  
+  async createLifeEventAlert(alert: InsertLifeEventAlert): Promise<LifeEventAlert> {
+    const [created] = await db.insert(lifeEventAlerts).values(alert).returning();
+    return created;
+  }
+  
+  async updateLifeEventAlert(id: string, alert: Partial<InsertLifeEventAlert>): Promise<LifeEventAlert | undefined> {
+    const [updated] = await db.update(lifeEventAlerts)
+      .set({ ...alert, updatedAt: new Date() })
+      .where(eq(lifeEventAlerts.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async deleteLifeEventAlert(id: string): Promise<void> {
+    await db.delete(lifeEventAlerts).where(eq(lifeEventAlerts.id, id));
   }
 }
 
