@@ -88,6 +88,10 @@ A client-facing AI assistant trained in the user's voice with access to real est
 - **Voice-Trained Model**: Uses learned voice profile to respond authentically
 - **Real Estate Knowledge Base**: Access to market data, property info, and common Q&A
 - **SMS/Phone Integration**: Clients can text a dedicated phone number
+- **Embedded Chat Widget**: Chat embedded in digital Real Estate Review landing pages
+  - "Ask me questions about this" prompt on review pages
+  - Context-aware: knows which property/review the client is viewing
+  - Answers questions about market data, property details, pricing strategy
 - **Group Chat Visibility**: User sees all client questions and AI responses in real-time
 - **Human Override**: User can step in to correct or add context when needed
 - **Conversation Logging**: All client interactions logged for:
