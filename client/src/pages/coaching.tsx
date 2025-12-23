@@ -8,7 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Play, HelpCircle, Lightbulb, Target, CheckCircle, Sparkles, GraduationCap, RefreshCw, Headphones, Brain, Mic, BarChart3, Zap, MessageCircle } from "lucide-react";
+import { Loader2, Play, HelpCircle, Lightbulb, Target, CheckCircle, Sparkles, GraduationCap, RefreshCw, Headphones, Brain, Mic, BarChart3, Zap, MessageCircle, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { format, formatDistanceToNow } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -553,6 +554,7 @@ export default function Coaching() {
   const queryClient = useQueryClient();
   const [selectedInteraction, setSelectedInteraction] = useState<Interaction | null>(null);
   const [analyzingId, setAnalyzingId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   
   const { data: interactions = [], isLoading } = useQuery<Interaction[]>({
     queryKey: ["/api/interactions"],
@@ -601,6 +603,18 @@ export default function Coaching() {
   const conversationsWithTranscripts = interactions
     .filter(i => i.transcript && i.transcript.length > 100)
     .sort((a, b) => new Date(b.occurredAt || b.createdAt).getTime() - new Date(a.occurredAt || a.createdAt).getTime());
+  
+  const filteredConversations = searchQuery.trim()
+    ? conversationsWithTranscripts.filter(i => {
+        const person = getPersonById(i.personId);
+        const searchLower = searchQuery.toLowerCase();
+        return (
+          (i.title?.toLowerCase().includes(searchLower)) ||
+          (i.summary?.toLowerCase().includes(searchLower)) ||
+          (person?.name.toLowerCase().includes(searchLower))
+        );
+      })
+    : conversationsWithTranscripts;
   
   const analyzedConversations = conversationsWithTranscripts.filter(i => i.coachingAnalysis);
   
@@ -663,16 +677,26 @@ export default function Coaching() {
                       <CardDescription>
                         {conversationsWithTranscripts.length} with transcripts • {analyzedConversations.length} analyzed
                       </CardDescription>
+                      <div className="relative mt-2">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search by name or topic..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="pl-9"
+                          data-testid="input-search-conversations"
+                        />
+                      </div>
                     </CardHeader>
                     <CardContent className="p-0">
-                      <ScrollArea className="h-[calc(100vh-280px)]">
+                      <ScrollArea className="h-[calc(100vh-340px)]">
                         <div className="p-4 space-y-3">
-                          {conversationsWithTranscripts.length === 0 ? (
+                          {filteredConversations.length === 0 ? (
                             <p className="text-sm text-muted-foreground text-center py-8">
-                              No conversations with transcripts yet
+                              {searchQuery ? "No matching conversations" : "No conversations with transcripts yet"}
                             </p>
                           ) : (
-                            conversationsWithTranscripts.map((interaction) => (
+                            filteredConversations.map((interaction) => (
                               <ConversationCard
                                 key={interaction.id}
                                 interaction={interaction}

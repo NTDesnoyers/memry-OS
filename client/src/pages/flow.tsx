@@ -32,7 +32,8 @@ import {
   X,
   Trash2,
   Copy,
-  CheckSquare
+  CheckSquare,
+  GraduationCap
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, formatDistanceToNow } from "date-fns";
@@ -203,6 +204,15 @@ function InteractionDetailSheet({
             </div>
             <ExternalLink className="h-4 w-4 text-muted-foreground" />
           </div>
+        </Link>
+      )}
+      
+      {interaction.transcript && interaction.transcript.length > 100 && (
+        <Link href={`/coaching?id=${interaction.id}`}>
+          <Button variant="outline" className="w-full gap-2" data-testid="button-coaching-analysis">
+            <GraduationCap className="h-4 w-4" />
+            View Coaching Analysis
+          </Button>
         </Link>
       )}
       
