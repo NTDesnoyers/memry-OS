@@ -745,3 +745,126 @@ export async function findReferralMatches(personId: string): Promise<{
 
   return matches;
 }
+
+export type CoachingAnalysis = {
+  overallScore: number;
+  listeningScore: number;
+  questioningScore: number;
+  fordCoverage: number;
+  strengths: string[];
+  improvements: string[];
+  missedOpportunities: string[];
+  suggestedQuestions: string[];
+  keyMoments: {
+    timestamp?: string;
+    type: "good" | "missed" | "improvement";
+    description: string;
+  }[];
+  analyzedAt: string;
+};
+
+export async function analyzeConversationForCoaching(
+  interaction: Interaction,
+  person: Person | null
+): Promise<CoachingAnalysis> {
+  const openai = new OpenAI();
+  
+  const personContext = person
+    ? `Contact: ${person.name}${person.profession ? ` (${person.profession})` : ''}
+FORD Notes: ${person.fordNotes || 'None recorded'}
+Relationship: ${person.relationshipSegment || 'Unknown'}`
+    : 'Unknown contact';
+
+  const prompt = `You are a sales and relationship-building coach analyzing a real estate professional's conversation.
+
+CONTEXT:
+${personContext}
+
+CONVERSATION TYPE: ${interaction.type}
+${interaction.title ? `TITLE: ${interaction.title}` : ''}
+
+TRANSCRIPT:
+${interaction.transcript}
+
+Analyze this conversation using the Ninja Selling methodology and Question-Based Selling principles. Evaluate:
+
+1. LISTENING QUALITY (0-100):
+   - Did they let the other person talk more than themselves?
+   - Did they ask follow-up questions based on what was said?
+   - Did they avoid interrupting?
+
+2. QUESTIONING TECHNIQUE (0-100):
+   - Did they use open-ended questions vs closed questions?
+   - Did they probe deeper into important topics?
+   - Did they use questions to understand needs and motivations?
+
+3. FORD COVERAGE (0-100):
+   - Family: Did they discuss family topics?
+   - Occupation: Did they explore work/career?
+   - Recreation: Did they discuss hobbies/interests?
+   - Dreams: Did they ask about goals/aspirations?
+
+4. IDENTIFY:
+   - 3-5 specific things they did well (with examples from transcript)
+   - 2-4 specific areas for improvement
+   - 2-3 missed opportunities where they could have asked better questions
+   - 4-6 specific questions they could have asked instead
+
+5. KEY MOMENTS:
+   - Highlight 3-5 specific moments that were "good", "missed", or "improvement" opportunities
+
+Respond in JSON format:
+{
+  "overallScore": <0-100>,
+  "listeningScore": <0-100>,
+  "questioningScore": <0-100>,
+  "fordCoverage": <0-100>,
+  "strengths": ["strength 1", "strength 2", ...],
+  "improvements": ["improvement 1", "improvement 2", ...],
+  "missedOpportunities": ["missed 1", "missed 2", ...],
+  "suggestedQuestions": ["question 1", "question 2", ...],
+  "keyMoments": [
+    {"type": "good|missed|improvement", "description": "..."},
+    ...
+  ]
+}`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: "You are an expert sales coach specializing in relationship-based selling. Always respond with valid JSON." },
+        { role: "user", content: prompt }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+    });
+
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error("No response from AI");
+    }
+
+    const analysis = JSON.parse(content);
+    
+    return {
+      overallScore: Math.round(analysis.overallScore || 0),
+      listeningScore: Math.round(analysis.listeningScore || 0),
+      questioningScore: Math.round(analysis.questioningScore || 0),
+      fordCoverage: Math.round(analysis.fordCoverage || 0),
+      strengths: analysis.strengths || [],
+      improvements: analysis.improvements || [],
+      missedOpportunities: analysis.missedOpportunities || [],
+      suggestedQuestions: analysis.suggestedQuestions || [],
+      keyMoments: (analysis.keyMoments || []).map((m: any) => ({
+        type: m.type || "improvement",
+        description: m.description || "",
+        timestamp: m.timestamp,
+      })),
+      analyzedAt: new Date().toISOString(),
+    };
+  } catch (error) {
+    console.error("Error analyzing conversation for coaching:", error);
+    throw error;
+  }
+}

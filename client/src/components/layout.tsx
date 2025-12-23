@@ -28,7 +28,8 @@ import {
   Pin,
   PinOff,
   TrendingUp,
-  FileText
+  FileText,
+  GraduationCap
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -44,6 +45,7 @@ const navItems = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Flow", href: "/flow", icon: Repeat },
   { name: "People", href: "/people", icon: Users },
+  { name: "Coaching", href: "/coaching", icon: GraduationCap },
   { name: "Business Tracker", href: "/business-tracker", icon: PieChart },
   { name: "Visual Pricing", href: "/visual-pricing", icon: TrendingUp },
   { name: "Reviews", href: "/reviews", icon: FileText },

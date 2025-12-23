@@ -3225,6 +3225,37 @@ Return ONLY valid JSON, no explanations.`
     }
   });
   
+  // Coaching analysis for an interaction
+  app.post("/api/interactions/:id/coaching-analysis", async (req, res) => {
+    try {
+      const { analyzeConversationForCoaching } = await import("./conversation-processor");
+      const interaction = await storage.getInteraction(req.params.id);
+      
+      if (!interaction) {
+        return res.status(404).json({ message: "Interaction not found" });
+      }
+      
+      if (!interaction.transcript || interaction.transcript.length < 100) {
+        return res.status(400).json({ message: "Interaction has no transcript to analyze" });
+      }
+      
+      const person = interaction.personId 
+        ? await storage.getPerson(interaction.personId) 
+        : null;
+      
+      const analysis = await analyzeConversationForCoaching(interaction, person);
+      
+      await storage.updateInteraction(req.params.id, {
+        coachingAnalysis: analysis,
+      });
+      
+      res.json({ success: true, analysis });
+    } catch (error: any) {
+      console.error("Error analyzing conversation for coaching:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
   // Process all unprocessed interactions
   app.post("/api/interactions/process-all", async (req, res) => {
     try {
