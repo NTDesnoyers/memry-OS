@@ -34,7 +34,10 @@ import {
   type ListeningPattern, type InsertListeningPattern,
   type DashboardWidget, type InsertDashboardWidget,
   type LifeEventAlert, type InsertLifeEventAlert,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts
+  type SystemEvent, type InsertSystemEvent,
+  type AgentAction, type InsertAgentAction,
+  type AgentSubscription, type InsertAgentSubscription,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt } from "drizzle-orm";
@@ -338,6 +341,36 @@ export interface IStorage {
   
   // Unified Person Context
   getPersonFullContext(personId: string): Promise<PersonFullContext | undefined>;
+  
+  // System Events - Event Bus
+  getAllSystemEvents(limit?: number): Promise<SystemEvent[]>;
+  getSystemEvent(id: string): Promise<SystemEvent | undefined>;
+  getSystemEventsByType(eventType: string, limit?: number): Promise<SystemEvent[]>;
+  getSystemEventsByCategory(category: string, limit?: number): Promise<SystemEvent[]>;
+  getSystemEventsByPerson(personId: string, limit?: number): Promise<SystemEvent[]>;
+  getUnprocessedEvents(): Promise<SystemEvent[]>;
+  createSystemEvent(event: InsertSystemEvent): Promise<SystemEvent>;
+  markEventProcessed(id: string, processedBy: string[]): Promise<SystemEvent | undefined>;
+  
+  // Agent Actions - Approval Workflow
+  getAllAgentActions(limit?: number): Promise<AgentAction[]>;
+  getAgentAction(id: string): Promise<AgentAction | undefined>;
+  getAgentActionsByStatus(status: string, limit?: number): Promise<AgentAction[]>;
+  getAgentActionsByAgent(agentName: string, limit?: number): Promise<AgentAction[]>;
+  getPendingApprovals(): Promise<AgentAction[]>;
+  createAgentAction(action: InsertAgentAction): Promise<AgentAction>;
+  updateAgentAction(id: string, action: Partial<InsertAgentAction>): Promise<AgentAction | undefined>;
+  approveAgentAction(id: string, approvedBy: string): Promise<AgentAction | undefined>;
+  rejectAgentAction(id: string): Promise<AgentAction | undefined>;
+  markAgentActionExecuted(id: string, targetEntityId?: string): Promise<AgentAction | undefined>;
+  markAgentActionFailed(id: string, errorMessage: string): Promise<AgentAction | undefined>;
+  
+  // Agent Subscriptions
+  getAllAgentSubscriptions(): Promise<AgentSubscription[]>;
+  getActiveSubscriptionsForEvent(eventType: string): Promise<AgentSubscription[]>;
+  createAgentSubscription(subscription: InsertAgentSubscription): Promise<AgentSubscription>;
+  updateAgentSubscription(id: string, subscription: Partial<InsertAgentSubscription>): Promise<AgentSubscription | undefined>;
+  deleteAgentSubscription(id: string): Promise<void>;
 }
 
 /** Full context for a person - unified data layer response */
@@ -1845,6 +1878,170 @@ export class DatabaseStorage implements IStorage {
     }
     
     return "Relationship is healthy - continue regular touchpoints";
+  }
+  
+  // System Events - Event Bus
+  async getAllSystemEvents(limit: number = 100): Promise<SystemEvent[]> {
+    return await db.select().from(systemEvents).orderBy(desc(systemEvents.createdAt)).limit(limit);
+  }
+  
+  async getSystemEvent(id: string): Promise<SystemEvent | undefined> {
+    const [event] = await db.select().from(systemEvents).where(eq(systemEvents.id, id));
+    return event || undefined;
+  }
+  
+  async getSystemEventsByType(eventType: string, limit: number = 50): Promise<SystemEvent[]> {
+    return await db.select().from(systemEvents)
+      .where(eq(systemEvents.eventType, eventType))
+      .orderBy(desc(systemEvents.createdAt))
+      .limit(limit);
+  }
+  
+  async getSystemEventsByCategory(category: string, limit: number = 50): Promise<SystemEvent[]> {
+    return await db.select().from(systemEvents)
+      .where(eq(systemEvents.eventCategory, category))
+      .orderBy(desc(systemEvents.createdAt))
+      .limit(limit);
+  }
+  
+  async getSystemEventsByPerson(personId: string, limit: number = 50): Promise<SystemEvent[]> {
+    return await db.select().from(systemEvents)
+      .where(eq(systemEvents.personId, personId))
+      .orderBy(desc(systemEvents.createdAt))
+      .limit(limit);
+  }
+  
+  async getUnprocessedEvents(): Promise<SystemEvent[]> {
+    return await db.select().from(systemEvents)
+      .where(isNull(systemEvents.processedAt))
+      .orderBy(systemEvents.createdAt);
+  }
+  
+  async createSystemEvent(event: InsertSystemEvent): Promise<SystemEvent> {
+    const [created] = await db.insert(systemEvents).values(event).returning();
+    return created;
+  }
+  
+  async markEventProcessed(id: string, processedBy: string[]): Promise<SystemEvent | undefined> {
+    const [updated] = await db.update(systemEvents)
+      .set({ processedAt: new Date(), processedBy })
+      .where(eq(systemEvents.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  // Agent Actions - Approval Workflow
+  async getAllAgentActions(limit: number = 100): Promise<AgentAction[]> {
+    return await db.select().from(agentActions).orderBy(desc(agentActions.createdAt)).limit(limit);
+  }
+  
+  async getAgentAction(id: string): Promise<AgentAction | undefined> {
+    const [action] = await db.select().from(agentActions).where(eq(agentActions.id, id));
+    return action || undefined;
+  }
+  
+  async getAgentActionsByStatus(status: string, limit: number = 50): Promise<AgentAction[]> {
+    return await db.select().from(agentActions)
+      .where(eq(agentActions.status, status))
+      .orderBy(desc(agentActions.createdAt))
+      .limit(limit);
+  }
+  
+  async getAgentActionsByAgent(agentName: string, limit: number = 50): Promise<AgentAction[]> {
+    return await db.select().from(agentActions)
+      .where(eq(agentActions.agentName, agentName))
+      .orderBy(desc(agentActions.createdAt))
+      .limit(limit);
+  }
+  
+  async getPendingApprovals(): Promise<AgentAction[]> {
+    return await db.select().from(agentActions)
+      .where(and(
+        eq(agentActions.status, 'proposed'),
+        or(eq(agentActions.riskLevel, 'high'), eq(agentActions.riskLevel, 'medium'))
+      ))
+      .orderBy(desc(agentActions.createdAt));
+  }
+  
+  async createAgentAction(action: InsertAgentAction): Promise<AgentAction> {
+    const [created] = await db.insert(agentActions).values(action).returning();
+    return created;
+  }
+  
+  async updateAgentAction(id: string, action: Partial<InsertAgentAction>): Promise<AgentAction | undefined> {
+    const [updated] = await db.update(agentActions)
+      .set({ ...action, updatedAt: new Date() })
+      .where(eq(agentActions.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async approveAgentAction(id: string, approvedBy: string): Promise<AgentAction | undefined> {
+    const [updated] = await db.update(agentActions)
+      .set({ status: 'approved', approvedBy, approvedAt: new Date(), updatedAt: new Date() })
+      .where(eq(agentActions.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async rejectAgentAction(id: string): Promise<AgentAction | undefined> {
+    const [updated] = await db.update(agentActions)
+      .set({ status: 'rejected', updatedAt: new Date() })
+      .where(eq(agentActions.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async markAgentActionExecuted(id: string, targetEntityId?: string): Promise<AgentAction | undefined> {
+    const [updated] = await db.update(agentActions)
+      .set({ 
+        status: 'executed', 
+        executedAt: new Date(), 
+        targetEntityId: targetEntityId || null,
+        updatedAt: new Date() 
+      })
+      .where(eq(agentActions.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async markAgentActionFailed(id: string, errorMessage: string): Promise<AgentAction | undefined> {
+    const [updated] = await db.update(agentActions)
+      .set({ status: 'failed', errorMessage, updatedAt: new Date() })
+      .where(eq(agentActions.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  // Agent Subscriptions
+  async getAllAgentSubscriptions(): Promise<AgentSubscription[]> {
+    return await db.select().from(agentSubscriptions).orderBy(desc(agentSubscriptions.priority));
+  }
+  
+  async getActiveSubscriptionsForEvent(eventType: string): Promise<AgentSubscription[]> {
+    return await db.select().from(agentSubscriptions)
+      .where(and(
+        eq(agentSubscriptions.eventType, eventType),
+        eq(agentSubscriptions.isActive, true)
+      ))
+      .orderBy(desc(agentSubscriptions.priority));
+  }
+  
+  async createAgentSubscription(subscription: InsertAgentSubscription): Promise<AgentSubscription> {
+    const [created] = await db.insert(agentSubscriptions).values(subscription).returning();
+    return created;
+  }
+  
+  async updateAgentSubscription(id: string, subscription: Partial<InsertAgentSubscription>): Promise<AgentSubscription | undefined> {
+    const [updated] = await db.update(agentSubscriptions)
+      .set(subscription)
+      .where(eq(agentSubscriptions.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async deleteAgentSubscription(id: string): Promise<void> {
+    await db.delete(agentSubscriptions).where(eq(agentSubscriptions.id, id));
   }
 }
 
