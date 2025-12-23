@@ -5270,5 +5270,111 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
     }
   });
 
+  // Observer Suggestions API - AI Chief of Staff proactive suggestions
+  app.get("/api/observer/suggestions", async (req, res) => {
+    try {
+      const suggestions = await storage.getPendingObserverSuggestions();
+      res.json(suggestions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/observer/suggestions/all", async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+      const suggestions = await storage.getAllObserverSuggestions(limit);
+      res.json(suggestions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/observer/suggestions/:id", async (req, res) => {
+    try {
+      const suggestion = await storage.getObserverSuggestion(req.params.id);
+      if (!suggestion) {
+        return res.status(404).json({ message: "Suggestion not found" });
+      }
+      res.json(suggestion);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/observer/suggestions/:id/accept", async (req, res) => {
+    try {
+      const suggestion = await storage.acceptObserverSuggestion(req.params.id);
+      if (!suggestion) {
+        return res.status(404).json({ message: "Suggestion not found" });
+      }
+      res.json(suggestion);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/observer/suggestions/:id/snooze", async (req, res) => {
+    try {
+      const { minutes = 60 } = req.body;
+      const until = new Date(Date.now() + minutes * 60 * 1000);
+      const suggestion = await storage.snoozeObserverSuggestion(req.params.id, until);
+      if (!suggestion) {
+        return res.status(404).json({ message: "Suggestion not found" });
+      }
+      res.json(suggestion);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/observer/suggestions/:id/dismiss", async (req, res) => {
+    try {
+      const { feedbackNote } = req.body;
+      const suggestion = await storage.dismissObserverSuggestion(req.params.id, feedbackNote);
+      if (!suggestion) {
+        return res.status(404).json({ message: "Suggestion not found" });
+      }
+      res.json(suggestion);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Observer Patterns API - Learned behavior patterns
+  app.get("/api/observer/patterns", async (req, res) => {
+    try {
+      const patterns = await storage.getEnabledObserverPatterns();
+      res.json(patterns);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/observer/patterns/:id/feedback", async (req, res) => {
+    try {
+      const { delta } = req.body;
+      const pattern = await storage.updatePatternFeedback(req.params.id, delta || 1);
+      if (!pattern) {
+        return res.status(404).json({ message: "Pattern not found" });
+      }
+      res.json(pattern);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Trigger context-aware suggestions (for testing/manual triggers)
+  app.post("/api/observer/trigger", async (req, res) => {
+    try {
+      const { route, entityType, entityId } = req.body;
+      const { triggerContextSuggestions } = await import("./workflow-coach-agent");
+      await triggerContextSuggestions(route || '/', entityType, entityId);
+      res.json({ success: true, message: "Context suggestions triggered" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }

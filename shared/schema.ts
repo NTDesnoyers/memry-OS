@@ -1209,6 +1209,7 @@ export const AgentName = {
   DATA_CONTEXT: 'DataContextAgent',
   MARKETING: 'MarketingAgent',
   LIFE_EVENT: 'LifeEventAgent',
+  WORKFLOW_COACH: 'WorkflowCoachAgent',
 } as const;
 
 export type AgentNameType = typeof AgentName[keyof typeof AgentName];

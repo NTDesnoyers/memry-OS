@@ -6,6 +6,7 @@ import { storage } from "./storage";
 import { startFathomSyncScheduler } from "./fathom-sync";
 import { registerNurtureAgent } from "./nurture-agent";
 import { registerLeadIntakeAgent } from "./lead-intake-agent";
+import { registerWorkflowCoachAgent } from "./workflow-coach-agent";
 import { startRelationshipChecker } from "./relationship-checker";
 
 const app = express();
@@ -98,6 +99,7 @@ app.use((req, res, next) => {
   // Register agents and start relationship checker
   registerNurtureAgent();
   registerLeadIntakeAgent();
+  registerWorkflowCoachAgent();
   startRelationshipChecker();
 
   // importantly only setup vite in development and after
