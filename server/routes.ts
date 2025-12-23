@@ -4885,5 +4885,66 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
     }
   });
 
+  // Life Event Alerts
+  app.get("/api/life-event-alerts", async (req, res) => {
+    try {
+      const alerts = await storage.getAllLifeEventAlerts();
+      res.json(alerts);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/life-event-alerts/:id", async (req, res) => {
+    try {
+      const alert = await storage.getLifeEventAlert(req.params.id);
+      if (!alert) {
+        return res.status(404).json({ message: "Alert not found" });
+      }
+      res.json(alert);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/people/:personId/life-event-alerts", async (req, res) => {
+    try {
+      const alerts = await storage.getLifeEventAlertsByPerson(req.params.personId);
+      res.json(alerts);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/life-event-alerts", async (req, res) => {
+    try {
+      const alert = await storage.createLifeEventAlert(req.body);
+      res.status(201).json(alert);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/life-event-alerts/:id", async (req, res) => {
+    try {
+      const alert = await storage.updateLifeEventAlert(req.params.id, req.body);
+      if (!alert) {
+        return res.status(404).json({ message: "Alert not found" });
+      }
+      res.json(alert);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/life-event-alerts/:id", async (req, res) => {
+    try {
+      await storage.deleteLifeEventAlert(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   return httpServer;
 }
