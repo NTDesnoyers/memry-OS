@@ -1292,6 +1292,19 @@ When analyzing images:
     }
   });
   
+  // Get person with full context (unified data layer)
+  app.get("/api/people/:id/full", async (req, res) => {
+    try {
+      const context = await storage.getPersonFullContext(req.params.id);
+      if (!context) {
+        return res.status(404).json({ message: "Person not found" });
+      }
+      res.json(context);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
   // Create person
   app.post("/api/people", async (req, res) => {
     try {

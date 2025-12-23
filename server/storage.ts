@@ -335,7 +335,25 @@ export interface IStorage {
   createLifeEventAlert(alert: InsertLifeEventAlert): Promise<LifeEventAlert>;
   updateLifeEventAlert(id: string, alert: Partial<InsertLifeEventAlert>): Promise<LifeEventAlert | undefined>;
   deleteLifeEventAlert(id: string): Promise<void>;
+  
+  // Unified Person Context
+  getPersonFullContext(personId: string): Promise<PersonFullContext | undefined>;
 }
+
+/** Full context for a person - unified data layer response */
+export type PersonFullContext = {
+  person: Person;
+  deals: Deal[];
+  interactions: Interaction[];
+  notes: Note[];
+  lifeEventAlerts: LifeEventAlert[];
+  generatedDrafts: GeneratedDraft[];
+  relationshipScore: number;
+  lastTouchpoint: Date | null;
+  daysSinceContact: number | null;
+  fordCompleteness: number;
+  suggestedNextAction: string | null;
+};
 
 /** Result of contact due calculation with reason and days overdue. */
 export type ContactDueResult = {
@@ -1698,6 +1716,135 @@ export class DatabaseStorage implements IStorage {
   
   async deleteLifeEventAlert(id: string): Promise<void> {
     await db.delete(lifeEventAlerts).where(eq(lifeEventAlerts.id, id));
+  }
+  
+  async getPersonFullContext(personId: string): Promise<PersonFullContext | undefined> {
+    const person = await this.getPerson(personId);
+    if (!person) return undefined;
+    
+    const [personDeals, personInteractions, personNotes, personAlerts, personDrafts] = await Promise.all([
+      db.select().from(deals).where(eq(deals.personId, personId)).orderBy(desc(deals.createdAt)),
+      db.select().from(interactions).where(and(eq(interactions.personId, personId), isNull(interactions.deletedAt))).orderBy(desc(interactions.occurredAt)),
+      db.select().from(notes).where(eq(notes.personId, personId)).orderBy(desc(notes.createdAt)),
+      db.select().from(lifeEventAlerts).where(eq(lifeEventAlerts.personId, personId)).orderBy(desc(lifeEventAlerts.detectedAt)),
+      db.select().from(generatedDrafts).where(eq(generatedDrafts.personId, personId)).orderBy(desc(generatedDrafts.createdAt)),
+    ]);
+    
+    const lastTouchpoint = person.lastContact;
+    const daysSinceContact = lastTouchpoint 
+      ? Math.floor((Date.now() - new Date(lastTouchpoint).getTime()) / (1000 * 60 * 60 * 24))
+      : null;
+    
+    const fordFields = [person.fordFamily, person.fordOccupation, person.fordRecreation, person.fordDreams];
+    const fordFilled = fordFields.filter(f => f && f.trim().length > 0).length;
+    const fordCompleteness = Math.round((fordFilled / 4) * 100);
+    
+    const relationshipScore = this.calculateRelationshipScore(person, personInteractions, fordCompleteness, daysSinceContact);
+    
+    const suggestedNextAction = this.getSuggestedNextAction(person, personInteractions, fordCompleteness, daysSinceContact);
+    
+    return {
+      person,
+      deals: personDeals,
+      interactions: personInteractions,
+      notes: personNotes,
+      lifeEventAlerts: personAlerts,
+      generatedDrafts: personDrafts,
+      relationshipScore,
+      lastTouchpoint,
+      daysSinceContact,
+      fordCompleteness,
+      suggestedNextAction,
+    };
+  }
+  
+  private calculateRelationshipScore(
+    person: Person, 
+    interactions: Interaction[], 
+    fordCompleteness: number, 
+    daysSinceContact: number | null
+  ): number {
+    let score = 0;
+    
+    // FORD completeness (up to 25 points)
+    score += fordCompleteness * 0.25;
+    
+    // Recency of contact (up to 25 points)
+    if (daysSinceContact === null) {
+      score += 0;
+    } else if (daysSinceContact <= 7) {
+      score += 25;
+    } else if (daysSinceContact <= 30) {
+      score += 20;
+    } else if (daysSinceContact <= 60) {
+      score += 15;
+    } else if (daysSinceContact <= 90) {
+      score += 10;
+    } else if (daysSinceContact <= 180) {
+      score += 5;
+    }
+    
+    // Interaction frequency - last 90 days (up to 25 points)
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+    const recentInteractions = interactions.filter(i => 
+      i.occurredAt && new Date(i.occurredAt) >= ninetyDaysAgo
+    ).length;
+    score += Math.min(recentInteractions * 5, 25);
+    
+    // Interaction diversity - types used (up to 15 points)
+    const interactionTypes = new Set(interactions.map(i => i.type));
+    score += Math.min(interactionTypes.size * 5, 15);
+    
+    // Segment bonus (up to 10 points)
+    if (person.segment === 'A') score += 10;
+    else if (person.segment === 'B') score += 7;
+    else if (person.segment === 'C') score += 4;
+    
+    return Math.min(Math.round(score), 100);
+  }
+  
+  private getSuggestedNextAction(
+    person: Person, 
+    interactions: Interaction[], 
+    fordCompleteness: number, 
+    daysSinceContact: number | null
+  ): string | null {
+    // Priority 1: No contact ever
+    if (daysSinceContact === null) {
+      return "Make initial contact - introduce yourself";
+    }
+    
+    // Priority 2: Very stale relationship
+    if (daysSinceContact > 90) {
+      return "Reconnect - it's been over 3 months";
+    }
+    
+    // Priority 3: Missing FORD info
+    if (fordCompleteness < 50) {
+      const missing = [];
+      if (!person.fordFamily) missing.push("Family");
+      if (!person.fordOccupation) missing.push("Occupation");
+      if (!person.fordRecreation) missing.push("Recreation");
+      if (!person.fordDreams) missing.push("Dreams");
+      return `Learn more about their ${missing[0]}`;
+    }
+    
+    // Priority 4: Segment-based cadence
+    const cadenceDays: Record<string, number> = { 'A': 14, 'B': 30, 'C': 60, 'D': 90 };
+    const targetDays = cadenceDays[person.segment || 'C'] || 60;
+    if (daysSinceContact > targetDays) {
+      return `Schedule a touchpoint - ${person.segment || 'C'} contacts need attention every ${targetDays} days`;
+    }
+    
+    // Priority 5: Vary interaction type
+    const recentTypes = new Set(
+      interactions.slice(0, 5).map(i => i.type)
+    );
+    if (!recentTypes.has('call') && !recentTypes.has('meeting')) {
+      return "Schedule a call or meeting - recent contacts have been text-based";
+    }
+    
+    return "Relationship is healthy - continue regular touchpoints";
   }
 }
 
