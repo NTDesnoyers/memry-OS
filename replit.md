@@ -99,3 +99,37 @@ A client-facing AI assistant trained in the user's voice with access to real est
   - Training data for model improvement
   - Quality assurance and follow-up identification
 - **Implementation Considerations**: Twilio for SMS, fine-tuned model, moderation layer
+
+### Life Event Monitor Agent (Future)
+An agentic AI that monitors public social media of existing contacts (friends/sphere) for life changes that signal real estate needs:
+
+**Family & Household Changes**
+- Increase in family size (new baby, blended family, caregiving for relatives)
+- Children age 10 and under (school districts, yard space, safety needs)
+- Teenage children (more space, school changes, activity proximity)
+- Children recently left home (downsizing, lifestyle shift)
+
+**Financial & Career Triggers**
+- Company expansion / career growth (income increase, relocation, upgrade)
+- Company downsizing / job loss (forced move, cost reduction)
+- Substantial inheritance received (opportunity-based move or investment)
+- Living "below their means" (capacity and desire to upgrade)
+- Dream for "wake-up money" (investment real estate intent)
+
+**Life Transitions**
+- Getting married (combining households)
+- Getting divorced (household split)
+- Divorced AND remarried (complex but high move probability)
+- Dream to live "anywhere" (remote work, lifestyle relocation)
+
+**Property & Location Signals**
+- Lived in same house 8+ years (equity buildup + readiness for change)
+- Own a building lot (intent to build or sell)
+- Long commute (time pain → relocation motivation)
+
+**Technical Implementation**
+- Store contacts' social media URLs in People database
+- Periodic AI agent scans public profiles for keywords/patterns
+- Classifies changes and alerts user with context and suggested outreach
+- Respects platform ToS and privacy considerations
+- For friends/sphere only - relationship-based, not surveillance
