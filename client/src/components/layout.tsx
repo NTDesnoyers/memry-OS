@@ -30,7 +30,8 @@ import {
   TrendingUp,
   FileText,
   GraduationCap,
-  Eye
+  Eye,
+  Activity
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -47,6 +48,7 @@ const navItems = [
   { name: "Flow", href: "/flow", icon: Repeat },
   { name: "People", href: "/people", icon: Users },
   { name: "Life Events", href: "/life-events", icon: Eye },
+  { name: "Event Log", href: "/event-log", icon: Activity },
   { name: "Coaching", href: "/coaching", icon: GraduationCap },
   { name: "Business Tracker", href: "/business-tracker", icon: PieChart },
   { name: "Visual Pricing", href: "/visual-pricing", icon: TrendingUp },

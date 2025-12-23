@@ -30,6 +30,7 @@ import Flow from "@/pages/flow";
 import ContentIntelligence from "@/pages/content-intelligence";
 import Coaching from "@/pages/coaching";
 import LifeEvents from "@/pages/life-events";
+import EventLog from "@/pages/event-log";
 
 function Router() {
   return (
@@ -60,6 +61,7 @@ function Router() {
       <Route path="/content" component={ContentIntelligence} />
       <Route path="/coaching" component={Coaching} />
       <Route path="/life-events" component={LifeEvents} />
+      <Route path="/event-log" component={EventLog} />
       <Route component={NotFound} />
     </Switch>
   );
