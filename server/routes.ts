@@ -5153,6 +5153,95 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
     }
   });
 
+  // Leads - Top of funnel management
+  app.get("/api/leads", async (req, res) => {
+    try {
+      const { status, source } = req.query;
+      let leadsList;
+      if (status) {
+        leadsList = await storage.getLeadsByStatus(status as string);
+      } else if (source) {
+        leadsList = await storage.getLeadsBySource(source as string);
+      } else {
+        leadsList = await storage.getAllLeads();
+      }
+      res.json(leadsList);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/leads/new", async (req, res) => {
+    try {
+      const newLeads = await storage.getNewLeads();
+      res.json(newLeads);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/leads/:id", async (req, res) => {
+    try {
+      const lead = await storage.getLead(req.params.id);
+      if (!lead) {
+        return res.status(404).json({ message: "Lead not found" });
+      }
+      res.json(lead);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/leads", async (req, res) => {
+    try {
+      const lead = await storage.createLead(req.body);
+      await eventBus.emitLeadCreated(lead.id, lead.source, {
+        name: lead.name,
+        email: lead.email,
+        phone: lead.phone,
+        interestedIn: lead.interestedIn,
+        timeline: lead.timeline,
+        budget: lead.budget,
+      });
+      res.status(201).json(lead);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/leads/:id", async (req, res) => {
+    try {
+      const lead = await storage.updateLead(req.params.id, req.body);
+      if (!lead) {
+        return res.status(404).json({ message: "Lead not found" });
+      }
+      res.json(lead);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/leads/:id", async (req, res) => {
+    try {
+      await storage.deleteLead(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/leads/:id/convert", async (req, res) => {
+    try {
+      const result = await storage.convertLeadToPerson(req.params.id);
+      if (!result) {
+        return res.status(404).json({ message: "Lead not found" });
+      }
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Agent Subscriptions
   app.get("/api/agent-subscriptions", async (req, res) => {
     try {

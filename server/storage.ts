@@ -37,7 +37,8 @@ import {
   type SystemEvent, type InsertSystemEvent,
   type AgentAction, type InsertAgentAction,
   type AgentSubscription, type InsertAgentSubscription,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions
+  type Lead, type InsertLead,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions, leads
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt } from "drizzle-orm";
@@ -341,6 +342,18 @@ export interface IStorage {
   
   // Unified Person Context
   getPersonFullContext(personId: string): Promise<PersonFullContext | undefined>;
+  
+  // Leads - Top of funnel
+  getAllLeads(): Promise<Lead[]>;
+  getLead(id: string): Promise<Lead | undefined>;
+  getLeadsByStatus(status: string): Promise<Lead[]>;
+  getLeadsBySource(source: string): Promise<Lead[]>;
+  getNewLeads(): Promise<Lead[]>;
+  findDuplicateLead(email?: string, phone?: string): Promise<Lead | undefined>;
+  createLead(lead: InsertLead): Promise<Lead>;
+  updateLead(id: string, lead: Partial<InsertLead>): Promise<Lead | undefined>;
+  deleteLead(id: string): Promise<void>;
+  convertLeadToPerson(leadId: string): Promise<{ lead: Lead; person: Person } | undefined>;
   
   // System Events - Event Bus
   getAllSystemEvents(limit?: number): Promise<SystemEvent[]>;
@@ -1878,6 +1891,86 @@ export class DatabaseStorage implements IStorage {
     }
     
     return "Relationship is healthy - continue regular touchpoints";
+  }
+  
+  // Leads - Top of funnel
+  async getAllLeads(): Promise<Lead[]> {
+    return await db.select().from(leads).orderBy(desc(leads.createdAt));
+  }
+  
+  async getLead(id: string): Promise<Lead | undefined> {
+    const [lead] = await db.select().from(leads).where(eq(leads.id, id));
+    return lead || undefined;
+  }
+  
+  async getLeadsByStatus(status: string): Promise<Lead[]> {
+    return await db.select().from(leads)
+      .where(eq(leads.status, status))
+      .orderBy(desc(leads.createdAt));
+  }
+  
+  async getLeadsBySource(source: string): Promise<Lead[]> {
+    return await db.select().from(leads)
+      .where(eq(leads.source, source))
+      .orderBy(desc(leads.createdAt));
+  }
+  
+  async getNewLeads(): Promise<Lead[]> {
+    return await db.select().from(leads)
+      .where(eq(leads.status, 'new'))
+      .orderBy(desc(leads.createdAt));
+  }
+  
+  async findDuplicateLead(email?: string, phone?: string): Promise<Lead | undefined> {
+    if (!email && !phone) return undefined;
+    
+    const conditions = [];
+    if (email) conditions.push(eq(leads.email, email));
+    if (phone) conditions.push(eq(leads.phone, phone));
+    
+    const [match] = await db.select().from(leads)
+      .where(or(...conditions))
+      .limit(1);
+    
+    return match || undefined;
+  }
+  
+  async createLead(lead: InsertLead): Promise<Lead> {
+    const [created] = await db.insert(leads).values(lead).returning();
+    return created;
+  }
+  
+  async updateLead(id: string, lead: Partial<InsertLead>): Promise<Lead | undefined> {
+    const [updated] = await db.update(leads)
+      .set({ ...lead, updatedAt: new Date() })
+      .where(eq(leads.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async deleteLead(id: string): Promise<void> {
+    await db.delete(leads).where(eq(leads.id, id));
+  }
+  
+  async convertLeadToPerson(leadId: string): Promise<{ lead: Lead; person: Person } | undefined> {
+    const lead = await this.getLead(leadId);
+    if (!lead) return undefined;
+    
+    const person = await this.createPerson({
+      name: lead.name,
+      email: lead.email || undefined,
+      phone: lead.phone || undefined,
+      notes: lead.notes || undefined,
+      segment: 'D',
+    });
+    
+    const updatedLead = await this.updateLead(leadId, {
+      status: 'converted',
+      personId: person.id,
+      convertedAt: new Date(),
+    });
+    
+    return updatedLead ? { lead: updatedLead, person } : undefined;
   }
   
   // System Events - Event Bus

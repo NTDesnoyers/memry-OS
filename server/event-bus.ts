@@ -310,6 +310,38 @@ class EventBus {
   }
 
   /**
+   * Convenience method: Emit a lead created event.
+   */
+  async emitLeadCreated(leadId: string, source: string, payload: Record<string, unknown>): Promise<SystemEvent> {
+    return this.emit({
+      eventType: EventType.LEAD_CREATED,
+      eventCategory: EventCategory.LEAD,
+      personId: null,
+      dealId: null,
+      sourceEntity: 'lead',
+      sourceEntityId: leadId,
+      payload: { ...payload, source },
+      metadata: { triggeredBy: 'system', sourceAction: 'create_lead' },
+    });
+  }
+
+  /**
+   * Convenience method: Emit a lead qualified event.
+   */
+  async emitLeadQualified(leadId: string, qualificationScore: number, personId?: string): Promise<SystemEvent> {
+    return this.emit({
+      eventType: EventType.LEAD_QUALIFIED,
+      eventCategory: EventCategory.LEAD,
+      personId: personId || null,
+      dealId: null,
+      sourceEntity: 'lead',
+      sourceEntityId: leadId,
+      payload: { qualificationScore },
+      metadata: { triggeredBy: 'agent', agentName: AgentName.LEAD_INTAKE, sourceAction: 'qualify_lead' },
+    });
+  }
+
+  /**
    * Get statistics for the event bus.
    */
   async getStats(): Promise<{

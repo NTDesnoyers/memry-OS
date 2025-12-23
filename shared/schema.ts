@@ -1068,6 +1068,69 @@ export const insertDashboardWidgetSchema = createInsertSchema(dashboardWidgets).
 export type InsertDashboardWidget = z.infer<typeof insertDashboardWidgetSchema>;
 export type DashboardWidget = typeof dashboardWidgets.$inferSelect;
 
+/** Lead Sources - Where leads originate from. */
+export const LeadSource = {
+  WEBSITE: 'website',
+  REFERRAL: 'referral',
+  OPEN_HOUSE: 'open_house',
+  COLD_CALL: 'cold_call',
+  SOCIAL_MEDIA: 'social_media',
+  ZILLOW: 'zillow',
+  REALTOR_COM: 'realtor_com',
+  SPHERE: 'sphere',
+  SIGN_CALL: 'sign_call',
+  MANUAL: 'manual',
+  OTHER: 'other',
+} as const;
+
+export type LeadSourceType = typeof LeadSource[keyof typeof LeadSource];
+
+/** Lead Status - Lifecycle stages for leads. */
+export const LeadStatus = {
+  NEW: 'new',
+  CONTACTED: 'contacted',
+  QUALIFIED: 'qualified',
+  NURTURING: 'nurturing',
+  CONVERTED: 'converted',
+  LOST: 'lost',
+  DUPLICATE: 'duplicate',
+} as const;
+
+export type LeadStatusType = typeof LeadStatus[keyof typeof LeadStatus];
+
+/** Leads - Top-of-funnel lead tracking before conversion to contacts. */
+export const leads = pgTable("leads", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  email: text("email"),
+  phone: text("phone"),
+  source: text("source").notNull().default('manual'),
+  sourceDetails: text("source_details"),
+  status: text("status").notNull().default('new'),
+  qualificationScore: integer("qualification_score").default(0),
+  notes: text("notes"),
+  interestedIn: text("interested_in"),
+  budget: text("budget"),
+  timeline: text("timeline"),
+  areas: text("areas").array(),
+  personId: varchar("person_id").references(() => people.id),
+  assignedTo: text("assigned_to"),
+  firstContactAt: timestamp("first_contact_at"),
+  lastContactAt: timestamp("last_contact_at"),
+  convertedAt: timestamp("converted_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertLeadSchema = createInsertSchema(leads).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertLead = z.infer<typeof insertLeadSchema>;
+export type Lead = typeof leads.$inferSelect;
+
 /** Event Types - Central orchestration event type definitions. */
 export const EventCategory = {
   LEAD: 'lead',
