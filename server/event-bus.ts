@@ -247,6 +247,69 @@ class EventBus {
   }
 
   /**
+   * Convenience method: Emit a contact due event (overdue for follow-up).
+   */
+  async emitContactDue(
+    personId: string, 
+    dueReason: string, 
+    daysSinceContact: number, 
+    daysOverdue: number
+  ): Promise<SystemEvent> {
+    return this.emit({
+      eventType: EventType.CONTACT_DUE,
+      eventCategory: EventCategory.RELATIONSHIP,
+      personId,
+      dealId: null,
+      sourceEntity: 'person',
+      sourceEntityId: personId,
+      payload: { dueReason, daysSinceContact, daysOverdue },
+      metadata: { triggeredBy: 'system', sourceAction: 'relationship_check' },
+    });
+  }
+
+  /**
+   * Convenience method: Emit an anniversary approaching event.
+   */
+  async emitAnniversaryApproaching(
+    personId: string, 
+    anniversaryType: string, 
+    date: string, 
+    daysUntil: number
+  ): Promise<SystemEvent> {
+    return this.emit({
+      eventType: EventType.ANNIVERSARY_APPROACHING,
+      eventCategory: EventCategory.INTELLIGENCE,
+      personId,
+      dealId: null,
+      sourceEntity: 'person',
+      sourceEntityId: personId,
+      payload: { anniversaryType, date, daysUntil },
+      metadata: { triggeredBy: 'system', sourceAction: 'anniversary_check' },
+    });
+  }
+
+  /**
+   * Convenience method: Emit a relationship score changed event.
+   */
+  async emitRelationshipScoreChanged(
+    personId: string, 
+    oldScore: number, 
+    newScore: number, 
+    changeReason: string
+  ): Promise<SystemEvent> {
+    return this.emit({
+      eventType: EventType.RELATIONSHIP_SCORE_CHANGED,
+      eventCategory: EventCategory.RELATIONSHIP,
+      personId,
+      dealId: null,
+      sourceEntity: 'person',
+      sourceEntityId: personId,
+      payload: { oldScore, newScore, changeReason },
+      metadata: { triggeredBy: 'system', sourceAction: 'score_calculation' },
+    });
+  }
+
+  /**
    * Get statistics for the event bus.
    */
   async getStats(): Promise<{

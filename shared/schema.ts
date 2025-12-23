@@ -1103,6 +1103,8 @@ export const EventType = {
   LIFE_EVENT_DETECTED: 'life_event.detected',
   COACHING_INSIGHT: 'coaching.insight',
   DRAFT_GENERATED: 'draft.generated',
+  ANNIVERSARY_APPROACHING: 'anniversary.approaching',
+  RELATIONSHIP_SCORE_CHANGED: 'relationship.score_changed',
 } as const;
 
 export type EventCategoryType = typeof EventCategory[keyof typeof EventCategory];
