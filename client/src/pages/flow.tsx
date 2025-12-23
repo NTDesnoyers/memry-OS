@@ -128,6 +128,126 @@ type GeneratedDraft = {
   updatedAt: string;
 };
 
+type CoachingAnalysis = {
+  overallScore: number;
+  listeningScore: number;
+  questioningScore: number;
+  fordCoverage: number;
+  strengths: string[];
+  improvements: string[];
+};
+
+function InlineCoachingWidget({ interaction }: { interaction: Interaction }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysis, setAnalysis] = useState<CoachingAnalysis | null>(
+    interaction.coachingAnalysis as CoachingAnalysis | null
+  );
+
+  const runAnalysis = async () => {
+    setIsAnalyzing(true);
+    try {
+      const response = await apiRequest("POST", `/api/interactions/${interaction.id}/coaching-analysis`);
+      if (!response.ok) throw new Error("Failed to analyze");
+      const data = await response.json();
+      setAnalysis(data.analysis);
+      queryClient.invalidateQueries({ queryKey: ["/api/interactions"] });
+      toast({ title: "Analysis complete!" });
+    } catch (error: any) {
+      toast({ title: "Analysis failed", description: error.message, variant: "destructive" });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  if (!interaction.transcript || interaction.transcript.length < 100) {
+    return null;
+  }
+
+  if (isAnalyzing) {
+    return (
+      <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border border-purple-200">
+        <div className="flex items-center gap-3">
+          <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+          <div>
+            <p className="font-medium text-purple-800">Analyzing conversation...</p>
+            <p className="text-xs text-purple-600">Reviewing questioning, listening, and FORD coverage</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (analysis) {
+    const getScoreColor = (score: number) => {
+      if (score >= 80) return "text-green-600 bg-green-100";
+      if (score >= 60) return "text-yellow-600 bg-yellow-100";
+      return "text-red-600 bg-red-100";
+    };
+
+    return (
+      <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border border-purple-200">
+        <div className="flex items-center gap-2 mb-3">
+          <GraduationCap className="h-5 w-5 text-purple-600" />
+          <h4 className="font-medium text-purple-800">Coaching Score</h4>
+        </div>
+        
+        <div className="grid grid-cols-4 gap-2 mb-3">
+          <div className={`p-2 rounded-lg text-center ${getScoreColor(analysis.overallScore)}`}>
+            <p className="text-2xl font-bold">{analysis.overallScore}</p>
+            <p className="text-xs">Overall</p>
+          </div>
+          <div className={`p-2 rounded-lg text-center ${getScoreColor(analysis.listeningScore)}`}>
+            <p className="text-2xl font-bold">{analysis.listeningScore}</p>
+            <p className="text-xs">Listening</p>
+          </div>
+          <div className={`p-2 rounded-lg text-center ${getScoreColor(analysis.questioningScore)}`}>
+            <p className="text-2xl font-bold">{analysis.questioningScore}</p>
+            <p className="text-xs">Questions</p>
+          </div>
+          <div className={`p-2 rounded-lg text-center ${getScoreColor(analysis.fordCoverage)}`}>
+            <p className="text-2xl font-bold">{analysis.fordCoverage}</p>
+            <p className="text-xs">FORD</p>
+          </div>
+        </div>
+
+        {analysis.strengths?.length > 0 && (
+          <div className="mb-2">
+            <p className="text-xs font-medium text-green-700 mb-1">Strengths:</p>
+            <p className="text-xs text-green-600">{analysis.strengths[0]}</p>
+          </div>
+        )}
+
+        {analysis.improvements?.length > 0 && (
+          <div>
+            <p className="text-xs font-medium text-amber-700 mb-1">To improve:</p>
+            <p className="text-xs text-amber-600">{analysis.improvements[0]}</p>
+          </div>
+        )}
+
+        <Link href={`/coaching?id=${interaction.id}`}>
+          <Button variant="ghost" size="sm" className="w-full mt-3 text-purple-600">
+            View Full Analysis
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <Button 
+      variant="outline" 
+      className="w-full gap-2 border-purple-200 text-purple-700 hover:bg-purple-50" 
+      onClick={runAnalysis}
+      data-testid="button-run-coaching-analysis"
+    >
+      <GraduationCap className="h-4 w-4" />
+      Get Coaching Score
+    </Button>
+  );
+}
+
 function InteractionDetailSheet({ 
   interaction, 
   person, 
@@ -207,14 +327,7 @@ function InteractionDetailSheet({
         </Link>
       )}
       
-      {interaction.transcript && interaction.transcript.length > 100 && (
-        <Link href={`/coaching?id=${interaction.id}`}>
-          <Button variant="outline" className="w-full gap-2" data-testid="button-coaching-analysis">
-            <GraduationCap className="h-4 w-4" />
-            View Coaching Analysis
-          </Button>
-        </Link>
-      )}
+      <InlineCoachingWidget interaction={interaction} />
       
       {aiData?.keyTopics && aiData.keyTopics.length > 0 && (
         <div>
