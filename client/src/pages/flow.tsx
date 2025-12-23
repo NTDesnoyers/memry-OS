@@ -1,7 +1,7 @@
 import Layout from "@/components/layout";
 import { FordTrackerCompact } from "@/components/ford-tracker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Phone, Mail, Sparkles, Video, MessageCircle, Send } from "lucide-react";
+import { Phone, Mail, Sparkles, Video, MessageCircle, Send, Users } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 
@@ -45,6 +45,7 @@ import { Link } from "wouter";
 const liveFlowTypes = [
   { value: "call", label: "Phone Call", icon: Phone, color: "bg-green-50 text-green-700 border-green-200" },
   { value: "meeting", label: "Meeting / Video", icon: Video, color: "bg-blue-50 text-blue-700 border-blue-200" },
+  { value: "in_person", label: "In Person", icon: Users, color: "bg-teal-50 text-teal-700 border-teal-200" },
   { value: "text", label: "Text Message", icon: MessageCircle, color: "bg-purple-50 text-purple-700 border-purple-200" },
 ];
 
