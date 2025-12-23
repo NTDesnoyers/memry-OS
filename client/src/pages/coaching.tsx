@@ -11,6 +11,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, Play, HelpCircle, Lightbulb, Target, CheckCircle, Sparkles, GraduationCap, RefreshCw, Headphones, Brain, Mic, BarChart3, Zap, MessageCircle, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -171,8 +173,8 @@ function ConversationCard({
                 </div>
               )}
               <Badge variant="outline">{interaction.type}</Badge>
-              <span className="text-xs text-muted-foreground">
-                {formatDistanceToNow(new Date(interaction.occurredAt || interaction.createdAt), { addSuffix: true })}
+              <span className="text-xs text-muted-foreground" title={format(new Date(interaction.occurredAt || interaction.createdAt), "MMM d, yyyy 'at' h:mm a")}>
+                {format(new Date(interaction.occurredAt || interaction.createdAt), "MMM d, yyyy")}
               </span>
             </div>
             
@@ -559,6 +561,7 @@ export default function Coaching() {
   const [analyzingId, setAnalyzingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isBatchAnalyzing, setIsBatchAnalyzing] = useState(false);
+  const [dateFilter, setDateFilter] = useState<string>("all");
   
   const { data: interactions = [], isLoading } = useQuery<Interaction[]>({
     queryKey: ["/api/interactions"],
@@ -622,17 +625,51 @@ export default function Coaching() {
     .filter(i => i.transcript && i.transcript.length > 100)
     .sort((a, b) => new Date(b.occurredAt || b.createdAt).getTime() - new Date(a.occurredAt || a.createdAt).getTime());
   
-  const filteredConversations = searchQuery.trim()
-    ? conversationsWithTranscripts.filter(i => {
-        const person = getPersonById(i.personId);
-        const searchLower = searchQuery.toLowerCase();
-        return (
-          (i.title?.toLowerCase().includes(searchLower)) ||
-          (i.summary?.toLowerCase().includes(searchLower)) ||
-          (person?.name.toLowerCase().includes(searchLower))
-        );
-      })
-    : conversationsWithTranscripts;
+  const getDateFilterCutoff = () => {
+    const now = new Date();
+    switch (dateFilter) {
+      case "today":
+        return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      case "week":
+        const weekAgo = new Date(now);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        return weekAgo;
+      case "month":
+        const monthAgo = new Date(now);
+        monthAgo.setMonth(monthAgo.getMonth() - 1);
+        return monthAgo;
+      case "quarter":
+        const quarterAgo = new Date(now);
+        quarterAgo.setMonth(quarterAgo.getMonth() - 3);
+        return quarterAgo;
+      case "year":
+        const yearAgo = new Date(now);
+        yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+        return yearAgo;
+      default:
+        return null;
+    }
+  };
+  
+  const filteredConversations = conversationsWithTranscripts
+    .filter(i => {
+      const cutoff = getDateFilterCutoff();
+      if (cutoff) {
+        const interactionDate = new Date(i.occurredAt || i.createdAt);
+        if (interactionDate < cutoff) return false;
+      }
+      return true;
+    })
+    .filter(i => {
+      if (!searchQuery.trim()) return true;
+      const person = getPersonById(i.personId);
+      const searchLower = searchQuery.toLowerCase();
+      return (
+        (i.title?.toLowerCase().includes(searchLower)) ||
+        (i.summary?.toLowerCase().includes(searchLower)) ||
+        (person?.name.toLowerCase().includes(searchLower))
+      );
+    });
   
   const analyzedConversations = conversationsWithTranscripts.filter(i => i.coachingAnalysis);
   
@@ -774,23 +811,38 @@ export default function Coaching() {
                       <CardDescription>
                         {conversationsWithTranscripts.length} with transcripts • {analyzedConversations.length} analyzed
                       </CardDescription>
-                      <div className="relative mt-2">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          placeholder="Search by name or topic..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          className="pl-9"
-                          data-testid="input-search-conversations"
-                        />
+                      <div className="space-y-2 mt-2">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Search by name or topic..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-9"
+                            data-testid="input-search-conversations"
+                          />
+                        </div>
+                        <Select value={dateFilter} onValueChange={setDateFilter}>
+                          <SelectTrigger className="w-full" data-testid="select-date-filter">
+                            <SelectValue placeholder="Filter by date" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Time</SelectItem>
+                            <SelectItem value="today">Today</SelectItem>
+                            <SelectItem value="week">Last 7 Days</SelectItem>
+                            <SelectItem value="month">Last 30 Days</SelectItem>
+                            <SelectItem value="quarter">Last 3 Months</SelectItem>
+                            <SelectItem value="year">Last Year</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </CardHeader>
                     <CardContent className="p-0">
-                      <ScrollArea className="h-[calc(100vh-340px)]">
+                      <ScrollArea className="h-[calc(100vh-400px)]">
                         <div className="p-4 space-y-3">
                           {filteredConversations.length === 0 ? (
                             <p className="text-sm text-muted-foreground text-center py-8">
-                              {searchQuery ? "No matching conversations" : "No conversations with transcripts yet"}
+                              {searchQuery || dateFilter !== "all" ? "No matching conversations" : "No conversations with transcripts yet"}
                             </p>
                           ) : (
                             filteredConversations.map((interaction) => (
