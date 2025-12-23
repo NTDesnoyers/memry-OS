@@ -48,7 +48,23 @@ The project adheres to an event-driven, multi-agent architecture with a focus on
 The design emphasizes GTD principles, making the system an intelligent reference tool focused on speed for daily reviews and interaction logging. It integrates Ninja Selling methodologies, including relationship segments (A/B/C/D), transaction stages, FORD notes, Ninja Nine habits, and core working lists. Key workflows include weekly planning, daily start-up, and 8x8 campaigns.
 
 ### Feature Specifications
-Current features include a Contact Due Calculator, D Contact Review, AI Assistant with agentic tools, voice profile learning, generated drafts, and sync APIs. Future features target anticipatory, network, and reflective intelligence, memory augmentation, decision support, and skill development.
+Current features include a Contact Due Calculator, D Contact Review, AI Assistant with agentic tools, voice profile learning, generated drafts, sync APIs, and **In-App Observer** (data-driven suggestion overlay). Future features target anticipatory, network, and reflective intelligence, memory augmentation, decision support, and skill development.
+
+### Observer Feature
+**In-App Observer (Implemented)**:
+- WorkflowCoachAgent generates context-aware suggestions based on real data (leads, contacts, tasks)
+- Floating overlay in bottom-right corner with accept/snooze/dismiss controls
+- Learns from user feedback (thumbs up/down adjusts pattern scores, suppresses unhelpful suggestions)
+- Schema: `observerSuggestions`, `observerPatterns` tables
+- API: `/api/observer/suggestions`, `/api/observer/patterns`, `/api/observer/trigger`
+
+**Full-Screen Observation (Future Roadmap)**:
+- Toggle-based "Observe Mode" button (not always-on)
+- Captures and analyzes entire desktop/screen content
+- Requires: Chrome extension or desktop app for screen capture
+- Vision AI integration to understand screen context
+- Cross-application context awareness (email, calendar, browser, CRM)
+- Would leverage the existing suggestion engine and pattern learning infrastructure
 
 ### Orchestration Layer
 Ninja OS is a multi-agent, event-driven system that orchestrates actions while CRMs and external tools remain systems of record.
