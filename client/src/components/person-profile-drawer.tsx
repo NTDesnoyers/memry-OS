@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +9,7 @@ import { Phone, Mail, MapPin, Building2, Users, Briefcase, Heart, Star, Home, Do
 import { type Person, type Household } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
+import { PreCallDialog } from "@/components/pre-call-dialog";
 
 interface PersonProfileDrawerProps {
   personId: string | null;
@@ -16,6 +18,8 @@ interface PersonProfileDrawerProps {
 }
 
 export function PersonProfileDrawer({ personId, open, onClose }: PersonProfileDrawerProps) {
+  const [preCallOpen, setPreCallOpen] = useState(false);
+  
   const { data: person, isLoading } = useQuery<Person>({
     queryKey: ["/api/people", personId],
     queryFn: async () => {
@@ -85,7 +89,13 @@ export function PersonProfileDrawer({ personId, open, onClose }: PersonProfileDr
               {person.phone && (
                 <div className="flex items-center gap-3 text-sm">
                   <Phone className="h-4 w-4 text-muted-foreground" />
-                  <a href={`tel:${person.phone}`} className="text-primary hover:underline" data-testid="link-phone">{person.phone}</a>
+                  <button 
+                    onClick={() => setPreCallOpen(true)} 
+                    className="text-primary hover:underline" 
+                    data-testid="link-phone"
+                  >
+                    {person.phone}
+                  </button>
                 </div>
               )}
               {person.email && (
@@ -318,6 +328,14 @@ export function PersonProfileDrawer({ personId, open, onClose }: PersonProfileDr
           </div>
         )}
       </SheetContent>
+      
+      {person && (
+        <PreCallDialog
+          person={person}
+          open={preCallOpen}
+          onOpenChange={setPreCallOpen}
+        />
+      )}
     </Sheet>
   );
 }

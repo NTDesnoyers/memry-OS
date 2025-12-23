@@ -8,8 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Loader2, Play, MessageSquare, HelpCircle, Lightbulb, Target, TrendingUp, CheckCircle, AlertCircle, Clock, ChevronRight, Sparkles, GraduationCap, RefreshCw, Headphones, Brain, Mic, Phone, User, Heart, Briefcase, Gamepad2, Star, ArrowRight, BarChart3, Zap, MessageCircle } from "lucide-react";
+import { Loader2, Play, HelpCircle, Lightbulb, Target, CheckCircle, Sparkles, GraduationCap, RefreshCw, Headphones, Brain, Mic, BarChart3, Zap, MessageCircle } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -294,115 +293,6 @@ function AnalysisDetail({ analysis, interaction, person }: { analysis: CoachingA
   );
 }
 
-function PreCallSummary({ person, interactions }: { person: Person; interactions: Interaction[] }) {
-  const personInteractions = interactions
-    .filter(i => i.personId === person.id)
-    .sort((a, b) => new Date(b.occurredAt || b.createdAt).getTime() - new Date(a.occurredAt || a.createdAt).getTime());
-  
-  const lastInteraction = personInteractions[0];
-  const hasFord = person.fordFamily || person.fordOccupation || person.fordRecreation || person.fordDreams;
-  
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <Avatar className="h-12 w-12">
-          <AvatarFallback className="bg-primary/10 text-lg">
-            {getInitials(person.name)}
-          </AvatarFallback>
-        </Avatar>
-        <div>
-          <h3 className="font-semibold text-lg">{person.name}</h3>
-          <p className="text-sm text-muted-foreground">
-            {person.profession || "No profession recorded"}
-            {person.relationshipSegment && ` • ${person.relationshipSegment}`}
-          </p>
-        </div>
-      </div>
-      
-      {lastInteraction && (
-        <Card className="bg-blue-50 border-blue-200">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2 text-blue-700">
-              <Clock className="h-4 w-4" />
-              Last Conversation
-            </CardTitle>
-            <CardDescription className="text-blue-600">
-              {formatDistanceToNow(new Date(lastInteraction.occurredAt || lastInteraction.createdAt), { addSuffix: true })}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm">{lastInteraction.summary || lastInteraction.title || "No summary available"}</p>
-          </CardContent>
-        </Card>
-      )}
-      
-      {hasFord && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">FORD Notes</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {person.fordFamily && (
-              <div className="flex items-start gap-2">
-                <Heart className="h-4 w-4 text-pink-500 mt-0.5" />
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground">Family</p>
-                  <p className="text-sm">{person.fordFamily}</p>
-                </div>
-              </div>
-            )}
-            {person.fordOccupation && (
-              <div className="flex items-start gap-2">
-                <Briefcase className="h-4 w-4 text-blue-500 mt-0.5" />
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground">Occupation</p>
-                  <p className="text-sm">{person.fordOccupation}</p>
-                </div>
-              </div>
-            )}
-            {person.fordRecreation && (
-              <div className="flex items-start gap-2">
-                <Gamepad2 className="h-4 w-4 text-green-500 mt-0.5" />
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground">Recreation</p>
-                  <p className="text-sm">{person.fordRecreation}</p>
-                </div>
-              </div>
-            )}
-            {person.fordDreams && (
-              <div className="flex items-start gap-2">
-                <Star className="h-4 w-4 text-yellow-500 mt-0.5" />
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground">Dreams</p>
-                  <p className="text-sm">{person.fordDreams}</p>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-      
-      <Card className="bg-purple-50 border-purple-200">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2 text-purple-700">
-            <Lightbulb className="h-4 w-4" />
-            Suggested Talking Points
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="space-y-2 text-sm">
-            {!person.fordFamily && <li className="flex items-center gap-2"><ArrowRight className="h-3 w-3" /> Ask about their family</li>}
-            {!person.fordRecreation && <li className="flex items-center gap-2"><ArrowRight className="h-3 w-3" /> Discover their hobbies</li>}
-            {!person.fordDreams && <li className="flex items-center gap-2"><ArrowRight className="h-3 w-3" /> Explore their goals and dreams</li>}
-            {lastInteraction?.summary && <li className="flex items-center gap-2"><ArrowRight className="h-3 w-3" /> Follow up on: "{lastInteraction.summary.slice(0, 50)}..."</li>}
-            {!lastInteraction && <li className="flex items-center gap-2"><ArrowRight className="h-3 w-3" /> This is your first recorded conversation!</li>}
-          </ul>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
 function CoachingInsightsTab({ insights }: { insights: CoachingInsight[] }) {
   const activeInsights = insights.filter(i => i.status === 'active');
   
@@ -663,7 +553,6 @@ export default function Coaching() {
   const queryClient = useQueryClient();
   const [selectedInteraction, setSelectedInteraction] = useState<Interaction | null>(null);
   const [analyzingId, setAnalyzingId] = useState<string | null>(null);
-  const [selectedPersonForPreCall, setSelectedPersonForPreCall] = useState<Person | null>(null);
   
   const { data: interactions = [], isLoading } = useQuery<Interaction[]>({
     queryKey: ["/api/interactions"],
@@ -688,9 +577,10 @@ export default function Coaching() {
   const analyzeMutation = useMutation({
     mutationFn: async (interactionId: string) => {
       const response = await apiRequest("POST", `/api/interactions/${interactionId}/coaching-analysis`);
-      return response;
+      if (!response.ok) throw new Error("Failed to analyze conversation");
+      return response.json();
     },
-    onSuccess: (data, interactionId) => {
+    onSuccess: (data: { success: boolean; analysis: CoachingAnalysis }, interactionId) => {
       queryClient.invalidateQueries({ queryKey: ["/api/interactions"] });
       const interaction = interactions.find(i => i.id === interactionId);
       if (interaction) {
@@ -720,8 +610,6 @@ export default function Coaching() {
     analyzeMutation.mutate(interaction.id);
   };
   
-  const peopleWithPhone = people.filter(p => p.phone);
-  
   if (isLoading) {
     return (
       <Layout>
@@ -735,7 +623,7 @@ export default function Coaching() {
   return (
     <Layout>
       <div className="min-h-screen bg-secondary/30">
-        <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="px-6 py-6">
           <header className="mb-6">
             <h1 className="text-3xl font-serif font-bold text-primary flex items-center gap-3">
               <GraduationCap className="h-8 w-8" />
@@ -747,7 +635,7 @@ export default function Coaching() {
           </header>
           
           <Tabs defaultValue="replay" className="space-y-6">
-            <TabsList className="grid grid-cols-5 w-full max-w-2xl">
+            <TabsList className="grid grid-cols-4 w-full max-w-xl">
               <TabsTrigger value="replay" data-testid="tab-replay">
                 <Play className="h-4 w-4 mr-2" />
                 Replay
@@ -764,16 +652,12 @@ export default function Coaching() {
                 <Mic className="h-4 w-4 mr-2" />
                 Voice
               </TabsTrigger>
-              <TabsTrigger value="precall" data-testid="tab-precall">
-                <Phone className="h-4 w-4 mr-2" />
-                Pre-Call
-              </TabsTrigger>
             </TabsList>
             
             <TabsContent value="replay">
-              <div className="grid lg:grid-cols-5 gap-6">
-                <div className="lg:col-span-2">
-                  <Card>
+              <div className="grid lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-1">
+                  <Card className="h-full">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-lg">Conversations</CardTitle>
                       <CardDescription>
@@ -781,7 +665,7 @@ export default function Coaching() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="p-0">
-                      <ScrollArea className="h-[500px]">
+                      <ScrollArea className="h-[calc(100vh-280px)]">
                         <div className="p-4 space-y-3">
                           {conversationsWithTranscripts.length === 0 ? (
                             <p className="text-sm text-muted-foreground text-center py-8">
@@ -806,10 +690,10 @@ export default function Coaching() {
                   </Card>
                 </div>
                 
-                <div className="lg:col-span-3">
+                <div className="lg:col-span-2">
                   {selectedInteraction?.coachingAnalysis ? (
-                    <Card>
-                      <CardContent className="p-6">
+                    <Card className="h-full">
+                      <CardContent className="p-6 overflow-auto max-h-[calc(100vh-220px)]">
                         <AnalysisDetail 
                           analysis={selectedInteraction.coachingAnalysis}
                           interaction={selectedInteraction}
@@ -852,81 +736,6 @@ export default function Coaching() {
             
             <TabsContent value="voice">
               <VoiceProfileTab voiceProfile={voiceProfileData || null} />
-            </TabsContent>
-            
-            <TabsContent value="precall">
-              <div className="grid lg:grid-cols-3 gap-6">
-                <div>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <Phone className="h-5 w-5" />
-                        Pre-Call Prep
-                      </CardTitle>
-                      <CardDescription>
-                        Select a contact to see context before calling
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                      <ScrollArea className="h-[400px]">
-                        <div className="p-4 space-y-2">
-                          {peopleWithPhone.length === 0 ? (
-                            <p className="text-sm text-muted-foreground text-center py-8">
-                              No contacts with phone numbers
-                            </p>
-                          ) : (
-                            peopleWithPhone.map((person) => (
-                              <div
-                                key={person.id}
-                                className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                                  selectedPersonForPreCall?.id === person.id 
-                                    ? 'bg-primary/10 border border-primary' 
-                                    : 'bg-muted/50 hover:bg-muted'
-                                }`}
-                                onClick={() => setSelectedPersonForPreCall(person)}
-                                data-testid={`precall-person-${person.id}`}
-                              >
-                                <div className="flex items-center gap-3">
-                                  <Avatar className="h-10 w-10">
-                                    <AvatarFallback>{getInitials(person.name)}</AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                    <p className="font-medium">{person.name}</p>
-                                    <p className="text-xs text-muted-foreground">{person.phone}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      </ScrollArea>
-                    </CardContent>
-                  </Card>
-                </div>
-                
-                <div className="lg:col-span-2">
-                  {selectedPersonForPreCall ? (
-                    <Card>
-                      <CardContent className="p-6">
-                        <PreCallSummary 
-                          person={selectedPersonForPreCall} 
-                          interactions={interactions} 
-                        />
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <Card>
-                      <CardContent className="p-12 flex flex-col items-center justify-center text-center">
-                        <User className="h-12 w-12 text-muted-foreground mb-4" />
-                        <p className="text-lg font-medium">Select a contact</p>
-                        <p className="text-sm text-muted-foreground">
-                          Choose someone from your contacts to see their context before calling
-                        </p>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-              </div>
             </TabsContent>
           </Tabs>
         </div>
