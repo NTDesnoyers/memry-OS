@@ -38,7 +38,9 @@ import {
   type AgentAction, type InsertAgentAction,
   type AgentSubscription, type InsertAgentSubscription,
   type Lead, type InsertLead,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions, leads
+  type ObserverSuggestion, type InsertObserverSuggestion,
+  type ObserverPattern, type InsertObserverPattern,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions, leads, observerSuggestions, observerPatterns
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt } from "drizzle-orm";
@@ -384,6 +386,26 @@ export interface IStorage {
   createAgentSubscription(subscription: InsertAgentSubscription): Promise<AgentSubscription>;
   updateAgentSubscription(id: string, subscription: Partial<InsertAgentSubscription>): Promise<AgentSubscription | undefined>;
   deleteAgentSubscription(id: string): Promise<void>;
+  
+  // Observer Suggestions - AI Chief of Staff proactive suggestions
+  getAllObserverSuggestions(limit?: number): Promise<ObserverSuggestion[]>;
+  getPendingObserverSuggestions(): Promise<ObserverSuggestion[]>;
+  getObserverSuggestion(id: string): Promise<ObserverSuggestion | undefined>;
+  createObserverSuggestion(suggestion: InsertObserverSuggestion): Promise<ObserverSuggestion>;
+  updateObserverSuggestion(id: string, suggestion: Partial<InsertObserverSuggestion>): Promise<ObserverSuggestion | undefined>;
+  acceptObserverSuggestion(id: string): Promise<ObserverSuggestion | undefined>;
+  snoozeObserverSuggestion(id: string, until: Date): Promise<ObserverSuggestion | undefined>;
+  dismissObserverSuggestion(id: string, feedbackNote?: string): Promise<ObserverSuggestion | undefined>;
+  expireOldSuggestions(): Promise<number>;
+  
+  // Observer Patterns - Learned behavior patterns
+  getAllObserverPatterns(): Promise<ObserverPattern[]>;
+  getEnabledObserverPatterns(): Promise<ObserverPattern[]>;
+  getObserverPattern(id: string): Promise<ObserverPattern | undefined>;
+  createObserverPattern(pattern: InsertObserverPattern): Promise<ObserverPattern>;
+  updateObserverPattern(id: string, pattern: Partial<InsertObserverPattern>): Promise<ObserverPattern | undefined>;
+  incrementPatternOccurrence(id: string): Promise<ObserverPattern | undefined>;
+  updatePatternFeedback(id: string, delta: number): Promise<ObserverPattern | undefined>;
 }
 
 /** Full context for a person - unified data layer response */
@@ -2135,6 +2157,140 @@ export class DatabaseStorage implements IStorage {
   
   async deleteAgentSubscription(id: string): Promise<void> {
     await db.delete(agentSubscriptions).where(eq(agentSubscriptions.id, id));
+  }
+  
+  // Observer Suggestions - AI Chief of Staff proactive suggestions
+  async getAllObserverSuggestions(limit: number = 50): Promise<ObserverSuggestion[]> {
+    return await db.select().from(observerSuggestions)
+      .orderBy(desc(observerSuggestions.createdAt))
+      .limit(limit);
+  }
+  
+  async getPendingObserverSuggestions(): Promise<ObserverSuggestion[]> {
+    const now = new Date();
+    return await db.select().from(observerSuggestions)
+      .where(and(
+        eq(observerSuggestions.status, 'pending'),
+        or(
+          isNull(observerSuggestions.expiresAt),
+          gte(observerSuggestions.expiresAt, now)
+        ),
+        or(
+          isNull(observerSuggestions.snoozeUntil),
+          lt(observerSuggestions.snoozeUntil, now)
+        )
+      ))
+      .orderBy(desc(observerSuggestions.confidence), desc(observerSuggestions.createdAt));
+  }
+  
+  async getObserverSuggestion(id: string): Promise<ObserverSuggestion | undefined> {
+    const [suggestion] = await db.select().from(observerSuggestions)
+      .where(eq(observerSuggestions.id, id));
+    return suggestion || undefined;
+  }
+  
+  async createObserverSuggestion(suggestion: InsertObserverSuggestion): Promise<ObserverSuggestion> {
+    const [created] = await db.insert(observerSuggestions).values(suggestion).returning();
+    return created;
+  }
+  
+  async updateObserverSuggestion(id: string, suggestion: Partial<InsertObserverSuggestion>): Promise<ObserverSuggestion | undefined> {
+    const [updated] = await db.update(observerSuggestions)
+      .set(suggestion)
+      .where(eq(observerSuggestions.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async acceptObserverSuggestion(id: string): Promise<ObserverSuggestion | undefined> {
+    const [updated] = await db.update(observerSuggestions)
+      .set({ status: 'accepted', acceptedAt: new Date() })
+      .where(eq(observerSuggestions.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async snoozeObserverSuggestion(id: string, until: Date): Promise<ObserverSuggestion | undefined> {
+    const [updated] = await db.update(observerSuggestions)
+      .set({ status: 'snoozed', snoozeUntil: until })
+      .where(eq(observerSuggestions.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async dismissObserverSuggestion(id: string, feedbackNote?: string): Promise<ObserverSuggestion | undefined> {
+    const [updated] = await db.update(observerSuggestions)
+      .set({ status: 'dismissed', dismissedAt: new Date(), feedbackNote: feedbackNote || null })
+      .where(eq(observerSuggestions.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async expireOldSuggestions(): Promise<number> {
+    const now = new Date();
+    const result = await db.update(observerSuggestions)
+      .set({ status: 'expired' })
+      .where(and(
+        eq(observerSuggestions.status, 'pending'),
+        isNotNull(observerSuggestions.expiresAt),
+        lt(observerSuggestions.expiresAt, now)
+      ))
+      .returning();
+    return result.length;
+  }
+  
+  // Observer Patterns - Learned behavior patterns
+  async getAllObserverPatterns(): Promise<ObserverPattern[]> {
+    return await db.select().from(observerPatterns)
+      .orderBy(desc(observerPatterns.occurrenceCount));
+  }
+  
+  async getEnabledObserverPatterns(): Promise<ObserverPattern[]> {
+    return await db.select().from(observerPatterns)
+      .where(eq(observerPatterns.isEnabled, true))
+      .orderBy(desc(observerPatterns.occurrenceCount));
+  }
+  
+  async getObserverPattern(id: string): Promise<ObserverPattern | undefined> {
+    const [pattern] = await db.select().from(observerPatterns)
+      .where(eq(observerPatterns.id, id));
+    return pattern || undefined;
+  }
+  
+  async createObserverPattern(pattern: InsertObserverPattern): Promise<ObserverPattern> {
+    const [created] = await db.insert(observerPatterns).values(pattern).returning();
+    return created;
+  }
+  
+  async updateObserverPattern(id: string, pattern: Partial<InsertObserverPattern>): Promise<ObserverPattern | undefined> {
+    const [updated] = await db.update(observerPatterns)
+      .set({ ...pattern, updatedAt: new Date() })
+      .where(eq(observerPatterns.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async incrementPatternOccurrence(id: string): Promise<ObserverPattern | undefined> {
+    const [updated] = await db.update(observerPatterns)
+      .set({ 
+        occurrenceCount: sql`${observerPatterns.occurrenceCount} + 1`,
+        lastTriggeredAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(observerPatterns.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async updatePatternFeedback(id: string, delta: number): Promise<ObserverPattern | undefined> {
+    const [updated] = await db.update(observerPatterns)
+      .set({ 
+        userFeedbackScore: sql`${observerPatterns.userFeedbackScore} + ${delta}`,
+        updatedAt: new Date()
+      })
+      .where(eq(observerPatterns.id, id))
+      .returning();
+    return updated || undefined;
   }
 }
 
