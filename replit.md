@@ -1,4 +1,7 @@
-# Ninja OS - Ninja Selling Operating System
+# Ninja OS - Relationship Intelligence Platform
+
+## Massive Transformative Purpose (MTP)
+"Rewiring how opportunity flows by building the connective intelligence that enables human potential to scale in the age of abundance."
 
 ## Overview
 Ninja OS is a single-user personal business operating system designed for real estate professionals utilizing the Ninja Selling methodology. It unifies Weekly Meeting Agenda (WMA), FORD relationship tracking, client intelligence, business execution tracking, and deal management into one platform. The application serves as the source of truth for Ninja Selling workflows, emphasizing speed and efficiency for tasks like WMA completion and FORD interaction logging. It is primarily an intelligent reference material system, adhering to Getting Things Done (GTD) principles, and integrates with external task managers like Todoist for task execution. The project aims to provide an AI Chief of Staff experience, offering anticipatory intelligence, network insights, reflective analysis, memory augmentation, decision support, and skill development to enhance relationship management and business strategy.
@@ -133,3 +136,73 @@ An agentic AI that monitors public social media of existing contacts (friends/sp
 - Classifies changes and alerts user with context and suggested outreach
 - Respects platform ToS and privacy considerations
 - For friends/sphere only - relationship-based, not surveillance
+
+### Industry Overlay Architecture (Future)
+The core of the system is **Relationship Intelligence Software** - applicable to any relationship-based profession. The current implementation is a "Ninja Selling" overlay for real estate professionals.
+
+**Modular Overlay System**
+- **Core Platform**: Universal relationship intelligence engine (FORD tracking, contact cadence, life event monitoring, AI analysis)
+- **Industry Skins/Overlays**: Configurable UI, terminology, workflows, and triggers for specific industries
+- **First Overlay**: Ninja Selling for Real Estate (current implementation)
+
+**Potential Industry Overlays**
+- **Financial Advisors**: Client wealth events, retirement triggers, inheritance planning signals
+- **Insurance Agents**: Life change triggers, family expansion, asset acquisition signals
+- **Wealth Management**: Portfolio events, liquidity needs, generational wealth transfer
+- **Executive Recruiters**: Career transition signals, company changes, skill development
+- **B2B Sales**: Company growth signals, funding rounds, leadership changes
+- **Professional Services** (Lawyers, Accountants): Business lifecycle events, compliance triggers
+
+**Implementation Strategy**
+- Industry overlays may require outside help: employees or high-level agentic AIs
+- Each overlay needs domain expertise for trigger definitions and workflow design
+- Core relationship intelligence remains universal across overlays
+
+### Enterprise Application Vision (Future)
+Scaling relationship intelligence from individual practitioners to organizations.
+
+**Enterprise Use Cases**
+
+1. **Sales Team Intelligence**
+   - Unified relationship graph across entire sales organization
+   - Warm handoffs between team members with full context
+   - Team-wide life event monitoring and lead distribution
+   - Coaching insights aggregated across team performance
+
+2. **Customer Success at Scale**
+   - Proactive churn prediction via relationship health scoring
+   - Automated relationship handoffs during team transitions
+   - Customer journey intelligence with relationship context
+   - Multi-stakeholder relationship mapping within accounts
+
+3. **Professional Services Firms**
+   - Partner relationship networks with referral tracking
+   - Client relationship continuity across personnel changes
+   - Cross-selling intelligence based on relationship patterns
+   - Rainmaker coaching and skill development at scale
+
+4. **Financial Institutions**
+   - Advisor-client relationship health monitoring
+   - Life event-based product recommendations
+   - Compliance-aware relationship documentation
+   - Multi-generational family relationship mapping
+
+5. **Healthcare Networks**
+   - Patient relationship management for concierge practices
+   - Referral network intelligence for specialists
+   - Care team coordination with relationship context
+
+**Enterprise Features Required**
+- Multi-user access with role-based permissions
+- Team relationship graphs with shared/private segments
+- Admin dashboards for coaching and performance insights
+- API integrations for CRM systems (Salesforce, HubSpot)
+- SSO/SAML authentication
+- Audit trails and compliance reporting
+- White-label/custom branding options
+
+**Go-to-Market Considerations**
+- Start with individual practitioners (current)
+- Expand to small teams (2-10 users)
+- Scale to enterprise (multi-team, org-wide)
+- Potential SaaS pricing: per-seat + AI usage tiers
