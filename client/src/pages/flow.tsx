@@ -509,14 +509,6 @@ function InteractionList({
     return allInteractionTypes.find(t => t.value === type) || liveFlowTypes[0];
   };
 
-  if (filteredInteractions.length === 0) {
-    return (
-      <div className="text-center py-12 text-muted-foreground">
-        <p>No interactions found</p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-3">
       <div className="flex gap-2 mb-4">
@@ -545,7 +537,11 @@ function InteractionList({
         </Select>
       </div>
       
-      {filteredInteractions.map((interaction) => {
+      {filteredInteractions.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">
+          <p>No interactions found</p>
+        </div>
+      ) : filteredInteractions.map((interaction) => {
         const person = getPersonById(interaction.personId);
         const config = getTypeConfig(interaction.type);
         const Icon = config.icon;
