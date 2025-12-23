@@ -1301,3 +1301,95 @@ export const agentActionsRelations = relations(agentActions, ({ one }) => ({
     references: [deals.id],
   }),
 }));
+
+/** Observer Suggestion Types */
+export const ObserverSuggestionIntent = {
+  DELEGATE: 'delegate',
+  AUTOMATE: 'automate',
+  SHORTCUT: 'shortcut',
+  INSIGHT: 'insight',
+} as const;
+
+export type ObserverSuggestionIntentType = typeof ObserverSuggestionIntent[keyof typeof ObserverSuggestionIntent];
+
+export const ObserverSuggestionStatus = {
+  PENDING: 'pending',
+  ACCEPTED: 'accepted',
+  SNOOZED: 'snoozed',
+  DISMISSED: 'dismissed',
+  EXPIRED: 'expired',
+} as const;
+
+export type ObserverSuggestionStatusType = typeof ObserverSuggestionStatus[keyof typeof ObserverSuggestionStatus];
+
+/** Observer Suggestions - Proactive suggestions from the AI observer */
+export const observerSuggestions = pgTable("observer_suggestions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  agentName: text("agent_name").notNull(),
+  intent: text("intent").notNull(), // 'delegate', 'automate', 'shortcut', 'insight'
+  status: text("status").notNull().default('pending'),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  confidence: integer("confidence").notNull().default(50), // 0-100 confidence score
+  contextRoute: text("context_route"), // The route where this suggestion was generated
+  contextEntityType: text("context_entity_type"), // 'person', 'lead', 'deal', etc.
+  contextEntityId: varchar("context_entity_id"),
+  personId: varchar("person_id").references(() => people.id),
+  dealId: varchar("deal_id").references(() => deals.id),
+  leadId: varchar("lead_id").references(() => leads.id),
+  actionPayload: jsonb("action_payload").$type<Record<string, unknown>>(), // Data needed to execute
+  patternId: text("pattern_id"), // Identifies recurring patterns for learning
+  snoozeUntil: timestamp("snooze_until"),
+  acceptedAt: timestamp("accepted_at"),
+  dismissedAt: timestamp("dismissed_at"),
+  feedbackNote: text("feedback_note"), // User's feedback when teaching
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at"), // When the suggestion becomes irrelevant
+});
+
+export const insertObserverSuggestionSchema = createInsertSchema(observerSuggestions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertObserverSuggestion = z.infer<typeof insertObserverSuggestionSchema>;
+export type ObserverSuggestion = typeof observerSuggestions.$inferSelect;
+
+/** Observer Patterns - Learned patterns from user behavior */
+export const observerPatterns = pgTable("observer_patterns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  patternType: text("pattern_type").notNull(), // 'action_sequence', 'timing', 'preference'
+  description: text("description").notNull(),
+  triggerConditions: jsonb("trigger_conditions").$type<Record<string, unknown>>().notNull(),
+  suggestedAction: jsonb("suggested_action").$type<Record<string, unknown>>().notNull(),
+  occurrenceCount: integer("occurrence_count").default(1),
+  lastTriggeredAt: timestamp("last_triggered_at"),
+  isEnabled: boolean("is_enabled").default(true),
+  userFeedbackScore: integer("user_feedback_score").default(0), // Positive = helpful, negative = annoying
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertObserverPatternSchema = createInsertSchema(observerPatterns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertObserverPattern = z.infer<typeof insertObserverPatternSchema>;
+export type ObserverPattern = typeof observerPatterns.$inferSelect;
+
+export const observerSuggestionsRelations = relations(observerSuggestions, ({ one }) => ({
+  person: one(people, {
+    fields: [observerSuggestions.personId],
+    references: [people.id],
+  }),
+  deal: one(deals, {
+    fields: [observerSuggestions.dealId],
+    references: [deals.id],
+  }),
+  lead: one(leads, {
+    fields: [observerSuggestions.leadId],
+    references: [leads.id],
+  }),
+}));
