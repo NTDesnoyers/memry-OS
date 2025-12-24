@@ -216,7 +216,7 @@ export function ObserverOverlay() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-80" data-testid="observer-overlay">
+    <div className="fixed bottom-24 right-4 z-40 w-80" data-testid="observer-overlay">
       <div className={cn(
         "rounded-lg border bg-background shadow-lg overflow-hidden transition-all",
         !isOpen && "cursor-pointer hover:shadow-xl"
