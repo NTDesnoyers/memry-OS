@@ -52,6 +52,7 @@ const navItems = [
   { name: "Life Events", href: "/life-events", icon: Eye },
   { name: "Event Log", href: "/event-log", icon: Activity },
   { name: "Lead Inbox", href: "/leads", icon: Inbox },
+  { name: "Revival", href: "/revival", icon: Sparkles },
   { name: "Coaching", href: "/coaching", icon: GraduationCap },
   { name: "Business Tracker", href: "/business-tracker", icon: PieChart },
   { name: "Visual Pricing", href: "/visual-pricing", icon: TrendingUp },
