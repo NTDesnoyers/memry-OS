@@ -713,6 +713,28 @@ Respond with valid JSON only, no other text.`;
         description: "Get tasks due today or overdue",
         parameters: { type: "object", properties: {} }
       }
+    },
+    {
+      type: "function",
+      function: {
+        name: "link_household",
+        description: "Link people together as a household. Creates a household and assigns all specified people to it. They will count as one unit for FORD conversations and mailers.",
+        parameters: {
+          type: "object",
+          properties: {
+            personIds: { 
+              type: "array", 
+              items: { type: "string" },
+              description: "Array of person IDs to link together in the same household" 
+            },
+            householdName: { 
+              type: "string", 
+              description: "Name for the household (e.g., 'Samaha Household')" 
+            }
+          },
+          required: ["personIds", "householdName"]
+        }
+      }
     }
   ];
 
@@ -905,6 +927,34 @@ Respond with valid JSON only, no other text.`;
           return JSON.stringify(dueTasks.map(t => ({ title: t.title, priority: t.priority, dueDate: t.dueDate })));
         }
         
+        case "link_household": {
+          if (!args.personIds || !Array.isArray(args.personIds) || args.personIds.length < 2) {
+            return `Error: personIds must be an array with at least 2 person IDs`;
+          }
+          if (!args.householdName) {
+            return `Error: householdName is required`;
+          }
+          
+          const household = await storage.createHousehold({ 
+            name: args.householdName,
+            address: null
+          });
+          
+          const linkedNames: string[] = [];
+          for (const personId of args.personIds) {
+            const updated = await storage.addPersonToHousehold(personId, household.id);
+            if (updated) {
+              linkedNames.push(updated.name || personId);
+            }
+          }
+          
+          if (linkedNames.length === 0) {
+            return `Error: Could not link any people to the household`;
+          }
+          
+          return `Created "${args.householdName}" and linked ${linkedNames.join(", ")}. They will now count as one household for FORD conversations and mailers.`;
+        }
+        
         default:
           return `Unknown tool: ${toolName}`;
       }
@@ -934,6 +984,7 @@ YOU CAN TAKE ACTION. When the user asks you to do something, USE YOUR TOOLS to a
 - Create tasks and follow-ups
 - Update deal stages (warm → hot → in_contract → closed)
 - Get Hot/Warm lists and today's tasks
+- Link people together as a household (they count as one for FORD conversations)
 
 WORKFLOW:
 1. When user mentions a person, FIRST search for them to get their ID
