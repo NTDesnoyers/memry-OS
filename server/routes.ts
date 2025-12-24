@@ -35,6 +35,11 @@ import * as XLSX from "xlsx";
 import * as googleCalendar from "./google-calendar";
 import { processInteraction, extractContentTopics } from "./conversation-processor";
 import { eventBus } from "./event-bus";
+import { createLogger } from "./logger";
+import { verifySavedContent, verifySummary, verifyTags, type VerifierContext } from "./verifiers";
+import type { SavedContent } from "@shared/schema";
+
+const logger = createLogger('Routes');
 
 // Background processing for batch operations
 let processingStatus = {
@@ -84,6 +89,269 @@ async function processAllInBackground(interactionIds: string[]) {
 
   console.log(`Background processing complete. Processed: ${processingStatus.processed}, Failed: ${processingStatus.failed}`);
   processingStatus.isProcessing = false;
+}
+
+// ============================================================
+// Content Processing Functions (Insight Inbox)
+// ============================================================
+
+async function processContentAsync(contentId: string): Promise<void> {
+  try {
+    const content = await storage.getSavedContent(contentId);
+    if (!content) return;
+    
+    await processContentWithAI(content);
+  } catch (error: any) {
+    logger.error('Async content processing failed', { contentId, error: error.message });
+  }
+}
+
+async function processContentWithAI(content: SavedContent): Promise<SavedContent> {
+  const openaiClient = getOpenAI();
+  
+  // Audit this action
+  const aiAction = await storage.createAiAction({
+    actionType: 'process_content',
+    proposedBy: 'ai',
+    input: { contentId: content.id, url: content.url }
+  });
+  
+  try {
+    // Step 1: Fetch and extract article content if not already present
+    let articleText = content.content;
+    let title = content.title;
+    let author = content.author;
+    let siteName = content.siteName;
+    
+    if (!articleText) {
+      try {
+        const response = await fetch(content.url);
+        const html = await response.text();
+        
+        // Basic extraction (could be enhanced with a proper parser)
+        const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+        title = titleMatch ? titleMatch[1].trim() : null;
+        
+        // Extract text content (simplified)
+        const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+        if (bodyMatch) {
+          articleText = bodyMatch[1]
+            .replace(/<script[\s\S]*?<\/script>/gi, '')
+            .replace(/<style[\s\S]*?<\/style>/gi, '')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .slice(0, 10000); // Limit size
+        }
+        
+        // Try to get og:site_name
+        const siteMatch = html.match(/<meta[^>]*property="og:site_name"[^>]*content="([^"]+)"/i);
+        siteName = siteMatch ? siteMatch[1] : null;
+        
+        // Try to get author
+        const authorMatch = html.match(/<meta[^>]*name="author"[^>]*content="([^"]+)"/i);
+        author = authorMatch ? authorMatch[1] : null;
+      } catch (fetchError: any) {
+        logger.warn('Failed to fetch article', { url: content.url, error: fetchError.message });
+      }
+    }
+    
+    // Verify content was extracted
+    const verifierContext: VerifierContext = {
+      actionType: 'extract_content',
+      proposedBy: 'ai',
+      timestamp: new Date()
+    };
+    
+    const contentVerification = verifySavedContent(
+      { url: content.url, title: title || undefined, content: articleText || undefined },
+      verifierContext
+    );
+    
+    if (!contentVerification.passed) {
+      await storage.updateAiAction(aiAction.id, {
+        verifierName: 'savedContent',
+        verifierPassed: false,
+        verifierErrors: contentVerification.errors,
+        verifierScore: contentVerification.score,
+        outcome: 'rejected'
+      });
+      
+      // Still save what we have
+      return await storage.updateSavedContent(content.id, {
+        title: title || content.url,
+        content: articleText || undefined,
+        author,
+        siteName
+      }) || content;
+    }
+    
+    // Step 2: Generate summary and tags with AI
+    let summary: string | undefined;
+    let keyPoints: string[] = [];
+    let tags: string[] = [];
+    
+    if (articleText && openaiClient) {
+      const response = await openaiClient.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: `You analyze articles and extract structured insights. Return JSON only.`
+          },
+          {
+            role: "user",
+            content: `Analyze this article and return a JSON object with:
+- summary: 2-3 sentence summary (max 300 chars)
+- keyPoints: array of 3-5 key takeaways (each max 100 chars)
+- tags: array of 2-5 topic tags (lowercase, single words or hyphenated)
+
+Article title: ${title || 'Unknown'}
+Article content: ${articleText.slice(0, 4000)}`
+          }
+        ],
+        response_format: { type: "json_object" }
+      });
+      
+      try {
+        const analysis = JSON.parse(response.choices[0].message.content || '{}');
+        summary = analysis.summary;
+        keyPoints = analysis.keyPoints || [];
+        tags = analysis.tags || [];
+      } catch (parseError) {
+        logger.warn('Failed to parse AI response', { contentId: content.id });
+      }
+    }
+    
+    // Verify summary
+    if (summary && articleText) {
+      const summaryVerification = verifySummary(
+        { original: articleText, summary },
+        verifierContext
+      );
+      
+      if (!summaryVerification.passed) {
+        logger.warn('Summary verification failed', { 
+          contentId: content.id, 
+          errors: summaryVerification.errors 
+        });
+        // Don't reject, just log warning
+      }
+    }
+    
+    // Update content with processed data
+    const updated = await storage.updateSavedContent(content.id, {
+      title: title || content.url,
+      content: articleText,
+      summary,
+      keyPoints,
+      tags,
+      author,
+      siteName
+    });
+    
+    // Record successful action
+    await storage.updateAiAction(aiAction.id, {
+      verifierName: 'savedContent',
+      verifierPassed: true,
+      verifierScore: 100,
+      outcome: 'executed',
+      resultData: { summary, keyPointsCount: keyPoints.length, tagsCount: tags.length },
+      executedAt: new Date()
+    });
+    
+    logger.info('Content processed successfully', { 
+      contentId: content.id, 
+      title,
+      tagsCount: tags.length 
+    });
+    
+    return updated || content;
+  } catch (error: any) {
+    await storage.updateAiAction(aiAction.id, {
+      outcome: 'rejected',
+      verifierErrors: [error.message]
+    });
+    throw error;
+  }
+}
+
+async function generateDailyDigest() {
+  const openaiClient = getOpenAI();
+  
+  // Get unread content from the last 24 hours
+  const allContent = await storage.getUnreadSavedContent();
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  const recentContent = allContent.filter(c => 
+    c.createdAt && new Date(c.createdAt) > yesterday
+  );
+  
+  if (recentContent.length === 0) {
+    // Create empty digest
+    const digest = await storage.createDailyDigest({
+      digestDate: new Date(),
+      itemCount: 0,
+      contentIds: [],
+      summaryHtml: '<p>No new content saved today.</p>'
+    });
+    return digest;
+  }
+  
+  // Generate digest summary
+  let summaryHtml = '';
+  
+  if (openaiClient && recentContent.length > 0) {
+    const contentSummaries = recentContent.map(c => 
+      `- ${c.title || c.url}: ${c.summary || 'No summary'}`
+    ).join('\n');
+    
+    const response = await openaiClient.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: `You create brief, scannable daily digest summaries in HTML format.`
+        },
+        {
+          role: "user",
+          content: `Create a daily digest summary for these saved articles. Use simple HTML (h3, p, ul, li). Keep it brief and actionable.
+
+Articles:
+${contentSummaries}`
+        }
+      ]
+    });
+    
+    summaryHtml = response.choices[0].message.content || '';
+  } else {
+    summaryHtml = `<h3>Today's Reading</h3><ul>${recentContent.map(c => 
+      `<li><strong>${c.title || 'Untitled'}</strong>: ${c.summary || 'No summary available'}</li>`
+    ).join('')}</ul>`;
+  }
+  
+  // Create digest
+  const digest = await storage.createDailyDigest({
+    digestDate: new Date(),
+    itemCount: recentContent.length,
+    contentIds: recentContent.map(c => c.id),
+    summaryHtml
+  });
+  
+  // Mark content as included in digest
+  for (const content of recentContent) {
+    await storage.updateSavedContent(content.id, {
+      digestIncludedAt: new Date()
+    });
+  }
+  
+  logger.info('Daily digest generated', { 
+    digestId: digest.id, 
+    itemCount: recentContent.length 
+  });
+  
+  return digest;
 }
 
 // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
@@ -5443,6 +5711,212 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
       const { triggerContextSuggestions } = await import("./workflow-coach-agent");
       await triggerContextSuggestions(route || '/', entityType, entityId);
       res.json({ success: true, message: "Context suggestions triggered" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============================================================
+  // Insight Inbox API - Content Capture & Daily Digest
+  // Pattern: AI proposes → Verifier checks → Execute or Review
+  // ============================================================
+  
+  // Get all saved content
+  app.get("/api/content", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const content = await storage.getAllSavedContent(limit);
+      res.json(content);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get unread content only
+  app.get("/api/content/unread", async (req, res) => {
+    try {
+      const content = await storage.getUnreadSavedContent();
+      res.json(content);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get single content item
+  app.get("/api/content/:id", async (req, res) => {
+    try {
+      const content = await storage.getSavedContent(req.params.id);
+      if (!content) {
+        return res.status(404).json({ message: "Content not found" });
+      }
+      res.json(content);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Capture new content (URL submission)
+  app.post("/api/content/capture", async (req, res) => {
+    try {
+      const { url, source = 'manual', notes } = req.body;
+      
+      if (!url) {
+        return res.status(400).json({ message: "URL is required" });
+      }
+      
+      // Check if URL already exists
+      const existing = await storage.getSavedContentByUrl(url);
+      if (existing) {
+        return res.status(409).json({ 
+          message: "Content already saved",
+          content: existing
+        });
+      }
+      
+      // Create with minimal data first
+      const content = await storage.createSavedContent({
+        url,
+        source,
+        notes,
+        status: 'unread'
+      });
+      
+      // Queue for AI processing (async - don't wait)
+      processContentAsync(content.id).catch(err => {
+        logger.error('Content processing failed', { contentId: content.id, error: err.message });
+      });
+      
+      res.status(201).json(content);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Update content
+  app.put("/api/content/:id", async (req, res) => {
+    try {
+      const content = await storage.updateSavedContent(req.params.id, req.body);
+      if (!content) {
+        return res.status(404).json({ message: "Content not found" });
+      }
+      res.json(content);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Mark content as read
+  app.post("/api/content/:id/read", async (req, res) => {
+    try {
+      const content = await storage.markContentRead(req.params.id);
+      if (!content) {
+        return res.status(404).json({ message: "Content not found" });
+      }
+      res.json(content);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Archive content
+  app.post("/api/content/:id/archive", async (req, res) => {
+    try {
+      const content = await storage.archiveContent(req.params.id);
+      if (!content) {
+        return res.status(404).json({ message: "Content not found" });
+      }
+      res.json(content);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Delete content
+  app.delete("/api/content/:id", async (req, res) => {
+    try {
+      await storage.deleteSavedContent(req.params.id);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Process content with AI (manual trigger)
+  app.post("/api/content/:id/process", async (req, res) => {
+    try {
+      const content = await storage.getSavedContent(req.params.id);
+      if (!content) {
+        return res.status(404).json({ message: "Content not found" });
+      }
+      
+      const processed = await processContentWithAI(content);
+      res.json(processed);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Daily Digest API
+  app.get("/api/digests", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 30;
+      const digests = await storage.getAllDailyDigests(limit);
+      res.json(digests);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.get("/api/digests/today", async (req, res) => {
+    try {
+      const digest = await storage.getTodaysDigest();
+      if (!digest) {
+        return res.status(404).json({ message: "No digest for today yet" });
+      }
+      res.json(digest);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.get("/api/digests/:id", async (req, res) => {
+    try {
+      const digest = await storage.getDailyDigest(req.params.id);
+      if (!digest) {
+        return res.status(404).json({ message: "Digest not found" });
+      }
+      res.json(digest);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Generate today's digest manually
+  app.post("/api/digests/generate", async (req, res) => {
+    try {
+      const digest = await generateDailyDigest();
+      res.json(digest);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // AI Actions audit trail
+  app.get("/api/ai-actions", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const actions = await storage.getAllAiActions(limit);
+      res.json(actions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.get("/api/ai-actions/:type", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const actions = await storage.getAiActionsByType(req.params.type, limit);
+      res.json(actions);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

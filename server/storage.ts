@@ -40,7 +40,10 @@ import {
   type Lead, type InsertLead,
   type ObserverSuggestion, type InsertObserverSuggestion,
   type ObserverPattern, type InsertObserverPattern,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions, leads, observerSuggestions, observerPatterns
+  type AiAction, type InsertAiAction,
+  type SavedContent, type InsertSavedContent,
+  type DailyDigest, type InsertDailyDigest,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions, leads, observerSuggestions, observerPatterns, aiActions, savedContent, dailyDigests
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt } from "drizzle-orm";
@@ -406,6 +409,31 @@ export interface IStorage {
   updateObserverPattern(id: string, pattern: Partial<InsertObserverPattern>): Promise<ObserverPattern | undefined>;
   incrementPatternOccurrence(id: string): Promise<ObserverPattern | undefined>;
   updatePatternFeedback(id: string, delta: number): Promise<ObserverPattern | undefined>;
+  
+  // AI Actions - Verify → Automate audit trail
+  getAllAiActions(limit?: number): Promise<AiAction[]>;
+  getAiAction(id: string): Promise<AiAction | undefined>;
+  getAiActionsByType(actionType: string, limit?: number): Promise<AiAction[]>;
+  createAiAction(action: InsertAiAction): Promise<AiAction>;
+  updateAiAction(id: string, action: Partial<InsertAiAction>): Promise<AiAction | undefined>;
+  
+  // Saved Content - Insight Inbox
+  getAllSavedContent(limit?: number): Promise<SavedContent[]>;
+  getUnreadSavedContent(): Promise<SavedContent[]>;
+  getSavedContent(id: string): Promise<SavedContent | undefined>;
+  getSavedContentByUrl(url: string): Promise<SavedContent | undefined>;
+  createSavedContent(content: InsertSavedContent): Promise<SavedContent>;
+  updateSavedContent(id: string, content: Partial<InsertSavedContent>): Promise<SavedContent | undefined>;
+  markContentRead(id: string): Promise<SavedContent | undefined>;
+  archiveContent(id: string): Promise<SavedContent | undefined>;
+  deleteSavedContent(id: string): Promise<void>;
+  
+  // Daily Digests
+  getAllDailyDigests(limit?: number): Promise<DailyDigest[]>;
+  getDailyDigest(id: string): Promise<DailyDigest | undefined>;
+  getTodaysDigest(): Promise<DailyDigest | undefined>;
+  createDailyDigest(digest: InsertDailyDigest): Promise<DailyDigest>;
+  updateDailyDigest(id: string, digest: Partial<InsertDailyDigest>): Promise<DailyDigest | undefined>;
 }
 
 /** Full context for a person - unified data layer response */
@@ -2289,6 +2317,137 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date()
       })
       .where(eq(observerPatterns.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  // AI Actions - Verify → Automate audit trail
+  async getAllAiActions(limit: number = 100): Promise<AiAction[]> {
+    return await db.select().from(aiActions)
+      .orderBy(desc(aiActions.createdAt))
+      .limit(limit);
+  }
+  
+  async getAiAction(id: string): Promise<AiAction | undefined> {
+    const [action] = await db.select().from(aiActions)
+      .where(eq(aiActions.id, id));
+    return action || undefined;
+  }
+  
+  async getAiActionsByType(actionType: string, limit: number = 50): Promise<AiAction[]> {
+    return await db.select().from(aiActions)
+      .where(eq(aiActions.actionType, actionType))
+      .orderBy(desc(aiActions.createdAt))
+      .limit(limit);
+  }
+  
+  async createAiAction(action: InsertAiAction): Promise<AiAction> {
+    const [created] = await db.insert(aiActions).values(action).returning();
+    return created;
+  }
+  
+  async updateAiAction(id: string, action: Partial<InsertAiAction>): Promise<AiAction | undefined> {
+    const [updated] = await db.update(aiActions)
+      .set(action)
+      .where(eq(aiActions.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  // Saved Content - Insight Inbox
+  async getAllSavedContent(limit: number = 100): Promise<SavedContent[]> {
+    return await db.select().from(savedContent)
+      .orderBy(desc(savedContent.createdAt))
+      .limit(limit);
+  }
+  
+  async getUnreadSavedContent(): Promise<SavedContent[]> {
+    return await db.select().from(savedContent)
+      .where(eq(savedContent.status, 'unread'))
+      .orderBy(desc(savedContent.createdAt));
+  }
+  
+  async getSavedContent(id: string): Promise<SavedContent | undefined> {
+    const [content] = await db.select().from(savedContent)
+      .where(eq(savedContent.id, id));
+    return content || undefined;
+  }
+  
+  async getSavedContentByUrl(url: string): Promise<SavedContent | undefined> {
+    const [content] = await db.select().from(savedContent)
+      .where(eq(savedContent.url, url));
+    return content || undefined;
+  }
+  
+  async createSavedContent(content: InsertSavedContent): Promise<SavedContent> {
+    const [created] = await db.insert(savedContent).values(content).returning();
+    return created;
+  }
+  
+  async updateSavedContent(id: string, content: Partial<InsertSavedContent>): Promise<SavedContent | undefined> {
+    const [updated] = await db.update(savedContent)
+      .set({ ...content, updatedAt: new Date() })
+      .where(eq(savedContent.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async markContentRead(id: string): Promise<SavedContent | undefined> {
+    const [updated] = await db.update(savedContent)
+      .set({ status: 'read', readAt: new Date(), updatedAt: new Date() })
+      .where(eq(savedContent.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async archiveContent(id: string): Promise<SavedContent | undefined> {
+    const [updated] = await db.update(savedContent)
+      .set({ status: 'archived', updatedAt: new Date() })
+      .where(eq(savedContent.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async deleteSavedContent(id: string): Promise<void> {
+    await db.delete(savedContent).where(eq(savedContent.id, id));
+  }
+  
+  // Daily Digests
+  async getAllDailyDigests(limit: number = 30): Promise<DailyDigest[]> {
+    return await db.select().from(dailyDigests)
+      .orderBy(desc(dailyDigests.digestDate))
+      .limit(limit);
+  }
+  
+  async getDailyDigest(id: string): Promise<DailyDigest | undefined> {
+    const [digest] = await db.select().from(dailyDigests)
+      .where(eq(dailyDigests.id, id));
+    return digest || undefined;
+  }
+  
+  async getTodaysDigest(): Promise<DailyDigest | undefined> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const [digest] = await db.select().from(dailyDigests)
+      .where(and(
+        gte(dailyDigests.digestDate, today),
+        lt(dailyDigests.digestDate, tomorrow)
+      ));
+    return digest || undefined;
+  }
+  
+  async createDailyDigest(digest: InsertDailyDigest): Promise<DailyDigest> {
+    const [created] = await db.insert(dailyDigests).values(digest).returning();
+    return created;
+  }
+  
+  async updateDailyDigest(id: string, digest: Partial<InsertDailyDigest>): Promise<DailyDigest | undefined> {
+    const [updated] = await db.update(dailyDigests)
+      .set(digest)
+      .where(eq(dailyDigests.id, id))
       .returning();
     return updated || undefined;
   }

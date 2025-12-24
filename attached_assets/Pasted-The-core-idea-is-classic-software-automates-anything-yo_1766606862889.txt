@@ -1,0 +1,50 @@
+The core idea is: classic software automates anything you can precisely **specify**; modern AI lets you automate anything you can reliably **verify** as correct or incorrect.  You design verifiers (checks) first, then let AI search for actions that satisfy them.[5][6]
+
+## Concept 1: Specify → Automate (Software 1.0)
+
+- If you can spell out exact rules, inputs, outputs, and edge cases, you can encode them in traditional code.[7]
+- Behavior is determined by hand‑written logic; changes require editing rules or adding new ones.[6]
+
+## Concept 2: Verify → Automate (Software 2.0 / AI)
+
+- AI behavior is learned from data and feedback, not fully written as explicit rules.[2]
+- As long as there’s a reliable way to check whether an output is “good” (a verifier), you can train or constrain AI to produce mostly good outputs.[3]
+
+## What makes a task “verifiable”
+
+- There is an objective pass/fail or graded criterion: e.g., “email sent without bounce,” “all required CRM fields filled,” “meeting successfully scheduled.”[4]
+- The check can be implemented as code, rules, or a deterministic procedure that does not require deep human judgment each time.[3]
+
+## Design pattern: Verifier‑first automation
+
+- For each workflow step, define: success condition, validation rules, and what to do on failure (retry, escalate, ask human).[6]
+- Let AI generate drafts/actions, but only commit them if they pass the verifier; otherwise route to a human or request clarification.[4]
+
+## Characteristics of systems built on this framework
+
+- **Explicit success criteria** for every automated step (clear definitions of “done right”).[6]
+- **Separation of concerns**: AI proposes actions; verifiers (classic code/rules) accept, reject, or flag them.[3]
+- **Risk‑bounded**: high‑impact or low‑verifiability tasks stay human‑in‑the‑loop; low‑risk, easily checked tasks are fully automated.[4]
+- **Iteratively improvable**: you can tighten verifiers and improve models over time without rewriting whole workflows.[2]
+- **Metrics‑driven**: the system tracks pass rates, exceptions, and human overrides to refine both AI and verifiers.[8]
+
+You can hand this to Replit roughly as: “This OS should treat AI as a proposal engine and classic code as a verifier; every automation must have a coded success check, and only actions that pass those checks should execute automatically.”
+
+Sources
+[1] image-1.jpg https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/images/41252432/36edb6f9-d8e6-4010-ac64-273b32407daf/image-1.jpg?AWSAccessKeyId=ASIA2F3EMEYEV3ZOUZQN&Signature=0TmSXQFw1ugsVMBIUrBc0EJF9wM%3D&x-amz-security-token=IQoJb3JpZ2luX2VjEGUaCXVzLWVhc3QtMSJHMEUCIQDv2cN%2BeE8OqJWNg%2B9hFkz02fC2dWuW%2FfkhH7oOGNoibgIgP%2Bkl4LTbHQarEBiGcvT6KgscBVSwjYyTqeEoaAyw1Ugq8wQILRABGgw2OTk3NTMzMDk3MDUiDDDRVaxYDMVS%2FkxLairQBCq4ofCvSp2njhcW43QGdYYR7K9XD1Tjq%2B1DiMQ%2BYwrHtAZbnaPVGQoxR5Z0DMahfdSGtz8gW9IFnjOQc9lNXjOcT1bMAjU1kFDyLDRA0PG2Iy%2B%2FptWP%2BOcdOlQvcSwt5Y%2FWu04gZxdfyJy9uGdzhJIXASpJK7YZKMLjPC2Z8PGhMI24U7IAF1HC2F65%2FtrNOXJRU%2Fay1fA%2Bbg6cH6Iql0EsFyekKc2lfHxhzFauZ35gY5w9Th7RY85KIqOAY0ViQVAbFWEDmgWeS6haMKOZo5USqqnB73ZgG8sAeVS2XsoGPUVqV3eg9gwZ93ItEfShJgG5QaBwh6jDfPpeuTm9ZUkA6WjJup1ur1YbnW7rzZFS4i32%2BCKahnFFi1feNGrUuqsCVtoZ4zwdHluEenyLw7URHuXPYpADl%2FcL5BTCkf7rA4mz9zthaWsYx97tXpE1S%2B3nMj%2BaOTUQoPO403ovd%2BgdT5e24H9Ofl%2Fa%2FoOT8vLHItrMvQ%2FwLLbVu6sF%2BbRa8y1NKZjJCcfLN6W6RgrafyIq0t59HNlCkruO7S45oLL5NY9i7BjWlhVtvMAd67HpVo0j47I2WJX7zjj9XqkJOzQYGc06dSuUrQNpxo9rIyQD%2Ba%2B36J3ibsYu0mUhRU0O1ivH2UZkPeemVjGmdoJ8Bi7GoYmQ%2FKeoUlgJxUC%2FF74nbQ00fpkkTKBbAXjRL%2FpPtGsVpoXbDEbTCCN9ibRKrnPyGk0IJZRbGTxsPfc%2BlTdH%2FSNDIkISVEMx%2B40xoFRL83QSPls%2BMEMUsoXe%2B3Dm6uowhI%2BxygY6mAFsa%2Fo48uZrgHqD4a3b59xMODp9atu4Weshb6p09fkElCxfAcEZSGaFDXx9qCJDjxyX%2B3z7OU1fOBfJ2%2Bg2gGU3X2SDYLNHDsM7V%2BLcBA4rV125EDUfBnuauMmpEJAqhsRL91ExAnBj3k3Zl3nvdLrXotgjNIXrI0njFunMey0Mg6mE9yoIYWfqfbF4E3UuUVP8Ah8n2UwPAA%3D%3D&Expires=1766606785
+[2] Karpathy: AI as Software 2.0, automating what can be verified https://www.linkedin.com/posts/yaelkroy_ai-software20-automation-activity-7396155398925283328-e7Z5
+[3] Reinforcement Learning with Verifiable Reward - Emergent Mind https://www.emergentmind.com/topics/reinforcement-learning-with-verifiable-reward-rlvr
+[4] Reinforcement Learning from Verifiable Rewards - Label Studio https://labelstud.io/blog/reinforcement-learning-from-verifiable-rewards/
+[5] What does the workflow look like for highly productive ai centered people? Do they incorporate Raycast? https://www.perplexity.ai/search/263feffb-ce2b-4cee-b65f-21796ff958aa
+[6] Ninja OS - Technical Overview
+Purpose
+A personal business operating system for real estate professionals using the Ninja Selling methodology. It combines relationship management (CRM), conversation intelligence, and task automation into a single plat...
+
+...pts
+deals - Pipeline tracking (warm → hot → in_contract → closed)
+tasks - Follow-ups with Todoist sync
+generated_drafts - AI-generated emails and handwritten notes
+voice_profile - Learned communication patterns
+sync_logs - Track external data sources https://www.perplexity.ai/search/721b1ecd-4702-4ac9-8758-ca809603b6b0
+[7] I am starting to vibe code a lot help me learn best practices in this podcast specifically Daniel Eck CEO Spotify is mentioned and Brett Victor. I want to build great software that lasts and is usable by everyone. https://www.perplexity.ai/search/70dffbac-18eb-4fe8-b2d1-03e19893984b
+[8] which of these duties can be automated by AI? https://www.perplexity.ai/search/9256b42f-2e4a-4265-a25b-8a85c23efd5d

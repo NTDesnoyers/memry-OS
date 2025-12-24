@@ -1680,3 +1680,103 @@ export const userConnectorsRelations = relations(userConnectors, ({ one }) => ({
     references: [betaUsers.id],
   }),
 }));
+
+/** AI Actions - Audit trail for AI proposals and verifier results (Verify → Automate pattern) */
+export const aiActions = pgTable("ai_actions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  actionType: text("action_type").notNull(), // create_task, log_interaction, generate_summary, etc.
+  proposedBy: text("proposed_by").notNull().default("ai"), // ai, user, system
+  input: jsonb("input"), // The input that was proposed
+  verifierName: text("verifier_name"), // Which verifier was used
+  verifierPassed: boolean("verifier_passed"),
+  verifierErrors: text("verifier_errors").array(),
+  verifierWarnings: text("verifier_warnings").array(),
+  verifierScore: integer("verifier_score"), // 0-100 confidence
+  outcome: text("outcome"), // executed, rejected, escalated, modified
+  resultData: jsonb("result_data"), // What was actually created/modified
+  executedAt: timestamp("executed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("ai_actions_type_idx").on(table.actionType),
+  index("ai_actions_outcome_idx").on(table.outcome),
+  index("ai_actions_created_idx").on(table.createdAt),
+]);
+
+export const insertAiActionSchema = createInsertSchema(aiActions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertAiAction = z.infer<typeof insertAiActionSchema>;
+export type AiAction = typeof aiActions.$inferSelect;
+
+/** Saved Content - Articles, posts, links saved for later reading and daily digest */
+export const savedContent = pgTable("saved_content", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  url: text("url").notNull(),
+  title: text("title"),
+  author: text("author"),
+  siteName: text("site_name"),
+  content: text("content"), // Extracted article text
+  summary: text("summary"), // AI-generated summary
+  keyPoints: text("key_points").array(), // AI-extracted key takeaways
+  tags: text("tags").array(), // Auto-generated or user-added tags
+  imageUrl: text("image_url"), // Featured image
+  status: text("status").default("unread"), // unread, read, archived
+  readAt: timestamp("read_at"),
+  digestIncludedAt: timestamp("digest_included_at"), // When it was included in a digest
+  linkedPersonId: varchar("linked_person_id"), // If linked to a contact for sharing
+  notes: text("notes"), // User's personal notes
+  source: text("source"), // email, extension, manual, share
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("saved_content_status_idx").on(table.status),
+  index("saved_content_created_idx").on(table.createdAt),
+]);
+
+export const insertSavedContentSchema = createInsertSchema(savedContent).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertSavedContent = z.infer<typeof insertSavedContentSchema>;
+export type SavedContent = typeof savedContent.$inferSelect;
+
+/** Daily Digests - Generated daily summaries of saved content */
+export const dailyDigests = pgTable("daily_digests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  digestDate: timestamp("digest_date").notNull(),
+  itemCount: integer("item_count").default(0),
+  summaryHtml: text("summary_html"), // Rendered digest content
+  contentIds: text("content_ids").array(), // IDs of savedContent included
+  shareSuggestions: jsonb("share_suggestions").$type<Array<{
+    contentId: string;
+    personId: string;
+    personName: string;
+    reason: string;
+    score: number;
+  }>>(),
+  emailSentAt: timestamp("email_sent_at"),
+  viewedAt: timestamp("viewed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("daily_digests_date_idx").on(table.digestDate),
+]);
+
+export const insertDailyDigestSchema = createInsertSchema(dailyDigests).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertDailyDigest = z.infer<typeof insertDailyDigestSchema>;
+export type DailyDigest = typeof dailyDigests.$inferSelect;
+
+/** Saved Content Relations */
+export const savedContentRelations = relations(savedContent, ({ one }) => ({
+  linkedPerson: one(people, {
+    fields: [savedContent.linkedPersonId],
+    references: [people.id],
+  }),
+}));

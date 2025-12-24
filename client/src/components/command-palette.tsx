@@ -29,6 +29,8 @@ import {
   Repeat,
   Inbox,
   GraduationCap,
+  BookOpen,
+  Link,
 } from "lucide-react";
 
 interface Person {
@@ -57,6 +59,7 @@ const navigationCommands = [
   { name: "Flow", href: "/flow", icon: Repeat, keywords: ["timeline", "activity"] },
   { name: "People", href: "/people", icon: Users, keywords: ["contacts", "clients"] },
   { name: "Lead Inbox", href: "/leads", icon: Inbox, keywords: ["leads", "prospects"] },
+  { name: "Insight Inbox", href: "/insights", icon: BookOpen, keywords: ["articles", "content", "reading"] },
   { name: "Business Tracker", href: "/business-tracker", icon: TrendingUp, keywords: ["deals", "pipeline"] },
   { name: "Calendar", href: "/calendar", icon: Calendar, keywords: ["schedule", "meetings"] },
   { name: "Coaching", href: "/coaching", icon: GraduationCap, keywords: ["training", "skills"] },
@@ -68,6 +71,7 @@ const quickActions = [
   { name: "Log a Call", action: "log_call", icon: Phone, keywords: ["phone", "conversation"] },
   { name: "Create Task", action: "create_task", icon: CheckSquare, keywords: ["todo", "reminder"] },
   { name: "Add Contact", action: "add_contact", icon: UserPlus, keywords: ["new", "person"] },
+  { name: "Save URL", action: "save_url", icon: Link, keywords: ["article", "link", "content", "capture"] },
   { name: "Ask AI", action: "ai_query", icon: Sparkles, keywords: ["assistant", "help"] },
 ];
 
@@ -132,6 +136,13 @@ export function CommandPalette() {
           break;
         case "add_contact":
           setLocation("/people/new");
+          break;
+        case "save_url":
+          setLocation("/insights");
+          setTimeout(() => {
+            const captureBtn = document.querySelector('[data-testid="button-quick-capture"]') as HTMLButtonElement;
+            if (captureBtn) captureBtn.click();
+          }, 200);
           break;
         case "ai_query":
           const event = new CustomEvent("ninja:open-ai-assistant");
