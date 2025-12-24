@@ -31,7 +31,14 @@ import {
   GraduationCap,
   BookOpen,
   Link,
+  Zap,
+  Mail,
+  BarChart3,
+  RefreshCw,
+  Send,
+  Building2,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface Person {
   id: string;
@@ -75,10 +82,51 @@ const quickActions = [
   { name: "Ask AI", action: "ai_query", icon: Sparkles, keywords: ["assistant", "help"] },
 ];
 
+const skillPacks = [
+  { 
+    name: "Compare Listings", 
+    action: "compare_listings", 
+    icon: Building2, 
+    keywords: ["zillow", "mls", "compare", "properties", "analysis"],
+    description: "Paste listing URLs to get AI comparison table"
+  },
+  { 
+    name: "Draft Revival Email", 
+    action: "draft_revival", 
+    icon: Mail, 
+    keywords: ["dormant", "reengage", "email", "outreach"],
+    description: "Generate personalized email for dormant contacts"
+  },
+  { 
+    name: "Bulk Lead Outreach", 
+    action: "bulk_outreach", 
+    icon: RefreshCw, 
+    keywords: ["leads", "batch", "follow", "nurture"],
+    description: "AI-powered batch messaging for old leads"
+  },
+  { 
+    name: "Quick Text Client", 
+    action: "quick_text", 
+    icon: Send, 
+    keywords: ["sms", "text", "message", "contact"],
+    description: "Fast compose and send text to a contact"
+  },
+  { 
+    name: "Market Update", 
+    action: "market_update", 
+    icon: BarChart3, 
+    keywords: ["market", "stats", "report", "newsletter"],
+    description: "Generate market update content for sharing"
+  },
+];
+
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const [skillModalOpen, setSkillModalOpen] = useState(false);
+  const [activeSkill, setActiveSkill] = useState<string | null>(null);
 
   const { data: people = [] } = useQuery<Person[]>({
     queryKey: ["/api/people"],
@@ -156,8 +204,67 @@ export function CommandPalette() {
     handleSelect(() => setLocation(`/people/${personId}`));
   }, [handleSelect, setLocation]);
 
+  const handleSkill = useCallback((action: string) => {
+    handleSelect(() => {
+      switch (action) {
+        case "compare_listings":
+          const listingUrls = prompt("Paste listing URLs (one per line or comma-separated):");
+          if (listingUrls) {
+            const event = new CustomEvent("ninja:open-ai-assistant", {
+              detail: { 
+                initialMessage: `Compare these real estate listings and create a detailed comparison table with key features, pros/cons, and recommendations:\n\n${listingUrls}`
+              }
+            });
+            window.dispatchEvent(event);
+          }
+          break;
+        case "draft_revival":
+          setLocation("/revival");
+          toast({
+            title: "Draft Revival Email",
+            description: "Select a dormant contact and click 'Revive' to generate a personalized email."
+          });
+          break;
+        case "bulk_outreach":
+          setLocation("/revival");
+          toast({
+            title: "Bulk Lead Outreach",
+            description: "Scan for dormant contacts and approve them for batch outreach campaigns."
+          });
+          setTimeout(() => {
+            const scanBtn = document.querySelector('[data-testid="button-scan"]') as HTMLButtonElement;
+            if (scanBtn) scanBtn.click();
+          }, 500);
+          break;
+        case "quick_text":
+          const contactName = prompt("Enter contact name to text:");
+          if (contactName) {
+            const message = prompt("Enter your message:");
+            if (message) {
+              const event = new CustomEvent("ninja:open-ai-assistant", {
+                detail: { 
+                  initialMessage: `Draft a personalized text message to ${contactName}. My message intent: "${message}". Make it casual and friendly, keeping my voice and style.`
+                }
+              });
+              window.dispatchEvent(event);
+            }
+          }
+          break;
+        case "market_update":
+          const event = new CustomEvent("ninja:open-ai-assistant", {
+            detail: { 
+              initialMessage: `Generate a market update for my real estate newsletter. Include current trends, inventory levels, interest rate impacts, and actionable advice for buyers and sellers. Make it engaging and shareable.`
+            }
+          });
+          window.dispatchEvent(event);
+          break;
+      }
+    });
+  }, [handleSelect, setLocation, toast]);
+
   const isAiQuery = inputValue.startsWith(">");
-  const searchTerm = isAiQuery ? inputValue.slice(1).trim() : inputValue;
+  const isSkillQuery = inputValue.startsWith("/");
+  const searchTerm = isAiQuery ? inputValue.slice(1).trim() : isSkillQuery ? inputValue.slice(1).trim() : inputValue;
 
   const filteredPeople = people
     .filter((p) => p.name?.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -174,7 +281,7 @@ export function CommandPalette() {
   return (
     <CommandDialog open={open} onOpenChange={setOpen} title="Command Palette">
       <CommandInput
-        placeholder="Search or type > to ask AI..."
+        placeholder="Search, > for AI, / for Skills..."
         value={inputValue}
         onValueChange={setInputValue}
         data-testid="command-palette-input"
@@ -186,6 +293,12 @@ export function CommandPalette() {
               <Sparkles className="h-8 w-8 text-muted-foreground" />
               <p>Press Enter to ask the AI Assistant</p>
               <p className="text-xs text-muted-foreground">"{searchTerm}"</p>
+            </div>
+          ) : isSkillQuery ? (
+            <div className="flex flex-col items-center gap-2 py-4">
+              <Zap className="h-8 w-8 text-amber-500" />
+              <p>Type to filter skills...</p>
+              <p className="text-xs text-muted-foreground">e.g., /compare, /email, /text</p>
             </div>
           ) : (
             "No results found."
@@ -204,7 +317,31 @@ export function CommandPalette() {
           </CommandGroup>
         )}
 
-        {!isAiQuery && (
+        {isSkillQuery && (
+          <CommandGroup heading="Skills (DIA-Style Shortcuts)">
+            {skillPacks
+              .filter(skill => 
+                !searchTerm || 
+                skill.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                skill.keywords.some(k => k.includes(searchTerm.toLowerCase()))
+              )
+              .map((skill) => (
+              <CommandItem
+                key={skill.action}
+                onSelect={() => handleSkill(skill.action)}
+                data-testid={`command-skill-${skill.action}`}
+              >
+                <skill.icon className="mr-2 h-4 w-4 text-amber-500" />
+                <div className="flex flex-col">
+                  <span>{skill.name}</span>
+                  <span className="text-xs text-muted-foreground">{skill.description}</span>
+                </div>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
+
+        {!isAiQuery && !isSkillQuery && (
           <>
             <CommandGroup heading="Quick Actions">
               {quickActions.map((action) => (
@@ -218,6 +355,28 @@ export function CommandPalette() {
                   {action.action === "ai_query" && (
                     <CommandShortcut>{">"}</CommandShortcut>
                   )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+
+            <CommandGroup heading="Skills">
+              {skillPacks
+                .filter(skill => 
+                  skill.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  skill.keywords.some(k => k.includes(searchTerm.toLowerCase()))
+                )
+                .map((skill) => (
+                <CommandItem
+                  key={skill.action}
+                  onSelect={() => handleSkill(skill.action)}
+                  data-testid={`command-skill-${skill.action}`}
+                >
+                  <skill.icon className="mr-2 h-4 w-4 text-amber-500" />
+                  <div className="flex flex-col">
+                    <span>{skill.name}</span>
+                    <span className="text-xs text-muted-foreground">{skill.description}</span>
+                  </div>
+                  <CommandShortcut>/</CommandShortcut>
                 </CommandItem>
               ))}
             </CommandGroup>
