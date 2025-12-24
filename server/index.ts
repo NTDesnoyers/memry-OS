@@ -9,6 +9,7 @@ import { registerLeadIntakeAgent } from "./lead-intake-agent";
 import { registerWorkflowCoachAgent } from "./workflow-coach-agent";
 import { startRelationshipChecker } from "./relationship-checker";
 import { startMaintenanceScheduler } from "./maintenance";
+import { setupVoiceRelay } from "./voice-relay";
 
 const app = express();
 const httpServer = createServer(app);
@@ -103,6 +104,9 @@ app.use((req, res, next) => {
   registerWorkflowCoachAgent();
   startRelationshipChecker();
   startMaintenanceScheduler(7);
+  
+  // Setup voice relay WebSocket server
+  setupVoiceRelay(httpServer);
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route

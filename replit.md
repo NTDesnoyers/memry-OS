@@ -50,7 +50,17 @@ The project adheres to an event-driven, multi-agent architecture with a focus on
 The design emphasizes GTD principles, making the system an intelligent reference tool focused on speed for daily reviews and interaction logging. It integrates Ninja Selling methodologies, including relationship segments (A/B/C/D), transaction stages, FORD notes, Ninja Nine habits, and core working lists. Key workflows include weekly planning, daily start-up, and 8x8 campaigns.
 
 ### Feature Specifications
-Current features include a Contact Due Calculator, D Contact Review, AI Assistant with agentic tools, voice profile learning, generated drafts, sync APIs, **In-App Observer** (data-driven suggestion overlay), **Insight Inbox** (content capture and daily digest), and **Guiding Principles Profile** (MTP, mission, values personalization). Future features target anticipatory, network, and reflective intelligence, memory augmentation, decision support, and skill development.
+Current features include a Contact Due Calculator, D Contact Review, AI Assistant with agentic tools, voice profile learning, generated drafts, sync APIs, **In-App Observer** (data-driven suggestion overlay), **Insight Inbox** (content capture and daily digest), **Guiding Principles Profile** (MTP, mission, values personalization), and **Voice Conversation** (real-time voice AI chat via OpenAI Realtime API). Future features target anticipatory, network, and reflective intelligence, memory augmentation, decision support, and skill development.
+
+### Voice Conversation
+**Real-Time Voice AI (Implemented)**:
+- Click "Voice" button in AI Assistant to switch to voice mode
+- Uses OpenAI Realtime API for low-latency voice-to-voice conversation
+- Server-side WebSocket relay at `/api/voice/realtime` proxies to OpenAI
+- Audio: PCM16 format at 24kHz, voice activity detection (VAD) for turn-taking
+- Components: `server/voice-relay.ts`, `client/src/components/voice-conversation.tsx`
+- Personalized with user's Guiding Principles profile via AI Context Service
+- Long-term vision: iPhone Action Button, Siri-like shortcuts for "Siri for your people"
 
 ### Guiding Principles Profile
 **User Core Profile (Implemented)**:

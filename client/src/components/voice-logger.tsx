@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Mic, Square, Loader2, Send, MessageSquare, Sparkles, X, Bot, User, CheckCircle2, Zap, Paperclip, Plus, History, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Mic, Square, Loader2, Send, MessageSquare, Sparkles, X, Bot, User, CheckCircle2, Zap, Paperclip, Plus, History, Trash2, ChevronLeft, ChevronRight, Phone } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { VoiceConversation } from "./voice-conversation";
 
 interface AiConversation {
   id: string;
@@ -58,6 +59,7 @@ export function VoiceLogger() {
   const [attachedImages, setAttachedImages] = useState<AttachedImage[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [isVoiceMode, setIsVoiceMode] = useState(false);
   
   const recognitionRef = useRef<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -461,7 +463,18 @@ export function VoiceLogger() {
                 Ninja AI Assistant
               </DialogTitle>
               <div className="flex items-center gap-1">
-                {messages.length > 0 && (
+                <Button 
+                  variant={isVoiceMode ? "default" : "ghost"} 
+                  size="sm" 
+                  onClick={() => setIsVoiceMode(!isVoiceMode)}
+                  className={cn("gap-1", isVoiceMode && "bg-violet-600 hover:bg-violet-700")}
+                  title={isVoiceMode ? "Switch to text chat" : "Switch to voice conversation"}
+                  data-testid="button-toggle-voice-mode"
+                >
+                  <Phone className="h-4 w-4" />
+                  {isVoiceMode ? "Text" : "Voice"}
+                </Button>
+                {messages.length > 0 && !isVoiceMode && (
                   <Button variant="ghost" size="sm" onClick={clearConversation} className="text-xs text-muted-foreground">
                     Clear
                   </Button>
@@ -469,10 +482,16 @@ export function VoiceLogger() {
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Agentic AI that can search, update, and create data for you
+              {isVoiceMode ? "Talk to your AI assistant with voice" : "Agentic AI that can search, update, and create data for you"}
             </p>
           </DialogHeader>
 
+          {isVoiceMode ? (
+            <div className="flex-1 flex items-center justify-center">
+              <VoiceConversation isOpen={isOpen && isVoiceMode} onClose={() => setIsVoiceMode(false)} />
+            </div>
+          ) : (
+          <>
           <ScrollArea className="flex-1 px-4" ref={scrollRef}>
             <div className="py-4 space-y-4">
               {messages.length === 0 && (
@@ -704,6 +723,8 @@ export function VoiceLogger() {
               </Button>
             </div>
           </div>
+          </>
+          )}
           </div>
         </DialogContent>
       </Dialog>
