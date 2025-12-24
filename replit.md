@@ -50,7 +50,30 @@ The project adheres to an event-driven, multi-agent architecture with a focus on
 The design emphasizes GTD principles, making the system an intelligent reference tool focused on speed for daily reviews and interaction logging. It integrates Ninja Selling methodologies, including relationship segments (A/B/C/D), transaction stages, FORD notes, Ninja Nine habits, and core working lists. Key workflows include weekly planning, daily start-up, and 8x8 campaigns.
 
 ### Feature Specifications
-Current features include a Contact Due Calculator, D Contact Review, AI Assistant with agentic tools, voice profile learning, generated drafts, sync APIs, **In-App Observer** (data-driven suggestion overlay), **Insight Inbox** (content capture and daily digest), **Guiding Principles Profile** (MTP, mission, values personalization), and **Voice Conversation** (real-time voice AI chat via OpenAI Realtime API). Future features target anticipatory, network, and reflective intelligence, memory augmentation, decision support, and skill development.
+Current features include a Contact Due Calculator, D Contact Review, AI Assistant with agentic tools, voice profile learning, generated drafts, sync APIs, **In-App Observer** (data-driven suggestion overlay), **Insight Inbox** (content capture and daily digest), **Guiding Principles Profile** (MTP, mission, values personalization), **Voice Conversation** (real-time voice AI chat via OpenAI Realtime API), **Dormant Lead Revival Engine** (Gmail scanning, dormancy scoring, approval workflow, campaign generation), and **DIA-Style Skill Packs** (Command Palette shortcuts for Compare Listings, Draft Revival Email, Bulk Outreach, Quick Text, Market Update). Future features target anticipatory, network, and reflective intelligence, memory augmentation, decision support, and skill development.
+
+### Dormant Lead Revival Engine
+**Lead Revival System (Implemented)**:
+- Gmail scanner identifies dormant contacts (180+ days no interaction)
+- Dormancy scoring (0-100): 180+ days = +20, 365+ = +30, 730+ = +40, 1095+ = +50
+- Approval workflow: review, approve/dismiss, bulk actions
+- One-click campaign generation creates personalized email drafts
+- Schema: `dormantOpportunities` table
+- API: `/api/dormant-opportunities/*`, `/api/dormant-lead-scanner/*`
+- Page: `/revival` for full Revival Opportunities management
+
+### DIA-Style Skill Packs
+**Command Palette Skills (Implemented)**:
+- Inspired by DIA Browser's "/" command shortcuts
+- Access via Command Palette (Cmd+K) → type "/" or scroll to Skills section
+- Available skills:
+  - `/compare` - Compare Listings: Paste URLs → AI comparison table
+  - `/draft` - Draft Revival Email: Navigate to Revival page
+  - `/bulk` - Bulk Lead Outreach: Scan and batch outreach
+  - `/text` - Quick Text Client: Draft personalized SMS
+  - `/market` - Market Update: Generate newsletter content
+- Skills trigger AI Assistant with pre-built prompts
+- Extensible architecture for adding new skill packs
 
 ### Voice Conversation
 **Real-Time Voice AI (Implemented)**:
@@ -126,3 +149,24 @@ Ninja OS is a multi-agent, event-driven system that orchestrates actions while C
 - **Granola**: Meeting notes.
 - **OpenAI/Anthropic/Gemini**: AI processing for voice logs.
 - **Gmail/Google Calendar**: Email and scheduling.
+
+## Feature Roadmap
+**Planned Features (Inspired by Michael Wade's Workflow)**:
+
+### Near-term
+- **Lofty CRM Integration**: Bidirectional sync with Lofty/Chime CRM for leads and contacts
+- **iMessage/SMS Sync with Media**: Mac companion app for encrypted backup parsing, photo/video upload to cloud storage with signed URLs (beyond Cloze's text-only sync)
+- **Form Intake Hub**: Tally.so-style embedded forms for lead capture with smart routing
+
+### Mid-term
+- **System-wide Keyboard Shortcuts**: Raycast-like global hotkeys (e.g., iPhone Action Button → Voice AI)
+- **Multi-CRM Orchestration**: Unified interface across Lofty, Cloze, Follow Up Boss
+- **Zapier/Make Integration Hub**: Connect to 5000+ apps via no-code automation
+
+### Long-term (AI Chief of Staff Vision)
+- **Anticipatory Intelligence**: Proactive suggestions before you need them
+- **Network Intelligence**: Map relationship graphs and identify warm introductions
+- **Reflective Analysis**: Weekly/monthly performance insights
+- **Memory Augmentation**: Never forget a detail about any relationship
+- **Decision Support**: AI-powered strategic recommendations
+- **Skill Development**: Personalized coaching for Ninja Selling mastery

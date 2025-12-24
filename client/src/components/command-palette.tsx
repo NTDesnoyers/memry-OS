@@ -208,15 +208,16 @@ export function CommandPalette() {
     handleSelect(() => {
       switch (action) {
         case "compare_listings":
-          const listingUrls = prompt("Paste listing URLs (one per line or comma-separated):");
-          if (listingUrls) {
-            const event = new CustomEvent("ninja:open-ai-assistant", {
-              detail: { 
-                initialMessage: `Compare these real estate listings and create a detailed comparison table with key features, pros/cons, and recommendations:\n\n${listingUrls}`
-              }
-            });
-            window.dispatchEvent(event);
-          }
+          toast({
+            title: "Compare Listings",
+            description: "Open AI Assistant and paste your listing URLs to compare them."
+          });
+          const compareEvent = new CustomEvent("ninja:open-ai-assistant", {
+            detail: { 
+              initialMessage: `I want to compare real estate listings. Please help me create a detailed comparison table. I'll paste the listing URLs or details now...`
+            }
+          });
+          window.dispatchEvent(compareEvent);
           break;
         case "draft_revival":
           setLocation("/revival");
@@ -237,26 +238,28 @@ export function CommandPalette() {
           }, 500);
           break;
         case "quick_text":
-          const contactName = prompt("Enter contact name to text:");
-          if (contactName) {
-            const message = prompt("Enter your message:");
-            if (message) {
-              const event = new CustomEvent("ninja:open-ai-assistant", {
-                detail: { 
-                  initialMessage: `Draft a personalized text message to ${contactName}. My message intent: "${message}". Make it casual and friendly, keeping my voice and style.`
-                }
-              });
-              window.dispatchEvent(event);
+          toast({
+            title: "Quick Text",
+            description: "Open AI Assistant to draft a personalized text message."
+          });
+          const textEvent = new CustomEvent("ninja:open-ai-assistant", {
+            detail: { 
+              initialMessage: `Help me draft a quick text message to a client. I'll tell you who I'm texting and what I want to say...`
             }
-          }
+          });
+          window.dispatchEvent(textEvent);
           break;
         case "market_update":
-          const event = new CustomEvent("ninja:open-ai-assistant", {
+          toast({
+            title: "Market Update",
+            description: "Generating newsletter content..."
+          });
+          const marketEvent = new CustomEvent("ninja:open-ai-assistant", {
             detail: { 
               initialMessage: `Generate a market update for my real estate newsletter. Include current trends, inventory levels, interest rate impacts, and actionable advice for buyers and sellers. Make it engaging and shareable.`
             }
           });
-          window.dispatchEvent(event);
+          window.dispatchEvent(marketEvent);
           break;
       }
     });
@@ -359,27 +362,21 @@ export function CommandPalette() {
               ))}
             </CommandGroup>
 
-            <CommandGroup heading="Skills">
-              {skillPacks
-                .filter(skill => 
-                  skill.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                  skill.keywords.some(k => k.includes(searchTerm.toLowerCase()))
-                )
-                .map((skill) => (
-                <CommandItem
-                  key={skill.action}
-                  onSelect={() => handleSkill(skill.action)}
-                  data-testid={`command-skill-${skill.action}`}
-                >
-                  <skill.icon className="mr-2 h-4 w-4 text-amber-500" />
-                  <div className="flex flex-col">
+            {!searchTerm && (
+              <CommandGroup heading="Skills (type / for shortcuts)">
+                {skillPacks.slice(0, 3).map((skill) => (
+                  <CommandItem
+                    key={skill.action}
+                    onSelect={() => handleSkill(skill.action)}
+                    data-testid={`command-skill-${skill.action}`}
+                  >
+                    <skill.icon className="mr-2 h-4 w-4 text-amber-500" />
                     <span>{skill.name}</span>
-                    <span className="text-xs text-muted-foreground">{skill.description}</span>
-                  </div>
-                  <CommandShortcut>/</CommandShortcut>
-                </CommandItem>
-              ))}
-            </CommandGroup>
+                    <CommandShortcut>/</CommandShortcut>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
 
             <CommandSeparator />
 
