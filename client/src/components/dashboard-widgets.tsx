@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { 
   ArrowRight, CheckCircle2, DollarSign, TrendingUp, Users, PieChart, 
   Mic, FileEdit, Sparkles, Loader2, ListTodo, RefreshCw, AlertCircle, 
-  ExternalLink, GripVertical, Settings, Plus, X, Home
+  ExternalLink, GripVertical, Settings, Plus, X, Home, BookOpen
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -289,6 +289,69 @@ function ProductiveHoursWidgetContent() {
   );
 }
 
+type SavedContentWidget = { id: string; status: string; title?: string | null };
+type DailyDigestWidget = { id: string; summaryHtml?: string | null };
+
+function InsightDigestWidgetContent() {
+  const { data: content = [], isLoading: contentLoading } = useQuery<SavedContentWidget[]>({
+    queryKey: ["/api/content"],
+  });
+  
+  const { data: todaysDigest, isLoading: digestLoading } = useQuery<DailyDigestWidget>({
+    queryKey: ["/api/digests/today"],
+    retry: false,
+  });
+  
+  if (contentLoading || digestLoading) {
+    return (
+      <div className="flex items-center justify-center py-4" data-testid="insight-widget-loading">
+        <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+  
+  const unreadCount = content.filter(c => c.status === "unread").length;
+  
+  return (
+    <div className="space-y-3" data-testid="insight-widget-content">
+      <Link href="/insights">
+        <div 
+          className="flex items-center justify-between p-3 bg-white/60 rounded-lg hover:bg-white/80 cursor-pointer transition-colors"
+          data-testid="link-insight-inbox"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-teal-100 text-teal-600 rounded-full">
+              <BookOpen className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="font-medium text-sm">Saved Articles</p>
+              <p className="text-xs text-muted-foreground" data-testid="text-unread-count">{unreadCount} unread</p>
+            </div>
+          </div>
+          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+        </div>
+      </Link>
+      
+      {todaysDigest?.summaryHtml ? (
+        <div className="p-3 bg-teal-50/50 rounded-lg" data-testid="digest-preview">
+          <p className="text-xs font-medium text-teal-700 mb-1">Today's Digest</p>
+          <p className="text-xs text-muted-foreground line-clamp-3">
+            {todaysDigest.summaryHtml.replace(/<[^>]*>/g, '').slice(0, 200)}
+          </p>
+        </div>
+      ) : unreadCount > 0 ? (
+        <p className="text-xs text-muted-foreground text-center py-2" data-testid="text-articles-ready">
+          {unreadCount} articles ready to summarize
+        </p>
+      ) : (
+        <p className="text-xs text-muted-foreground text-center py-2" data-testid="text-empty-state">
+          Save articles via Command Palette (Cmd+K)
+        </p>
+      )}
+    </div>
+  );
+}
+
 const WIDGET_CONFIGS: Record<string, {
   icon: React.ReactNode;
   gradient: string;
@@ -335,6 +398,11 @@ const WIDGET_CONFIGS: Record<string, {
     gradient: "from-red-50 to-orange-50",
     description: "GTD task management"
   },
+  insight_digest: { 
+    icon: <BookOpen className="h-5 w-5 text-teal-600" />,
+    gradient: "from-teal-50 to-cyan-50",
+    description: "Saved articles & daily digest"
+  },
 };
 
 const AVAILABLE_WIDGETS = [
@@ -346,6 +414,7 @@ const AVAILABLE_WIDGETS = [
   { type: "ford_tracker", title: "FORD Conversations" },
   { type: "ai_status", title: "AI Status" },
   { type: "todoist_tasks", title: "Todoist Tasks" },
+  { type: "insight_digest", title: "Insight Digest" },
 ];
 
 function WidgetContent({ widgetType }: { widgetType: string }) {
@@ -366,6 +435,8 @@ function WidgetContent({ widgetType }: { widgetType: string }) {
       return <AIStatusWidgetContent />;
     case "todoist_tasks":
       return <TodoistWidgetContent />;
+    case "insight_digest":
+      return <InsightDigestWidgetContent />;
     default:
       return <p className="text-sm text-muted-foreground">Unknown widget type</p>;
   }
