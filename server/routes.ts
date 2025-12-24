@@ -1,7 +1,6 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
+import type { Server } from "http";
 import { storage } from "./storage";
-import { db } from "./db";
 import { 
   insertPersonSchema, 
   insertDealSchema, 
@@ -31,7 +30,6 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import OpenAI from "openai";
-import Anthropic from "@anthropic-ai/sdk";
 import * as XLSX from "xlsx";
 import * as googleCalendar from "./google-calendar";
 import { processInteraction, extractContentTopics } from "./conversation-processor";
@@ -98,37 +96,6 @@ function getOpenAI(): OpenAI {
     openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   }
   return openai;
-}
-
-// Anthropic client for Claude
-let anthropic: Anthropic | null = null;
-function getAnthropic(): Anthropic {
-  if (!anthropic) {
-    anthropic = new Anthropic();
-  }
-  return anthropic;
-}
-
-// Smart model selection based on task type
-type ModelChoice = { provider: "openai" | "claude"; model: string; reason: string };
-function selectModel(hasImages: boolean, hasTools: boolean, messageCount: number): ModelChoice {
-  // Use GPT-4o for vision tasks (image analysis)
-  if (hasImages) {
-    return { provider: "openai", model: "gpt-4o", reason: "Vision/image analysis" };
-  }
-  
-  // Use GPT-4o for tool-heavy agentic tasks (better function calling)
-  if (hasTools) {
-    return { provider: "openai", model: "gpt-4o", reason: "Tool/function calling" };
-  }
-  
-  // Use Claude for complex reasoning and long conversations
-  if (messageCount > 6) {
-    return { provider: "claude", model: "claude-sonnet-4-20250514", reason: "Complex reasoning" };
-  }
-  
-  // Default to GPT-4o for quick responses
-  return { provider: "openai", model: "gpt-4o", reason: "Quick response" };
 }
 
 const uploadDir = path.join(process.cwd(), "uploads");

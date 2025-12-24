@@ -3,7 +3,7 @@
  * Shared between frontend and backend for type safety.
  */
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, boolean, jsonb, index } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -89,7 +89,10 @@ export const people = pgTable("people", {
   reviewStatus: text("review_status"), // null, 'needs_review', 'keep', 'delete_pending'
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("people_segment_idx").on(table.segment),
+  index("people_last_contact_idx").on(table.lastContact),
+]);
 
 export const insertPersonSchema = createInsertSchema(people).omit({
   id: true,
@@ -193,7 +196,10 @@ export const deals = pgTable("deals", {
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("deals_person_id_idx").on(table.personId),
+  index("deals_stage_idx").on(table.stage),
+]);
 
 export const insertDealSchema = createInsertSchema(deals).omit({
   id: true,
@@ -239,7 +245,11 @@ export const tasks = pgTable("tasks", {
   todoistId: text("todoist_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("tasks_person_id_idx").on(table.personId),
+  index("tasks_due_date_idx").on(table.dueDate),
+  index("tasks_status_idx").on(table.status),
+]);
 
 export const insertTaskSchema = createInsertSchema(tasks).omit({
   id: true,
@@ -333,7 +343,9 @@ export const notes = pgTable("notes", {
   imageUrls: text("image_urls").array(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("notes_person_id_idx").on(table.personId),
+]);
 
 export const insertNoteSchema = createInsertSchema(notes).omit({
   id: true,
@@ -669,7 +681,11 @@ export const interactions = pgTable("interactions", {
   deletedAt: timestamp("deleted_at"), // soft delete - null means not deleted
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("interactions_person_id_idx").on(table.personId),
+  index("interactions_occurred_at_idx").on(table.occurredAt),
+  index("interactions_type_idx").on(table.type),
+]);
 
 export const insertInteractionSchema = createInsertSchema(interactions).omit({
   id: true,
@@ -1120,7 +1136,11 @@ export const leads = pgTable("leads", {
   convertedAt: timestamp("converted_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("leads_status_idx").on(table.status),
+  index("leads_source_idx").on(table.source),
+  index("leads_created_at_idx").on(table.createdAt),
+]);
 
 export const insertLeadSchema = createInsertSchema(leads).omit({
   id: true,

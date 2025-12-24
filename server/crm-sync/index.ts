@@ -4,7 +4,7 @@
  */
 
 import { db } from '../db';
-import { eq, and, lt, isNull, or } from 'drizzle-orm';
+import { eq, and, lt, or } from 'drizzle-orm';
 import { 
   crmIntegrations, 
   crmSyncQueue, 

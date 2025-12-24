@@ -200,7 +200,7 @@ async function handleLeadCreated(event: SystemEvent): Promise<AgentAction[]> {
 
   const { score, factors } = calculateLeadScore(lead);
 
-  let newStatus: LeadStatus;
+  let newStatus: typeof LeadStatus[keyof typeof LeadStatus];
   let qualificationTier: 'hot' | 'warm' | 'cold';
   
   if (score >= QUALIFICATION_THRESHOLDS.HOT) {

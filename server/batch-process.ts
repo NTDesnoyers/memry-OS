@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { interactions } from "@shared/schema";
-import { isNull, ne, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { processInteraction } from "./conversation-processor";
 
 // Flush output immediately
