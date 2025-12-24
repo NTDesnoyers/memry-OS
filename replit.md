@@ -43,6 +43,8 @@ The project adheres to an event-driven, multi-agent architecture with a focus on
 - **Storage Interface**: Abstracted database operations in `server/storage.ts`.
 - **Path Aliases**: `@/` for client, `@shared/` for shared code.
 - **Component Library**: shadcn/ui components.
+- **Structured Logging**: Use `createLogger('ModuleName')` from `server/logger.ts` instead of console.log. Supports debug/info/warn/error levels.
+- **Maintenance Scheduler**: Automatic cleanup of old system_events and agent_actions (7-day retention). API: `/api/maintenance/stats`, `/api/maintenance/cleanup`.
 
 ### UI/UX Decisions
 The design emphasizes GTD principles, making the system an intelligent reference tool focused on speed for daily reviews and interaction logging. It integrates Ninja Selling methodologies, including relationship segments (A/B/C/D), transaction stages, FORD notes, Ninja Nine habits, and core working lists. Key workflows include weekly planning, daily start-up, and 8x8 campaigns.
