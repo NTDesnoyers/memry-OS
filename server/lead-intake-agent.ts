@@ -13,6 +13,7 @@
 
 import { eventBus } from "./event-bus";
 import { storage } from "./storage";
+import { createLogger } from "./logger";
 import { 
   EventType, 
   AgentName, 
@@ -21,6 +22,8 @@ import {
   type AgentAction,
   type Lead
 } from "@shared/schema";
+
+const logger = createLogger('LeadIntakeAgent');
 
 const QUALIFICATION_THRESHOLDS = {
   HOT: 80,
@@ -316,5 +319,5 @@ export function registerLeadIntakeAgent(): void {
     handler: handleLeadEvent,
   });
 
-  console.log('[LeadIntakeAgent] Registered and listening for lead events');
+  logger.info('Registered and listening for lead events');
 }

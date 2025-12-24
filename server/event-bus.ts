@@ -9,6 +9,7 @@
  */
 
 import { storage } from "./storage";
+import { createLogger } from "./logger";
 import { 
   EventType, 
   EventCategory, 
@@ -18,6 +19,8 @@ import {
   type SystemEvent,
   type AgentAction,
 } from "@shared/schema";
+
+const logger = createLogger('EventBus');
 
 type EventHandler = (event: SystemEvent) => Promise<AgentAction[] | void>;
 
@@ -43,7 +46,7 @@ class EventBus {
       this.eventHandlers.set(eventType, handlers);
     }
     
-    console.log(`[EventBus] Registered agent: ${registration.agentName} for events: ${registration.eventTypes.join(', ')}`);
+    logger.info(`Registered agent: ${registration.agentName} for events: ${registration.eventTypes.join(', ')}`);
   }
 
   /**
@@ -56,7 +59,7 @@ class EventBus {
       processedBy: null,
     });
     
-    console.log(`[EventBus] Event emitted: ${event.eventType} (${systemEvent.id})`);
+    logger.info(`Event emitted: ${event.eventType} (${systemEvent.id})`);
     
     this.processEventAsync(systemEvent);
     
@@ -89,7 +92,7 @@ class EventBus {
           processedBy.push(agentEntry[0]);
         }
       } catch (error) {
-        console.error(`[EventBus] Error processing event ${event.id}:`, error);
+        logger.error(`Error processing event ${event.id}:`, error);
       }
     }
     
@@ -104,7 +107,7 @@ class EventBus {
   private async autoApproveAndExecute(action: AgentAction): Promise<void> {
     await storage.approveAgentAction(action.id, 'auto');
     await storage.markAgentActionExecuted(action.id);
-    console.log(`[EventBus] Auto-executed low-risk action: ${action.actionType} by ${action.agentName}`);
+    logger.info(`Auto-executed low-risk action: ${action.actionType} by ${action.agentName}`);
   }
 
   /**

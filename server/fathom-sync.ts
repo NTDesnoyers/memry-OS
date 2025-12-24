@@ -1,7 +1,9 @@
 import { storage } from "./storage";
 import crypto from "crypto";
 import { processInteraction, analyzeConversationForCoaching } from "./conversation-processor";
+import { createLogger } from "./logger";
 
+const logger = createLogger('FathomSync');
 const FATHOM_API_URL = "https://api.fathom.ai/external/v1";
 const SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -176,9 +178,9 @@ export async function runFathomSync(): Promise<{ synced: number; failed: number;
     lookbackDate.setDate(lookbackDate.getDate() - 7);
     const createdAfter = lookbackDate.toISOString();
     
-    console.log(`[Fathom Sync] Fetching meetings since ${createdAfter}...`);
+    logger.info(`Fetching meetings since ${createdAfter}...`);
     const meetings = await fetchMeetings(apiKey, createdAfter);
-    console.log(`[Fathom Sync] Found ${meetings.length} meetings`);
+    logger.info(`Found ${meetings.length} meetings`);
     
     let synced = 0;
     let failed = 0;
@@ -192,25 +194,25 @@ export async function runFathomSync(): Promise<{ synced: number; failed: number;
           if (result.interactionId) {
             newInteractionIds.push(result.interactionId);
           }
-          console.log(`[Fathom Sync] Synced: ${meeting.title || "Untitled"}`);
+          logger.info(`Synced: ${meeting.title || "Untitled"}`);
         }
       } catch (error: any) {
         failed++;
-        console.error(`[Fathom Sync] Failed to sync meeting:`, error.message);
+        logger.error(`Failed to sync meeting:`, error.message);
       }
     }
     
     // Auto-process all newly synced meetings to generate follow-ups and coaching analysis
     if (newInteractionIds.length > 0) {
-      console.log(`[Fathom Sync] Processing ${newInteractionIds.length} new meetings for follow-ups and coaching...`);
+      logger.info(`Processing ${newInteractionIds.length} new meetings for follow-ups and coaching...`);
       for (const interactionId of newInteractionIds) {
         try {
           // First process for follow-ups
           const processResult = await processInteraction(interactionId);
           if (processResult.success) {
-            console.log(`[Fathom Sync] Processed interaction, created ${processResult.draftsCreated || 0} drafts`);
+            logger.info(`Processed interaction, created ${processResult.draftsCreated || 0} drafts`);
           } else {
-            console.log(`[Fathom Sync] Processing skipped: ${processResult.error || "unknown reason"}`);
+            logger.info(`Processing skipped: ${processResult.error || "unknown reason"}`);
           }
           
           // Then run coaching analysis if there's a transcript
@@ -222,13 +224,13 @@ export async function runFathomSync(): Promise<{ synced: number; failed: number;
                 : null;
               const coachingAnalysis = await analyzeConversationForCoaching(interaction, person);
               await storage.updateInteraction(interactionId, { coachingAnalysis });
-              console.log(`[Fathom Sync] Coaching analysis complete: score ${coachingAnalysis.overallScore}`);
+              logger.info(`Coaching analysis complete: score ${coachingAnalysis.overallScore}`);
             } catch (coachingError: any) {
-              console.error(`[Fathom Sync] Coaching analysis failed:`, coachingError.message);
+              logger.error(`Coaching analysis failed:`, coachingError.message);
             }
           }
         } catch (error: any) {
-          console.error(`[Fathom Sync] Failed to process interaction:`, error.message);
+          logger.error(`Failed to process interaction:`, error.message);
         }
       }
     }
@@ -238,11 +240,11 @@ export async function runFathomSync(): Promise<{ synced: number; failed: number;
     syncStatus.lastResult = result;
     lastSyncTime = new Date();
     
-    console.log(`[Fathom Sync] Complete: ${synced} synced, ${failed} failed`);
+    logger.info(`Complete: ${synced} synced, ${failed} failed`);
     return result;
   } catch (error: any) {
     syncStatus.error = error.message;
-    console.error(`[Fathom Sync] Error:`, error.message);
+    logger.error(`Error:`, error.message);
     return { synced: 0, failed: 0, message: error.message };
   } finally {
     syncStatus.isRunning = false;
@@ -251,16 +253,16 @@ export async function runFathomSync(): Promise<{ synced: number; failed: number;
 
 export function startFathomSyncScheduler() {
   if (syncInterval) {
-    console.log("[Fathom Sync] Scheduler already running");
+    logger.info("Scheduler already running");
     return;
   }
   
   if (!process.env.FATHOM_API_KEY) {
-    console.log("[Fathom Sync] FATHOM_API_KEY not set, scheduler not started");
+    logger.info("FATHOM_API_KEY not set, scheduler not started");
     return;
   }
   
-  console.log(`[Fathom Sync] Starting scheduler (every ${SYNC_INTERVAL_MS / 1000 / 60} minutes)`);
+  logger.info(`Starting scheduler (every ${SYNC_INTERVAL_MS / 1000 / 60} minutes)`);
   
   setTimeout(() => runFathomSync(), 10000);
   
@@ -273,7 +275,7 @@ export function stopFathomSyncScheduler() {
   if (syncInterval) {
     clearInterval(syncInterval);
     syncInterval = null;
-    console.log("[Fathom Sync] Scheduler stopped");
+    logger.info("Scheduler stopped");
   }
 }
 

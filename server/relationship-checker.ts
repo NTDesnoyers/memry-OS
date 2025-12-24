@@ -10,8 +10,10 @@
 
 import { eventBus } from "./event-bus";
 import { storage } from "./storage";
+import { createLogger } from "./logger";
 import { differenceInDays, isValid, format } from "date-fns";
 
+const logger = createLogger('RelationshipChecker');
 const CHECK_INTERVAL_MS = 60 * 60 * 1000;
 const ANNIVERSARY_LOOKAHEAD_DAYS = 14;
 
@@ -23,7 +25,7 @@ function resetIfNewDay(): void {
   if (lastCheckDate !== today) {
     emittedToday.clear();
     lastCheckDate = today;
-    console.log('[RelationshipChecker] New day detected, reset daily tracking');
+    logger.info('New day detected, reset daily tracking');
   }
 }
 
@@ -47,11 +49,11 @@ async function checkOverdueContacts(): Promise<void> {
         );
         
         emittedToday.add(eventKey);
-        console.log(`[RelationshipChecker] Emitted contact.due for ${contact.person.name} (${contact.daysOverdue} days overdue)`);
+        logger.info(`Emitted contact.due for ${contact.person.name} (${contact.daysOverdue} days overdue)`);
       }
     }
   } catch (error) {
-    console.error('[RelationshipChecker] Error checking overdue contacts:', error);
+    logger.error('Error checking overdue contacts:', error);
   }
 }
 
@@ -92,12 +94,12 @@ async function checkUpcomingAnniversaries(): Promise<void> {
           );
           
           emittedToday.add(eventKey);
-          console.log(`[RelationshipChecker] Emitted anniversary.approaching for ${person.name} (${anniversary.type} in ${daysUntil} days)`);
+          logger.info(`Emitted anniversary.approaching for ${person.name} (${anniversary.type} in ${daysUntil} days)`);
         }
       }
     }
   } catch (error) {
-    console.error('[RelationshipChecker] Error checking anniversaries:', error);
+    logger.error('Error checking anniversaries:', error);
   }
 }
 
@@ -127,14 +129,14 @@ function parseFlexibleDate(dateStr: string, defaultYear: number): Date | null {
 }
 
 export async function runRelationshipCheck(): Promise<{ overdueChecked: boolean; anniversariesChecked: boolean }> {
-  console.log('[RelationshipChecker] Running relationship check...');
+  logger.info('Running relationship check...');
   
   resetIfNewDay();
   
   await checkOverdueContacts();
   await checkUpcomingAnniversaries();
   
-  console.log('[RelationshipChecker] Relationship check complete');
+  logger.info('Relationship check complete');
   return { overdueChecked: true, anniversariesChecked: true };
 }
 
@@ -142,11 +144,11 @@ let checkInterval: NodeJS.Timeout | null = null;
 
 export function startRelationshipChecker(): void {
   if (checkInterval) {
-    console.log('[RelationshipChecker] Already running');
+    logger.info('Already running');
     return;
   }
   
-  console.log('[RelationshipChecker] Starting scheduler (hourly checks)');
+  logger.info('Starting scheduler (hourly checks)');
   
   runRelationshipCheck();
   
@@ -157,6 +159,6 @@ export function stopRelationshipChecker(): void {
   if (checkInterval) {
     clearInterval(checkInterval);
     checkInterval = null;
-    console.log('[RelationshipChecker] Stopped');
+    logger.info('Stopped');
   }
 }

@@ -8,6 +8,7 @@ import { registerNurtureAgent } from "./nurture-agent";
 import { registerLeadIntakeAgent } from "./lead-intake-agent";
 import { registerWorkflowCoachAgent } from "./workflow-coach-agent";
 import { startRelationshipChecker } from "./relationship-checker";
+import { startMaintenanceScheduler } from "./maintenance";
 
 const app = express();
 const httpServer = createServer(app);
@@ -96,11 +97,12 @@ app.use((req, res, next) => {
   // Start Fathom.video automatic sync scheduler
   startFathomSyncScheduler();
 
-  // Register agents and start relationship checker
+  // Register agents and start schedulers
   registerNurtureAgent();
   registerLeadIntakeAgent();
   registerWorkflowCoachAgent();
   startRelationshipChecker();
+  startMaintenanceScheduler(7);
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route

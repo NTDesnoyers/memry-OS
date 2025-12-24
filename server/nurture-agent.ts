@@ -11,12 +11,15 @@
 
 import { eventBus } from "./event-bus";
 import { storage } from "./storage";
+import { createLogger } from "./logger";
 import { 
   EventType, 
   AgentName, 
   type SystemEvent, 
   type AgentAction 
 } from "@shared/schema";
+
+const logger = createLogger('NurtureAgent');
 
 async function handleContactDue(event: SystemEvent): Promise<AgentAction[]> {
   const { dueReason, daysSinceContact, daysOverdue } = event.payload as {
@@ -275,5 +278,5 @@ export function registerNurtureAgent(): void {
     handler: handleNurtureEvent,
   });
 
-  console.log('[NurtureAgent] Registered and listening for relationship events');
+  logger.info('Registered and listening for relationship events');
 }

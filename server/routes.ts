@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
 import { 
   insertPersonSchema, 
   insertDealSchema, 
@@ -96,6 +97,16 @@ function getOpenAI(): OpenAI {
     openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   }
   return openai;
+}
+
+function selectModel(hasImages: boolean, hasTools: boolean, messageCount: number): { model: string; reason: string } {
+  if (hasImages) {
+    return { model: "gpt-4o", reason: "Vision/image analysis" };
+  }
+  if (hasTools || messageCount > 6) {
+    return { model: "gpt-4o", reason: "Tool calling or complex reasoning" };
+  }
+  return { model: "gpt-4o", reason: "Default" };
 }
 
 const uploadDir = path.join(process.cwd(), "uploads");
@@ -5921,6 +5932,28 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
       res.json({ success: true, interactionId: interaction.id });
     } catch (error: any) {
       console.error('Capture webhook error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Maintenance API endpoints
+  app.get("/api/maintenance/stats", async (_req, res) => {
+    try {
+      const { getEventStats } = await import("./maintenance");
+      const stats = await getEventStats();
+      res.json(stats);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/maintenance/cleanup", async (req, res) => {
+    try {
+      const { cleanupOldEvents } = await import("./maintenance");
+      const retentionDays = req.body.retentionDays || 7;
+      const result = await cleanupOldEvents(retentionDays);
+      res.json(result);
+    } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
   });

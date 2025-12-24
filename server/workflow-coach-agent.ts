@@ -14,8 +14,10 @@
 
 import { eventBus } from "./event-bus";
 import { storage } from "./storage";
+import { createLogger } from "./logger";
 import { AgentName, type SystemEvent, type InsertObserverSuggestion } from "@shared/schema";
 
+const logger = createLogger('WorkflowCoachAgent');
 const AGENT_NAME = "WorkflowCoachAgent";
 
 interface ContextData {
@@ -63,7 +65,7 @@ async function ensurePatternExists(patternId: string, intent: string): Promise<v
       isEnabled: true,
       userFeedbackScore: 0,
     });
-    console.log(`[${AGENT_NAME}] Created pattern: ${patternId}`);
+    logger.info(`Created pattern: ${patternId}`);
   }
 }
 
@@ -76,7 +78,7 @@ async function createSuggestionIfAllowed(
     
     const feedbackScore = await getPatternFeedbackScore(suggestion.patternId);
     if (feedbackScore < -3) {
-      console.log(`[${AGENT_NAME}] Suppressed suggestion (feedback score ${feedbackScore}): ${suggestion.patternId}`);
+      logger.info(`Suppressed suggestion (feedback score ${feedbackScore}): ${suggestion.patternId}`);
       return false;
     }
     
@@ -84,7 +86,7 @@ async function createSuggestionIfAllowed(
   }
   
   await storage.createObserverSuggestion(suggestion);
-  console.log(`[${AGENT_NAME}] Created suggestion: ${suggestion.title}`);
+  logger.info(`Created suggestion: ${suggestion.title}`);
   return true;
 }
 
@@ -272,7 +274,7 @@ async function handleLeadCreated(event: SystemEvent): Promise<void> {
       patternId: 'hot_lead_created',
       expiresAt: new Date(Date.now() + 4 * 60 * 60 * 1000),
     });
-    console.log(`[${AGENT_NAME}] Hot lead alert created for ${lead.name}`);
+    logger.info(`Hot lead alert created for ${lead.name}`);
   }
 }
 
@@ -313,7 +315,7 @@ export function registerWorkflowCoachAgent(): void {
     config: {}
   }).catch(() => {});
   
-  console.log(`[${AGENT_NAME}] Initialized with data-driven suggestions`);
+  logger.info(`Initialized with data-driven suggestions`);
 }
 
 export async function triggerContextSuggestions(route: string, entityType?: string, entityId?: string): Promise<void> {
