@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
 import { 
   insertPersonSchema, 
   insertDealSchema, 
@@ -5391,6 +5392,302 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
       await triggerContextSuggestions(route || '/', entityType, entityId);
       res.json({ success: true, message: "Context suggestions triggered" });
     } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // CRM Integrations API
+  app.get("/api/crm/integrations", async (req, res) => {
+    try {
+      const { crmSyncService } = await import("./crm-sync");
+      const integrations = await crmSyncService.getActiveIntegrations();
+      res.json(integrations);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/crm/integrations/all", async (req, res) => {
+    try {
+      const { crmIntegrations } = await import("@shared/schema");
+      const integrations = await db.select().from(crmIntegrations);
+      res.json(integrations);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/crm/integrations", async (req, res) => {
+    try {
+      const { crmIntegrations, insertCrmIntegrationSchema } = await import("@shared/schema");
+      const parsed = insertCrmIntegrationSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: fromZodError(parsed.error).message });
+      }
+      const [integration] = await db.insert(crmIntegrations).values(parsed.data).returning();
+      res.status(201).json(integration);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/crm/integrations/:id", async (req, res) => {
+    try {
+      const { crmIntegrations } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [integration] = await db
+        .update(crmIntegrations)
+        .set({ ...req.body, updatedAt: new Date() })
+        .where(eq(crmIntegrations.id, req.params.id))
+        .returning();
+      if (!integration) {
+        return res.status(404).json({ message: "Integration not found" });
+      }
+      res.json(integration);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/crm/integrations/:id", async (req, res) => {
+    try {
+      const { crmIntegrations } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      await db.delete(crmIntegrations).where(eq(crmIntegrations.id, req.params.id));
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/crm/integrations/:id/test", async (req, res) => {
+    try {
+      const { crmSyncService } = await import("./crm-sync");
+      const result = await crmSyncService.testConnection(req.params.id);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/crm/sync/process", async (req, res) => {
+    try {
+      const { crmSyncService } = await import("./crm-sync");
+      const limit = parseInt(req.query.limit as string) || 10;
+      const result = await crmSyncService.processQueue(limit);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/crm/sync/queue", async (req, res) => {
+    try {
+      const { crmSyncQueue } = await import("@shared/schema");
+      const { desc } = await import("drizzle-orm");
+      const items = await db
+        .select()
+        .from(crmSyncQueue)
+        .orderBy(desc(crmSyncQueue.createdAt))
+        .limit(50);
+      res.json(items);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Capture Tool Integrations API
+  app.get("/api/capture/integrations", async (req, res) => {
+    try {
+      const { captureIntegrations } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const integrations = await db
+        .select()
+        .from(captureIntegrations)
+        .where(eq(captureIntegrations.isActive, true));
+      res.json(integrations);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/capture/integrations/all", async (req, res) => {
+    try {
+      const { captureIntegrations } = await import("@shared/schema");
+      const integrations = await db.select().from(captureIntegrations);
+      res.json(integrations);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/capture/integrations", async (req, res) => {
+    try {
+      const { captureIntegrations, insertCaptureIntegrationSchema } = await import("@shared/schema");
+      const parsed = insertCaptureIntegrationSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: fromZodError(parsed.error).message });
+      }
+      const [integration] = await db.insert(captureIntegrations).values(parsed.data).returning();
+      res.status(201).json(integration);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/capture/integrations/:id", async (req, res) => {
+    try {
+      const { captureIntegrations } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [integration] = await db
+        .update(captureIntegrations)
+        .set({ ...req.body, updatedAt: new Date() })
+        .where(eq(captureIntegrations.id, req.params.id))
+        .returning();
+      if (!integration) {
+        return res.status(404).json({ message: "Integration not found" });
+      }
+      res.json(integration);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Webhook authentication helper
+  const verifyWebhookSecret = async (req: Request, provider: string): Promise<boolean> => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return false;
+    
+    const token = authHeader.replace('Bearer ', '');
+    if (!token) return false;
+    
+    try {
+      const { captureIntegrations } = await import("@shared/schema");
+      const { eq, and } = await import("drizzle-orm");
+      const [integration] = await db
+        .select()
+        .from(captureIntegrations)
+        .where(and(
+          eq(captureIntegrations.provider, provider),
+          eq(captureIntegrations.isActive, true)
+        ));
+      
+      const config = integration?.config as { webhookSecret?: string } | null;
+      if (!config?.webhookSecret) return false;
+      return token === config.webhookSecret;
+    } catch {
+      return false;
+    }
+  };
+
+  // Webhook endpoints for capture tools (Granola, Plaud via Zapier)
+  app.post("/api/webhooks/granola", async (req, res) => {
+    try {
+      const isAuthenticated = await verifyWebhookSecret(req, 'granola');
+      if (!isAuthenticated && process.env.NODE_ENV === 'production') {
+        return res.status(401).json({ message: 'Unauthorized: Missing or invalid webhook secret' });
+      }
+      
+      const { title, notes, transcript, date, attendees, enhanced_notes } = req.body;
+      
+      const interaction = await storage.createInteraction({
+        type: 'meeting',
+        source: 'granola',
+        title: title || 'Granola Meeting',
+        summary: enhanced_notes || notes,
+        transcript: transcript,
+        occurredAt: date ? new Date(date) : new Date(),
+        participants: attendees,
+        externalId: req.body.id || `granola-${Date.now()}`,
+      });
+      
+      eventBus.emit({
+        eventType: 'interaction.created',
+        eventCategory: 'communication',
+        sourceEntity: 'interaction',
+        sourceEntityId: interaction.id,
+        payload: { source: 'granola', type: 'meeting' },
+      });
+      
+      res.json({ success: true, interactionId: interaction.id });
+    } catch (error: any) {
+      console.error('Granola webhook error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/webhooks/plaud", async (req, res) => {
+    try {
+      const isAuthenticated = await verifyWebhookSecret(req, 'plaud');
+      if (!isAuthenticated && process.env.NODE_ENV === 'production') {
+        return res.status(401).json({ message: 'Unauthorized: Missing or invalid webhook secret' });
+      }
+      
+      const { title, transcript, summary, duration, date, participants, recording_url } = req.body;
+      
+      const interaction = await storage.createInteraction({
+        type: 'call',
+        source: 'plaud',
+        title: title || 'Plaud Recording',
+        summary: summary,
+        transcript: transcript,
+        occurredAt: date ? new Date(date) : new Date(),
+        duration: duration,
+        participants: participants,
+        externalLink: recording_url,
+        externalId: req.body.id || `plaud-${Date.now()}`,
+      });
+      
+      eventBus.emit({
+        eventType: 'interaction.created',
+        eventCategory: 'communication',
+        sourceEntity: 'interaction',
+        sourceEntityId: interaction.id,
+        payload: { source: 'plaud', type: 'call' },
+      });
+      
+      res.json({ success: true, interactionId: interaction.id });
+    } catch (error: any) {
+      console.error('Plaud webhook error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Generic Zapier webhook for any capture tool
+  app.post("/api/webhooks/capture", async (req, res) => {
+    try {
+      const source = req.body.source || 'zapier';
+      const isAuthenticated = await verifyWebhookSecret(req, source);
+      if (!isAuthenticated && process.env.NODE_ENV === 'production') {
+        return res.status(401).json({ message: 'Unauthorized: Missing or invalid webhook secret' });
+      }
+      
+      const { type, title, content, transcript, date, duration, participants, external_id, external_url } = req.body;
+      
+      const interaction = await storage.createInteraction({
+        type: type || 'note',
+        source: source || 'zapier',
+        title: title,
+        summary: content,
+        transcript: transcript,
+        occurredAt: date ? new Date(date) : new Date(),
+        duration: duration,
+        participants: participants,
+        externalLink: external_url,
+        externalId: external_id || `capture-${Date.now()}`,
+      });
+      
+      eventBus.emit({
+        eventType: 'interaction.created',
+        eventCategory: 'communication',
+        sourceEntity: 'interaction',
+        sourceEntityId: interaction.id,
+        payload: { source: source || 'zapier', type: type || 'note' },
+      });
+      
+      res.json({ success: true, interactionId: interaction.id });
+    } catch (error: any) {
+      console.error('Capture webhook error:', error);
       res.status(500).json({ message: error.message });
     }
   });

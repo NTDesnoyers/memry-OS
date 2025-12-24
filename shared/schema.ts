@@ -1394,3 +1394,133 @@ export const observerSuggestionsRelations = relations(observerSuggestions, ({ on
     references: [leads.id],
   }),
 }));
+
+/** CRM Integrations - Configuration for external CRM connections */
+export const crmIntegrations = pgTable("crm_integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  provider: text("provider").notNull(), // 'cloze', 'follow_up_boss', 'liondesk', 'zapier', etc.
+  displayName: text("display_name").notNull(),
+  isActive: boolean("is_active").default(false),
+  isPrimary: boolean("is_primary").default(false), // Only one can be primary
+  config: jsonb("config").$type<{
+    apiKey?: string;
+    apiUrl?: string;
+    webhookUrl?: string;
+    systemKey?: string; // For Follow Up Boss
+    refreshToken?: string; // For OAuth-based integrations
+    accessToken?: string;
+    tokenExpiresAt?: string;
+    customFields?: Record<string, string>; // Map Ninja OS fields to CRM fields
+  }>(),
+  lastSyncAt: timestamp("last_sync_at"),
+  lastSyncStatus: text("last_sync_status"), // 'success', 'failed', 'partial'
+  lastSyncError: text("last_sync_error"),
+  syncContactsEnabled: boolean("sync_contacts_enabled").default(true),
+  syncNotesEnabled: boolean("sync_notes_enabled").default(true),
+  syncTasksEnabled: boolean("sync_tasks_enabled").default(true),
+  syncDealsEnabled: boolean("sync_deals_enabled").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertCrmIntegrationSchema = createInsertSchema(crmIntegrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertCrmIntegration = z.infer<typeof insertCrmIntegrationSchema>;
+export type CrmIntegration = typeof crmIntegrations.$inferSelect;
+
+/** CRM Sync Queue - Queue for outbound sync operations */
+export const crmSyncQueue = pgTable("crm_sync_queue", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  integrationId: varchar("integration_id").references(() => crmIntegrations.id).notNull(),
+  entityType: text("entity_type").notNull(), // 'contact', 'note', 'task', 'interaction'
+  entityId: varchar("entity_id").notNull(), // ID of the local entity
+  operation: text("operation").notNull(), // 'create', 'update', 'delete'
+  payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+  status: text("status").notNull().default('pending'), // 'pending', 'processing', 'completed', 'failed', 'retry'
+  attempts: integer("attempts").default(0),
+  maxAttempts: integer("max_attempts").default(3),
+  lastError: text("last_error"),
+  externalId: varchar("external_id"), // ID returned from CRM after successful sync
+  scheduledFor: timestamp("scheduled_for").defaultNow().notNull(),
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertCrmSyncQueueSchema = createInsertSchema(crmSyncQueue).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertCrmSyncQueue = z.infer<typeof insertCrmSyncQueueSchema>;
+export type CrmSyncQueue = typeof crmSyncQueue.$inferSelect;
+
+/** CRM Field Mappings - External ID mappings for synced entities */
+export const crmFieldMappings = pgTable("crm_field_mappings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  integrationId: varchar("integration_id").references(() => crmIntegrations.id).notNull(),
+  localEntityType: text("local_entity_type").notNull(), // 'person', 'interaction', 'task', 'deal'
+  localEntityId: varchar("local_entity_id").notNull(),
+  externalId: varchar("external_id").notNull(), // ID in the external CRM
+  externalData: jsonb("external_data").$type<Record<string, unknown>>(), // Cache of external fields
+  lastSyncedAt: timestamp("last_synced_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertCrmFieldMappingSchema = createInsertSchema(crmFieldMappings).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertCrmFieldMapping = z.infer<typeof insertCrmFieldMappingSchema>;
+export type CrmFieldMapping = typeof crmFieldMappings.$inferSelect;
+
+/** Capture Tool Integrations - Plaud, Granola, Beeper, Fathom configs */
+export const captureIntegrations = pgTable("capture_integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  provider: text("provider").notNull(), // 'plaud', 'granola', 'beeper', 'fathom', 'gmail', 'google_calendar'
+  displayName: text("display_name").notNull(),
+  isActive: boolean("is_active").default(false),
+  config: jsonb("config").$type<{
+    apiKey?: string;
+    webhookUrl?: string; // For receiving data from Zapier
+    webhookSecret?: string;
+    accessToken?: string;
+    refreshToken?: string;
+    tokenExpiresAt?: string;
+    beeperDesktopPort?: number; // For Beeper Desktop API
+    granolaFolder?: string; // Specific Granola folder to watch
+  }>(),
+  lastSyncAt: timestamp("last_sync_at"),
+  lastSyncStatus: text("last_sync_status"),
+  lastSyncError: text("last_sync_error"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertCaptureIntegrationSchema = createInsertSchema(captureIntegrations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertCaptureIntegration = z.infer<typeof insertCaptureIntegrationSchema>;
+export type CaptureIntegration = typeof captureIntegrations.$inferSelect;
+
+// CRM Sync Queue Relations
+export const crmSyncQueueRelations = relations(crmSyncQueue, ({ one }) => ({
+  integration: one(crmIntegrations, {
+    fields: [crmSyncQueue.integrationId],
+    references: [crmIntegrations.id],
+  }),
+}));
+
+export const crmFieldMappingsRelations = relations(crmFieldMappings, ({ one }) => ({
+  integration: one(crmIntegrations, {
+    fields: [crmFieldMappings.integrationId],
+    references: [crmIntegrations.id],
+  }),
+}));
