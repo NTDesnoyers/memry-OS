@@ -170,3 +170,17 @@ Ninja OS is a multi-agent, event-driven system that orchestrates actions while C
 - **Memory Augmentation**: Never forget a detail about any relationship
 - **Decision Support**: AI-powered strategic recommendations
 - **Skill Development**: Personalized coaching for Ninja Selling mastery
+
+## Strategic Positioning
+
+**AI-Native vs AI-Bolted-On** (Inspired by Gavin Baker's "SaaS Death Trap" thesis):
+
+Traditional CRMs (Cloze, Follow Up Boss, Salesforce) are protecting 80%+ margins and reluctantly adding AI features. Ninja OS is AI-native with no legacy margins to protect—comfortable at 35-40% gross margins while delivering 10x more value.
+
+**Core Differentiation:**
+1. **AI That Takes Action**: Not just data display—AI drafts, sends, schedules with user approval
+2. **Verify → Automate Pattern**: Build trust incrementally (suggest → draft → notify → autonomous)
+3. **Voice + Relationship Memory**: Voice AI and FORD notes create irreplaceable context
+4. **Ninja Selling Specialization**: Serve one methodology perfectly vs. everyone poorly
+
+**See:** `docs/STRATEGIC_ROADMAP.md` for detailed 90-day sprint plan and phase breakdown.
