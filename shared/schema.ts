@@ -1510,6 +1510,41 @@ export const insertCaptureIntegrationSchema = createInsertSchema(captureIntegrat
 export type InsertCaptureIntegration = z.infer<typeof insertCaptureIntegrationSchema>;
 export type CaptureIntegration = typeof captureIntegrations.$inferSelect;
 
+// Webhook payload validation schemas
+export const granolaWebhookSchema = z.object({
+  id: z.string().optional(),
+  title: z.string().min(1).max(255),
+  notes: z.string().optional(),
+  transcript: z.string().optional(),
+  enhanced_notes: z.string().optional(),
+  date: z.string().datetime().optional(),
+  attendees: z.array(z.string()).optional(),
+}).strict();
+
+export const plaudWebhookSchema = z.object({
+  id: z.string().optional(),
+  title: z.string().min(1).max(255),
+  transcript: z.string().optional(),
+  summary: z.string().optional(),
+  duration: z.number().min(0).optional(),
+  date: z.string().datetime().optional(),
+  participants: z.array(z.string()).optional(),
+  recording_url: z.string().url().optional(),
+}).strict();
+
+export const captureWebhookSchema = z.object({
+  source: z.string().min(1).max(50),
+  type: z.enum(['call', 'meeting', 'note', 'email', 'text']).optional(),
+  title: z.string().min(1).max(255),
+  content: z.string().optional(),
+  transcript: z.string().optional(),
+  date: z.string().datetime().optional(),
+  duration: z.number().min(0).optional(),
+  participants: z.array(z.string()).optional(),
+  external_id: z.string().optional(),
+  external_url: z.string().url().optional(),
+}).strict();
+
 // CRM Sync Queue Relations
 export const crmSyncQueueRelations = relations(crmSyncQueue, ({ one }) => ({
   integration: one(crmIntegrations, {

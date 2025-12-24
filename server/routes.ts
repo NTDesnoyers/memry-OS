@@ -21,7 +21,10 @@ import {
   insertContentTopicSchema,
   insertContentIdeaSchema,
   insertContentCalendarSchema,
-  insertDashboardWidgetSchema
+  insertDashboardWidgetSchema,
+  granolaWebhookSchema,
+  plaudWebhookSchema,
+  captureWebhookSchema
 } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import multer from "multer";
@@ -5554,8 +5557,8 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
   });
 
   // Webhook authentication helper
-  const verifyWebhookSecret = async (req: Request, provider: string): Promise<boolean> => {
-    const authHeader = req.headers.authorization;
+  const verifyWebhookSecret = async (req: any, provider: string): Promise<boolean> => {
+    const authHeader = req.headers?.authorization;
     if (!authHeader) return false;
     
     const token = authHeader.replace('Bearer ', '');
@@ -5588,7 +5591,12 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
         return res.status(401).json({ message: 'Unauthorized: Missing or invalid webhook secret' });
       }
       
-      const { title, notes, transcript, date, attendees, enhanced_notes } = req.body;
+      const parsed = granolaWebhookSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: fromZodError(parsed.error).message });
+      }
+      
+      const { title, notes, transcript, date, attendees, enhanced_notes } = parsed.data;
       
       const interaction = await storage.createInteraction({
         type: 'meeting',
@@ -5623,7 +5631,12 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
         return res.status(401).json({ message: 'Unauthorized: Missing or invalid webhook secret' });
       }
       
-      const { title, transcript, summary, duration, date, participants, recording_url } = req.body;
+      const parsed = plaudWebhookSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: fromZodError(parsed.error).message });
+      }
+      
+      const { title, transcript, summary, duration, date, participants, recording_url } = parsed.data;
       
       const interaction = await storage.createInteraction({
         type: 'call',
@@ -5662,7 +5675,12 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
         return res.status(401).json({ message: 'Unauthorized: Missing or invalid webhook secret' });
       }
       
-      const { type, title, content, transcript, date, duration, participants, external_id, external_url } = req.body;
+      const parsed = captureWebhookSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: fromZodError(parsed.error).message });
+      }
+      
+      const { type, title, content, transcript, date, duration, participants, external_id, external_url } = parsed.data;
       
       const interaction = await storage.createInteraction({
         type: type || 'note',
