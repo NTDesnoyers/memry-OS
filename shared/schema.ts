@@ -1872,3 +1872,23 @@ export const userCoreProfileRelations = relations(userCoreProfile, ({ one }) => 
     references: [betaUsers.id],
   }),
 }));
+
+/** Beta Feedback - User feedback submissions for bug reports, ideas, and praise */
+export const betaFeedback = pgTable("beta_feedback", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: text("type").notNull(), // bug, idea, praise
+  message: text("message").notNull(),
+  page: text("page"), // URL path where feedback was submitted
+  userAgent: text("user_agent"),
+  status: text("status").notNull().default("new"), // new, reviewed, resolved, archived
+  resolution: text("resolution"), // How/if the feedback was addressed
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertBetaFeedbackSchema = createInsertSchema(betaFeedback).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertBetaFeedback = z.infer<typeof insertBetaFeedbackSchema>;
+export type BetaFeedback = typeof betaFeedback.$inferSelect;

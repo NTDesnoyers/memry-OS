@@ -4,6 +4,9 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CommandPalette } from "@/components/command-palette";
+import { ErrorBoundary } from "@/components/error-boundary";
+import { FeedbackWidget } from "@/components/feedback-widget";
+import { WelcomeTour } from "@/components/welcome-tour";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import WeeklyReport from "@/pages/weekly-report";
@@ -80,13 +83,17 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <CommandPalette />
-        <Router />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <CommandPalette />
+          <FeedbackWidget />
+          <WelcomeTour />
+          <Router />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

@@ -6599,6 +6599,53 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
     }
   });
 
+  // Beta Feedback API
+  app.post("/api/feedback", async (req, res) => {
+    try {
+      const { betaFeedback, insertBetaFeedbackSchema } = await import("@shared/schema");
+      const parsed = insertBetaFeedbackSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: fromZodError(parsed.error).message });
+      }
+      const [feedback] = await db.insert(betaFeedback).values(parsed.data).returning();
+      res.status(201).json(feedback);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/feedback", async (req, res) => {
+    try {
+      const { betaFeedback } = await import("@shared/schema");
+      const { desc } = await import("drizzle-orm");
+      const feedback = await db.select().from(betaFeedback).orderBy(desc(betaFeedback.createdAt));
+      res.json(feedback);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Health Check API for monitoring
+  app.get("/api/health", async (req, res) => {
+    try {
+      const { sql } = await import("drizzle-orm");
+      await db.execute(sql`SELECT 1`);
+      res.json({
+        status: "healthy",
+        timestamp: new Date().toISOString(),
+        database: "connected",
+        version: process.env.npm_package_version || "1.0.0",
+      });
+    } catch (error: any) {
+      res.status(503).json({
+        status: "unhealthy",
+        timestamp: new Date().toISOString(),
+        database: "disconnected",
+        error: error.message,
+      });
+    }
+  });
+
   // Webhook authentication helper
   const verifyWebhookSecret = async (req: any, provider: string): Promise<boolean> => {
     const authHeader = req.headers?.authorization;
