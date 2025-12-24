@@ -1,0 +1,999 @@
+AI Integration - Initial Call - December 16
+VIEW RECORDING - 114 mins (No highlights): https://fathom.video/share/B44WnSkkLxbiCsE1vTMnsRyfTJ8zY_8E
+
+---
+
+0:00 - Michael Wade (Michael Wade)
+  Nathan, how are you, man?
+
+0:01 - Nathan Desnoyers (desnoyersproperties.com)
+  Oh, Jesus.
+
+0:01 - Michael Wade (Michael Wade)
+  Hello. Jesus, I'm sorry, I have a lack of voice.
+
+0:05 - Nathan Desnoyers (desnoyersproperties.com)
+  You're good. You're good. I need to turn my volume down a bit. Good, man. How are you? I was in a reading.  I've been building stuff with Replit while laying in bed, and today is my first day on it in a while on my computer.  And I was trying to automate or create a form for the weekly meeting agenda, and it's kind of turned into making a fully customized CRM because I didn't realize how much stuff you could do in Replit.  I was just like, can you do this? And I said, yes, I did it. And I was like, oh, wow.  Now it hasn't fully deployed yet. But yeah, and now I'm thinking, the first thought, well, not the first, one of the thoughts I had was, this actually looks kind of similar to GoHighLevel, but I thought GoHighLevel was kind of overkill.  And now I'm wondering if maybe I could just do all this with a notion, but I don't I
+
+1:00 - Michael Wade (Michael Wade)
+  think you can do the majority of what you want to do in Notion. Yeah. If you just use, like, tally.so, you can build exactly what you need.
+
+1:11 - Nathan Desnoyers (desnoyersproperties.com)
+  I haven't messed around with tally. I don't know what that is. I mean, I remember you saying that, but...
+
+1:16 - Michael Wade (Michael Wade)
+  I'll show you real quick.
+  SCREEN SHARING: Michael started screen sharing - WATCH: https://fathom.video/share/B44WnSkkLxbiCsE1vTMnsRyfTJ8zY_8E?timestamp=77.583152
+
+1:17 - Nathan Desnoyers (desnoyersproperties.com)
+  Oh, okay, yeah, so it's Google Forms. Okay. Or Simulator Forms.
+
+1:21 - Michael Wade (Michael Wade)
+  It's way better. Way, way, way better. So this is tally. So basically what you can do, and I'll show you, like...  Let me show you one that I've been doing for my open houses. So when I send something to a listing agent, these are all the questions that they answer.  So I have all the submissions here, and it's all categorized, and it goes directly into Notion. It's like all these match up to a field in Notion.
+
+1:54 - Nathan Desnoyers (desnoyersproperties.com)
+  Does that make sense?
+
+1:56 - Michael Wade (Michael Wade)
+  Yeah. And then when they click on it, you can see it has a unique one. With ask Michael Wade Realtor, that's what the actual image looks like, that's just one I create within Canva.  And when I paste it, it loads up like this. So you enter the address, you then go through.
+
+2:20 - Nathan Desnoyers (desnoyersproperties.com)
+  Oh, that's nice.
+
+2:22 - Michael Wade (Michael Wade)
+  And this took me like, I don't know, like 20 minutes to build. Next. Then you just go through the answers and you can change all the colors, you can make it really simple.  And my whole goal is to make this as simple as possible for people. And I can even add signatures.  And finish the survey. And that's how fast it is.
+
+2:51 - Nathan Desnoyers (desnoyersproperties.com)
+  it goes directly on my website. Wow. Okay. So, so do you use that for client facing stuff as well?  Just... And Or what are your other use cases of telly?
+
+3:03 - Michael Wade (Michael Wade)
+  yeah. So I'll send a survey out for offers. I send one for buyers. I'm actually redoing both of those right now.  And I do one for sellers.
+
+3:19 - Nathan Desnoyers (desnoyersproperties.com)
+  Cool.
+
+3:21 - Michael Wade (Michael Wade)
+  So you can get the majority of your stuff directly from that. And I'll show you, like, if I were to start again, let's say I wanted to build a survey for, I'll give you an example.  So this is a form that I use, right? What I'll do is I'll just copy this, I'll paste an idea, and I'll say, I would like to make this a survey in tally.so.  Please modify it, make adjustments, and let me know where to paste the information in. you. you. Thank And then what it does is it's just going to provide me with all the information about how to do it.  It even tells me what to do for the heading. It gives me the things to copy and paste. And I just go straight down the list.  And that's how I built it.
+
+4:28 - Nathan Desnoyers (desnoyersproperties.com)
+  So yeah, I really don't think about it any more than that. Yeah. So the DIA is the, what, what GPT is that using?
+
+4:42 - Michael Wade (Michael Wade)
+  Can you choose? using a 5.2.
+
+4:45 - Nathan Desnoyers (desnoyersproperties.com)
+  Okay.
+  ACTION ITEM: Share Dia skills w/ Nathan; grant access - WATCH: https://fathom.video/share/B44WnSkkLxbiCsE1vTMnsRyfTJ8zY_8E?timestamp=286.9999
+
+4:47 - Michael Wade (Michael Wade)
+  So basically, DIA is my browser. It's amazing. And what's nice about DIA is you have all of these skills that you can layer on top.  And I'll give you access to all my skills. bit bit bit bit of a And I have a bunch of different skills that I built out.  So I'll even make them custom, like compare listings. So watch this. So if I go to Zillow, and I'll just pick three listings real quick, one, two, three, four.  Then I hit command E, and I hit slash, I do compare listings, it will then break down all those different listings that I just did.
+
+5:43 - Nathan Desnoyers (desnoyersproperties.com)
+  Where are the tabs? I didn't see them open.
+
+5:46 - Michael Wade (Michael Wade)
+  Actually, I messed up. sorry.
+
+5:50 - Nathan Desnoyers (desnoyersproperties.com)
+  Are you opening a window?
+
+5:51 - Michael Wade (Michael Wade)
+  So are over here. Oh, okay. So Dia keeps everything in the, in the left pane here. I'm sorry. One second.  Let me move this up here so you can see me look up. I have so many monitors, it's hard for me to them off.  So let me show you. So I have everything in a pane over here. Does that make sense? Can you see my screen?
+
+6:18 - Nathan Desnoyers (desnoyersproperties.com)
+  No, just see you.
+  SCREEN SHARING: Michael started screen sharing - WATCH: https://fathom.video/share/B44WnSkkLxbiCsE1vTMnsRyfTJ8zY_8E?timestamp=381.48464
+
+6:20 - Michael Wade (Michael Wade)
+  One second. So here's desktop 2. So what you'll see is that everything here, man, is these are just all of my apps, everything that I'm using.  And then when I hit command E, I can then hit at, and I'll do all open Zolo tabs. It loads more.  And I hit compare listings when I hit enter. Then it processes all of them.
+
+6:51 - Nathan Desnoyers (desnoyersproperties.com)
+  And so the compare listings is a shortcut you made in DIA that has explicit instructions on what to do.  Exactly.
+
+6:59 - Michael Wade (Michael Wade)
+  And then I can say... Say, at Gmail, draft an email to michaelpaulwade at gmail.com, explaining what listings we're going be looking at.
+
+7:21 - Nathan Desnoyers (desnoyersproperties.com)
+  Oh, wow.
+
+7:23 - Michael Wade (Michael Wade)
+  Then when I hit create draft, you'll see what it does.
+
+7:33 - Nathan Desnoyers (desnoyersproperties.com)
+  Oh, wow. That is fast.
+
+7:36 - Michael Wade (Michael Wade)
+  Dump. So that's how I send emails. Jesus. When people see this the first time, they're like, wait, what?
+
+7:47 - Nathan Desnoyers (desnoyersproperties.com)
+  Yeah, that's pretty fast. mean, I'm trying to think of my workflow. I was to do all that, I would.  I mean, I just don't do that. I mean, I would just schedule them in in um What's it called?  And showing time and just maybe text them some stuff ahead of time, but nothing that detailed. Yeah, or detailed, yeah.
+
+8:12 - Michael Wade (Michael Wade)
+  And I'll just show you some like real use cases. So let's say I go here, and I have a client who, let's say I want to send her this property.  I'll just go right here, and close the other ones that are up. And then I am going to say at, or I'm going to do slash rather, and I'm going to do a Okay.  Okay. Okay. Okay. Okay. Okay. Okay. So if I wasn't working with this person, would happen is, and I'll plug your information into it so you can see, it'll interrupt the message for Sabrina.  Now keep in mind, I don't have her tab open. So this is a powerful part of Dia. I can go to Lofty, and I can then blend the tabs together.  So let me show you. I'll go to Sabrina. So now it's going to read this one, and it's going to read that one.  And I'm going to do the same thing, but I'm just going to say tour invite. I'm going to do at Sabrina text.  Now it's going to read both, and then identify the information.
+
+9:51 - Nathan Desnoyers (desnoyersproperties.com)
+  Oh, wow.
+
+9:52 - Michael Wade (Michael Wade)
+  Yeah, okay. And then on my keyboard, I will hit option M. around and And I'm just going to change, what's your phone number?
+
+10:04 - Nathan Desnoyers (desnoyersproperties.com)
+  571-361-1841.
+
+10:11 - Michael Wade (Michael Wade)
+  Let's do this. Boom. He's got a text message.
+
+10:26 - Nathan Desnoyers (desnoyersproperties.com)
+  Oh, wow. It pulled her number automatically because you blended it with losty.
+
+10:34 - Michael Wade (Michael Wade)
+  Yep, because I referenced it right here. You see that? Yeah. And then all I do to build these, and I'm just going show you, it's so easy.  What I do is I just have a bunch of different skills set up. And I'll just show you, for example, this one.  And I'll just show you what's going on. back. do the open house one, just so you can see what that looks like.  So I do have to book a few open houses, so it's a good thing to book. So I'll go to, or actually I'll do a lead, no response.  So what it does is it reads all of their information.
+
+11:28 - Nathan Desnoyers (desnoyersproperties.com)
+  Do you see that script? Read all content. From active tab. Okay, yeah.
+
+11:43 - Michael Wade (Michael Wade)
+  So here's where it gets cool. So watch this. So I go to Lofty. And I have all of these contacts that I haven't messaged in a while.  Because you always have leads that, you know, kind of fall by the wayside. So let's go to... go let's go to...  other... other... Last touch, and we're going to do all. Okay, so now watch this. I'm going to open this one.  I'm going to open this one. Open this one. Open this one. Open this one. Open this one. And I'm just going to do these next few.  So I have one, two, three, four, five, six, seven, eight. Okay? I hit Command-E.
+
+12:36 - Nathan Desnoyers (desnoyersproperties.com)
+  I'm going to do N.
+
+12:38 - Michael Wade (Michael Wade)
+  So Command-E just brings up, like, the sidebar system. Correct. I'm going to refresh it. And what I'm going to do is I'm going to do at all open lofty tabs.  Okay, yeah. And then I'm to do slash, and I'm going to decide what do I want to do. So what I'm going to do...  So no reply, and these are, I just memorized what these are.
+
+13:07 - Nathan Desnoyers (desnoyersproperties.com)
+  Does that make sense?
+
+13:09 - Michael Wade (Michael Wade)
+  Yeah. Related to what? Old lead, no response. Now what it's going to do is it's going to go through.  Okay, do this for all of them. usually does it for all of them. don't know why it's messing up right now.
+
+13:47 - Nathan Desnoyers (desnoyersproperties.com)
+  So again, DIA operates pretty much exactly like Perplexity, just has better security, you're saying?
+
+13:52 - Michael Wade (Michael Wade)
+  Way, way, way better, and it's far faster.
+
+13:57 - Nathan Desnoyers (desnoyersproperties.com)
+  Sorry, not Perplexity, Comet, yeah.
+
+14:03 - Michael Wade (Michael Wade)
+  And then what I do is I hit copy, and I hit option M, which is the command that I have for Raycast, and I hit command V to paste.  Enter.
+
+14:25 - Nathan Desnoyers (desnoyersproperties.com)
+  But do you have to, does it send it or do have to click it again for it to send it?
+
+14:29 - Michael Wade (Michael Wade)
+  Yeah, it's sending it right now.
+
+14:31 - Nathan Desnoyers (desnoyersproperties.com)
+  Okay, well. Yeah, I had, I was at KW where I did the bulk of my open houses, and I was using command, and command sucks.  And when I left, I was like, okay, you're probably bringing the data with me. I need to go find it.  I mean, I have, I have hundreds if not thousands of old open house leads that are, we're all organized through command, but now we're just, you know, I texted and emailed most of them.  So they, they exist.
+
+15:08 - Michael Wade (Michael Wade)
+  And then check this out. then what I'll do is I'll then take this information here. I go over to Lofty.  I hit the Lofty AI. And then I'll say, please log the following message for every contact related to their phone number.  And then I hit shift return, shift return. I paste it in. Done. And then what Lofty is going to do is now it's going to update every lead in my CRM.
+
+15:43 - Nathan Desnoyers (desnoyersproperties.com)
+  Yeah. See, this is what I liked about Close or what I like about Close is that I don't have to update this by hand.
+
+15:52 - Michael Wade (Michael Wade)
+  It'll do it automatically.
+
+15:54 - Nathan Desnoyers (desnoyersproperties.com)
+  Oh, yeah. for that message. Yeah. But I guess... Update just has more functionality to be on that, so it makes it worth it.  Okay, that's pretty empty. So, yeah, I haven't – so, like I said, I created a daily time block to, like, create stuff.  I didn't get to Raycast today. I've just been in Replay all day, and I actually went way over my time block for it.  But so I think I'm going to get into that. I sent you a podcast for this guy. was also using Fabric.
+
+16:24 - Michael Wade (Michael Wade)
+  I don't know if you're familiar with Fabric.
+
+16:25 - Nathan Desnoyers (desnoyersproperties.com)
+  No, what is that? I don't know too much about it. It sounds like it was more customizations on top of it.  He used it, like, in conjunction with Raycast. So as I figure that out, I'll let you know.
+
+16:36 - Michael Wade (Michael Wade)
+  yeah, I'm just going to show you some basic stuff with Raycast just for two seconds. Just because I think it will help you.  Okay, so this is Raycast right here. I'm going to share my screen again. me one second. All righty. So you can have all these tabs open, right?  Yeah. It's cool. But this is...
+
+17:00 - Nathan Desnoyers (desnoyersproperties.com)
+  This Raycast right here. Yep.
+
+17:02 - Michael Wade (Michael Wade)
+  And what's nice about Raycast is these are all my favorites. This is what I do. A really cool feature that I love is, I'll get to it in a second.  But you see I have all these MCPs that are loaded in here. So they can read basically everything that I'm doing, and I have all of my commands set up.
+
+17:24 - Nathan Desnoyers (desnoyersproperties.com)
+  When is an MCP more appropriate than a Zapier or a Make or N8N or something like that?
+
+17:33 - Michael Wade (Michael Wade)
+  To be really candid with you, I think that it just makes your life easier to do MCPs. Because I don't have to build stuff out.
+
+17:42 - Nathan Desnoyers (desnoyersproperties.com)
+  Okay.
+
+17:42 - Michael Wade (Michael Wade)
+  The nice part about MCPs is they're free. So I'm doing everything very basically through my MCP connection.
+
+17:53 - Nathan Desnoyers (desnoyersproperties.com)
+  Okay.
+
+17:53 - Michael Wade (Michael Wade)
+  I can do everything that I can do with a... Um... What is it called? With make.com just through an MCP and it doesn't cost me anything.  So this is the Raycast tab. The thing you should know is that command K is how you modify or change any of these individual things.  Oh, so it's kind of like superhuman.
+
+18:22 - Nathan Desnoyers (desnoyersproperties.com)
+  Yeah.
+
+18:23 - Michael Wade (Michael Wade)
+  Exactly.
+
+18:24 - Nathan Desnoyers (desnoyersproperties.com)
+  Yeah.
+
+18:25 - Michael Wade (Michael Wade)
+  Okay, cool. And what you'll learn is that you just learn what these little things are.
+
+18:29 - Nathan Desnoyers (desnoyersproperties.com)
+  Right. Does that make sense? Yeah.
+
+18:32 - Michael Wade (Michael Wade)
+  It makes sense.
+
+18:33 - Nathan Desnoyers (desnoyersproperties.com)
+  Now. If you're ever confused, just command K.
+
+18:35 - Michael Wade (Michael Wade)
+  Exactly. Now what you can do is that everything is linked through AI. So you can do all your AI searches here.  So before I get to that, just a few cool things. One thing that's nice about Raycast is that you can do window management.  So I have all my windows managed. This is my planner. I have all my windows managed. Yeah. That's
+
+19:02 - Nathan Desnoyers (desnoyersproperties.com)
+  Oh, you're doing all this by hand? By hand. Oh, that's so sick.
+
+19:09 - Michael Wade (Michael Wade)
+  I have a studio monitor and my Mac, and it's like... So if I have these tabs open? Yeah, yeah.  So let me just do this real quick. So if I just do a few of these, Google, I can then do...  I hold a hyperkey, which I have set to cap locks, and I just hold cap, and I hit left, and I have it toggle to three different sizes.  And then for the one on the right, if I click it again, it just toggles again.
+
+19:40 - Nathan Desnoyers (desnoyersproperties.com)
+  Can you send it to different monitors as well?
+
+19:43 - Michael Wade (Michael Wade)
+  Unfortunately, not.
+
+19:44 - Nathan Desnoyers (desnoyersproperties.com)
+  Not yet.
+
+19:45 - Michael Wade (Michael Wade)
+  But to be honest with you, I do it so quickly that it doesn't really...
+
+19:49 - Nathan Desnoyers (desnoyersproperties.com)
+  Yeah. Does that make sense? Yeah, I know that makes sense. I mean, yeah, I have a studio monitor, so it's enough real estate for me to do split screen and not take too much space, and I have my MacBook Air on the right, so...  know. I just want about.
+
+20:02 - Michael Wade (Michael Wade)
+  So then I can bring this to the center, and then if I hold shift and the cab lock key, I can zoom in or out of each tab.
+
+20:13 - Nathan Desnoyers (desnoyersproperties.com)
+  Oh, wow.
+
+20:14 - Michael Wade (Michael Wade)
+  Okay. So I fully customize this to really kind of do everything that I want. Yeah. And how I get to that is I hold option and the – so if go to Raycast.  Hold on one second. I'm sorry. It's one of the negatives of doing this on the fly. So if I do Raycast right here, and then I hit command and then the comma key, it loads up the Raycast settings.
+
+20:58 - Nathan Desnoyers (desnoyersproperties.com)
+  Okay, nice. Mine is – so that's – I'm talking around a now. I've actually been using Raycast just to bring up the spotlight.
+
+21:05 - Michael Wade (Michael Wade)
+  haven't gone any deeper than that.
+
+21:06 - Nathan Desnoyers (desnoyersproperties.com)
+  Yeah, you're trying to just give me, like, very rough overview. That's baked in. right. Because I know you can customize everything if you wanted to.  You can make the settings a different look.
+
+21:18 - Michael Wade (Michael Wade)
+  Exactly. So, for example, I have Quick Links. Now, here's what's really cool. Quick Links, most people think are just websites, right?
+
+21:30 - Nathan Desnoyers (desnoyersproperties.com)
+  It can be anything.
+
+21:32 - Michael Wade (Michael Wade)
+  But they can be anything. So, for example, my cellar file is cap2, and it loads up with my cellar transactions I'm working on right now.
+
+21:41 - Nathan Desnoyers (desnoyersproperties.com)
+  Oh, yeah. Good question. I've been dealing around with a stream deck. Do you have one, or do you think you can pretty much do everything through Raycast?
+
+21:53 - Michael Wade (Michael Wade)
+  I can do everything through Raycast, man.
+
+21:55 - Nathan Desnoyers (desnoyersproperties.com)
+  Okay, yeah. Because I was thinking, the more I thought about it, I was like, I think the stream deck might be useful.  We'll of a so. I If I started streaming, which is probably what it's for.
+
+22:03 - Michael Wade (Michael Wade)
+  Yeah. I don't even know if it's necessary to be really candid with you.
+
+22:07 - Nathan Desnoyers (desnoyersproperties.com)
+  Yeah. I might just return it.
+
+22:09 - Michael Wade (Michael Wade)
+  Let's see. And then I have every section fully loaded up. Now, I also have all my apps. And you can filter to see which ones are enabled and which ones have a conflict.
+  ACTION ITEM: Send Raycast window-management screenshot to Nathan - WATCH: https://fathom.video/share/B44WnSkkLxbiCsE1vTMnsRyfTJ8zY_8E?timestamp=1346.9999  Extensions apps. Okay. I can see which ones have been customized. I don't have any scripts here right now. And I can see all my commands that I have, too.  So, these are the window management commands. I'll send you a screenshot of that so you have exactly how I'm doing it.
+
+22:52 - Nathan Desnoyers (desnoyersproperties.com)
+  So, yeah, I'm just going to start digging into that. You learn just all Raycast just through just trial and error and their YouTube.  Thank you, the
+
+23:02 - Michael Wade (Michael Wade)
+  I really just taught myself.
+
+23:04 - Nathan Desnoyers (desnoyersproperties.com)
+  Yeah. Okay. It seems like it's, mean, because like with superhuman, it's like once you learn just the command K, anytime you get stuck, I just do command K.  It's kind of a similar thing.
+
+23:16 - Michael Wade (Michael Wade)
+  One thousand percent.
+
+23:17 - Nathan Desnoyers (desnoyersproperties.com)
+  Okay. Yeah. We already established that. It's like superhuman for everything.
+
+23:22 - Michael Wade (Michael Wade)
+  Yeah. It's like superhuman for everything else.
+
+23:25 - Nathan Desnoyers (desnoyersproperties.com)
+  So when you have, when you have it on your phone, right, all this stuff ports over to the phone, but do you make phone specific quick links or extensions?
+
+23:35 - Michael Wade (Michael Wade)
+  Sure.
+
+23:36 - Nathan Desnoyers (desnoyersproperties.com)
+  Yeah. So I imagine some of this doesn't quite translate to the phone. Like if you wanted to, if you, if you have a quick link or an extension to like a spreadsheet, does that, do you have to create something unique for the phone or?
+
+23:51 - Michael Wade (Michael Wade)
+  It looks right up.
+
+23:53 - Nathan Desnoyers (desnoyersproperties.com)
+  Okay.
+
+23:57 - Michael Wade (Michael Wade)
+  And we'll only court the ones that do connect. So if it doesn't connect, it's not going to port it.  And then when you click on, I always turn on the iCloud sync, I don't have a team, but everything's all logged in here.  I would recommend setting a hyperkey, if you haven't already.
+
+24:24 - Nathan Desnoyers (desnoyersproperties.com)
+  Explain the hyperkey.
+
+24:31 - Michael Wade (Michael Wade)
+  So the hyperkey gives you a whole separate, it's like pushing down these three modifier keys at the same time.  Oh, okay. Okay. So what it's doing is, with a hyperkey, can hold down, so mine shift, sorry, cap lock, so I can hold down cap lock and hit D, and then D pops right up.  hold down lock. lock. I can hold hold hold hold
+
+25:12 - Nathan Desnoyers (desnoyersproperties.com)
+  Let's just set up the superhuman one, okay, go to extensions, or is this extensions and then quick links?
+
+25:21 - Michael Wade (Michael Wade)
+  Mm-hmm.
+
+25:22 - Nathan Desnoyers (desnoyersproperties.com)
+  Now make sure there two ways to do it.
+
+25:27 - Michael Wade (Michael Wade)
+  Go to extension. Yep. And then just in search type super, make sure it's on all.
+
+25:36 - Nathan Desnoyers (desnoyersproperties.com)
+  Yeah.
+
+25:37 - Michael Wade (Michael Wade)
+  Okay. And you see, I have two.
+
+25:40 - Nathan Desnoyers (desnoyersproperties.com)
+  I have a web version. Oh.
+
+25:42 - Michael Wade (Michael Wade)
+  Record hockey.
+
+25:46 - Nathan Desnoyers (desnoyersproperties.com)
+  When would you use the web version?
+
+25:49 - Michael Wade (Michael Wade)
+  When I want Dia to be able to see the web version.
+
+25:52 - Nathan Desnoyers (desnoyersproperties.com)
+  Oh, okay. So you use, wait, let me see. Applications and quick links. Okay. So applications.
+
+26:03 - Michael Wade (Michael Wade)
+  So the little star is the hyper key.
+
+26:07 - Nathan Desnoyers (desnoyersproperties.com)
+  Oh, okay.
+
+26:09 - Michael Wade (Michael Wade)
+  And then the up is shift. All I'm doing is I'm just taking my finger and holding down the shift, then I'm this finger and pressing it on the...
+
+26:23 - Nathan Desnoyers (desnoyersproperties.com)
+  Okay. That's pretty sick. Okay, so you have...
+
+26:28 - Michael Wade (Michael Wade)
+  Let's just set up a queue for you.
+
+26:30 - Nathan Desnoyers (desnoyersproperties.com)
+  okay. So I just want to say, so caps s is, so that's an application, quick links is going to be...
+
+26:37 - Michael Wade (Michael Wade)
+  Quick links is just going to this right here.
+
+26:43 - Nathan Desnoyers (desnoyersproperties.com)
+  Okay. So let's add something in there. I'll just give you the exact text to add. Okay. Thank you. Okay, so I go to, so I made one for, I made a quick link, no, wait, what did I do?  Where did it go? Because if I do caps S right now, it pulls up superhuman. So I did that, but now I'm trying to find where, so I go into commands, no, quick links, add, what you do is do this little plus button, just click that, and you'll get all the different options for everything you can build.  Okay.
+
+27:40 - Michael Wade (Michael Wade)
+  So I'm going to create a quick link. Yeah, there's so much crap you can do.
+
+27:44 - Nathan Desnoyers (desnoyersproperties.com)
+  It's wild. So superhuman web, guess, all right, open with, I may as well start swapping over to D&L.
+
+27:59 - Michael Wade (Michael Wade)
+  Thanks. Thanks. And if you look when I click it, it shows what's the name, how do you want it to open, and you can have it open in any of these apps.
+
+28:13 - Nathan Desnoyers (desnoyersproperties.com)
+  Yeah. And then when I click create quick link, it says do I want it to be configure command, configure extension, or send feedback?  Oh, save quick link, just. Oh, enter. Mhm. Okay. Okay. So. Oh, then I need to record a hotkey. Okay.  So you do what for the, did you, is that what you sent me?
+
+28:48 - Michael Wade (Michael Wade)
+  Yeah. So what I do is I just do shift cap. So remember my, my, uh, hyper key is cap locks.
+
+28:54 - Nathan Desnoyers (desnoyersproperties.com)
+  Yeah.
+
+28:55 - Michael Wade (Michael Wade)
+  So I pull down the cap locks and I just hit shift. It. I And All Then I type in the letter S.
+
+29:06 - Nathan Desnoyers (desnoyersproperties.com)
+  Okay, done. I still need to configure Dia, but I get the overall part of now. Oh, yeah. I have Dia installed on 7.
+
+29:16 - Michael Wade (Michael Wade)
+  But I'm going to show you what's really cool, though. So when you're in Raycast, first off, the calculator is amazing.  So I'm going show you something real cool with it. So if you just hit – you can type anything.  So I could say 45 days from today. The calculator is remarkable.
+
+29:37 - Nathan Desnoyers (desnoyersproperties.com)
+  Or like – Yeah. And isn't it – if you hit that, it gives you the answer.
+
+29:41 - Michael Wade (Michael Wade)
+  Then if you click enter, it copies it.
+
+29:43 - Nathan Desnoyers (desnoyersproperties.com)
+  Yeah, it copies it. Yeah.
+
+29:45 - Michael Wade (Michael Wade)
+  Which is amazing. And those go to your clipboard. But when I'm here, let's say I want to edit this granola one.  Well, there are two things you're getting noticed. One is that when I right-click it, It reveals the hotkey, and it also shows what its aliases.  So I can just do gra and it will load up with granola. But if I go down here, I could restart the application, could quit, I can uninstall directly from here, that's nice, and it removes every file, it's amazing.  I can configure the application, we'll click that, and it will then show me everything related to that application right there.  And then I also go through and I disable the ones I'm not using. And that way they don't even come up in my, does that make sense?  Yeah. It's like I'm not using a DPD player, so why do have it there? So... It just allows me to have a really clean setup without all the extra BS.  So I would just encourage you to have fun and explore. You really can't screw up. For window management, this is fun.  Let me go to window management. Right here, you can set all of these to however you want. So you can create a window campaign, and you could say 10% on this side or 10% on that side, and you see it's going to 50%.  Yeah. So it's going to whatever the size is.
+
+31:45 - Nathan Desnoyers (desnoyersproperties.com)
+  Can you do an automatic, so let's say I want the same apps, the same percentage open every time I do a real estate review or property analysis is the one that, do you have?  You can.
+
+31:55 - Michael Wade (Michael Wade)
+  Okay, that's pretty sick. So I'll show you what that looks like. She adds call. So let's say I use focus first as one, and let's say I want that over here, but I'd like this to be 100% height and then 50% on the side.  So we'll call this analysis, and then on the other one, I'm going to dia, but I'm going to load up.  I already have one set. What you have to do is you have to set the... Save quick link. And then when I go here, I can then load up the Bright MLS one right down here, wherever it is.  You know what it is? I've never actually done this. You're seeing me in real time messing with this. You see, don't really think about it that much.  just kind of do it. Yeah.
+
+33:40 - Nathan Desnoyers (desnoyersproperties.com)
+  So, yeah, I mean, I guess if setting up these customized shortcuts is, you know, majoring in the minors per se, where really it's like if you just learn how to super quickly without thinking about it, adjust the size of the tabs, then, you know, because your workflow may change over time and so it may become redundant to set up.  Yeah, and then basically you can just do this, so I can do 50, 50, and then I'll call this workflow, what I want to call it, analysis.
+
+34:15 - Michael Wade (Michael Wade)
+  And then you can set it to all the different windows, too. So which one do I want this one to pop up on?  So I can set three different windows for this workflow. So when I hit save, and I do analysis, and I'll launch with exactly that on my desktop.  So pretty slick. Yeah, for sure. I wanted to show you. And I'm going to share one more thing with you real quick.
+
+34:59 - Nathan Desnoyers (desnoyersproperties.com)
+  Yeah. Because it's... This could be helpful. I just want to teach you a little bit about the AI so you understand it.  Okay, so this is your AI setup.
+
+35:09 - Michael Wade (Michael Wade)
+  Right up here, it shows you what features this AI setup has. Okay. Okay, so we're in Raycast. You just click on AI.  Do you have an AI command setup? No, I don't have anything set up, really. I have option space for my AI bar.  Okay, so if I go to So go to AI. Ah, . I have some crossover shortcuts set up to.
+
+35:41 - Nathan Desnoyers (desnoyersproperties.com)
+  Okay, so I'm going to do this. Okay, so I'm in AI. Yep. So you'll see the AI, and then it will say AI chat, a dedicated chat window for larger conversations.  I can replace it with the option space.
+  ACTION ITEM: Resolve Option+Space hotkey conflict in Todoist/Raycast - WATCH: https://fathom.video/share/B44WnSkkLxbiCsE1vTMnsRyfTJ8zY_8E?timestamp=2140.582226
+
+35:58 - Michael Wade (Michael Wade)
+  Okay. Okay. And then this allows you to set up whatever you want.
+
+36:06 - Nathan Desnoyers (desnoyersproperties.com)
+  Trigger should be custom global hotkey, record hotkey. Oh, crap. I have option set to to do with stuff, which I never use.  How do I? Hotkeys. Need to get rid of those. . You can set it to anything right now. Yeah, I'm saying like my Mac hotkey is set to.  My Mac hotkey, I click option space and it pulls up Todoist. That's fine. You just go to Todoist and then you'll see shortcuts.  Love. Love.
+
+37:05 - Michael Wade (Michael Wade)
+  I used to have to do this a long time ago. I thought that would be in my Mac hotkeys.  It's completely separate. All right.
+
+37:17 - Nathan Desnoyers (desnoyersproperties.com)
+  I'll figure that out later. That's okay. But you set it to the AI.
+
+37:24 - Michael Wade (Michael Wade)
+  Okay. you have it go to tab to ask AI. Oh, so mine is, so you have option space.
+
+37:38 - Nathan Desnoyers (desnoyersproperties.com)
+  Mine is, oh, I do have it.
+
+37:42 - Michael Wade (Michael Wade)
+  It's just command J. Okay. It's the same. Either one.
+
+37:48 - Nathan Desnoyers (desnoyersproperties.com)
+  Either one. So you can do command J or option space. And then when you're on here, in the lower left-hand corner, you have your model.
+
+37:58 - Michael Wade (Michael Wade)
+  you're doing. It's really Just a few things about it. These are your system instructions. This is like, do step 1, step 2, step 3.  Does that make sense? It's building out everything you do. These are all the different models. you can do any model you want.  And it will even tell you what it's good at and what it's not good at. Oh, wow. Okay. That's pretty cool.  Yeah, so for example, I can do, I've really been enjoying 5.2 instant.
+
+38:36 - Nathan Desnoyers (desnoyersproperties.com)
+  So let's do 5.2. And then I can give it instructions, anything I want.
+
+38:42 - Michael Wade (Michael Wade)
+  Like, do the following. One, identify the dates of the contract, including, and then you just list them, right? I can And I can I  And then the AI extensions are where it gets really interesting. These are where you can have all the MCPs built directly in.  But here's what's cool. If you do it on Claude or any of these other tools, they don't tell you what all the different options are.  Here, for every MCP, it shows you everything that you can do. Does that make sense? Kind of. Let me see.  Oh, okay. So when I just click add AI extensions, it has like browser or calculator.
+
+39:43 - Nathan Desnoyers (desnoyersproperties.com)
+  And you have something Beeper, right? So you have Beeper in there. I would have to, you added Beeper as an extension elsewhere in Raycast?  I'm going show you how easy it is. All I do is we're going to go back to Raycast. And I'm going type in store, Raycast store.
+
+40:04 - Michael Wade (Michael Wade)
+  And it's going to load up pieces on my screen. Yeah. Categories. You see AI extensions. You click it. It loads up with every AI extension they had built in.  Okay. So the message is one. how I send messages? Right. So I don't know. I type in Beeper and nothing pops up because Beeper is not.
+
+40:30 - Nathan Desnoyers (desnoyersproperties.com)
+  So great question.
+
+40:32 - Michael Wade (Michael Wade)
+  So there are a few that you have to do.
+
+40:37 - Nathan Desnoyers (desnoyersproperties.com)
+  I'll show you how I did it.
+
+40:40 - Michael Wade (Michael Wade)
+  And again, Beeper is, I haven't used it, but I think I've heard of it. It just connects every messaging app that you have into one.  Right.
+
+40:49 - Nathan Desnoyers (desnoyersproperties.com)
+  So if I did Beeper MCP, use the memorized word MCP or Raycast. It will then load up.
+
+41:00 - Michael Wade (Michael Wade)
+  The context of how to do it. Okay. And you just follow the instructions. So, quick question. I'm setting up the, is there any reason why you have the tabs on the side?  it just personal preference or? I like having a full screen.
+
+41:17 - Nathan Desnoyers (desnoyersproperties.com)
+  Yeah. And I just hit command shift S and it loads up. But I have it auto-flat too, which is not normal.
+
+41:32 - Michael Wade (Michael Wade)
+  So if I do this, then we'll keep it up all the time. Okay. Because I like that. I think it allows me to organize my stuff so much better.  So I have, when I switched to Comet, I had a pretty detailed, like I see you have pretty detailed bookmark folders.  I was able to port that over to Comet from Safari.
+
+41:59 - Nathan Desnoyers (desnoyersproperties.com)
+  what it's scary, But now I'm not finding an easy way to port it out of Comet into this. And then this guy mentioned on a podcast, the one that I sent you, he said that he almost doesn't even use bookmarks anymore.  Because Raycast is just so fast. But I do kind of like having a visual of like, oh, like, here's where my stuff is.  I would encourage you to say, well, what do I really need? And then look again and say, is this stuff that I actually use?  Because if it's not, then just get rid of it.
+
+42:35 - Michael Wade (Michael Wade)
+  Yeah, I think it's useful for like, for example, it's like I have all my utility bookmarks. And I'm like, okay, what do I use for electric again?  Oh, right, it's Novec. But if I could just click utilities, I know it's right there.
+
+42:47 - Nathan Desnoyers (desnoyersproperties.com)
+  Exactly. Stuff like that. Yeah. Yeah. And let me just show you just a few more things real quick, because I think it will help you.  You have presets and you have AI commands. AI commands automatically... That's nice.
+
+43:29 - Michael Wade (Michael Wade)
+  He speaks English, too, which is a nice way to connect. Yeah. Right here, though, I have all these presets set.  So for example, this is the send message one that I've been doing. And it literally is simple. It has the messages, I have low creativity because I don't want it to go crazy.  And then it's using flash 2.5 light. Thank you. Thank you. Thank And I just found that that's the fastest one for sending it, and it always works.  But I could add other extensions, like, let's say I want to add a calendar event. I can create one that just adds all-day calendar events.  So my point is you don't need a... You can literally do anything you can think of, and raycast, even image generation.  Let's just do this real quick. So let's say I did image, and I'm going to do... Generate, generate, and image Baltimore.  Baltimore and make it hyper-realistic. Okay. Okay. Well, I gave you the command, so let's remove that, we're going to switch it to Google.  But you know what, I didn't give it system instructions. Then I'm going to do this. See if works. There we go.  So you can generate images directly in here. You can do literally anything you can do, except for vibe coding.  can't do vibe coding. See? Pretty slick. Okay. Okay. Okay. Okay. And then you can branch it, though. branching allows you to then use another model and generate something else.  So that's what's really cool about it. I hope this is helpful. Yeah, no, this is super helpful. I just need to get in and fiddle with it myself.  I think this would really reduce friction and workflow.
+
+46:26 - Nathan Desnoyers (desnoyersproperties.com)
+  I will also do that. Because I just feel the frustration of, like, tabs and trying to access tools and stuff like that.  I think we have too much stuff going on. So let's say I'll say, how's the market in Maryland? We'll see.
+
+46:47 - Michael Wade (Michael Wade)
+  And then Grok will spit out an answer. Or it should. So it's doing a quick web search. And then halfway through doing that, that, it'll  I move slower whenever I'm on Zoom, don't know why. It's usually way faster. Just bandwidth getting clogged in. And then I can hit command shift R though, and now it will regenerate with a different model.  But if I click right here, it still shows me the prior one. That's nice. And then you can branch it, and then ask a follow-on one to say a different one.  Critique the above information. And then what it will do is you can have the models go against each other.  It's pretty awesome. I don't know any other tool that can do this. I think it's amazing. That is pretty sick.  I have been liking comparing different LLM responses and seeing how they differ. Definitely. Yeah. Yeah.
+
+48:00 - Nathan Desnoyers (desnoyersproperties.com)
+  I've noticed how much of a sick event GPT can be when it comes to, like, asking what I should do with certain business decisions.  Like, I was trying to figure out, so I started building with Replit, right? And I was like, should I, I want to improve this workflow, what should I do?  And I was like, oh, should I make an app? And it said no, making an app would be overkill for this point in time.  And then, like, five minutes later, I'm like, I just made an app within Replit, was really easy. I like, oh, wow, like, that's great.  Here's how you can make it better. And I was like, okay, so it's like, if I hadn't gone and  around, I wouldn't have gotten that far.  So I'm being more wary of using it for actual decisions on what to build. Yeah, I completely agree. And I think it's a good idea to run stuff through multiple models.  So you see, I ran this through Croc, and I ran it through Gemini.
+
+48:56 - Michael Wade (Michael Wade)
+  And now I can run it through, um... And then what it's going to do is it's now thinking about everything that we spoke about here, and it's using full perplexity sonar reasoning.  So I don't know how they make any money from this, because I think this is absolutely incredible. And you see, it's like a full, what you love about perplexity.  It gives you all the hot links, everything.
+
+49:46 - Nathan Desnoyers (desnoyersproperties.com)
+  Yeah. So how much are you paying a month?
+
+49:49 - Michael Wade (Michael Wade)
+  16 bucks or something? 16 bucks. 16 and then 20 for Dia.
+
+49:56 - Nathan Desnoyers (desnoyersproperties.com)
+  So 36 bucks a month. That's all I spend. Yeah. Yeah, basically, yeah, I just need to dig in.
+
+50:03 - Michael Wade (Michael Wade)
+  I did want to show you some stuff real quick, just to get your take on a couple things here.
+
+50:12 - Nathan Desnoyers (desnoyersproperties.com)
+  Okay, so here's my chat. Basically, I'm using chat as chatGBT as I have like a rotary project. I've created so many different projects.  I do my forward recording here, real estate, just a ton of stuff that I've like tried to spin off.  And I was like, oh, maybe I could use this. And I ended up not using half of these, right?
+  SCREEN SHARING: Nathan started screen sharing - WATCH: https://fathom.video/share/B44WnSkkLxbiCsE1vTMnsRyfTJ8zY_8E?timestamp=3023.443698  Because it just becomes too much. And I was like, okay, can I build these using like the same use case using Redcast?  I think just what I like is that I can upload files and create instructions, right? So it's like, and...  It just already has all that context. So how would I supplement that in using Raycast? Well, you can do exactly that.  Okay. So what you would do is whatever the thing that you have, you go here, you select the model.  I'm going to share my screen again. Yeah.
+
+51:30 - Michael Wade (Michael Wade)
+  I'll do it over on this one, that's fine. I have like 54 inches of screen space above me, so it's a little ridiculous.  Let's see. Or 52. So right here, you just add everything in here. I don't know if we can do, if you can attach stuff.
+  SCREEN SHARING: Michael started screen sharing - WATCH: https://fathom.video/share/B44WnSkkLxbiCsE1vTMnsRyfTJ8zY_8E?timestamp=3099.487244000001  They have a whole set of presets here, it's pretty cool. I didn't even know you could do that. I want to see if I can add files to presets.  honestly never looked at that. For example, I want to have the club bylaws, various standard rotary stuff where if I wanted to reference it.
+
+52:24 - Nathan Desnoyers (desnoyersproperties.com)
+  Why don't give me one? Why don't I do this? I'm going to build one off of a contract that I just wrote.  Okay. One second.
+
+52:32 - Michael Wade (Michael Wade)
+  So we'll do 5.2 instant and we'll say, I'm going to, you can add everything in here. It's the same thing.  I can add selected file from file. Finder, I can actually just drag it in, I don't know what the hell I'm doing, so let just add the contract I just sent over, where's this file?  Here we are, I can then load the offering here, and I'll say, and I'll build out a preset, identify the key dates of the contract, and send an email to my client congratulating them for being under contract.  And I'll add the extension. of Google Calendar, add the extension of, oh, I know there's a male one, I just haven't enabled it.  That's fine. And then what I can then do is, I'll say, I can set, so that's a preset, and I'm just going to save this, and I want to see if it actually saves a model with it, saves a file with it.  Action. Oh, here you can add the attachments. I can even change the spacing on it. It's pretty wild. So let me do...  How do I save this? Oh, create preset. And then I want to see if I create a new one.  Oh, that's what it doesn't do. It doesn't save all You save them as quick links. Okay. Can you add an unlimited amount, though?  Or maybe not unlimited, but...
+
+56:01 - Nathan Desnoyers (desnoyersproperties.com)
+  I see no reason why you can't. Yeah. And, I mean, to be honest, it's not like I'm referencing the files every single time I ask a question.
+
+56:12 - Michael Wade (Michael Wade)
+  It's just nice to know that they're in there.
+
+56:17 - Nathan Desnoyers (desnoyersproperties.com)
+  Okay, yeah, well, that pretty much gets rid of my need for JetGPT business in 60 months a month for.  Yeah, when you're paying that much money for it, you just have to ask yourself, what am I really getting out of it?  Yeah, I was getting a lot out of it, and then I realized it was just getting too clunky, and it didn't scale.  Like, it's just, yeah. And I was like, well, I was, because I kept realizing, the reason why I ended up with JetGPT is because the application of JetGPT I liked the most.  It wasn't actually the model. So then when I saw that Raycast can use every single model, that just seems like the future.  It's like, you know, it's the, you're paying for the application layer, the models are going to kind of. You can attach files to individual chats.  You just can't save them.
+
+57:22 - Michael Wade (Michael Wade)
+  I think the reason why they're doing it is because they're not saving all of your prompts to a server.  All your prompts are going to be saved natively. Yeah, that makes sense. Sometimes I... Actually, that's not true. They're saving in the cloud.  Right. And there are times where I'm brainstorming stuff around life and future decisions based on whatever.
+
+57:52 - Nathan Desnoyers (desnoyersproperties.com)
+  And I'm like, hey, based off what you know about me, and it knows a good amount of stuff like cross-projects and cross-chats.  That I haven't, I didn't tell it to remember it. It just had a memory, right? And so I wonder how much of that Raycast would be able to do.  This is why I use Dia and Raycast at the same time. Because with Dia, you can do more of that.  And I'm going to show you. Okay.
+
+58:21 - Michael Wade (Michael Wade)
+  That'll do I share my screen again. You see, I'm good with AI, but you asked me to share my screen and I have no idea what else.  All right.
+
+58:31 - Nathan Desnoyers (desnoyersproperties.com)
+  So in Dia, when I go to the main page, I've been using Dia since it came out, actually before, when it was even just in alpha mode.
+  SCREEN SHARING: Michael started screen sharing - WATCH: https://fathom.video/share/B44WnSkkLxbiCsE1vTMnsRyfTJ8zY_8E?timestamp=3521.4272260000002
+
+58:41 - Michael Wade (Michael Wade)
+  And if I go to personalization, I can actually load in all of my memories from ChatGPT. Okay. Is that you're saying?  Yeah. Every memory, everything that you've had with, it just summarizes it. But you can add in all of your information from, what is it called?  Where is it, settings. You can upload all of your information from ChatGPT into this. So I think that's really cool.  And then for, I still use, what is it called? I still use, actually, I wonder, can I make a.  Can I make a skill where I attach a file to it? I can. Let's see. These are the different tools that they have.  Formats. Okay. Use. And then I wonder if I create a new one. I need some more tea. Yeah, it's adding all every time, man.  So there you go.
+
+1:01:15 - Nathan Desnoyers (desnoyersproperties.com)
+  That solved your problem. Oh, yeah. All right, I wanted to show you something really quick.
+
+1:01:20 - Michael Wade (Michael Wade)
+  Yeah, yeah. And I built this out so fast, it's mind-blowing. So I wanted to – I mean, I'm not going show you all of it.  But basically, I wanted to – oh, wait, wait.
+
+1:01:34 - Nathan Desnoyers (desnoyersproperties.com)
+  Oh, wow. Kind of go over the top, man. So I just wanted to do this. I just wanted to create a weekly meeting agenda in a format where it would store all of it in a database so that I could see trends over time.  Because if I just upload my WMAs, I use them in PDF format, like, LLMs actually aren't that good at reading all the things.
+  SCREEN SHARING: Nathan started screen sharing - WATCH: https://fathom.video/share/B44WnSkkLxbiCsE1vTMnsRyfTJ8zY_8E?timestamp=3696.158523  And I thought they were. But then I realized I was making mistakes. And I was like, well, I can't reliably trust this.  So I was like, well, anyway, I want to move away from using PDFs anyway. It seems like that's the past.  And I optimized it for IGU. And so I'm still fixing this stuff. But I started to build out more things.  Because I was like, well, if I'm going to track that, I may as well auto-populate the pie time. And if auto-populate the pie time, and maybe I can put my full business tracker in here.  So I started putting, I built out the business tracker. So this is the, it's still not perfect. And I'm like, okay, if I have people in here, there's no one in here right now.  I want to be able to click on them and take the people. I basically just started building out a CRM.  And then I was like, can you also do, can you, at first I was going to integrate it with everything.  But I realized that I was like, can you just build out the functionality of Granola and Fathom in here?  And instead you can, now it doesn't actually work. Not completely yet, but I literally just uploaded screenshots of my business tracker, and it coded out the back shots from Focus First, and it did.  So look, I'll just do it. New analysis. So test, Woodgate. This is, so I just took my most recent, where the  is it?  That's not it. Okay. You know, this is Focus, oh, that's not it. Where? Okay, this one. So this is, you know, like when you do Focus First, I don't know, just copy that in.  I could probably stream on this part, and it made it for me. Like, it did all the things. It's not perfect, you know?  But I, but it did. Because it's really not that complicated. It's just a spreadsheet, right? How complicated could it be?  And so I'm going to also tie in, so my real estate review has a cover page, it has a financial review checklist, like component lifespans, all this stuff is just the same in every single one.  And then I have their public records, and then I have focus first stuff, and then I have county update, the DC Metro update, and more focus first graphs, and then FHFA stuff in the nation.  So it's like I could automate all of that. It's like pull the most recent smart charts stuff from here, and then pull the most recent bright MLS stuff from there.  And on a quarterly basis, update, you know, the FHFA graphs, and I could personalize it for myself. But, and then I also want to start doing a weekly email of haves and wants to like my entire realtor data review.  And I was like, okay, if I have, let's say, so I have one person. Let's say I have Dave, Dave Alumo is a hot buyer right now.  He's looking for a house stack. If I have him and describe what he wants to automatically populate my house and wants emails, send that out.  I mean, it made this interface. I just told it in plain language what I wanted to see. And was like, I have all these capture things, you know, my plod, Fathom, granola.  I want it to be coming through here closed. But I'm realizing now that I'm just going to, I can just turn this into my CRM.  Now, the act of doing it, of creating it, and the act of it actually working are two separate things.  I'm figuring that out. But does this look like stuff? I mean, as a building, this is just, this is exactly what I need and nothing that I don't.  Could I do all this through Notion? I don't think you could do the analysis part, like the visual pricing.  Yeah. And when I tell you it was easy, I literally just say, these are the reports I want. I copied and pasted the instructions from Focus First.  And I thought, okay, is this stealing IP? I don't know. Do they own the rights to visual pricing tools?  If I copied the Excel stuff, maybe. But when's the last time you saw an update from Focus First? So it's like, I don't know.  Which one are you doing? Are you doing the core? Well, I have, or what? Proofers?
+
+1:06:46 - Michael Wade (Michael Wade)
+  Oh, that's a good question. I don't know.
+
+1:06:49 - Nathan Desnoyers (desnoyersproperties.com)
+  I think I'm paying $25 a month, but I went through it. So I have to, I just have it paying per token now.  can't remember how much this costs, but this costs me $25 to get this far. But this is not fully operational yet.  Like, and I asked it, and you can ask it questions where I was like, okay, one of the things I love about Close is that it auto-populates, it goes through my contacts and goes through my iMessages.  What would I have to do for that to happen? And it told me, and I was like, would I have to build a native iOS app?  And it said, no. And so I just described what I want, and it can brainstorm with you, and then does it for you.  know, so I mean, here's the actual, let's see if I, I don't know why it's not showing me anything else.  But I mean, it's so easy to do. It's insane. You know, so I was thinking about layering some other stuff on it.  Like, so, oh, and I said, I want it to be, I want this down here to be dictation. So it's like, if I want to tell it that I just had a conversation.  Maybe it's not listening right now. It was working earlier, but it was dictating for me. Oh, is that it?  Oh, there it is. Yeah, yeah, yeah. I'm having a conversation with Andrew Wade about AI and Raycast. Create a follow-up task that I need to send him a hand or a note.  And what I wanted to do is take that, take your profile stuff that it already knows about you and auto-write it.  So it's like, let's say that it auto-captures my granola, my Fathom. It's going to automatically write follow-up emails and automatically write handwritten notes.  And so it's just like every morning, it's just going to be like, here are all the handwritten notes you can write for the day.  And it just like does it for me. And then I just handwrite it. I bet I could even tie it in with like one of those handwritten note companies.  So it could, but I think I like the action of actually doing the note. There's like the psychological component of it as well.  Yeah. But, I mean, what else for Ninja? You know, like, you could do a disc profile overlay, you know, power party piece perfection.  The learning modalities, kinesthetic, auditory, visual, and stuff like that. So you could hyper-personalize the outreach to people. You could have all their fun facts and stuff loaded in here.  So it's like, and just like, I was even thinking about continuing to add layers of, like, coaching. So, you know, it's like, I don't know.  I mean, you could just literally just, like, keep adding layer and layer of the stuff I've learned from Ninja over the years into this.  How does that work? They save the app on Repplit, and then you just build it out there? They launch it, and they manage it for you?  So I asked that question. I'm trying to remember what it said.
+
+1:09:50 - Michael Wade (Michael Wade)
+  I think it said that it's hosted on, yeah, it's hosted on Repplit, and as I develop it, it's going to fix it for me.
+  ACTION ITEM: Send Replit CRM app link to Michael - WATCH: https://fathom.video/share/B44WnSkkLxbiCsE1vTMnsRyfTJ8zY_8E?timestamp=4177.5822259999995  It's going to do stuff in here, like launch new features.
+
+1:09:59 - Nathan Desnoyers (desnoyersproperties.com)
+  Yeah. And then I'll click publish. this is an actual published thing. could send you this app right here. it to me real quick.  This is internal. Let's see how this works. It's still a little clunky, right?
+
+1:10:15 - Michael Wade (Michael Wade)
+  It's is my message?
+
+1:10:23 - Nathan Desnoyers (desnoyersproperties.com)
+  See, I need to get, maybe I'll, maybe I'll, is it, how do I, how do you send a message through Raycast?  Just messages? send. Let's see, I'm just going to go to messages.
+
+1:10:41 - Michael Wade (Michael Wade)
+  Why is nothing popping up?
+
+1:10:50 - Nathan Desnoyers (desnoyersproperties.com)
+  Okay, there we go. And I can have them turn it into an iOS app, Android app. You know? So I'm thinking about adding postcard stuff in here as well, just adding everything that I could possibly need for myself, and then maybe monetizing it at some point.  I'd have to change the name maybe, but I thought about it. Really nothing in here is proprietary to Ninja.  Everything that Ninja implements is sales tactics from just good practice sales. I don't think I could use the word Ninja, but that's fine.  That's just what I named it for now, just because that's what it is. Yeah. I mean, it's pretty slick.
+
+1:11:50 - Michael Wade (Michael Wade)
+  Oh, but this is the – you said you haven't used a business tracker in like a year or two, so I'll just show you.  I don't know if you've seen the new one.
+
+1:11:59 - Nathan Desnoyers (desnoyersproperties.com)
+  don't the new one. I don't seen But this is the new one. So it's like you put in all this information about your goals and your fees.  Here's what the tracker part actually looks like. So you have your hot, warm, under contract, closed. And then you put in your closed stuff here.  It has more metrics. has a plot tracker. So this is pretty – it's much more – many more features than what it used to have.  And so I literally just took screenshots of this and put it in a repli and said, build this. And it did.  Now, it's not perfect. And so I'm going through and I'm testing it. I'm like, oh, this button doesn't work.  Oh, this doesn't map to this. And then it goes in and does it for me. So it's like you have to go through it and like, you know.  Pretty wild. But I'm like, okay, because I'm looking at this. It's like, is this – and I don't even use all these things in the real estate review planner.  I was using my WMA. So I just uploaded all of it. And, yeah, and I was like, oh, yeah, it'd be cool if it could integrate with Fathom and Granola, but what if I just created Fathom and Granola within this, and then it added the feature of, yeah, like, it'll join your meeting with you.  I don't know how, I know, this is not fully launched yet, but just reducing the amount of things that I have to integrate with it and just have it be native inside it.  So, we'll see. It's kind of like I started building it out on, here, let me show you this. I started building it out on Notion.  Now, this is not every deal I've done.
+
+1:13:37 - Michael Wade (Michael Wade)
+  I just started plugging them in just to see. Right. But basically, this is just kind of like test. Does that make sense, like, seeing how it works?
+
+1:13:49 - Nathan Desnoyers (desnoyersproperties.com)
+  What I did was I layered Granola. I'm sorry, not Granola.
+  SCREEN SHARING: Michael started screen sharing - WATCH: https://fathom.video/share/B44WnSkkLxbiCsE1vTMnsRyfTJ8zY_8E?timestamp=4424.981063999999
+
+1:13:52 - Michael Wade (Michael Wade)
+  I layered Clay on top of this. So, Clay is how all these contacts are coming. When I go here, I can search every contact that I have.  And then when I go to Task Tracker, they all go directly from Raycast into here. So now my real estate reviews, I started building those in.  Business Tracker, so everything's tracked.
+
+1:14:26 - Nathan Desnoyers (desnoyersproperties.com)
+  I started doing an Open House Tracker in here, a newer one.
+
+1:14:32 - Michael Wade (Michael Wade)
+  And then a area to put older files. This is all in Notion? Yeah. Yeah, see, I haven't messed around in Notion enough to...  Which is what I was thinking, because I remember sometimes I'll get things sent to me from random people.
+
+1:14:54 - Nathan Desnoyers (desnoyersproperties.com)
+  Like, it's usually marketing agencies where it's a Notion landing page for an event or... So if Notion has good client-facing stuff, kind of like what you're using Tally.so for, well, yeah, actually, maybe that's a good question.  Do you ever use Notion for client-facing things, or do you always use Tally? Well, here's the reason why I use...  So, for example, let's say I want to make this into a form. I do a new view, and I just click form.
+
+1:15:32 - Michael Wade (Michael Wade)
+  And then this is what the form looks like, but they're kind of clunky. Maybe that doesn't matter, but it just bothers me.  So when I preview the form, people will just go through and just select stuff. I guess it's essentially the same thing.  yeah. Maybe I can get over it. But for me, it, I guess I just didn't think it looked as professional and I can't embed this and stuff.  Oh, okay. Yeah, I see what you're saying. But as I'm looking at it now, I'm like, hmm. You know.
+
+1:16:24 - Nathan Desnoyers (desnoyersproperties.com)
+  Then I started doing mapping out of visitors and all that stuff.
+
+1:16:31 - Michael Wade (Michael Wade)
+  So Notion's pretty powerful. I even started doing a contractor database in here where I mapped out every person. And then this is the older version.  I have a newer, I have a, sorry, I have an older one. How do search on here again? Here it is.  I have every contractor that I know in here. Awfully organized. Oh, that's nice. So I can create a website off of this and send it to people.  You can create a website from your...
+
+1:17:30 - Nathan Desnoyers (desnoyersproperties.com)
+  from this page. It'll literally make a website.
+
+1:17:32 - Michael Wade (Michael Wade)
+  Watch. So this is Notion will make a website?
+
+1:17:38 - Nathan Desnoyers (desnoyersproperties.com)
+  Yeah. That's pretty sick.
+
+1:17:42 - Michael Wade (Michael Wade)
+  So if you want to do an email blast or you create that website, make it a shortcut, and someone's like, hey, do you know so-and-so, and you're like, hey, here's every person that I know or something.
+
+1:17:55 - Nathan Desnoyers (desnoyersproperties.com)
+  Here's my contractor database. Yep. later. Okay. Thank you. Now, here's what you can do with Notion that's pretty cool that they just rolled out that may answer your question for you.
+
+1:18:10 - Michael Wade (Michael Wade)
+  Notion used to be really hard to learn, but you can just go right here. You can start a new page and say to AI, create a database using ninja selling, the ninja selling framework.  And I can upload literally the ninja selling book and we'll create a whole database on this page. That's nice.  I guess I'm just trying to start. I see it's like... If I had a brand new idea for a feature in my CRM that I wanted to do, and I was using Replit to build it, I could just do it, right?
+
+1:19:07 - Nathan Desnoyers (desnoyersproperties.com)
+  But then I'd have to pull it around with it and make sure it works. Whereas if everything I could ever need would be within Notion, then it would probably just make sense to get to learn Notion.  But then it would never be anything that I owned, you know? So I'm just trying to figure out which one would actually be better for me.  Because I like the idea of not an alternative career path, but the way that I envision my future is I enjoy real estate.  Well, I probably get the most hyped and into my work when I'm creating stuff. Like building the CRM this morning brought me so much joy.  Yeah, no, I get it. And I'm like, okay, if I can do that, if I can build stuff like that and then spin them off as products.  Yeah. Am I better off just doing that instead of finding the right tool like if Notion – if there was like an omniscient god that could say, yeah, Nathan, you're better off just like – for the sake of building out tools for real estate for yourself, you're better off just learning Notion.  Restore page. Let's see. What did it do? Oh, wow.
+
+1:20:31 - Michael Wade (Michael Wade)
+  And that's just from uploading the book? That was just from me saying look online.
+
+1:20:37 - Nathan Desnoyers (desnoyersproperties.com)
+  Just do ninja selling? Okay, wow, yeah. That's nuts. Yeah, no, it's pretty nuts.
+
+1:20:46 - Michael Wade (Michael Wade)
+  So you can just do ridiculous stuff. You could say like, watch this. I can change everything up on here.
+
+1:20:54 - Nathan Desnoyers (desnoyersproperties.com)
+  I can create agents too that will do different things for me.
+
+1:21:00 - Michael Wade (Michael Wade)
+  So I could say, I could go here and I'll say, let me go back to Ocean AI. I'd like to make a work homepage for real estate, tracking deals, tasks, transactions, and I'd like to do it all through the framework of Ninja Selling.  So now it's going to look at everything online. And we're going hit go, see what happens. It's wild what you can do with AI now.  Okay, wow. I'm curious to see what this looks like. Yeah.
+
+1:22:48 - Nathan Desnoyers (desnoyersproperties.com)
+  So now it's creating all the individual sections. Hmm. you. you. Thank you. Thank you.
+
+1:22:59 - Michael Wade (Michael Wade)
+  Thank you. you. you. you.
+
+1:23:08 - Nathan Desnoyers (desnoyersproperties.com)
+  Establishing a KPI tracker.
+
+1:23:13 - Michael Wade (Michael Wade)
+  And all I did was say, please, my only prompt was this. I'd like to make a work homepage for real estate, tracking deals, tax transactions, and I'd like to do it all through the framework and end yourself.
+
+1:23:25 - Nathan Desnoyers (desnoyersproperties.com)
+  All I said.
+
+1:23:25 - Michael Wade (Michael Wade)
+  That's pretty nuts. So do you use Notion for just, like, life in general? Okay. Look. Oh.
+
+1:23:36 - Nathan Desnoyers (desnoyersproperties.com)
+  Oh, wow.
+
+1:23:46 - Michael Wade (Michael Wade)
+  Now, am I completely in love with this?
+
+1:23:48 - Nathan Desnoyers (desnoyersproperties.com)
+  No, but I can adjust it. Right, yeah. Yeah, I'm sure you could get in there and fiddle with it if you actually wanted to.
+
+1:23:54 - Michael Wade (Michael Wade)
+  So then, that real estate HQ, where does that live inside? Like, show me your...
+
+1:24:00 - Nathan Desnoyers (desnoyersproperties.com)
+  Notion homepage, I guess, let me just, I don't really, again, I haven't really used Notion at all, so. Everything's kind of a mess, to be really frank with you, so I'm building it out.  But when you, you have your team spaces, then you have all of your private pages.
+
+1:24:15 - Michael Wade (Michael Wade)
+  What I don't like is that it does not have a good search functionality. So this is your homepage that shows everything that you're working on.  All the tasks, stuff that you have to do. Basically, I kind of just use this as a giant, like, brainstorming and, like, experimenting thing.  I'm not using it very well right now, to be fully transparent with you. I manage my life mainly through Sonsama.  And what I do is I come over here, and I have all my Notion pages. Okay. Very do you  I have all my objectives I have to do, and then all the tasks I have to do. So Samsama is at the top of your funnel, all this stuff.  It's the overarching umbrella, and the notion fits inside that, Clay fits inside Samsama.
+
+1:25:13 - Nathan Desnoyers (desnoyersproperties.com)
+  And I don't pay for Clay. I did it for a month just to load everyone in, and then I canceled it.  Does that make sense?
+
+1:25:22 - Michael Wade (Michael Wade)
+  I mean, I'm not super familiar with Clay, so I'm not sure how that would... You don't need to be subscribed to it.  You do. I wanted to...
+
+1:25:30 - Nathan Desnoyers (desnoyersproperties.com)
+  It was just kind of like a test concept.
+
+1:25:32 - Michael Wade (Michael Wade)
+  Is this possible today?
+
+1:25:37 - Nathan Desnoyers (desnoyersproperties.com)
+  So, and what's nice is that you can then see on a week what do you have to do, what's going on, and you can focus on each of your tasks.  My favorite thing, though, that I like to do is the planning.
+
+1:25:48 - Michael Wade (Michael Wade)
+  So if you go to daily planning, you can say, okay, well, what do I have to do today? And then you can assign different tasks towards it.  You can say, like, how long do I think this is going to take? Okay. So this is going to be, I'm going to add these to my backlog, and then what will happen is I will just get random ideas that come into my head, and then can just add them onto my calendar in real time for what I have to do.  Does that make sense? Yeah, yeah, that makes sense. And then over here, I have all my backlogged folders. You have all your what?  All my folders for all the backlogged ideas.
+
+1:26:37 - Nathan Desnoyers (desnoyersproperties.com)
+  Oh, okay. Cool.
+
+1:26:40 - Michael Wade (Michael Wade)
+  And that's kind of how I manage my life.
+
+1:26:43 - Nathan Desnoyers (desnoyersproperties.com)
+  And it's super cheap. It's like 16 bucks a month.
+
+1:26:46 - Michael Wade (Michael Wade)
+  Yeah.
+
+1:26:46 - Nathan Desnoyers (desnoyersproperties.com)
+  it's super helpful having everything on there. And that's it.
+
+1:26:52 - Michael Wade (Michael Wade)
+  So, my friend, that's all that I have.
+
+1:26:58 - Nathan Desnoyers (desnoyersproperties.com)
+  So, not a lot already.
+
+1:26:59 - Michael Wade (Michael Wade)
+  you. I'm not as tech-savvy as thought. I'm not doing anything crazy. No, mean, Raycast proficiency itself is pretty, maybe not like high-level, but it's powerful.  It's leveraged, very leveraged. It doesn't seem overly difficult to get up to speed with.
+
+1:27:16 - Nathan Desnoyers (desnoyersproperties.com)
+  I just need to learn it. So I started doing stuff with Replit. I started doing stuff with Base44. I was trying all these different programs.
+
+1:27:27 - Michael Wade (Michael Wade)
+  And what I found is that it could never get it perfect. So I had no issues getting it to do the odds of selling.  But as soon as you ask it to do regression analyses and all that stuff, it gets overwhelmed. You just can't do it.  Yeah. I was trying to build out that postcard company I talked to you about. Maybe like a couple weeks ago, where it would do like geolocals.
+
+1:28:00 - Nathan Desnoyers (desnoyersproperties.com)
+  So it's like you put it in an address and it would map out five closest restaurants with like four and a half stars or higher.  Anyway, it sort of did it, but it was kind of clunky. And so then when I went back to do what I just did now, it was like a thousand times better.  And so I have a feeling that the functionality is just going to continue to improve exponentially. Oh, I completely agree.  Do you use Bear Media right now? No, but I remember you showing me it, which made me think, oh, maybe I don't need to do this at all.  Because there's already a company that does it.
+
+1:28:37 - Michael Wade (Michael Wade)
+  And their 's really good. So you can do everything.
+
+1:28:40 - Nathan Desnoyers (desnoyersproperties.com)
+  That's where I send my postcards out. Yeah. And it's cheap. Because I really don't like Prosecco in post.
+
+1:28:49 - Michael Wade (Michael Wade)
+  No, it's ugly.
+
+1:28:51 - Nathan Desnoyers (desnoyersproperties.com)
+  My wife hates it. My wife has a degree.
+
+1:28:56 - Michael Wade (Michael Wade)
+  She has a degree in media arts and design. The concentration in...
+
+1:29:00 - Nathan Desnoyers (desnoyersproperties.com)
+  Creative advertising. She works for a consulting company, so she's like jack-of-all-trades. She's a graphic designer, artist at heart. She thinks Perseq on Post is just nasty looking.  It's pretty garbage, yeah. Yeah. And that's the closest, you know, postcard in a box that we have. I mean, I haven't done any other market research, but I guess bear printing looks – their website looks like it's been made in the 2000s, but – No, the website's trash, but, like, their tools are really cool.  So you can do so much stuff with it.
+
+1:29:39 - Michael Wade (Michael Wade)
+  See, I haven't even seen their – they just added a Canva feature onto it. I'm curious what that is.  But I'm thinking, I mean, you know, so it's like Perseq Ninja system. I feel like there are a couple things where they need to update it.  I mean, their autoflow is, they say, three touches per month, a mix of postcards and email.
+
+1:29:59 - Nathan Desnoyers (desnoyersproperties.com)
+  So, yeah. So, Um... But I guess you could probably get away with doing one postcard a month and then heavy social media, and you're going to hit most of your people.  Because social media is autoflow. So I'm like, okay, maybe I shouldn't really be focusing super heavy. I mean, still do the postcards.  I feel like I can get one out per month pretty easily. And could I get two to three if I really systematize it?  Probably. But, yeah. I think I want to do more video. More than – I guess my question to you is why do you want to do that many postcards?  I mean, I do see – I guess I don't have anything trackable from it, but I do see more people saying, hey, I got your postcard, hey, I got your postcard, the more I send them.  Or they like them. I mean, they are high quality. Couldn't you do like a gamma site and create like a gamma site for your market?  So, for example, what if you create a gamma website for – what's your market? So, tell
+
+1:31:01 - Michael Wade (Michael Wade)
+  Uh, Fairfax County, Northern Virginia. called like Fairfax Stats. Yeah. FairfaxMarketStats.com.
+
+1:31:10 - Nathan Desnoyers (desnoyersproperties.com)
+  And then you could do like an RSS feed for everything that's happening in Fairfax County.
+
+1:31:16 - Michael Wade (Michael Wade)
+  Then you could have to stream in. And then you could also do a, um, like, are you a Canva guy?  I'm going to share one last thing with you. Here and there. I have a pro count. mean, EXP gives me a pro count.  Um, I'm not the most proficient, but my wife is. She's my Canva. Your wife likes Canva?
+
+1:31:40 - Nathan Desnoyers (desnoyersproperties.com)
+  Yeah, no, I mean, she can do, she likes, she does like Canva. I mean, she's good at, she can do like Photoshop and all the fancy graphic design stuff, but she, for free stuff, uh, she likes Canva.
+
+1:31:51 - Michael Wade (Michael Wade)
+  It's easy.
+
+1:31:51 - Nathan Desnoyers (desnoyersproperties.com)
+  Let me show you this. Canva just purchased two companies. They purchased-
+
+1:32:12 - Michael Wade (Michael Wade)
+  They purchased a company called Flourish, Leonardo, and Affinity. So Affinity is a very well-known graphic tool, but Flourish is really the cool one.  And what it allows you to do is this. So you can go right on here. You can go to Flourish.  And I've been learning how to use it. I'm not super familiar with it. So you're seeing like very rudimentary understanding of how to use it.  But what it allows you to do, and I'm just going to show you a few other examples. You can create visual storytelling.
+  SCREEN SHARING: Michael started screen sharing - WATCH: https://fathom.video/share/B44WnSkkLxbiCsE1vTMnsRyfTJ8zY_8E?timestamp=5565.221036999998  Thank on what's happening with the market. Wow, that's, I mean, that looks fancy. That looks nice and cool and fancy.  Mm-hmm. So you can embed those directly into a, what is it called? Like a real estate review or whatever.  Yeah. Yeah.
+
+1:33:29 - Nathan Desnoyers (desnoyersproperties.com)
+  You know, I was thinking, was like, what would be, what would be a super, like, was like, okay, I have all these product ideas, but a lot of them just seem like it's something that's going to be made realistically in the next few years.  But I was you know what would be sick is if you can make, like, Harry, you know how Harry Potter newspaper is like pictures and  like that?  What if you make an easy, printable, disposable, compostable screen like that? So you send someone a real estate review and it's like, instead of having to send them a tablet, you send them.  This page where things live on it. I mean, you could totally do that. would just be really expensive. Yeah.  That's why I love Gamma. Yeah. You can do the full real estate for review. Are you doing your reviews in Gamma right now?
+
+1:34:17 - Michael Wade (Michael Wade)
+  No, which is what I was going to do, build out in this, in the Ninja OS thing, is have it automatically where it's like, okay, I paste the focus first stuff and it automatically creates stuff for me.
+
+1:34:29 - Nathan Desnoyers (desnoyersproperties.com)
+  But show me, yeah, what do you, you're just taking the focus first graphs and you're just manually copy pasting them into here, right?  I mean, I'm physically mailing a real estate review and giving them, handing them as copies. Do you not do physical anymore?  No. No. I send them this.
+
+1:34:59 - Michael Wade (Michael Wade)
+  So it's just super easy. Yeah, and you can make this, like, as soon as you're done with the, so you do focus first, export, create the graphs, and then you just copy-paste them into a prompt, or you, you know, copy-paste them.
+
+1:35:12 - Nathan Desnoyers (desnoyersproperties.com)
+  Do you have, like, a broadcast preset or something? No, these are literally, like, copied and pasted. Okay. That's all it is.  Yeah. And for someone who's not tech-savvy, they're like, oh, my God, that's so complicated. Yeah. No, I realize that this could be pretty straightforward to set up, and it looks amazing, and it's personalized.  I do like, I mean, I think if I wanted to do this, I would still do the physical one, because I like, because I've had people tell me that it sits on their desk or their kitchen counter for months, you know, and that they use it.  um, I have, like, a tracker of, like, a components-age tracker, so it's. It's like, you know, they write down how old their water heater is or HVAC or something like that so that they can, if they know how old it is, if they have to start budgeting.  And so I use it as a referral opportunity for my contractors and my BNI. But obviously this is, this would be great too.  maybe even just like sending, doing a electronic and a digital and a physical one as well and have maybe a QR code on the digital and physical one.  And doing a loom and then embedding that loom into it. Yeah, actually that, that was, I don't listen to every single Ninja Selling podcast anymore because I just don't need to.
+  ACTION ITEM: Find Ninja Selling podcast episode re: Loom in reviews; share w/ Michael - WATCH: https://fathom.video/share/B44WnSkkLxbiCsE1vTMnsRyfTJ8zY_8E?timestamp=5780.582225999999
+
+1:36:37 - Michael Wade (Michael Wade)
+  But there was one guy who talked about doing that. He would do like a bunch of real estate reviews every week and he did them all digitally, but did loom.
+
+1:36:46 - Nathan Desnoyers (desnoyersproperties.com)
+  And so then it just makes it feel more personalized, you know, when they get that message. So I wonder who that was because I made that recommendation during a call and a bunch of people wrote it down.  Let me see, I can find it.
+
+1:37:00 - Michael Wade (Michael Wade)
+  What you can do, though, Nathan, is you could record a... This is how you multiply it, though. In Loom, you can record a video, and you can do plugins, so you can change the address and the person's name, and the AI will just adjust it.  So, in other words, you can go on here, and I'll show you this. I just did a sample one yesterday, so check this out.  I do it all for the property tours, so when people want to see tours, I do a quick video, and then when they click it, they can see everything that's happening with that video.  I don't want to listen to myself talk. But it shows all the information about the home. I can see that they've watched it.
+  SCREEN SHARING: Michael started screen sharing - WATCH: https://fathom.video/share/B44WnSkkLxbiCsE1vTMnsRyfTJ8zY_8E?timestamp=5871.327306999999  I can, they can go down and they can look at the different chapters. It'll auto-create the chapters for me.  So do you record this on your camera? Do you record this in the Loom app? I guess it probably is On the Loom app on my phone.  Okay, so you record this in the Loom app. It auto-subtitles it. Yeah.
+
+1:38:21 - Nathan Desnoyers (desnoyersproperties.com)
+  Okay, that's pretty sick. Because I use Zoom Clips.
+
+1:38:24 - Michael Wade (Michael Wade)
+  I wonder if I can do that.
+
+1:38:26 - Nathan Desnoyers (desnoyersproperties.com)
+  You cannot. I've tried. Okay. And what's nice, though, is here. So if go to Go Street, it then will then give you all the chapters.
+
+1:38:39 - Michael Wade (Michael Wade)
+  So when you hit play, I haven't seen any. So it breaks it all down. So you can click through.  You can leave comments. You can see feedback. There's a whole transcript. I can have it draft an email about it.  But what's really cool, though, and this is where it takes it a step further, Street. I'll For open house welcomes, so just testing this out with Carol, my girlfriend, and I made a stupid video, because I'm a goofball.  So I said, like, hey, Carol. Oh, yeah, Jaz, thanks, you too. Then I had the same thing, but for Zach, for John, for Chris, for Zach, for John, for Chris.  And I've done it as well for... Oh, so you just recorded generic. Oh, wow. So look at this. Hey, Eric, this is a non-horning one.  Come on. Yeah, so I guess bigger picture, how are you going to monetize all of this stuff that you're talking?
+
+1:39:51 - Nathan Desnoyers (desnoyersproperties.com)
+  Substack, just Patreon, what do you think? I was just going to do a substack. I, like, just downloaded substack.  I've never... But I feel like it's simple enough that people – so you'll see, hey, Eric, and it replaces it with Jim, John, Zach.
+
+1:40:11 - Michael Wade (Michael Wade)
+  And then all I do is I come right here, and let's say I want to make more with this.  I can create more based off of this. Wait, is it putting their name in there audibly? Yes. Wait, so how?  And it changes your lips?
+
+1:40:38 - Nathan Desnoyers (desnoyersproperties.com)
+  No, but you don't pay attention to it. I'll just put on – so here's the original.
+
+1:40:49 - Michael Wade (Michael Wade)
+  Just so can hear it. This is a quick video for you. I hope that you are enjoying this.
+
+1:40:57 - Nathan Desnoyers (desnoyersproperties.com)
+  Hey, Eric, this is a quick video for you.
+
+1:40:59 - Michael Wade (Michael Wade)
+  I hope – Hey, Kathy, this is a quick video for you.
+
+1:41:13 - Nathan Desnoyers (desnoyersproperties.com)
+  I hope that you are enjoying the AI presentation.
+
+1:41:15 - Michael Wade (Michael Wade)
+  That was a little off, but nothing like everything else is real. So it kind of like it's so it's so fast.  It's a male merging video.
+
+1:41:27 - Nathan Desnoyers (desnoyersproperties.com)
+  Oh, so it doesn't change your lips, but it does change the okay. Yeah, either way, it doesn't matter. It's it's there since the rest of the video is real.  It's not like if the whole thing was generated, then it would be I've seen those entirely generated talking head things.  I saw the presentation from this guy, syllabi.io, and it was just way too creepy. I'm sure it'll be good soon, but yeah, but I thought you would think that's pretty cool.  No, that pretty cool. though, is you could record, you can do A real estate review, though, for a whole town.
+
+1:42:07 - Michael Wade (Michael Wade)
+  Oh, wow, yeah. But then how would a... You create a video for the owners of every single person in that town.
+
+1:42:18 - Nathan Desnoyers (desnoyersproperties.com)
+  Then how do you deliver it to them? Like a QR code and a, oh, yeah, what if you did that in a mailer?
+
+1:42:23 - Michael Wade (Michael Wade)
+  That's my point. Yeah.
+
+1:42:39 - Nathan Desnoyers (desnoyersproperties.com)
+  I know you're like, what the ? Wheels are turning. Yeah, I can only do so much of this stuff at once, but I do love it.  It's good stuff. I need to re-explore Loom. Like I said, I've been using Zoom.
+
+1:42:49 - Michael Wade (Michael Wade)
+  Zoom clips works for just, like, quick videos, but it doesn't have that functionality of...
+
+1:42:55 - Nathan Desnoyers (desnoyersproperties.com)
+  Well, I did look in the app. I can, as I was curious. I can go in and record. Let me see.
+  ACTION ITEM: Test Zoom Clips for auto-captions/transcripts - WATCH: https://fathom.video/share/B44WnSkkLxbiCsE1vTMnsRyfTJ8zY_8E?timestamp=6180.582225999999  Let me try it. Oh, crap. That's the background. It's video only. Oh, no. My background is blurry. Okay. Okay.  Let me see. This works. Hey, Andrew. This is a test of Zoom clips. I'm going to see if it has subtitles.  Because one less thing I need to pay for would be fantastic. I don't know. I'll have to  with this later.  Yeah, the Loom app is awesome because I can pause it. And I can even draw on it and add...  I can add comments and...
+
+1:44:00 - Michael Wade (Michael Wade)
+  Everything in it. Yeah. It's a pretty remarkable tool. I like it a lot. Yeah. Yeah, I mean, it's the original, like, screen recording app that I remember being talked about when I was, so.  Bonbon, right?
+
+1:44:18 - Nathan Desnoyers (desnoyersproperties.com)
+  was, well, yeah, Bonbon, and then, but no, there was this podcast, three-and-a-half-hour podcast with Sam Korkos on the Tim Ferriss show.  We were just talking about using Athena virtual assistants, and he said that he doesn't have any calls with them.  He just records his workflow using Loom and gives it to them. He says that's just the quickest way. It's at least, it's the lowest friction way to train people, which brings me to my question.  I remember you, so I was thinking, was like, okay, should I get a virtual assistant? And I think that there's so much stuff that I could automate and systematize myself, but I still think maybe, I don't know, maybe, maybe, like, long-term, it would be nice to just hand stuff off if you had, like, the right assistant.  Since that was proactive enough, but what's your stance on that? So what my thought pattern was is to build out a back page on Notion because I can embed the videos on how to do each thing.
+
+1:45:21 - Michael Wade (Michael Wade)
+  So I could show someone how to do a real estate review. I could show someone what to look for in a property, how to write a contract.  Because there's really not that much stuff that we do. Then you can break that down and you can just do like 20 videos.  Yeah, I trained my past virtual assistant on doing real estate reviews. And it took him a few tries because I kept having to think, okay, this guy's in Kenya.  Like he doesn't have the context of these neighborhoods and things like that.
+
+1:45:54 - Nathan Desnoyers (desnoyersproperties.com)
+  And so I had to like, as I was walking through, I was explaining like every time my mouse moved, I was like explaining what I was doing.  But eventually he got it down pretty good. But I realized that I actually didn't mind the process of going in and making it because it gave me like a peek into that neighborhood briefly.  So again, like with handwritten notes, like there's that psychological component that I think is actually pretty important of writing the note, thinking and bringing the person in your mind, like writing something positive about them, stuff like that.  Like the actual, like the keystroke, the writing with the pen. And I think that also, for me at least, applies to real estate reviews.  Now, as soon as I make the things in focus first, everything after that is plug and play. I could automate that.  But I don't want to lose that touch of, that human touch. So I'm going to show you what I'm doing with real estate reviews.  And this is kind of the layer up on it. Have you ever used Screen Studio? No. It's just...
+
+1:47:00 - Michael Wade (Michael Wade)
+  Screen Studio, I just got it. And what it allows you to do is you can do a video and it zooms into each component.  Oh, that's sick. Now, their presentation tool sucks.
+
+1:47:27 - Nathan Desnoyers (desnoyersproperties.com)
+  So what you do is you download this, upload it into a loom, and then send it.
+
+1:47:36 - Michael Wade (Michael Wade)
+  That's pretty sweet. So kind of going back to my bigger zoomed out view, do you have plans on hiring a virtual assistant ever?
+  SCREEN SHARING: Michael started screen sharing - WATCH: https://fathom.video/share/B44WnSkkLxbiCsE1vTMnsRyfTJ8zY_8E?timestamp=6443.925677999999
+
+1:47:44 - Nathan Desnoyers (desnoyersproperties.com)
+  Or do you think that, you know? I just don't see the benefit. Yeah. Because, look, I'd rather have agents work with me and then I can show them how I'm doing all this.
+
+1:47:59 - Michael Wade (Michael Wade)
+  to this. So,
+
+1:48:00 - Nathan Desnoyers (desnoyersproperties.com)
+  Yeah. So where are you at with building out a team?
+
+1:48:04 - Michael Wade (Michael Wade)
+  So the first step is I'm starting to do mentorship for agents, and I'm going to test my systems out on them.  And then once I have like three or four that are doing well, at the end of this year, at the end of next year, I'll then bring on a few people.  So the issue is I just went through a nasty divorce. That was brutal. And about $150,000, man. I don't recommend it.  Oh, it's tough. So, yeah, you would never guess if that can happen, but it does. I was one of those guys like, I'm to stay married forever, you know, and then  happens.  I basically funded my ex's school the whole way through, and she walked away right as she got a job.  fromshyster. in took was I'm And will be Yeah, you told me that stuff. Sorry about that, man. Oh, thank you.  But my point is, it happens. And you just can't worry about it.
+
+1:49:10 - Nathan Desnoyers (desnoyersproperties.com)
+  But I think that there are so many things that you can do, though.
+
+1:49:16 - Michael Wade (Michael Wade)
+  So, like, I really think, man, that with technology, kind of going back to that, with Raycast, you can do so much of the automation yourself.  Because you can just set up the hotkeys and then the next steps that you have to do. Then you can train a team and then everyone just has the same process.
+
+1:49:45 - Nathan Desnoyers (desnoyersproperties.com)
+  Yeah, that makes sense. I think what I'm thinking of now is really, and I need to, I haven't read the book, but I understand the basic principles and buy back your time, is that there are certain things that I would offload to an executive assistant that would be kind of outside the purview of.  More of like house manager, like life management stuff. But again, I think before I delegate something, I should probably determine if it's something that I can automate or determine if it even needs to get done.  I'm to remember the actual axiom that Elon has where he's like, simplify. He screams simplify, simplify, simplify, or is he something that he does where he, I heard him in this podcast, not him, somebody talking about biography they read, but he said, don't automate  that doesn't need to be in the process at all.  Yeah, and I think that there's some things that just do not scale.
+
+1:50:41 - Michael Wade (Michael Wade)
+  So for example, I honestly do not think that AI, I'm sorry, that my real estate reviews scale. They don't.  Those gammas are just copying and pasting information in. But I will tell you every single. The I share it with, they absolutely love it because it's easy to read.  mean, I could tell you, mean, Ninja's always harping on real estate reviews, and I did their full business planning, and part of it was tracing your business down to the original piece of flow that if you could go as far back, like how far back, they call it the genealogy.
+
+1:51:25 - Nathan Desnoyers (desnoyersproperties.com)
+  And pretty much everything is either from an open house or real estate reviews. And it's sometimes a lot of things like crisscross too much, but it's hard to figure out.  It's like, yeah, met them in an open house, and then I wrote them a handwritten note, and then I sent them a real estate review, and it's just the compounds.  But most of my stuff comes from really, the real estate reviews are really high leverage, and so I'm trying to lean into those a lot more.
+
+1:51:46 - Michael Wade (Michael Wade)
+  So what I'm doing with real estate reviews is you can export the PDF from Gamma, and then I can have it auto-sized in Canva.  And then I'm printing out an eight-page book that my company prints out for a dollar a right. Samson. Oh, God.  I need to – I told myself this business planning season I was going to dig more into brokerages.
+
+1:52:13 - Nathan Desnoyers (desnoyersproperties.com)
+  I think I might stick around eXp for just a little bit longer just because there's a lot of other things together, too, than think about Switchbook.  So this is a brochure. Let see if I can zoom out. Yeah. This is just a brochure, but you can see it's high quality.
+
+1:52:33 - Michael Wade (Michael Wade)
+  Yeah. And just imagine that as a real estate review. So you do that for like once a month? I would just do them in advance.
+
+1:52:46 - Nathan Desnoyers (desnoyersproperties.com)
+  And then all you do in Gamma is once you build it, you then come up here.
+
+1:52:56 - Michael Wade (Michael Wade)
+  And I'm to show you. I'm not I'm not at all done with this. Okay. But I'm going build like a template.  So let's say this is, I'm going to do this one. Okay. I would then come up here to publish.  I hit share, export to a PDF. And then you organize it in a way that when you export it, it will, does that make sense?
+  SCREEN SHARING: Michael started screen sharing - WATCH: https://fathom.video/share/B44WnSkkLxbiCsE1vTMnsRyfTJ8zY_8E?timestamp=6787.3067919999985  Yeah. Like the internal parts will fill this. And then what it does is it makes it into an actual PDF that you can download whenever it downloads.
+
+1:53:44 - Nathan Desnoyers (desnoyersproperties.com)
+  Yeah.
+
+1:53:45 - Michael Wade (Michael Wade)
+  All right. Well, this has been, this has been awesome. I do need to go. Yeah. I got to go to make some calls.  I appreciate it. We should do this. appreciate you as well.
+
+1:53:55 - Nathan Desnoyers (desnoyersproperties.com)
+  All right. Take care, Michael. Take care, man. I'll see you. All right. Bye.
