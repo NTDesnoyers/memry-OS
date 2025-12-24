@@ -5556,6 +5556,254 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
     }
   });
 
+  // Beta Users API
+  app.get("/api/beta/users", async (req, res) => {
+    try {
+      const { betaUsers, betaIntake, userConnectors } = await import("@shared/schema");
+      const { desc, eq } = await import("drizzle-orm");
+      const users = await db.select().from(betaUsers).orderBy(desc(betaUsers.createdAt));
+      
+      const usersWithDetails = await Promise.all(users.map(async (user) => {
+        const [intake] = await db.select().from(betaIntake).where(eq(betaIntake.betaUserId, user.id));
+        const connectors = await db.select().from(userConnectors).where(eq(userConnectors.betaUserId, user.id));
+        return { ...user, intake, connectors };
+      }));
+      
+      res.json(usersWithDetails);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/beta/users/:id", async (req, res) => {
+    try {
+      const { betaUsers, betaIntake, userConnectors } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [user] = await db.select().from(betaUsers).where(eq(betaUsers.id, req.params.id));
+      if (!user) {
+        return res.status(404).json({ message: "Beta user not found" });
+      }
+      const [intake] = await db.select().from(betaIntake).where(eq(betaIntake.betaUserId, user.id));
+      const connectors = await db.select().from(userConnectors).where(eq(userConnectors.betaUserId, user.id));
+      res.json({ ...user, intake, connectors });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/beta/users", async (req, res) => {
+    try {
+      const { betaUsers, insertBetaUserSchema } = await import("@shared/schema");
+      const parsed = insertBetaUserSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: fromZodError(parsed.error).message });
+      }
+      const [user] = await db.insert(betaUsers).values(parsed.data).returning();
+      res.status(201).json(user);
+    } catch (error: any) {
+      if (error.code === '23505') {
+        return res.status(400).json({ message: "A user with this email already exists" });
+      }
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/beta/users/:id", async (req, res) => {
+    try {
+      const { betaUsers } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [user] = await db
+        .update(betaUsers)
+        .set({ ...req.body, updatedAt: new Date() })
+        .where(eq(betaUsers.id, req.params.id))
+        .returning();
+      if (!user) {
+        return res.status(404).json({ message: "Beta user not found" });
+      }
+      res.json(user);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Beta Intake API - Combined user + intake in single transaction
+  app.post("/api/beta/intake", async (req, res) => {
+    try {
+      const { betaIntake, betaUsers, userConnectors, insertBetaUserSchema } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      
+      const { user: userData, ...intakeData } = req.body;
+      
+      // If user data provided, create user and intake together in a transaction
+      if (userData) {
+        const userParsed = insertBetaUserSchema.safeParse(userData);
+        if (!userParsed.success) {
+          return res.status(400).json({ message: fromZodError(userParsed.error).message });
+        }
+        
+        // Check if user already exists and has intake (outside transaction for early return)
+        const [existingUser] = await db.select().from(betaUsers).where(eq(betaUsers.email, userData.email));
+        if (existingUser) {
+          const [existingIntake] = await db.select().from(betaIntake).where(eq(betaIntake.betaUserId, existingUser.id));
+          if (existingIntake) {
+            return res.status(400).json({ message: "This user has already completed the intake form" });
+          }
+        }
+        
+        // Use transaction for atomic operations
+        const result = await db.transaction(async (tx) => {
+          let userId: string;
+          
+          if (existingUser) {
+            userId = existingUser.id;
+          } else {
+            const [newUser] = await tx.insert(betaUsers).values(userParsed.data).returning();
+            userId = newUser.id;
+          }
+          
+          // Create intake
+          const [intake] = await tx.insert(betaIntake).values({
+            betaUserId: userId,
+            meetingTools: intakeData.meetingTools,
+            callTools: intakeData.callTools,
+            messagingTools: intakeData.messagingTools,
+            emailTools: intakeData.emailTools,
+            crmTools: intakeData.crmTools,
+            otherTools: intakeData.otherTools,
+            priorities: intakeData.priorities,
+            painPoints: intakeData.painPoints,
+          }).returning();
+          
+          // Auto-create connector entries based on intake
+          const connectorInserts: any[] = [];
+          
+          const toolCategories = [
+            { tools: intakeData.meetingTools, category: 'meeting' },
+            { tools: intakeData.callTools, category: 'call' },
+            { tools: intakeData.messagingTools, category: 'messaging' },
+            { tools: intakeData.emailTools, category: 'email' },
+          ];
+          
+          for (const { tools, category } of toolCategories) {
+            if (tools && tools.length > 0) {
+              for (const tool of tools) {
+                connectorInserts.push({
+                  betaUserId: userId,
+                  provider: tool,
+                  category: category,
+                  status: 'pending',
+                });
+              }
+            }
+          }
+          
+          if (connectorInserts.length > 0) {
+            await tx.insert(userConnectors).values(connectorInserts);
+          }
+          
+          return { userId, intake };
+        });
+        
+        res.status(201).json(result);
+      } else {
+        // Legacy path: just intake with existing user
+        if (!intakeData.betaUserId) {
+          return res.status(400).json({ message: "betaUserId is required" });
+        }
+        
+        // Check for existing intake
+        const [existingIntake] = await db.select().from(betaIntake).where(eq(betaIntake.betaUserId, intakeData.betaUserId));
+        if (existingIntake) {
+          return res.status(400).json({ message: "This user has already completed the intake form" });
+        }
+        
+        // Use transaction for atomic operations
+        const result = await db.transaction(async (tx) => {
+          const [intake] = await tx.insert(betaIntake).values(intakeData).returning();
+          
+          // Auto-create connector entries
+          const connectorInserts: any[] = [];
+          const toolCategories = [
+            { tools: intakeData.meetingTools, category: 'meeting' },
+            { tools: intakeData.callTools, category: 'call' },
+            { tools: intakeData.messagingTools, category: 'messaging' },
+            { tools: intakeData.emailTools, category: 'email' },
+          ];
+          
+          for (const { tools, category } of toolCategories) {
+            if (tools && tools.length > 0) {
+              for (const tool of tools) {
+                connectorInserts.push({
+                  betaUserId: intakeData.betaUserId,
+                  provider: tool,
+                  category: category,
+                  status: 'pending',
+                });
+              }
+            }
+          }
+          
+          if (connectorInserts.length > 0) {
+            await tx.insert(userConnectors).values(connectorInserts);
+          }
+          
+          return intake;
+        });
+        
+        res.status(201).json(result);
+      }
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // User Connectors API
+  app.get("/api/beta/connectors/:betaUserId", async (req, res) => {
+    try {
+      const { userConnectors } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const connectors = await db
+        .select()
+        .from(userConnectors)
+        .where(eq(userConnectors.betaUserId, req.params.betaUserId));
+      res.json(connectors);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.put("/api/beta/connectors/:id", async (req, res) => {
+    try {
+      const { userConnectors } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [connector] = await db
+        .update(userConnectors)
+        .set({ ...req.body, updatedAt: new Date() })
+        .where(eq(userConnectors.id, req.params.id))
+        .returning();
+      if (!connector) {
+        return res.status(404).json({ message: "Connector not found" });
+      }
+      res.json(connector);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/beta/connectors", async (req, res) => {
+    try {
+      const { userConnectors, insertUserConnectorSchema } = await import("@shared/schema");
+      const parsed = insertUserConnectorSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: fromZodError(parsed.error).message });
+      }
+      const [connector] = await db.insert(userConnectors).values(parsed.data).returning();
+      res.status(201).json(connector);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Webhook authentication helper
   const verifyWebhookSecret = async (req: any, provider: string): Promise<boolean> => {
     const authHeader = req.headers?.authorization;

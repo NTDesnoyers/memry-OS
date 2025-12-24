@@ -1559,3 +1559,104 @@ export const crmFieldMappingsRelations = relations(crmFieldMappings, ({ one }) =
     references: [crmIntegrations.id],
   }),
 }));
+
+/** Beta Users - Tracks beta program participants */
+export const betaUsers = pgTable("beta_users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  phone: text("phone"),
+  brokerage: text("brokerage"),
+  isNinjaCertified: boolean("is_ninja_certified").default(false),
+  status: text("status").default("pending"), // pending, active, churned
+  onboardedAt: timestamp("onboarded_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertBetaUserSchema = createInsertSchema(betaUsers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertBetaUser = z.infer<typeof insertBetaUserSchema>;
+export type BetaUser = typeof betaUsers.$inferSelect;
+
+/** Beta Intake - Captures tool preferences from intake form */
+export const betaIntake = pgTable("beta_intake", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  betaUserId: varchar("beta_user_id").notNull().unique().references(() => betaUsers.id),
+  meetingTools: text("meeting_tools").array(), // fathom, otter, fireflies, zoom, meet, teams, granola
+  callTools: text("call_tools").array(), // ringcentral, callrail, dialpad, fub_dialer, plaud
+  messagingTools: text("messaging_tools").array(), // imessage, whatsapp, messenger, instagram_dm, sms
+  emailTools: text("email_tools").array(), // gmail, outlook
+  crmTools: text("crm_tools").array(), // follow_up_boss, cloze, kvcore, boomtown, chime
+  otherTools: text("other_tools"), // Free text for tools we didn't list
+  priorities: text("priorities").array(), // What they most want to capture: meetings, calls, texts, emails
+  painPoints: text("pain_points"), // What's not working for them today
+  submittedAt: timestamp("submitted_at").defaultNow().notNull(),
+});
+
+export const insertBetaIntakeSchema = createInsertSchema(betaIntake).omit({
+  id: true,
+  submittedAt: true,
+});
+
+export type InsertBetaIntake = z.infer<typeof insertBetaIntakeSchema>;
+export type BetaIntake = typeof betaIntake.$inferSelect;
+
+/** User Connectors - Maps each beta user to their configured capture sources */
+export const userConnectors = pgTable("user_connectors", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  betaUserId: varchar("beta_user_id").notNull().references(() => betaUsers.id),
+  provider: text("provider").notNull(), // fathom, plaud, granola, beeper, gmail, etc.
+  category: text("category").notNull(), // meeting, call, messaging, email
+  status: text("status").default("pending"), // pending, needs_config, connected, error
+  config: jsonb("config").$type<{
+    apiKey?: string;
+    webhookSecret?: string;
+    accessToken?: string;
+    refreshToken?: string;
+    tokenExpiresAt?: string;
+    customSettings?: Record<string, any>;
+  }>(),
+  lastSyncAt: timestamp("last_sync_at"),
+  lastSyncStatus: text("last_sync_status"),
+  lastSyncError: text("last_sync_error"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertUserConnectorSchema = createInsertSchema(userConnectors).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertUserConnector = z.infer<typeof insertUserConnectorSchema>;
+export type UserConnector = typeof userConnectors.$inferSelect;
+
+/** Beta User Relations */
+export const betaUsersRelations = relations(betaUsers, ({ one, many }) => ({
+  intake: one(betaIntake, {
+    fields: [betaUsers.id],
+    references: [betaIntake.betaUserId],
+  }),
+  connectors: many(userConnectors),
+}));
+
+export const betaIntakeRelations = relations(betaIntake, ({ one }) => ({
+  betaUser: one(betaUsers, {
+    fields: [betaIntake.betaUserId],
+    references: [betaUsers.id],
+  }),
+}));
+
+export const userConnectorsRelations = relations(userConnectors, ({ one }) => ({
+  betaUser: one(betaUsers, {
+    fields: [userConnectors.betaUserId],
+    references: [betaUsers.id],
+  }),
+}));

@@ -32,6 +32,7 @@ import Coaching from "@/pages/coaching";
 import LifeEvents from "@/pages/life-events";
 import EventLog from "@/pages/event-log";
 import LeadInbox from "@/pages/lead-inbox";
+import BetaOnboarding from "@/pages/beta-onboarding";
 
 function Router() {
   return (
@@ -64,6 +65,7 @@ function Router() {
       <Route path="/life-events" component={LifeEvents} />
       <Route path="/event-log" component={EventLog} />
       <Route path="/leads" component={LeadInbox} />
+      <Route path="/beta" component={BetaOnboarding} />
       <Route component={NotFound} />
     </Switch>
   );
