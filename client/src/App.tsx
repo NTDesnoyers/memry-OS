@@ -40,6 +40,7 @@ import BetaOnboarding from "@/pages/beta-onboarding";
 import InsightInbox from "@/pages/insight-inbox";
 import Intake from "@/pages/intake";
 import RevivalOpportunities from "@/pages/revival-opportunities";
+import BetaWelcome from "@/pages/beta-welcome";
 
 function Router() {
   return (
@@ -76,6 +77,7 @@ function Router() {
       <Route path="/insights" component={InsightInbox} />
       <Route path="/intake" component={Intake} />
       <Route path="/revival" component={RevivalOpportunities} />
+      <Route path="/welcome" component={BetaWelcome} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 
 const TOUR_STEPS = [
   {
-    title: "Welcome to Ninja OS",
-    description: "Your AI-powered relationship intelligence platform for Ninja Selling. Let's take a quick tour of the key features.",
+    title: "Welcome to Ninja OS Beta",
+    description: "You're one of our first testers! Your feedback shapes this product. Use the feedback button (bottom right) to report bugs or share ideas.",
     icon: Sparkles,
   },
   {
