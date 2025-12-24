@@ -43,7 +43,8 @@ import {
   type AiAction, type InsertAiAction,
   type SavedContent, type InsertSavedContent,
   type DailyDigest, type InsertDailyDigest,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions, leads, observerSuggestions, observerPatterns, aiActions, savedContent, dailyDigests
+  type UserCoreProfile, type InsertUserCoreProfile,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions, leads, observerSuggestions, observerPatterns, aiActions, savedContent, dailyDigests, userCoreProfile
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt } from "drizzle-orm";
@@ -434,6 +435,13 @@ export interface IStorage {
   getTodaysDigest(): Promise<DailyDigest | undefined>;
   createDailyDigest(digest: InsertDailyDigest): Promise<DailyDigest>;
   updateDailyDigest(id: string, digest: Partial<InsertDailyDigest>): Promise<DailyDigest | undefined>;
+  
+  // User Core Profile - Guiding Principles & Personalization
+  getUserCoreProfile(betaUserId: string): Promise<UserCoreProfile | undefined>;
+  getUserCoreProfileById(id: string): Promise<UserCoreProfile | undefined>;
+  createUserCoreProfile(profile: InsertUserCoreProfile): Promise<UserCoreProfile>;
+  updateUserCoreProfile(betaUserId: string, profile: Partial<InsertUserCoreProfile>): Promise<UserCoreProfile | undefined>;
+  upsertUserCoreProfile(profile: InsertUserCoreProfile): Promise<UserCoreProfile>;
 }
 
 /** Full context for a person - unified data layer response */
@@ -2450,6 +2458,41 @@ export class DatabaseStorage implements IStorage {
       .where(eq(dailyDigests.id, id))
       .returning();
     return updated || undefined;
+  }
+  
+  // User Core Profile
+  async getUserCoreProfile(betaUserId: string): Promise<UserCoreProfile | undefined> {
+    const [profile] = await db.select().from(userCoreProfile)
+      .where(eq(userCoreProfile.betaUserId, betaUserId));
+    return profile || undefined;
+  }
+  
+  async getUserCoreProfileById(id: string): Promise<UserCoreProfile | undefined> {
+    const [profile] = await db.select().from(userCoreProfile)
+      .where(eq(userCoreProfile.id, id));
+    return profile || undefined;
+  }
+  
+  async createUserCoreProfile(profile: InsertUserCoreProfile): Promise<UserCoreProfile> {
+    const [created] = await db.insert(userCoreProfile).values(profile).returning();
+    return created;
+  }
+  
+  async updateUserCoreProfile(betaUserId: string, profile: Partial<InsertUserCoreProfile>): Promise<UserCoreProfile | undefined> {
+    const [updated] = await db.update(userCoreProfile)
+      .set({ ...profile, updatedAt: new Date() })
+      .where(eq(userCoreProfile.betaUserId, betaUserId))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async upsertUserCoreProfile(profile: InsertUserCoreProfile): Promise<UserCoreProfile> {
+    const existing = await this.getUserCoreProfile(profile.betaUserId);
+    if (existing) {
+      const updated = await this.updateUserCoreProfile(profile.betaUserId, profile);
+      return updated!;
+    }
+    return await this.createUserCoreProfile(profile);
   }
 }
 

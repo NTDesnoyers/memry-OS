@@ -27,7 +27,9 @@ import {
   Check,
   X,
   Eye,
-  Sparkles
+  Sparkles,
+  Target,
+  ArrowRight
 } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -46,6 +48,12 @@ const interactionTypes = [
 ];
 
 const settingsLinks = [
+  {
+    title: "Guiding Principles",
+    description: "Your MTP, mission, values, and decision framework",
+    href: "/intake",
+    icon: Target,
+  },
   {
     title: "Voice Profile",
     description: "Your communication style patterns learned from conversations",
@@ -90,6 +98,20 @@ export default function SettingsPage() {
   const { data: noteUploads = [], isLoading: isLoadingNotes } = useQuery<HandwrittenNoteUpload[]>({
     queryKey: ["/api/handwritten-notes"],
   });
+
+  type ProfileData = {
+    intakeStep: number;
+    intakeCompletedAt?: string | null;
+    mtp: string | null;
+    missionStatement: string | null;
+    coreValues: string[];
+  };
+
+  const { data: profile } = useQuery<ProfileData>({
+    queryKey: ["/api/profile"],
+  });
+  
+  const profileComplete = profile?.intakeCompletedAt != null;
 
   const uploadNote = useMutation({
     mutationFn: async (file: File) => {
@@ -270,6 +292,61 @@ export default function SettingsPage() {
               Configure your Ninja OS preferences and integrations.
             </p>
           </div>
+
+          {/* Profile Summary Card */}
+          <Card className="mb-6 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10" data-testid="card-profile-summary">
+            <CardContent className="p-5">
+              {profileComplete ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Target className="h-5 w-5 text-primary" />
+                      <h3 className="font-medium">Your Guiding Principles</h3>
+                    </div>
+                    <Link href="/intake">
+                      <Button variant="ghost" size="sm" className="text-xs" data-testid="button-edit-profile">
+                        Edit
+                      </Button>
+                    </Link>
+                  </div>
+                  {profile?.mtp && (
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">MTP</p>
+                      <p className="text-sm" data-testid="text-mtp-preview">{profile.mtp}</p>
+                    </div>
+                  )}
+                  {profile?.coreValues && profile.coreValues.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {profile.coreValues.slice(0, 5).map((value, i) => (
+                        <Badge key={i} variant="secondary" className="text-xs" data-testid={`badge-value-${i}`}>
+                          {value}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                      <Target className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium">Complete Your Profile</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Help your AI Chief of Staff understand your mission and values
+                      </p>
+                    </div>
+                  </div>
+                  <Link href="/intake">
+                    <Button size="sm" className="gap-1" data-testid="button-complete-profile">
+                      Get Started <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           <div className="space-y-4">
             {settingsLinks.map((item) => (

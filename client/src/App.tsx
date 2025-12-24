@@ -35,6 +35,7 @@ import EventLog from "@/pages/event-log";
 import LeadInbox from "@/pages/lead-inbox";
 import BetaOnboarding from "@/pages/beta-onboarding";
 import InsightInbox from "@/pages/insight-inbox";
+import Intake from "@/pages/intake";
 
 function Router() {
   return (
@@ -69,6 +70,7 @@ function Router() {
       <Route path="/leads" component={LeadInbox} />
       <Route path="/beta" component={BetaOnboarding} />
       <Route path="/insights" component={InsightInbox} />
+      <Route path="/intake" component={Intake} />
       <Route component={NotFound} />
     </Switch>
   );

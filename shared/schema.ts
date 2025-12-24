@@ -1780,3 +1780,44 @@ export const savedContentRelations = relations(savedContent, ({ one }) => ({
     references: [people.id],
   }),
 }));
+
+/** User Core Profile - Guiding principles, mission, values for AI Chief of Staff personalization */
+export const userCoreProfile = pgTable("user_core_profile", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  betaUserId: varchar("beta_user_id").notNull().unique().references(() => betaUsers.id),
+  mtp: text("mtp"), // Master Transformative Purpose
+  missionStatement: text("mission_statement"),
+  philosophy: text("philosophy"), // Business approach/philosophy
+  decisionFramework: text("decision_framework"), // How they make decisions
+  coreValues: text("core_values").array(), // Ordered list of core values
+  yearsExperience: integer("years_experience"),
+  teamStructure: text("team_structure"), // solo, team_lead, team_member, partnership
+  annualGoalTransactions: integer("annual_goal_transactions"),
+  annualGoalGci: integer("annual_goal_gci"),
+  specializations: text("specializations").array(), // luxury, first_time, investment, relocation, commercial
+  focusAreas: text("focus_areas").array(), // Geographic focus (neighborhoods, cities)
+  familySummary: text("family_summary"), // Personal context for FORD
+  hobbies: text("hobbies").array(),
+  communityInvolvement: text("community_involvement"),
+  intakeCompletedAt: timestamp("intake_completed_at"),
+  intakeStep: integer("intake_step").default(0), // Track progress: 0=not started, 1=principles, 2=professional, 3=personal
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertUserCoreProfileSchema = createInsertSchema(userCoreProfile).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertUserCoreProfile = z.infer<typeof insertUserCoreProfileSchema>;
+export type UserCoreProfile = typeof userCoreProfile.$inferSelect;
+
+/** User Core Profile Relations */
+export const userCoreProfileRelations = relations(userCoreProfile, ({ one }) => ({
+  betaUser: one(betaUsers, {
+    fields: [userCoreProfile.betaUserId],
+    references: [betaUsers.id],
+  }),
+}));

@@ -5922,6 +5922,135 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
     }
   });
 
+  // User Core Profile API - Guiding Principles & Personalization
+  app.get("/api/profile/:betaUserId", async (req, res) => {
+    try {
+      const profile = await storage.getUserCoreProfile(req.params.betaUserId);
+      if (!profile) {
+        return res.status(404).json({ message: "Profile not found" });
+      }
+      res.json(profile);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.post("/api/profile", async (req, res) => {
+    try {
+      const { insertUserCoreProfileSchema } = await import("@shared/schema");
+      const parsed = insertUserCoreProfileSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: fromZodError(parsed.error).message });
+      }
+      const profile = await storage.upsertUserCoreProfile(parsed.data);
+      res.status(201).json(profile);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.patch("/api/profile/:betaUserId", async (req, res) => {
+    try {
+      const { insertUserCoreProfileSchema } = await import("@shared/schema");
+      
+      // Validate with partial schema
+      const updateSchema = insertUserCoreProfileSchema.partial().omit({ betaUserId: true });
+      const parsed = updateSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: fromZodError(parsed.error).message });
+      }
+      
+      const profile = await storage.updateUserCoreProfile(req.params.betaUserId, parsed.data);
+      if (!profile) {
+        return res.status(404).json({ message: "Profile not found" });
+      }
+      res.json(profile);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get profile for current session (simplified for single-user mode)
+  app.get("/api/profile", async (req, res) => {
+    try {
+      // For single-user mode, get the first/only profile
+      const { userCoreProfile } = await import("@shared/schema");
+      const [profile] = await db.select().from(userCoreProfile).limit(1);
+      if (!profile) {
+        // Return empty profile structure for intake wizard
+        return res.json({ 
+          intakeStep: 0, 
+          intakeCompletedAt: null,
+          mtp: null,
+          missionStatement: null,
+          coreValues: [],
+          philosophy: null,
+          decisionFramework: null,
+          yearsExperience: null,
+          teamStructure: null,
+          annualGoalTransactions: null,
+          annualGoalGci: null,
+          specializations: [],
+          focusAreas: [],
+          familySummary: null,
+          hobbies: [],
+          communityInvolvement: null
+        });
+      }
+      res.json(profile);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Update profile (single-user mode)
+  app.put("/api/profile", async (req, res) => {
+    try {
+      const { userCoreProfile, betaUsers, insertUserCoreProfileSchema } = await import("@shared/schema");
+      const { eq: eqOp } = await import("drizzle-orm");
+      
+      // Validate request body with partial schema (all fields optional for updates)
+      const updateSchema = insertUserCoreProfileSchema.partial().omit({ betaUserId: true });
+      const parsed = updateSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ message: fromZodError(parsed.error).message });
+      }
+      
+      // Get or create beta user for single-user mode
+      let [betaUser] = await db.select().from(betaUsers).limit(1);
+      if (!betaUser) {
+        [betaUser] = await db.insert(betaUsers).values({
+          name: "Default User",
+          email: "user@ninja-os.local"
+        }).returning();
+      }
+      
+      // Check if profile exists
+      let [existing] = await db.select().from(userCoreProfile).limit(1);
+      
+      const profileData = {
+        ...parsed.data,
+        betaUserId: betaUser.id,
+        updatedAt: new Date()
+      };
+      
+      if (existing) {
+        const [updated] = await db.update(userCoreProfile)
+          .set(profileData)
+          .where(eqOp(userCoreProfile.id, existing.id))
+          .returning();
+        res.json(updated);
+      } else {
+        const [created] = await db.insert(userCoreProfile)
+          .values(profileData)
+          .returning();
+        res.status(201).json(created);
+      }
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // CRM Integrations API
   app.get("/api/crm/integrations", async (req, res) => {
     try {

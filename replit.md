@@ -50,7 +50,27 @@ The project adheres to an event-driven, multi-agent architecture with a focus on
 The design emphasizes GTD principles, making the system an intelligent reference tool focused on speed for daily reviews and interaction logging. It integrates Ninja Selling methodologies, including relationship segments (A/B/C/D), transaction stages, FORD notes, Ninja Nine habits, and core working lists. Key workflows include weekly planning, daily start-up, and 8x8 campaigns.
 
 ### Feature Specifications
-Current features include a Contact Due Calculator, D Contact Review, AI Assistant with agentic tools, voice profile learning, generated drafts, sync APIs, and **In-App Observer** (data-driven suggestion overlay). Future features target anticipatory, network, and reflective intelligence, memory augmentation, decision support, and skill development.
+Current features include a Contact Due Calculator, D Contact Review, AI Assistant with agentic tools, voice profile learning, generated drafts, sync APIs, **In-App Observer** (data-driven suggestion overlay), **Insight Inbox** (content capture and daily digest), and **Guiding Principles Profile** (MTP, mission, values personalization). Future features target anticipatory, network, and reflective intelligence, memory augmentation, decision support, and skill development.
+
+### Guiding Principles Profile
+**User Core Profile (Implemented)**:
+- Multi-step intake wizard at `/intake` captures MTP, mission statement, core values, philosophy, decision framework
+- Professional profile: years experience, team structure, goals, specializations, focus areas
+- Personal context (FORD): family summary, hobbies, community involvement
+- Schema: `userCoreProfile` table linked to `betaUsers`
+- API: `GET/PUT /api/profile` for single-user mode
+- Settings page shows profile summary with link to edit
+- AI Context Service (`server/ai-context.ts`): `getSystemPromptWithProfile()` injects guiding principles into AI prompts
+
+### Insight Inbox
+**Content Capture & Daily Digest (Implemented)**:
+- Save URLs via Command Palette (Cmd+K) → "Save URL"
+- Async processing: fetch HTML → extract content → AI summarize → generate tags
+- Verifier pattern validates AI-generated summaries/tags before storage
+- Daily digest generation with share suggestions
+- Schema: `savedContent`, `dailyDigests`, `aiActions` tables
+- API: `/api/content/capture`, `/api/digests/today`, `/api/digests/generate`
+- Dashboard widget shows unread count and digest preview
 
 ### Observer Feature
 **In-App Observer (Implemented)**:
