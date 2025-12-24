@@ -25,12 +25,12 @@ interface ScoringFactors {
 export function calculateDormancyScore(factors: ScoringFactors): number {
   let score = 0;
   
-  if (factors.daysSinceContact >= 365 && factors.daysSinceContact < 730) {
-    score += 30;
-  } else if (factors.daysSinceContact >= 730 && factors.daysSinceContact < 1095) {
+  if (factors.daysSinceContact >= 1095) {
     score += 50;
-  } else if (factors.daysSinceContact >= 1095) {
+  } else if (factors.daysSinceContact >= 730) {
     score += 40;
+  } else if (factors.daysSinceContact >= 365) {
+    score += 30;
   } else if (factors.daysSinceContact >= 180) {
     score += 20;
   }
@@ -352,4 +352,80 @@ export async function scanContactsForDormantLeads(options: {
   
   logger.info('Contact scan complete', { found, created, skipped });
   return { found, created, skipped };
+}
+
+export async function generateRevivalCampaign(opportunityId: string): Promise<{
+  success: boolean;
+  draftId?: string;
+  emailSubject?: string;
+  emailBody?: string;
+  error?: string;
+}> {
+  logger.info('Generating revival campaign', { opportunityId });
+  
+  try {
+    const opportunity = await storage.getDormantOpportunity(opportunityId);
+    if (!opportunity) {
+      return { success: false, error: 'Opportunity not found' };
+    }
+    
+    if (opportunity.status !== 'approved') {
+      return { success: false, error: 'Opportunity must be approved first' };
+    }
+    
+    const person = opportunity.personId ? await storage.getPerson(opportunity.personId) : null;
+    if (!person) {
+      return { success: false, error: 'Person not found' };
+    }
+    
+    const years = Math.floor((opportunity.daysSinceContact || 0) / 365);
+    const months = Math.floor(((opportunity.daysSinceContact || 0) % 365) / 30);
+    
+    const timeAgoText = years >= 1 
+      ? `${years} year${years > 1 ? 's' : ''}` 
+      : `${months} month${months > 1 ? 's' : ''}`;
+    
+    const emailSubject = `Thinking of you - Quick check-in`;
+    
+    const firstName = person.name?.split(' ')[0] || 'there';
+    
+    const emailBody = `Hi ${firstName},
+
+It's been a while since we last connected - about ${timeAgoText} if I'm counting right! I was just going through my contacts and your name came up.
+
+I hope you're doing well and that life has been treating you kindly. A lot has happened in the real estate market since we last spoke, and I wanted to reach out to see how things are going on your end.
+
+Are you still in the same place, or have your housing needs changed? Either way, I'd love to catch up if you have a few minutes.
+
+No pressure at all - just wanted to say hello and let you know I'm here if you ever need anything real estate related or just want to chat.
+
+Looking forward to hearing from you!
+
+Best regards`;
+
+    const draft = await storage.createGeneratedDraft({
+      personId: person.id,
+      draftType: 'email',
+      subject: emailSubject,
+      content: emailBody,
+      source: 'dormant_revival',
+      status: 'pending',
+    });
+    
+    await storage.updateDormantOpportunity(opportunityId, {
+      status: 'campaign_sent',
+    });
+    
+    logger.info('Revival campaign generated', { opportunityId, draftId: draft.id });
+    
+    return {
+      success: true,
+      draftId: draft.id,
+      emailSubject,
+      emailBody,
+    };
+  } catch (error: any) {
+    logger.error('Failed to generate revival campaign', { opportunityId, error: error.message });
+    return { success: false, error: error.message };
+  }
 }

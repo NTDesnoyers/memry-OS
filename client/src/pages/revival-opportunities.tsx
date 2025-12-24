@@ -44,11 +44,79 @@ export default function RevivalOpportunities() {
   const approveOpportunity = useMutation({
     mutationFn: async (id: string) => {
       const res = await fetch(`/api/dormant-opportunities/${id}/approve`, { method: "POST" });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message);
+      }
       return res.json();
     },
     onSuccess: () => {
       toast({ title: "Opportunity Approved", description: "Ready for campaign generation" });
-      queryClient.invalidateQueries({ queryKey: ["/api/dormant-opportunities"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dormant-opportunities/pending"] });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Approval Failed", 
+        description: error.message,
+        variant: "destructive"
+      });
+    },
+  });
+
+  const generateCampaign = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/dormant-opportunities/${id}/generate-campaign`, { method: "POST" });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message);
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: "Campaign Created", 
+        description: "Email draft has been generated. View it in Drafts." 
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/dormant-opportunities/pending"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/drafts"] });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Campaign Generation Failed", 
+        description: error.message,
+        variant: "destructive"
+      });
+    },
+  });
+
+  const approveAndGenerate = useMutation({
+    mutationFn: async (id: string) => {
+      const approveRes = await fetch(`/api/dormant-opportunities/${id}/approve`, { method: "POST" });
+      if (!approveRes.ok) {
+        const error = await approveRes.json();
+        throw new Error(`Approval failed: ${error.message}`);
+      }
+      const res = await fetch(`/api/dormant-opportunities/${id}/generate-campaign`, { method: "POST" });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message);
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: "Campaign Created", 
+        description: "Approved and email draft generated. View it in Drafts." 
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/dormant-opportunities/pending"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/drafts"] });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Campaign Generation Failed", 
+        description: error.message,
+        variant: "destructive"
+      });
     },
   });
 
@@ -59,11 +127,22 @@ export default function RevivalOpportunities() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason }),
       });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message);
+      }
       return res.json();
     },
     onSuccess: () => {
       toast({ title: "Opportunity Dismissed", description: "This contact won't appear in future scans" });
-      queryClient.invalidateQueries({ queryKey: ["/api/dormant-opportunities"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dormant-opportunities/pending"] });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Dismiss Failed", 
+        description: error.message,
+        variant: "destructive"
+      });
     },
   });
 
@@ -75,6 +154,10 @@ export default function RevivalOpportunities() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ minDaysSinceContact: 180, maxResults: 50 }),
       });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message);
+      }
       return res.json();
     },
     onSuccess: (data) => {
@@ -83,13 +166,13 @@ export default function RevivalOpportunities() {
         title: "Scan Complete", 
         description: data.message 
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/dormant-opportunities"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dormant-opportunities/pending"] });
     },
-    onError: () => {
+    onError: (error: Error) => {
       setIsScanning(false);
       toast({ 
         title: "Scan Failed", 
-        description: "Could not complete the scan",
+        description: error.message || "Could not complete the scan",
         variant: "destructive"
       });
     },
@@ -115,13 +198,21 @@ export default function RevivalOpportunities() {
     }
   };
 
-  const handleBulkApprove = () => {
-    selectedIds.forEach(id => approveOpportunity.mutate(id));
+  const handleBulkApprove = async () => {
+    const ids = Array.from(selectedIds);
+    try {
+      await Promise.all(ids.map(id => approveOpportunity.mutateAsync(id)));
+    } catch (error) {
+    }
     setSelectedIds(new Set());
   };
 
-  const handleBulkDismiss = () => {
-    selectedIds.forEach(id => dismissOpportunity.mutate({ id }));
+  const handleBulkDismiss = async () => {
+    const ids = Array.from(selectedIds);
+    try {
+      await Promise.all(ids.map(id => dismissOpportunity.mutateAsync({ id })));
+    } catch (error) {
+    }
     setSelectedIds(new Set());
   };
 
@@ -369,11 +460,13 @@ export default function RevivalOpportunities() {
                           <Button
                             size="sm"
                             variant="default"
-                            onClick={() => approveOpportunity.mutate(opp.id)}
-                            disabled={approveOpportunity.isPending}
-                            data-testid={`button-approve-${opp.id}`}
+                            onClick={() => approveAndGenerate.mutate(opp.id)}
+                            disabled={approveAndGenerate.isPending}
+                            data-testid={`button-generate-${opp.id}`}
+                            title="Approve & Generate Email"
                           >
-                            <UserCheck className="w-4 h-4" />
+                            <Mail className="w-4 h-4 mr-1" />
+                            Revive
                           </Button>
                           <Button
                             size="sm"

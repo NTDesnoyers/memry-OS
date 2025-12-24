@@ -5833,6 +5833,22 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
     }
   });
   
+  // Generate revival campaign for approved opportunity
+  app.post("/api/dormant-opportunities/:id/generate-campaign", async (req, res) => {
+    try {
+      const { generateRevivalCampaign } = await import("./dormant-lead-scanner");
+      const result = await generateRevivalCampaign(req.params.id);
+      
+      if (!result.success) {
+        return res.status(400).json({ message: result.error });
+      }
+      
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
   // Delete opportunity
   app.delete("/api/dormant-opportunities/:id", async (req, res) => {
     try {
