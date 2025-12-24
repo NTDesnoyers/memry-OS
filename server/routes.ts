@@ -718,7 +718,7 @@ Respond with valid JSON only, no other text.`;
       type: "function",
       function: {
         name: "link_household",
-        description: "Link people together as a household. Creates a household and assigns all specified people to it. They will count as one unit for FORD conversations and mailers.",
+        description: "Link people together as a household. Creates a household and assigns all specified people to it. They will count as one unit for FORD conversations and mailers. If no name is provided, automatically generates '[Last Name] Family' from the first person's name.",
         parameters: {
           type: "object",
           properties: {
@@ -729,10 +729,10 @@ Respond with valid JSON only, no other text.`;
             },
             householdName: { 
               type: "string", 
-              description: "Name for the household (e.g., 'Samaha Household')" 
+              description: "Optional name for the household. If not provided, auto-generates '[Last Name] Family'" 
             }
           },
-          required: ["personIds", "householdName"]
+          required: ["personIds"]
         }
       }
     }
@@ -931,12 +931,32 @@ Respond with valid JSON only, no other text.`;
           if (!args.personIds || !Array.isArray(args.personIds) || args.personIds.length < 2) {
             return `Error: personIds must be an array with at least 2 person IDs`;
           }
-          if (!args.householdName) {
-            return `Error: householdName is required`;
+          
+          // Get person details to auto-generate household name if not provided
+          const peopleForHousehold: { id: string; name: string }[] = [];
+          for (const personId of args.personIds) {
+            const person = await storage.getPerson(personId);
+            if (person) {
+              peopleForHousehold.push({ id: person.id, name: person.name || personId });
+            }
+          }
+          
+          // Auto-generate household name from last name if not provided
+          let householdName = args.householdName;
+          if (!householdName && peopleForHousehold.length > 0) {
+            // Extract last name from first person's name
+            const firstPersonName = peopleForHousehold[0].name;
+            const nameParts = firstPersonName.trim().split(/\s+/);
+            const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : firstPersonName;
+            householdName = `${lastName} Family`;
+          }
+          
+          if (!householdName) {
+            return `Error: Could not determine household name`;
           }
           
           const household = await storage.createHousehold({ 
-            name: args.householdName,
+            name: householdName,
             address: null
           });
           
@@ -952,7 +972,7 @@ Respond with valid JSON only, no other text.`;
             return `Error: Could not link any people to the household`;
           }
           
-          return `Created "${args.householdName}" and linked ${linkedNames.join(", ")}. They will now count as one household for FORD conversations and mailers.`;
+          return `Created "${householdName}" and linked ${linkedNames.join(", ")}. They will now count as one household for FORD conversations and mailers.`;
         }
         
         default:
