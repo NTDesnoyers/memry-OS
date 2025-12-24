@@ -1151,6 +1151,53 @@ export const insertLeadSchema = createInsertSchema(leads).omit({
 export type InsertLead = z.infer<typeof insertLeadSchema>;
 export type Lead = typeof leads.$inferSelect;
 
+/** Dormant Opportunity Status - Lifecycle for revival opportunities. */
+export const DormantOpportunityStatus = {
+  PENDING: 'pending',       // Awaiting user review
+  APPROVED: 'approved',     // User approved, ready for campaign
+  DISMISSED: 'dismissed',   // User dismissed this opportunity
+  IN_CAMPAIGN: 'in_campaign', // Currently in active outreach campaign
+  CONVERTED: 'converted',   // Successfully re-engaged
+  EXPIRED: 'expired',       // Too old, no longer relevant
+} as const;
+
+export type DormantOpportunityStatusType = typeof DormantOpportunityStatus[keyof typeof DormantOpportunityStatus];
+
+/** Dormant Opportunities - Old leads/contacts identified for revival. */
+export const dormantOpportunities = pgTable("dormant_opportunities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  personId: varchar("person_id").references(() => people.id),
+  leadId: varchar("lead_id").references(() => leads.id),
+  status: text("status").notNull().default('pending'),
+  dormancyScore: integer("dormancy_score").default(0), // Higher = more promising
+  daysSinceContact: integer("days_since_contact"),
+  leadSource: text("lead_source"), // 'open_house', 'buyer_inquiry', 'seller_inquiry', etc.
+  lastEmailDate: timestamp("last_email_date"),
+  lastEmailSubject: text("last_email_subject"),
+  emailThreadCount: integer("email_thread_count").default(0),
+  discoveredVia: text("discovered_via").notNull(), // 'gmail_scan', 'contact_analysis', 'imessage_sync'
+  revivalReason: text("revival_reason"), // AI-generated explanation of why worth reviving
+  suggestedApproach: text("suggested_approach"), // AI-suggested first message/campaign type
+  campaignId: varchar("campaign_id"), // Link to email campaign if started
+  reviewedAt: timestamp("reviewed_at"),
+  dismissedReason: text("dismissed_reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("dormant_opportunities_status_idx").on(table.status),
+  index("dormant_opportunities_score_idx").on(table.dormancyScore),
+  index("dormant_opportunities_person_idx").on(table.personId),
+]);
+
+export const insertDormantOpportunitySchema = createInsertSchema(dormantOpportunities).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertDormantOpportunity = z.infer<typeof insertDormantOpportunitySchema>;
+export type DormantOpportunity = typeof dormantOpportunities.$inferSelect;
+
 /** Event Types - Central orchestration event type definitions. */
 export const EventCategory = {
   LEAD: 'lead',
@@ -1188,6 +1235,10 @@ export const EventType = {
   DRAFT_GENERATED: 'draft.generated',
   ANNIVERSARY_APPROACHING: 'anniversary.approaching',
   RELATIONSHIP_SCORE_CHANGED: 'relationship.score_changed',
+  // Revival Events
+  DORMANT_OPPORTUNITY_DETECTED: 'dormant.opportunity_detected',
+  REVIVAL_CAMPAIGN_STARTED: 'revival.campaign_started',
+  REVIVAL_RESPONSE_RECEIVED: 'revival.response_received',
 } as const;
 
 export type EventCategoryType = typeof EventCategory[keyof typeof EventCategory];

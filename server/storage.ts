@@ -44,7 +44,8 @@ import {
   type SavedContent, type InsertSavedContent,
   type DailyDigest, type InsertDailyDigest,
   type UserCoreProfile, type InsertUserCoreProfile,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions, leads, observerSuggestions, observerPatterns, aiActions, savedContent, dailyDigests, userCoreProfile
+  type DormantOpportunity, type InsertDormantOpportunity,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions, leads, observerSuggestions, observerPatterns, aiActions, savedContent, dailyDigests, userCoreProfile, dormantOpportunities
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt } from "drizzle-orm";
@@ -442,6 +443,17 @@ export interface IStorage {
   createUserCoreProfile(profile: InsertUserCoreProfile): Promise<UserCoreProfile>;
   updateUserCoreProfile(betaUserId: string, profile: Partial<InsertUserCoreProfile>): Promise<UserCoreProfile | undefined>;
   upsertUserCoreProfile(profile: InsertUserCoreProfile): Promise<UserCoreProfile>;
+  
+  // Dormant Opportunities - Revival lead finder
+  getAllDormantOpportunities(limit?: number): Promise<DormantOpportunity[]>;
+  getPendingDormantOpportunities(): Promise<DormantOpportunity[]>;
+  getDormantOpportunity(id: string): Promise<DormantOpportunity | undefined>;
+  getDormantOpportunityByPersonId(personId: string): Promise<DormantOpportunity | undefined>;
+  createDormantOpportunity(opportunity: InsertDormantOpportunity): Promise<DormantOpportunity>;
+  updateDormantOpportunity(id: string, opportunity: Partial<InsertDormantOpportunity>): Promise<DormantOpportunity | undefined>;
+  approveDormantOpportunity(id: string): Promise<DormantOpportunity | undefined>;
+  dismissDormantOpportunity(id: string, reason?: string): Promise<DormantOpportunity | undefined>;
+  deleteDormantOpportunity(id: string): Promise<void>;
 }
 
 /** Full context for a person - unified data layer response */
@@ -2493,6 +2505,72 @@ export class DatabaseStorage implements IStorage {
       return updated!;
     }
     return await this.createUserCoreProfile(profile);
+  }
+  
+  // Dormant Opportunities
+  async getAllDormantOpportunities(limit: number = 100): Promise<DormantOpportunity[]> {
+    return await db.select().from(dormantOpportunities)
+      .orderBy(desc(dormantOpportunities.dormancyScore))
+      .limit(limit);
+  }
+  
+  async getPendingDormantOpportunities(): Promise<DormantOpportunity[]> {
+    return await db.select().from(dormantOpportunities)
+      .where(eq(dormantOpportunities.status, 'pending'))
+      .orderBy(desc(dormantOpportunities.dormancyScore));
+  }
+  
+  async getDormantOpportunity(id: string): Promise<DormantOpportunity | undefined> {
+    const [opportunity] = await db.select().from(dormantOpportunities)
+      .where(eq(dormantOpportunities.id, id));
+    return opportunity || undefined;
+  }
+  
+  async getDormantOpportunityByPersonId(personId: string): Promise<DormantOpportunity | undefined> {
+    const [opportunity] = await db.select().from(dormantOpportunities)
+      .where(and(
+        eq(dormantOpportunities.personId, personId),
+        eq(dormantOpportunities.status, 'pending')
+      ));
+    return opportunity || undefined;
+  }
+  
+  async createDormantOpportunity(opportunity: InsertDormantOpportunity): Promise<DormantOpportunity> {
+    const [created] = await db.insert(dormantOpportunities).values(opportunity).returning();
+    return created;
+  }
+  
+  async updateDormantOpportunity(id: string, opportunity: Partial<InsertDormantOpportunity>): Promise<DormantOpportunity | undefined> {
+    const [updated] = await db.update(dormantOpportunities)
+      .set({ ...opportunity, updatedAt: new Date() })
+      .where(eq(dormantOpportunities.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async approveDormantOpportunity(id: string): Promise<DormantOpportunity | undefined> {
+    const [updated] = await db.update(dormantOpportunities)
+      .set({ status: 'approved', reviewedAt: new Date(), updatedAt: new Date() })
+      .where(eq(dormantOpportunities.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async dismissDormantOpportunity(id: string, reason?: string): Promise<DormantOpportunity | undefined> {
+    const [updated] = await db.update(dormantOpportunities)
+      .set({ 
+        status: 'dismissed', 
+        dismissedReason: reason,
+        reviewedAt: new Date(), 
+        updatedAt: new Date() 
+      })
+      .where(eq(dormantOpportunities.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async deleteDormantOpportunity(id: string): Promise<void> {
+    await db.delete(dormantOpportunities).where(eq(dormantOpportunities.id, id));
   }
 }
 
