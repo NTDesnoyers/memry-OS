@@ -653,11 +653,11 @@ export default function BetaOnboarding() {
   return (
     <Layout>
       <div 
-        className="min-h-screen p-6"
+        className="min-h-screen p-4 md:p-6"
         style={{ 
           backgroundImage: `url(${paperBg})`,
           backgroundSize: 'cover',
-          backgroundAttachment: 'fixed',
+          backgroundPosition: 'center',
         }}
       >
         <div className="max-w-6xl mx-auto">
