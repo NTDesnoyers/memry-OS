@@ -5717,6 +5717,133 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
   });
 
   // ============================================================
+  // Dormant Lead Revival API - Find and revive old opportunities
+  // ============================================================
+  
+  // Get all dormant opportunities (sorted by score)
+  app.get("/api/dormant-opportunities", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const opportunities = await storage.getAllDormantOpportunities(limit);
+      res.json(opportunities);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get pending opportunities only (review queue)
+  app.get("/api/dormant-opportunities/pending", async (req, res) => {
+    try {
+      const opportunities = await storage.getPendingDormantOpportunities();
+      
+      // Enrich with person data
+      const enriched = await Promise.all(opportunities.map(async (opp) => {
+        const person = opp.personId ? await storage.getPerson(opp.personId) : null;
+        return { ...opp, person };
+      }));
+      
+      res.json(enriched);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get single opportunity
+  app.get("/api/dormant-opportunities/:id", async (req, res) => {
+    try {
+      const opportunity = await storage.getDormantOpportunity(req.params.id);
+      if (!opportunity) {
+        return res.status(404).json({ message: "Opportunity not found" });
+      }
+      
+      const person = opportunity.personId ? await storage.getPerson(opportunity.personId) : null;
+      res.json({ ...opportunity, person });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Approve opportunity (ready for campaign)
+  app.post("/api/dormant-opportunities/:id/approve", async (req, res) => {
+    try {
+      const opportunity = await storage.approveDormantOpportunity(req.params.id);
+      if (!opportunity) {
+        return res.status(404).json({ message: "Opportunity not found" });
+      }
+      res.json(opportunity);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Dismiss opportunity
+  app.post("/api/dormant-opportunities/:id/dismiss", async (req, res) => {
+    try {
+      const { reason } = req.body;
+      const opportunity = await storage.dismissDormantOpportunity(req.params.id, reason);
+      if (!opportunity) {
+        return res.status(404).json({ message: "Opportunity not found" });
+      }
+      res.json(opportunity);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Trigger Gmail scan for dormant leads
+  app.post("/api/dormant-opportunities/scan", async (req, res) => {
+    try {
+      const { minDaysSinceContact = 180, maxResults = 50, scanDays = 1095 } = req.body;
+      
+      const { scanGmailForDormantLeads } = await import("./dormant-lead-scanner");
+      const result = await scanGmailForDormantLeads({
+        minDaysSinceContact,
+        maxResults,
+        scanDays,
+      });
+      
+      res.json({
+        success: true,
+        message: `Scan complete: found ${result.found}, created ${result.created}, skipped ${result.skipped}`,
+        ...result,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Scan contacts (without Gmail) for dormant leads
+  app.post("/api/dormant-opportunities/scan-contacts", async (req, res) => {
+    try {
+      const { minDaysSinceContact = 180, maxResults = 50 } = req.body;
+      
+      const { scanContactsForDormantLeads } = await import("./dormant-lead-scanner");
+      const result = await scanContactsForDormantLeads({
+        minDaysSinceContact,
+        maxResults,
+      });
+      
+      res.json({
+        success: true,
+        message: `Scan complete: found ${result.found}, created ${result.created}, skipped ${result.skipped}`,
+        ...result,
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Delete opportunity
+  app.delete("/api/dormant-opportunities/:id", async (req, res) => {
+    try {
+      await storage.deleteDormantOpportunity(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============================================================
   // Insight Inbox API - Content Capture & Daily Digest
   // Pattern: AI proposes → Verifier checks → Execute or Review
   // ============================================================
