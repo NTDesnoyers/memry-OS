@@ -33,10 +33,8 @@ import {
   Link,
   Zap,
   Mail,
-  BarChart3,
   RefreshCw,
   Send,
-  Building2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -84,13 +82,6 @@ const quickActions = [
 
 const skillPacks = [
   { 
-    name: "Compare Listings", 
-    action: "compare_listings", 
-    icon: Building2, 
-    keywords: ["zillow", "mls", "compare", "properties", "analysis"],
-    description: "Paste listing URLs to get AI comparison table"
-  },
-  { 
     name: "Draft Revival Email", 
     action: "draft_revival", 
     icon: Mail, 
@@ -110,13 +101,6 @@ const skillPacks = [
     icon: Send, 
     keywords: ["sms", "text", "message", "contact"],
     description: "Fast compose and send text to a contact"
-  },
-  { 
-    name: "Market Update", 
-    action: "market_update", 
-    icon: BarChart3, 
-    keywords: ["market", "stats", "report", "newsletter"],
-    description: "Generate market update content for sharing"
   },
 ];
 
@@ -207,18 +191,6 @@ export function CommandPalette() {
   const handleSkill = useCallback((action: string) => {
     handleSelect(() => {
       switch (action) {
-        case "compare_listings":
-          toast({
-            title: "Compare Listings",
-            description: "Open AI Assistant and paste your listing URLs to compare them."
-          });
-          const compareEvent = new CustomEvent("ninja:open-ai-assistant", {
-            detail: { 
-              initialMessage: `I want to compare real estate listings. Please help me create a detailed comparison table. I'll paste the listing URLs or details now...`
-            }
-          });
-          window.dispatchEvent(compareEvent);
-          break;
         case "draft_revival":
           setLocation("/revival");
           toast({
@@ -248,18 +220,6 @@ export function CommandPalette() {
             }
           });
           window.dispatchEvent(textEvent);
-          break;
-        case "market_update":
-          toast({
-            title: "Market Update",
-            description: "Generating newsletter content..."
-          });
-          const marketEvent = new CustomEvent("ninja:open-ai-assistant", {
-            detail: { 
-              initialMessage: `Generate a market update for my real estate newsletter. Include current trends, inventory levels, interest rate impacts, and actionable advice for buyers and sellers. Make it engaging and shareable.`
-            }
-          });
-          window.dispatchEvent(marketEvent);
           break;
       }
     });
