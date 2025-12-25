@@ -27,7 +27,7 @@ export default function PersonNew() {
     email: "",
     phone: "",
     role: "",
-    category: "",
+    segment: "",
     notes: "",
   });
 
@@ -130,12 +130,12 @@ export default function PersonNew() {
                   />
                 </div>
                 <div>
-                  <Label>Category</Label>
+                  <Label>Segment</Label>
                   <Input 
-                    value={formData.category || ""} 
-                    onChange={(e) => handleChange("category", e.target.value)}
-                    placeholder="Hot, Warm, Nurture..."
-                    data-testid="input-category"
+                    value={formData.segment || ""} 
+                    onChange={(e) => handleChange("segment", e.target.value)}
+                    placeholder="A, B, C, D..."
+                    data-testid="input-segment"
                   />
                 </div>
               </div>

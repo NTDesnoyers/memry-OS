@@ -405,10 +405,10 @@ Best regards`;
 
     const draft = await storage.createGeneratedDraft({
       personId: person.id,
-      draftType: 'email',
-      subject: emailSubject,
+      type: 'email',
+      title: emailSubject,
       content: emailBody,
-      source: 'dormant_revival',
+      metadata: { source: 'dormant_revival', subject: emailSubject },
       status: 'pending',
     });
     
