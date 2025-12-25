@@ -50,7 +50,7 @@ The project adheres to an event-driven, multi-agent architecture with a focus on
 The design emphasizes GTD principles, making the system an intelligent reference tool focused on speed for daily reviews and interaction logging. It integrates Ninja Selling methodologies, including relationship segments (A/B/C/D), transaction stages, FORD notes, Ninja Nine habits, and core working lists. Key workflows include weekly planning, daily start-up, and 8x8 campaigns.
 
 ### Feature Specifications
-Current features include a Contact Due Calculator, D Contact Review, AI Assistant with agentic tools, voice profile learning, generated drafts, sync APIs, **In-App Observer** (data-driven suggestion overlay), **Insight Inbox** (content capture and daily digest), **Guiding Principles Profile** (MTP, mission, values personalization), **Voice Conversation** (real-time voice AI chat via OpenAI Realtime API), **Dormant Lead Revival Engine** (Gmail scanning, dormancy scoring, approval workflow, campaign generation), and **DIA-Style Skill Packs** (Command Palette shortcuts for Compare Listings, Draft Revival Email, Bulk Outreach, Quick Text, Market Update). Future features target anticipatory, network, and reflective intelligence, memory augmentation, decision support, and skill development.
+Current features include a Contact Due Calculator, D Contact Review, AI Assistant with agentic tools, voice profile learning, generated drafts, sync APIs, **In-App Observer** (queued suggestions in Weekly Review "Insights" tab), **Insight Inbox** (content capture and daily digest), **Guiding Principles Profile** (MTP, mission, values personalization), **Voice Conversation** (real-time voice AI chat via OpenAI Realtime API), **Dormant Lead Revival Engine** (Gmail scanning, dormancy scoring, approval workflow, campaign generation), and **DIA-Style Skill Packs** (Command Palette shortcuts for relationship-compounding actions: Draft Revival, Bulk Outreach, Quick Text). Future features target anticipatory, network, and reflective intelligence, memory augmentation, decision support, and skill development.
 
 ### Dormant Lead Revival Engine
 **Lead Revival System (Implemented)**:
@@ -66,12 +66,10 @@ Current features include a Contact Due Calculator, D Contact Review, AI Assistan
 **Command Palette Skills (Implemented)**:
 - Inspired by DIA Browser's "/" command shortcuts
 - Access via Command Palette (Cmd+K) → type "/" or scroll to Skills section
-- Available skills:
-  - `/compare` - Compare Listings: Paste URLs → AI comparison table
+- Pruned to relationship-compounding actions only (one-off utilities deferred):
   - `/draft` - Draft Revival Email: Navigate to Revival page
   - `/bulk` - Bulk Lead Outreach: Scan and batch outreach
   - `/text` - Quick Text Client: Draft personalized SMS
-  - `/market` - Market Update: Generate newsletter content
 - Skills trigger AI Assistant with pre-built prompts
 - Extensible architecture for adding new skill packs
 
@@ -106,9 +104,10 @@ Current features include a Contact Due Calculator, D Contact Review, AI Assistan
 - Dashboard widget shows unread count and digest preview
 
 ### Observer Feature
-**In-App Observer (Implemented)**:
+**In-App Observer (Refactored for Quiet Intelligence)**:
 - WorkflowCoachAgent generates context-aware suggestions based on real data (leads, contacts, tasks)
-- Floating overlay in bottom-right corner with accept/snooze/dismiss controls
+- Suggestions queue silently in Weekly Review "Insights" tab (no real-time interruptions)
+- All 8 suggestion types include transparent "Because..." reasoning + evidence arrays for learnability
 - Learns from user feedback (thumbs up/down adjusts pattern scores, suppresses unhelpful suggestions)
 - Schema: `observerSuggestions`, `observerPatterns` tables
 - API: `/api/observer/suggestions`, `/api/observer/patterns`, `/api/observer/trigger`
