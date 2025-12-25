@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { DollarSign, Save, Plus, FileText, BarChart3, Clock, Phone, Calculator, Play, Pause, RotateCcw, ChevronLeft, ChevronRight, CalendarIcon, History, TrendingUp, Upload, FileSpreadsheet, X, Check, AlertCircle, Camera, Loader2, Home, Target } from "lucide-react";
 import DealsContent from "@/components/deals-content";
 import { format } from "date-fns";
-import * as XLSX from "xlsx";
+import Papa from "papaparse";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -459,42 +459,42 @@ export default function BusinessTracker() {
 
   const parseSpreadsheetFile = async (file: File) => {
     setIsParsingFile(true);
-    try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet) as Record<string, unknown>[];
-      
-      if (jsonData.length === 0) {
-        toast.error("Spreadsheet appears to be empty");
-        setIsParsingFile(false);
-        return;
-      }
+    Papa.parse(file, {
+      header: true,
+      complete: (results) => {
+        const jsonData = results.data as Record<string, unknown>[];
+        
+        if (jsonData.length === 0) {
+          toast.error("CSV file appears to be empty");
+          setIsParsingFile(false);
+          return;
+        }
 
-      const headers = Object.keys(jsonData[0] || {});
-      setRawHeaders(headers);
-      setRawData(jsonData);
+        const headers = Object.keys(jsonData[0] || {});
+        setRawHeaders(headers);
+        setRawData(jsonData);
 
-      // Auto-detect column mappings
-      const detectedMappings: Record<string, string> = {};
-      for (const [field, aliases] of Object.entries(knownColumnMappings)) {
-        for (const header of headers) {
-          if (aliases.some(alias => header.toLowerCase().includes(alias.toLowerCase()))) {
-            detectedMappings[field] = header;
-            break;
+        // Auto-detect column mappings
+        const detectedMappings: Record<string, string> = {};
+        for (const [field, aliases] of Object.entries(knownColumnMappings)) {
+          for (const header of headers) {
+            if (aliases.some(alias => header.toLowerCase().includes(alias.toLowerCase()))) {
+              detectedMappings[field] = header;
+              break;
+            }
           }
         }
-      }
-      setColumnMappings(detectedMappings);
+        setColumnMappings(detectedMappings);
 
-      // Parse deals with detected mappings
-      parseDealsWithMappings(jsonData, detectedMappings);
-    } catch (error) {
-      toast.error("Failed to read spreadsheet file");
-      console.error(error);
-    }
-    setIsParsingFile(false);
+        // Parse deals with detected mappings
+        parseDealsWithMappings(jsonData, detectedMappings);
+        setIsParsingFile(false);
+      },
+      error: () => {
+        toast.error("Failed to read CSV file");
+        setIsParsingFile(false);
+      }
+    });
   };
 
   const parseDealsWithMappings = (data: Record<string, unknown>[], mappings: Record<string, string>) => {
@@ -620,40 +620,40 @@ export default function BusinessTracker() {
 
   const parsePieSpreadsheetFile = async (file: File) => {
     setIsParsingPieFile(true);
-    try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet) as Record<string, unknown>[];
-      
-      if (jsonData.length === 0) {
-        toast.error("Spreadsheet appears to be empty");
-        setIsParsingPieFile(false);
-        return;
-      }
+    Papa.parse(file, {
+      header: true,
+      complete: (results) => {
+        const jsonData = results.data as Record<string, unknown>[];
+        
+        if (jsonData.length === 0) {
+          toast.error("CSV file appears to be empty");
+          setIsParsingPieFile(false);
+          return;
+        }
 
-      const headers = Object.keys(jsonData[0] || {});
-      setPieRawHeaders(headers);
-      setPieRawData(jsonData);
+        const headers = Object.keys(jsonData[0] || {});
+        setPieRawHeaders(headers);
+        setPieRawData(jsonData);
 
-      // Auto-detect column mappings
-      const detectedMappings: Record<string, string> = {};
-      for (const [field, aliases] of Object.entries(knownPieColumnMappings)) {
-        for (const header of headers) {
-          if (aliases.some(alias => header.toLowerCase() === alias.toLowerCase() || header.toLowerCase().includes(alias.toLowerCase()))) {
-            detectedMappings[field] = header;
-            break;
+        // Auto-detect column mappings
+        const detectedMappings: Record<string, string> = {};
+        for (const [field, aliases] of Object.entries(knownPieColumnMappings)) {
+          for (const header of headers) {
+            if (aliases.some(alias => header.toLowerCase() === alias.toLowerCase() || header.toLowerCase().includes(alias.toLowerCase()))) {
+              detectedMappings[field] = header;
+              break;
+            }
           }
         }
+        setPieColumnMappings(detectedMappings);
+        parsePieEntriesWithMappings(jsonData, detectedMappings);
+        setIsParsingPieFile(false);
+      },
+      error: () => {
+        toast.error("Failed to read CSV file");
+        setIsParsingPieFile(false);
       }
-      setPieColumnMappings(detectedMappings);
-      parsePieEntriesWithMappings(jsonData, detectedMappings);
-    } catch (error) {
-      toast.error("Failed to read spreadsheet file");
-      console.error(error);
-    }
-    setIsParsingPieFile(false);
+    });
   };
 
   const parsePieEntriesWithMappings = (data: Record<string, unknown>[], mappings: Record<string, string>) => {
@@ -1931,7 +1931,7 @@ export default function BusinessTracker() {
                     type="file"
                     ref={fileInputRef}
                     onChange={handleFileUpload}
-                    accept=".xlsx,.xls,.csv"
+                    accept=".csv"
                     className="hidden"
                     data-testid="input-spreadsheet-upload"
                   />
@@ -2134,7 +2134,7 @@ export default function BusinessTracker() {
                   <input
                     ref={pieFileInputRef}
                     type="file"
-                    accept=".csv,.xlsx,.xls"
+                    accept=".csv"
                     onChange={handlePieFileUpload}
                     className="hidden"
                   />

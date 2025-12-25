@@ -22,7 +22,6 @@ import { useToast } from "@/hooks/use-toast";
 import type { Person, InsertPerson, Interaction, GeneratedDraft } from "@shared/schema";
 import { format, formatDistanceToNow } from "date-fns";
 import Papa from "papaparse";
-import * as XLSX from "xlsx";
 
 interface TimelineItem {
   id: string;
@@ -208,17 +207,8 @@ export default function People() {
           toast({ title: "Failed to parse CSV file", variant: "destructive" });
         }
       });
-    } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
-        importContacts(jsonData as any[]);
-      };
-      reader.readAsArrayBuffer(file);
+    } else {
+      toast({ title: "Please upload a CSV file", variant: "destructive" });
     }
     
     if (fileInputRef.current) {
@@ -533,7 +523,7 @@ export default function People() {
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept=".csv,.xlsx,.xls"
+                      accept=".csv"
                       onChange={handleFileUpload}
                       className="w-full"
                     />

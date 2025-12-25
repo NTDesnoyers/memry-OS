@@ -31,7 +31,6 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import OpenAI from "openai";
-import * as XLSX from "xlsx";
 import * as googleCalendar from "./google-calendar";
 import { processInteraction, extractContentTopics } from "./conversation-processor";
 import { eventBus } from "./event-bus";
@@ -412,12 +411,12 @@ const uploadDocuments = multer({
   storage: storage_multer,
   limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const allowedExt = /pdf|xlsx|xls|csv/;
+    const allowedExt = /pdf|csv/;
     const ext = allowedExt.test(path.extname(file.originalname).toLowerCase());
     if (ext) {
       cb(null, true);
     } else {
-      cb(new Error("Only PDF, Excel, and CSV files are allowed"));
+      cb(new Error("Only PDF and CSV files are allowed"));
     }
   },
 });
@@ -500,48 +499,39 @@ export async function registerRoutes(
         return res.status(404).json({ message: "File not found" });
       }
       
-      const ext = path.extname(filePath).toLowerCase();
       let rows: any[] = [];
       
-      if (ext === '.xlsx' || ext === '.xls') {
-        // Parse Excel file
-        const workbook = XLSX.readFile(filePath);
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        rows = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
-      } else {
-        // Parse CSV file
-        const csvContent = fs.readFileSync(filePath, 'utf-8');
-        const lines = csvContent.split('\n');
-        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+      // Parse CSV file
+      const csvContent = fs.readFileSync(filePath, 'utf-8');
+      const lines = csvContent.split('\n');
+      const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+      
+      for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
         
-        for (let i = 1; i < lines.length; i++) {
-          if (!lines[i].trim()) continue;
-          
-          // Parse CSV line handling quoted fields
-          const values: string[] = [];
-          let current = '';
-          let inQuotes = false;
-          for (const char of lines[i]) {
-            if (char === '"') {
-              inQuotes = !inQuotes;
-            } else if (char === ',' && !inQuotes) {
-              values.push(current.trim());
-              current = '';
-            } else {
-              current += char;
-            }
+        // Parse CSV line handling quoted fields
+        const values: string[] = [];
+        let current = '';
+        let inQuotes = false;
+        for (const char of lines[i]) {
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            values.push(current.trim());
+            current = '';
+          } else {
+            current += char;
           }
-          values.push(current.trim());
-          
-          const row: any = {};
-          headers.forEach((header, idx) => {
-            let value = values[idx] || '';
-            value = value.replace(/^"|"$/g, '').trim();
-            row[header] = value;
-          });
-          rows.push(row);
         }
+        values.push(current.trim());
+        
+        const row: any = {};
+        headers.forEach((header, idx) => {
+          let value = values[idx] || '';
+          value = value.replace(/^"|"$/g, '').trim();
+          row[header] = value;
+        });
+        rows.push(row);
       }
       
       // Parse properties using schema-compatible MLSProperty format

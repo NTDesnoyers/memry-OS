@@ -1142,13 +1142,13 @@ export default function ReviewDetail() {
                             <CardTitle className="font-serif flex items-center gap-2 text-lg">
                               <FileCheck className="h-5 w-5" /> Public Records / Appraiser One Page
                             </CardTitle>
-                            <CardDescription>Upload PDF or Excel file from BrightMLS</CardDescription>
+                            <CardDescription>Upload PDF or CSV file from BrightMLS</CardDescription>
                           </CardHeader>
                           <CardContent>
                             <input
                               ref={publicRecordsInputRef}
                               type="file"
-                              accept=".pdf,.xlsx,.xls,.csv"
+                              accept=".pdf,.csv"
                               className="hidden"
                               onChange={(e) => {
                                 const file = e.target.files?.[0];
@@ -1185,7 +1185,7 @@ export default function ReviewDetail() {
                               >
                                 <Upload className="h-10 w-10 text-muted-foreground mb-3" />
                                 <p className="font-medium">Click to upload</p>
-                                <p className="text-sm text-muted-foreground">PDF, Excel, or CSV</p>
+                                <p className="text-sm text-muted-foreground">PDF or CSV</p>
                               </label>
                             )}
                           </CardContent>
@@ -1202,7 +1202,7 @@ export default function ReviewDetail() {
                             <input
                               ref={mlsExportInputRef}
                               type="file"
-                              accept=".xlsx,.xls,.csv"
+                              accept=".csv"
                               className="hidden"
                               onChange={(e) => {
                                 const file = e.target.files?.[0];
