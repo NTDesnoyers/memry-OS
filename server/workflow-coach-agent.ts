@@ -103,7 +103,13 @@ async function generateLeadPageSuggestions(context: ContextData): Promise<void> 
       agentName: AGENT_NAME,
       intent: 'delegate',
       title: `${hotLeads.length} Hot Lead${hotLeads.length > 1 ? 's' : ''} Need Attention`,
-      description: `You have ${hotLeads.length} high-priority lead${hotLeads.length > 1 ? 's' : ''} (score 80+). Consider calling ${hotLeads[0].name} first - they scored ${hotLeads[0].qualificationScore}/100.`,
+      description: `Consider calling ${hotLeads[0].name} first - they're your highest priority.`,
+      reasoning: `Because ${hotLeads.length} lead${hotLeads.length > 1 ? 's' : ''} scored 80+ on qualification. Hot leads typically convert 3x better when contacted within 24 hours.`,
+      evidence: hotLeads.slice(0, 3).map(l => ({
+        type: 'lead_score',
+        summary: `${l.name}: ${l.qualificationScore}/100 from ${l.source}`,
+        date: l.createdAt ? new Date(l.createdAt).toLocaleDateString() : undefined,
+      })),
       confidence: 90,
       contextRoute: context.route,
       contextEntityType: 'lead',
@@ -120,7 +126,12 @@ async function generateLeadPageSuggestions(context: ContextData): Promise<void> 
       agentName: AGENT_NAME,
       intent: 'insight',
       title: `${warmLeads.length} Warm Lead${warmLeads.length > 1 ? 's' : ''} to Nurture`,
-      description: `You have ${warmLeads.length} warm lead${warmLeads.length > 1 ? 's' : ''} in your inbox. A quick follow-up could move them to hot status.`,
+      description: `A quick follow-up could move them to hot status.`,
+      reasoning: `Because these ${warmLeads.length} leads scored 50-79 - they're interested but need nurturing. One touchpoint often tips them to ready-to-act.`,
+      evidence: warmLeads.slice(0, 3).map(l => ({
+        type: 'lead_score',
+        summary: `${l.name}: ${l.qualificationScore}/100`,
+      })),
       confidence: 70,
       contextRoute: context.route,
       patternId: 'warm_leads_nurture',
@@ -134,7 +145,9 @@ async function generateLeadPageSuggestions(context: ContextData): Promise<void> 
       agentName: AGENT_NAME,
       intent: 'shortcut',
       title: 'Lead Inbox Clear',
-      description: 'Great job! Your lead inbox is empty. Consider prospecting or checking in with your sphere.',
+      description: 'Consider prospecting or checking in with your sphere.',
+      reasoning: 'Because your lead inbox is empty - a perfect time to work on relationship building or generate new opportunities.',
+      evidence: [{ type: 'inbox_status', summary: 'No pending leads in inbox' }],
       confidence: 60,
       contextRoute: context.route,
       patternId: 'inbox_clear_celebrate',
@@ -155,11 +168,20 @@ async function generatePeoplePageSuggestions(context: ContextData): Promise<void
   const aListStale = staleContacts.filter(p => p.segment === 'A');
   
   if (aListStale.length > 0) {
+    const daysSinceContact = aListStale[0].lastContact 
+      ? Math.floor((Date.now() - new Date(aListStale[0].lastContact).getTime()) / (24 * 60 * 60 * 1000))
+      : 'many';
     await createSuggestionIfAllowed({
       agentName: AGENT_NAME,
       intent: 'delegate',
-      title: `${aListStale.length} A-List Contact${aListStale.length > 1 ? 's' : ''} Need Touch`,
-      description: `${aListStale[0].name} and ${aListStale.length - 1} other A-list contacts haven't been contacted in 30+ days. These are your top relationships.`,
+      title: `${aListStale.length} A-List Contact${aListStale.length > 1 ? 's' : ''} Ready for a Touch`,
+      description: `${aListStale[0].name} would love to hear from you.`,
+      reasoning: `Because your A-list relationships are your most valuable - they refer 80% of business. ${aListStale[0].name} hasn't heard from you in ${daysSinceContact} days.`,
+      evidence: aListStale.slice(0, 3).map(p => ({
+        type: 'last_contact',
+        summary: `${p.name}: Last contact ${p.lastContact ? new Date(p.lastContact).toLocaleDateString() : 'unknown'}`,
+        date: p.lastContact ? new Date(p.lastContact).toLocaleDateString() : undefined,
+      })),
       confidence: 85,
       contextRoute: context.route,
       contextEntityType: 'person',
@@ -180,7 +202,12 @@ async function generatePeoplePageSuggestions(context: ContextData): Promise<void
       agentName: AGENT_NAME,
       intent: 'insight',
       title: `FORD Notes Incomplete for ${missingFord.length} A-List`,
-      description: `${missingFord[0].name} is missing FORD details. Complete profiles help you build stronger relationships.`,
+      description: `${missingFord[0].name} is missing key relationship details.`,
+      reasoning: `Because knowing Family, Occupation, Recreation, and Dreams makes conversations more meaningful. FORD notes help you connect authentically.`,
+      evidence: missingFord.slice(0, 3).map(p => ({
+        type: 'missing_ford',
+        summary: `${p.name}: Missing ${!p.fordFamily ? 'Family' : ''}${!p.fordOccupation ? ', Occupation' : ''}`.replace(/^, /, ''),
+      })),
       confidence: 65,
       contextRoute: context.route,
       contextEntityType: 'person',
@@ -201,11 +228,23 @@ async function generateDashboardSuggestions(context: ContextData): Promise<void>
   });
   
   if (overdueTasks.length > 0) {
+    const oldestTask = overdueTasks.reduce((oldest, t) => 
+      !oldest.dueDate || (t.dueDate && new Date(t.dueDate) < new Date(oldest.dueDate)) ? t : oldest
+    );
+    const daysPastDue = oldestTask.dueDate 
+      ? Math.floor((Date.now() - new Date(oldestTask.dueDate).getTime()) / (24 * 60 * 60 * 1000))
+      : 0;
     await createSuggestionIfAllowed({
       agentName: AGENT_NAME,
       intent: 'delegate',
-      title: `${overdueTasks.length} Overdue Task${overdueTasks.length > 1 ? 's' : ''}`,
-      description: `"${overdueTasks[0].title}" and ${overdueTasks.length - 1} other task${overdueTasks.length > 1 ? 's are' : ' is'} past due. Would you like help prioritizing?`,
+      title: `${overdueTasks.length} Task${overdueTasks.length > 1 ? 's' : ''} Need Attention`,
+      description: `"${overdueTasks[0].title}" could use your focus.`,
+      reasoning: `Because ${overdueTasks.length} task${overdueTasks.length > 1 ? 's have' : ' has'} passed their due date. The oldest is ${daysPastDue} day${daysPastDue !== 1 ? 's' : ''} past due.`,
+      evidence: overdueTasks.slice(0, 3).map(t => ({
+        type: 'task_due',
+        summary: t.title,
+        date: t.dueDate ? new Date(t.dueDate).toLocaleDateString() : undefined,
+      })),
       confidence: 80,
       contextRoute: context.route,
       patternId: 'overdue_tasks',
@@ -221,6 +260,12 @@ async function generateDashboardSuggestions(context: ContextData): Promise<void>
       intent: 'insight',
       title: `${newLeads.length} New Lead${newLeads.length > 1 ? 's' : ''} Waiting`,
       description: 'Check your Lead Inbox to review and prioritize incoming opportunities.',
+      reasoning: `Because ${newLeads.length} new lead${newLeads.length > 1 ? 's have' : ' has'} come in. Fresh leads have the highest engagement rates when contacted promptly.`,
+      evidence: newLeads.slice(0, 3).map(l => ({
+        type: 'new_lead',
+        summary: `${l.name} from ${l.source}`,
+        date: l.createdAt ? new Date(l.createdAt).toLocaleDateString() : undefined,
+      })),
       confidence: 70,
       contextRoute: context.route,
       patternId: 'new_leads_dashboard',
@@ -265,7 +310,13 @@ async function handleLeadCreated(event: SystemEvent): Promise<void> {
       agentName: AGENT_NAME,
       intent: 'delegate',
       title: `Hot Lead Alert: ${lead.name}`,
-      description: `New lead scored ${score}/100! Source: ${lead.source}. ${lead.email ? `Email: ${lead.email}` : ''} ${lead.phone ? `Phone: ${lead.phone}` : ''}`,
+      description: `New high-priority lead just came in. Reach out soon for best results.`,
+      reasoning: `Because ${lead.name} scored ${score}/100 on qualification - that's in the "hot" range. Research shows contacting hot leads within 24 hours increases conversion by 3x.`,
+      evidence: [{
+        type: 'lead_details',
+        summary: `${lead.name}: ${score}/100 from ${lead.source}${lead.email ? `, ${lead.email}` : ''}${lead.phone ? `, ${lead.phone}` : ''}`,
+        date: lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : undefined,
+      }],
       confidence: 95,
       contextRoute: '/leads',
       contextEntityType: 'lead',

@@ -1402,6 +1402,8 @@ export const observerSuggestions = pgTable("observer_suggestions", {
   status: text("status").notNull().default('pending'),
   title: text("title").notNull(),
   description: text("description").notNull(),
+  reasoning: text("reasoning"), // "Because..." explanation for transparency (Heuristic 4)
+  evidence: jsonb("evidence").$type<{ type: string; summary: string; date?: string }[]>(), // Supporting evidence snippets
   confidence: integer("confidence").notNull().default(50), // 0-100 confidence score
   contextRoute: text("context_route"), // The route where this suggestion was generated
   contextEntityType: text("context_entity_type"), // 'person', 'lead', 'deal', etc.

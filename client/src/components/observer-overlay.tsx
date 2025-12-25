@@ -44,8 +44,10 @@ export interface SuggestionCardProps {
 
 export function SuggestionCard({ suggestion, onAccept, onSnooze, onDismiss, isProcessing }: SuggestionCardProps) {
   const [showFeedback, setShowFeedback] = useState(false);
+  const [showEvidence, setShowEvidence] = useState(false);
   const IntentIcon = intentIcons[suggestion.intent] || Sparkles;
   const intentClass = intentColors[suggestion.intent] || "bg-muted text-muted-foreground";
+  const evidence = suggestion.evidence as { type: string; summary: string; date?: string }[] | null;
 
   return (
     <div className="p-3 rounded-lg border bg-card shadow-sm transition-all hover:shadow-md" data-testid={`suggestion-card-${suggestion.id}`}>
@@ -63,7 +65,38 @@ export function SuggestionCard({ suggestion, onAccept, onSnooze, onDismiss, isPr
             )}
           </div>
           <p className="text-sm font-medium text-foreground">{suggestion.title}</p>
-          <p className="text-sm text-muted-foreground mb-2">{suggestion.description}</p>
+          <p className="text-sm text-muted-foreground">{suggestion.description}</p>
+          
+          {/* Reasoning - "Because..." explanation */}
+          {suggestion.reasoning && (
+            <p className="text-xs text-primary/80 mt-1 italic">{suggestion.reasoning}</p>
+          )}
+          
+          {/* Evidence toggle */}
+          {evidence && evidence.length > 0 && (
+            <div className="mt-2">
+              <button
+                type="button"
+                className="text-xs text-muted-foreground hover:text-foreground underline"
+                onClick={() => setShowEvidence(!showEvidence)}
+              >
+                {showEvidence ? 'Hide details' : `See ${evidence.length} detail${evidence.length > 1 ? 's' : ''}`}
+              </button>
+              {showEvidence && (
+                <ul className="mt-1 space-y-1 text-xs text-muted-foreground bg-muted/30 rounded p-2">
+                  {evidence.map((e, i) => (
+                    <li key={i} className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary/50" />
+                      <span>{e.summary}</span>
+                      {e.date && <span className="text-muted-foreground/60">({e.date})</span>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+          
+          <div className="mt-2">
           {!showFeedback ? (
             <div className="flex items-center gap-2">
               <Button
@@ -124,6 +157,7 @@ export function SuggestionCard({ suggestion, onAccept, onSnooze, onDismiss, isPr
               </Button>
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>
