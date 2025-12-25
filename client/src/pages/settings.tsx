@@ -486,23 +486,6 @@ export default function SettingsPage() {
 
           <Card className="mt-8">
             <CardHeader>
-              <CardTitle className="text-lg">Zapier Webhook</CardTitle>
-              <CardDescription>
-                Use this endpoint to send data from Granola or other services via Zapier.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="bg-muted rounded-lg p-3 font-mono text-sm break-all">
-                POST {typeof window !== 'undefined' ? window.location.origin : ''}/api/webhooks/conversation
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Send JSON with: type, title, summary, transcript, occurredAt, externalLink, externalId, source
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="mt-8">
-            <CardHeader>
               <div className="flex items-center gap-2">
                 <Upload className="h-5 w-5 text-primary" />
                 <CardTitle className="text-lg">Upload Historical Data</CardTitle>
