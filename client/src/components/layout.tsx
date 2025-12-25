@@ -42,7 +42,6 @@ import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { VoiceLogger } from "@/components/voice-logger";
-import { ObserverOverlay } from "@/components/observer-overlay";
 import { useQuery } from "@tanstack/react-query";
 
 const navItems = [
@@ -330,7 +329,6 @@ export default function LayoutComponent({ children }: { children: React.ReactNod
       </main>
       
       <VoiceLogger />
-      <ObserverOverlay />
     </div>
   );
 }

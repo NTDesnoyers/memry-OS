@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Link, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import LayoutComponent from "@/components/layout";
 import {
@@ -33,11 +33,14 @@ import { Rating } from "@/components/ui/rating";
 import { RatingSelect } from "@/components/ui/rating-select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, ArrowRight, Save, Check, Calendar, User, TrendingUp, Heart, Briefcase, RefreshCw, Upload, Briefcase as BriefcaseIcon, Phone, PieChart, Clock, Printer, Mail, Send, X, CloudUpload, Link as LinkIcon, Users, ListTodo, Activity } from "lucide-react";
+import { ArrowLeft, ArrowRight, Save, Check, Calendar, User, TrendingUp, Heart, Briefcase, RefreshCw, Upload, Briefcase as BriefcaseIcon, Phone, PieChart, Clock, Printer, Mail, Send, X, CloudUpload, Link as LinkIcon, Users, ListTodo, Activity, Sparkles, ThumbsDown, Zap, Eye, ExternalLink } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SuggestionCard, intentIcons, intentColors } from "@/components/observer-overlay";
+import type { ObserverSuggestion } from "@shared/schema";
+import { cn } from "@/lib/utils";
 
 interface NoteUpload {
   id: string;
@@ -170,10 +173,81 @@ export default function WeeklyReport() {
   const [activeTab, setActiveTab] = useState("get-clear");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [emailOpen, setEmailOpen] = useState(false);
   const [emailTo, setEmailTo] = useState("");
   const [noteUploads, setNoteUploads] = useState<NoteUpload[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
+
+  // AI Insights (Observer) - only fetched during weekly review
+  const { data: insights = [], isLoading: insightsLoading } = useQuery<ObserverSuggestion[]>({
+    queryKey: ["/api/observer/suggestions"],
+    queryFn: async () => {
+      const res = await fetch("/api/observer/suggestions");
+      if (!res.ok) throw new Error("Failed to fetch insights");
+      return res.json();
+    },
+  });
+
+  const acceptInsightMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/observer/suggestions/${id}/accept`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) throw new Error("Failed to accept");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/observer/suggestions"] });
+      toast({ title: "Insight accepted", description: "Added to your action items" });
+    },
+  });
+
+  const snoozeInsightMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/observer/suggestions/${id}/snooze`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ minutes: 10080 }), // Snooze for 1 week
+      });
+      if (!res.ok) throw new Error("Failed to snooze");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/observer/suggestions"] });
+      toast({ title: "Snoozed until next week" });
+    },
+  });
+
+  const dismissInsightMutation = useMutation({
+    mutationFn: async ({ id, feedback, patternId }: { id: string; feedback?: string; patternId?: string }) => {
+      const res = await fetch(`/api/observer/suggestions/${id}/dismiss`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feedbackNote: feedback }),
+      });
+      if (!res.ok) throw new Error("Failed to dismiss");
+      if (patternId && feedback === 'not_helpful') {
+        await fetch(`/api/observer/patterns/by-key/${patternId}/feedback`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ delta: -1 }),
+        });
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/observer/suggestions"] });
+    },
+  });
+
+  const handleAcceptInsight = (id: string) => acceptInsightMutation.mutate(id);
+  const handleSnoozeInsight = (id: string) => snoozeInsightMutation.mutate(id);
+  const handleDismissInsight = (id: string, feedback?: string, patternId?: string | null) => {
+    dismissInsightMutation.mutate({ id, feedback, patternId: patternId || undefined });
+  };
+  const isInsightProcessing = acceptInsightMutation.isPending || snoozeInsightMutation.isPending || dismissInsightMutation.isPending;
 
   const { data: pastReviews = [] } = useQuery<WeeklyReviewSummary[]>({
     queryKey: ["/api/weekly-reviews"],
@@ -540,6 +614,14 @@ export default function WeeklyReport() {
                 </TabsTrigger>
                 <TabsTrigger value="get-creative" className="gap-2 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                   <Activity className="h-4 w-4" /> 3. Get Creative
+                </TabsTrigger>
+                <TabsTrigger value="insights" className="gap-2 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  <Sparkles className="h-4 w-4" /> AI Insights
+                  {insights.length > 0 && (
+                    <Badge variant="secondary" className="h-5 px-1.5 text-xs ml-1">
+                      {insights.length}
+                    </Badge>
+                  )}
                 </TabsTrigger>
               </TabsList>
 
@@ -1370,6 +1452,65 @@ export default function WeeklyReport() {
                       <Link href="/">
                         <Button variant="outline">Cancel</Button>
                       </Link>
+                      <Button type="submit" size="lg" className="shadow-lg hover:shadow-xl transition-all">
+                        <Save className="mr-2 h-4 w-4" /> Save Review
+                      </Button>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                {/* ============================================ */}
+                {/* SECTION 4: AI INSIGHTS - Batched Suggestions */}
+                {/* ============================================ */}
+                <TabsContent value="insights" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <Card className="border-none shadow-md">
+                    <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 pb-4">
+                      <CardTitle className="font-serif flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-primary" />
+                        AI Insights
+                      </CardTitle>
+                      <CardDescription>
+                        Suggestions noticed during the week. Review them now during your weekly ritual.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                      {insightsLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : insights.length === 0 ? (
+                        <div className="text-center py-12">
+                          <Sparkles className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+                          <p className="text-muted-foreground">No insights this week</p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            The AI will queue suggestions here as it notices patterns in your work
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <p className="text-sm text-muted-foreground mb-4">
+                            {insights.length} suggestion{insights.length !== 1 ? 's' : ''} queued for your review
+                          </p>
+                          {insights.map((insight) => (
+                            <SuggestionCard
+                              key={insight.id}
+                              suggestion={insight}
+                              onAccept={handleAcceptInsight}
+                              onSnooze={handleSnoozeInsight}
+                              onDismiss={handleDismissInsight}
+                              isProcessing={isInsightProcessing}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <div className="flex justify-between items-center pt-4 no-print">
+                    <Button type="button" onClick={() => setActiveTab("get-creative")} variant="ghost">
+                      <ArrowLeft className="h-4 w-4 mr-2" /> Back to Get Creative
+                    </Button>
+                    <div className="flex gap-4">
                       <Button type="submit" size="lg" className="shadow-lg hover:shadow-xl transition-all">
                         <Save className="mr-2 h-4 w-4" /> Save Review
                       </Button>
