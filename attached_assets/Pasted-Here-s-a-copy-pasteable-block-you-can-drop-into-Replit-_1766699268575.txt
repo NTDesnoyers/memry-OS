@@ -1,0 +1,132 @@
+Here’s a copy‑pasteable block you can drop into Replit as a prompt or design note:
+
+***
+
+Here are a set of **updated design heuristics** for the product.  
+
+Please:
+
+1. Compare each heuristic with the current system design and behavior.  
+2. If we are already doing it, **tighten the implementation** to match the spirit described here.  
+3. If any heuristic **contradicts** existing behavior, call that out explicitly and propose options (change the heuristic vs. change the implementation).  
+4. For each heuristic, suggest **concrete edits** (data model, flows, defaults, or UI changes) to bring the product into alignment.
+
+### Heuristic 1 – Quiet intelligence, not loud automation
+- The system should feel calm, thoughtful, and non‑intrusive.  
+- AI should default to *silence* unless:
+  - The user explicitly asks for help, or  
+  - The user is in a reflection/review ritual (weekly or end‑of‑day).  
+- No real‑time nudging, pop‑ups, or attention‑grabbing notifications in v1.  
+- AI can queue suggestions in the background, but they should surface only in designated review moments.
+
+**Questions for you:**
+- Where in the current design are we “noisy” (real‑time suggestions, alerts, auto‑popups)?  
+- For each of those, can we move the behavior into a **batched review surface** instead (weekly review, daily recap, or manual “show insights” action)?
+
+***
+
+### Heuristic 2 – Conversation as primary source of truth
+- Conversations (calls, meetings, texts, notes) are the *core* data asset.  
+- CRM fields, stages, and scores are **derived annotations** on top of conversation history.  
+- The system should feel like it *understands people and relationships*, not just manages records.
+
+**Questions for you:**
+- In our current schema and UI, what is treated as primary: conversations or structured CRM entities (contacts, deals, stages)?  
+- Can we:
+  - Make conversation timelines the default “home” for a person or deal, and  
+  - Ensure stage/field changes are always linked back to specific conversations?
+
+***
+
+### Heuristic 3 – Ritual‑centered UX (weekly > daily > real‑time)
+- The **weekly review** is the emotional and cognitive center of the product.  
+- Daily usage is lightweight and execution‑focused (do the plan, don’t reinvent it).  
+- Real‑time interaction is minimal and optional.
+
+**Questions for you:**
+- Does the current navigation and onboarding make the *weekly review* feel like the main “home” of the product?  
+- Where are we encouraging real‑time checking or dashboard‑watching that could be deferred to weekly or daily rituals instead?
+
+***
+
+### Heuristic 4 – Learnability over raw power
+- The product should teach better thinking and workflow just by using it.  
+- Avoid hidden modes, magic buttons, or opaque AI decisions.  
+- Users should be able to inspect:
+  - What the AI noticed, and  
+  - Why it suggested something.
+
+**Questions for you:**
+- Where do we currently generate suggestions or changes without clear “because…” explanations?  
+- For each such place, how can we add:
+  - A short “why this” explanation, and  
+  - A way to see the exact evidence (conversation snippets, recency, tags) behind the suggestion?
+
+***
+
+### Heuristic 5 – Trust, safety, and psychological comfort
+- The product handles intimate conversations and self‑reflection.  
+- It must feel non‑judgmental and non‑surveillant.  
+- Feedback should feel like **coaching**, not grading.
+
+**Questions for you:**
+- Where are we using scores, grades, or harsh labels (e.g., “overdue”, “failed”, “bad”)?  
+- Can we replace those with softer, coaching‑oriented language (e.g., “could use attention”, “ready for a touch”, “recently nurtured”) and give users control over which feedback types they see?
+
+***
+
+### Heuristic 6 – Compounding advantage over feature breadth
+- Every feature should reinforce at least one compounding loop:
+  - Relationship memory  
+  - Insight that improves over time  
+  - The user’s skill and judgment
+- One‑off, isolated features that don’t feed these loops should be cut or deferred.
+
+**Questions for you:**
+- Which current or planned features **do not** clearly deepen relationship memory, long‑term insight, or user skill?  
+- For each, should we:
+  - Cut it,  
+  - Defer it, or  
+  - Reframe it so it clearly feeds one of the compounding loops?
+
+***
+
+### Heuristic 7 – Opinionated, not configurable‑by‑default
+- Early versions should be narrow and strongly opinionated.  
+- Avoid extensive settings and per‑user workflow builders.  
+- Defaults should embody best practice for relationship‑based work.
+
+**Questions for you:**
+- Where have we introduced configuration (settings, toggles, multiple flow options) that a solo practitioner doesn’t really need yet?  
+- For each, can we hard‑code a sensible default and remove or hide the configuration for now?
+
+***
+
+### Heuristic 8 – Designed for a small, thoughtful user base first
+- Target users: solo agents, advisors, and consultants, not enterprise teams.  
+- Optimize for one person owning their relationships and rituals.  
+- Team‑level features can come later, if ever.
+
+**Questions for you:**
+- Do we currently assume teams, managers, shared workspaces, or complex permissions anywhere in the model or UI?  
+- If yes, how can we simplify those areas so the product is clearly built for a single‑owner, solo‑practitioner setup in v1?
+
+***
+
+Using all of the above, please:
+
+1. Produce a **comparison summary** showing:  
+   - Strong alignments (where current design already matches these heuristics)  
+   - Misalignments or contradictions (where behavior opposes a heuristic)
+
+2. For each misalignment, propose **specific changes** to:  
+   - Data model  
+   - Flows / screens  
+   - Defaults and copy  
+
+3. Flag any heuristics that would require **significant re‑architecture** so they can be discussed before implementation.
+
+---
+
+Sources
+[1] image-1.jpg https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/images/41252432/36edb6f9-d8e6-4010-ac64-273b32407daf/image-1.jpg?AWSAccessKeyId=ASIA2F3EMEYE736C3PUU&Signature=%2FC13HQg0r5PJcdbfSuo%2FIwIw0Hk%3D&x-amz-security-token=IQoJb3JpZ2luX2VjEH0aCXVzLWVhc3QtMSJIMEYCIQCxIeUbGny8Elp6SCNDyJDQ15MxN0n9%2FFHtIYNl4e%2FobwIhALGliBHCM42adopGbhiSSYucarH%2BAQ4zJhzjF3h%2BQzkzKvMECEYQARoMNjk5NzUzMzA5NzA1IgwvnKdOMOLDapQAJ6gq0ATpO%2FonJpSd9e0e38HM3Hiy%2B3SEbmiM7VsZQTSaDEL9IV0kQpxdfzgF8ape0V4tEjIzv%2Bd6CLttLfzlJ5dtImJIjVoW%2FwWTF1uo%2BR2oD%2BVFb0VbCh%2FK4ONzlqahudv3fR2gsdLLH3Q6YRuCqqUIPKmhD%2BIOkr%2FBasos1Q%2BNe7uzKo7dwdFaWbFr01FcUUnZ%2BqJ9tt9PR8gjHsTINeEm7HEwo2XrII3AgCWwNL92%2FMI7dyPVG6MGgFyaUd4SPvRUxt2VHesGNbnEp%2FP52Jh2TnMRDR%2Bbd1jwq53xURHU2LMMuYW3%2FBZlYYDB1satlcsRjHm%2BMIASqV2WAyHKW3xNTg%2FwRIn9AQNJ1ajRXVjy0lp2Jq%2B9IapVhCJF8qiNfEkGZHn3R8NyvvK%2BPDijCPRktDxvcedOSA4QqYM0F9MA5YEMXDwiOKyL5Sy1yWPgoC3cQ93D%2FXa3xNCutlFXiSZpkoXiuPDaU5n4dKk7MsjRgWfo53XaMoih7VZsS9wOPknvvcTFAIs2k1cUimtZc0Bd5WgV3S4G2p4e0RA0FpjirM3q0lyf4HoXBGavINDCwHeDKn0XonKgMHmzrEcK17azaHIwFRIOCJDAvOl254G3QRVQC%2BlzrqkK6ln008vU1lTZiZ3vD%2BRH6vNsPVOrs40Bps25xezpb4k9Ddv56sFb962547rK%2BlTjZLOKMse4TTHWqlg6gdK6pgATJWvC5XbJLTuy9ENHJgm1aHt4%2BCM2Zecnkt73TOTEFfZzVeKPlyQaEv%2BDNrasUZAe%2BXjFRs7kETEHMIzNtsoGOpcBadQQpMVDkqiJ2pVYMSVpewevEamfxAulkzeKerKh8cxxlzOn4wPiACFlCmWbiRNU%2BcCCYGyHWtrSY4bLk1A7DI1K%2FeaRhzSilNbXf9H3pVPR5RM7dFtsqu5ASGOGGbGIUhpvhJQXUrXlL%2F11td8ThUtorY9W4N9V%2FjY92OmsxOfslw4J1R6tY1%2Fh%2B4rU2vxiPFB923jpfw%3D%3D&Expires=1766698961
