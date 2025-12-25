@@ -95,9 +95,9 @@ export default function DContactReviewContent() {
   const getReasonBadge = (reason: string) => {
     switch (reason) {
       case 'stale':
-        return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200"><Clock className="w-3 h-3 mr-1" />Stale (6+ months)</Badge>;
+        return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200"><Clock className="w-3 h-3 mr-1" />Ready to reconnect (6+ mo)</Badge>;
       case 'low_engagement':
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200"><TrendingDown className="w-3 h-3 mr-1" />Low Engagement</Badge>;
+        return <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200"><TrendingDown className="w-3 h-3 mr-1" />Could use attention</Badge>;
       case 'campaign_completed':
         return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200"><CheckCircle className="w-3 h-3 mr-1" />8x8 Complete</Badge>;
       default:
@@ -133,7 +133,7 @@ export default function DContactReviewContent() {
               </div>
               <div>
                 <div className="text-2xl font-bold" data-testid="text-stale-count">{staleCt}</div>
-                <div className="text-sm text-muted-foreground">Stale (6+ mo)</div>
+                <div className="text-sm text-muted-foreground">Ready to reconnect</div>
               </div>
             </div>
           </CardContent>
@@ -146,7 +146,7 @@ export default function DContactReviewContent() {
               </div>
               <div>
                 <div className="text-2xl font-bold" data-testid="text-low-engagement-count">{lowEngagementCt}</div>
-                <div className="text-sm text-muted-foreground">Low Engagement</div>
+                <div className="text-sm text-muted-foreground">Could use attention</div>
               </div>
             </div>
           </CardContent>

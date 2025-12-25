@@ -256,7 +256,7 @@ export default function RevivalOpportunities() {
               Revival Opportunities
             </h1>
             <p className="text-muted-foreground">
-              Dormant contacts with potential for re-engagement
+              Contacts ready for a fresh conversation
             </p>
           </div>
           <Button 
@@ -378,7 +378,7 @@ export default function RevivalOpportunities() {
             ) : opportunities.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>No dormant opportunities found.</p>
+                <p>No contacts ready for revival right now.</p>
                 <p className="text-sm">Click "Scan Contacts" to find old leads to revive.</p>
               </div>
             ) : (
@@ -395,7 +395,7 @@ export default function RevivalOpportunities() {
                     <TableHead>Contact</TableHead>
                     <TableHead>Segment</TableHead>
                     <TableHead>Score</TableHead>
-                    <TableHead>Days Dormant</TableHead>
+                    <TableHead>Days Since Contact</TableHead>
                     <TableHead>Revival Reason</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>

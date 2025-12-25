@@ -239,7 +239,7 @@ async function generateDashboardSuggestions(context: ContextData): Promise<void>
       intent: 'delegate',
       title: `${overdueTasks.length} Task${overdueTasks.length > 1 ? 's' : ''} Need Attention`,
       description: `"${overdueTasks[0].title}" could use your focus.`,
-      reasoning: `Because ${overdueTasks.length} task${overdueTasks.length > 1 ? 's have' : ' has'} passed their due date. The oldest is ${daysPastDue} day${daysPastDue !== 1 ? 's' : ''} past due.`,
+      reasoning: `Because ${overdueTasks.length} task${overdueTasks.length > 1 ? 's are' : ' is'} ready for attention. The oldest has been waiting ${daysPastDue} day${daysPastDue !== 1 ? 's' : ''}.`,
       evidence: overdueTasks.slice(0, 3).map(t => ({
         type: 'task_due',
         summary: t.title,
