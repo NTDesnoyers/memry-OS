@@ -29,7 +29,11 @@ import {
   Eye,
   Sparkles,
   Target,
-  ArrowRight
+  ArrowRight,
+  Instagram,
+  Facebook,
+  Unlink,
+  Link2
 } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -112,6 +116,44 @@ export default function SettingsPage() {
   });
   
   const profileComplete = profile?.intakeCompletedAt != null;
+
+  type MetaStatus = {
+    connected: boolean;
+    accountName?: string;
+    instagramUsername?: string;
+    expiresAt?: string;
+  };
+
+  const { data: metaStatus, isLoading: isLoadingMeta } = useQuery<MetaStatus>({
+    queryKey: ["/api/meta/status"],
+  });
+
+  const connectMeta = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/meta/oauth-url");
+      if (!res.ok) throw new Error("Failed to get OAuth URL");
+      const data = await res.json();
+      window.location.href = data.url;
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const disconnectMeta = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/meta/disconnect", { method: "POST" });
+      if (!res.ok) throw new Error("Failed to disconnect");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/meta/status"] });
+      toast({ title: "Disconnected", description: "Meta account has been disconnected." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
 
   const uploadNote = useMutation({
     mutationFn: async (file: File) => {
@@ -343,6 +385,81 @@ export default function SettingsPage() {
                       Get Started <ArrowRight className="h-4 w-4" />
                     </Button>
                   </Link>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Social Media Connection Card */}
+          <Card className="mb-6" data-testid="card-social-connections">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Instagram className="h-5 w-5 text-pink-600" />
+                <CardTitle className="text-lg">Social Media Posting</CardTitle>
+              </div>
+              <CardDescription>
+                Connect your Instagram/Facebook to let the AI post on your behalf
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingMeta ? (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Checking connection...</span>
+                </div>
+              ) : metaStatus?.connected ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-600 via-pink-600 to-orange-400 flex items-center justify-center">
+                        <Instagram className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-green-800">Connected</p>
+                        <p className="text-sm text-green-600">
+                          {metaStatus.instagramUsername ? `@${metaStatus.instagramUsername}` : metaStatus.accountName}
+                        </p>
+                      </div>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => disconnectMeta.mutate()}
+                      disabled={disconnectMeta.isPending}
+                      data-testid="button-disconnect-meta"
+                    >
+                      {disconnectMeta.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Unlink className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    The AI can now post to your Instagram and Facebook Page. Just ask it to post something!
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Connect your Instagram Business/Creator account to enable AI-powered social posting.
+                  </p>
+                  <Button 
+                    onClick={() => connectMeta.mutate()}
+                    disabled={connectMeta.isPending}
+                    className="gap-2"
+                    data-testid="button-connect-meta"
+                  >
+                    {connectMeta.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Link2 className="h-4 w-4" />
+                    )}
+                    Connect Instagram & Facebook
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    Requires: Instagram Business/Creator account linked to a Facebook Page
+                  </p>
                 </div>
               )}
             </CardContent>

@@ -1892,3 +1892,58 @@ export const insertBetaFeedbackSchema = createInsertSchema(betaFeedback).omit({
 
 export type InsertBetaFeedback = z.infer<typeof insertBetaFeedbackSchema>;
 export type BetaFeedback = typeof betaFeedback.$inferSelect;
+
+/** Social Media Connections - OAuth tokens for Meta/Instagram, Twitter, LinkedIn, etc. */
+export const socialConnections = pgTable("social_connections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  platform: text("platform").notNull(), // meta, twitter, linkedin
+  accessToken: text("access_token").notNull(),
+  accessTokenExpiresAt: timestamp("access_token_expires_at"),
+  refreshToken: text("refresh_token"),
+  platformUserId: text("platform_user_id"), // Meta user ID
+  platformPageId: text("platform_page_id"), // Facebook Page ID  
+  instagramAccountId: text("instagram_account_id"), // Instagram Business Account ID
+  accountName: text("account_name"), // Display name for UI
+  scopes: text("scopes").array(), // Granted permissions
+  metadata: jsonb("metadata"), // Platform-specific data
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertSocialConnectionSchema = createInsertSchema(socialConnections).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertSocialConnection = z.infer<typeof insertSocialConnectionSchema>;
+export type SocialConnection = typeof socialConnections.$inferSelect;
+
+/** Scheduled Social Posts - Posts queued for publishing */
+export const socialPosts = pgTable("social_posts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  connectionId: varchar("connection_id").references(() => socialConnections.id),
+  platform: text("platform").notNull(), // instagram, facebook
+  postType: text("post_type").notNull().default("feed"), // feed, story, reel
+  content: text("content").notNull(), // Caption/text
+  mediaUrls: text("media_urls").array(), // Image/video URLs
+  hashtags: text("hashtags").array(),
+  status: text("status").notNull().default("draft"), // draft, scheduled, publishing, published, failed
+  scheduledFor: timestamp("scheduled_for"),
+  publishedAt: timestamp("published_at"),
+  platformPostId: text("platform_post_id"), // ID from Meta after publishing
+  platformPostUrl: text("platform_post_url"), // Permalink
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertSocialPostSchema = createInsertSchema(socialPosts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertSocialPost = z.infer<typeof insertSocialPostSchema>;
+export type SocialPost = typeof socialPosts.$inferSelect;

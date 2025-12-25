@@ -45,7 +45,9 @@ import {
   type DailyDigest, type InsertDailyDigest,
   type UserCoreProfile, type InsertUserCoreProfile,
   type DormantOpportunity, type InsertDormantOpportunity,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions, leads, observerSuggestions, observerPatterns, aiActions, savedContent, dailyDigests, userCoreProfile, dormantOpportunities
+  type SocialConnection, type InsertSocialConnection,
+  type SocialPost, type InsertSocialPost,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions, leads, observerSuggestions, observerPatterns, aiActions, savedContent, dailyDigests, userCoreProfile, dormantOpportunities, socialConnections, socialPosts
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt } from "drizzle-orm";
@@ -454,6 +456,22 @@ export interface IStorage {
   approveDormantOpportunity(id: string): Promise<DormantOpportunity | undefined>;
   dismissDormantOpportunity(id: string, reason?: string): Promise<DormantOpportunity | undefined>;
   deleteDormantOpportunity(id: string): Promise<void>;
+  
+  // Social Media Connections
+  getAllSocialConnections(): Promise<SocialConnection[]>;
+  getSocialConnection(id: string): Promise<SocialConnection | undefined>;
+  getActiveSocialConnection(platform: string): Promise<SocialConnection | undefined>;
+  createSocialConnection(connection: InsertSocialConnection): Promise<SocialConnection>;
+  updateSocialConnection(id: string, connection: Partial<InsertSocialConnection>): Promise<SocialConnection | undefined>;
+  deleteSocialConnection(id: string): Promise<void>;
+  
+  // Social Posts
+  getAllSocialPosts(limit?: number): Promise<SocialPost[]>;
+  getSocialPost(id: string): Promise<SocialPost | undefined>;
+  getScheduledSocialPosts(): Promise<SocialPost[]>;
+  createSocialPost(post: InsertSocialPost): Promise<SocialPost>;
+  updateSocialPost(id: string, post: Partial<InsertSocialPost>): Promise<SocialPost | undefined>;
+  deleteSocialPost(id: string): Promise<void>;
 }
 
 /** Full context for a person - unified data layer response */
@@ -2571,6 +2589,77 @@ export class DatabaseStorage implements IStorage {
   
   async deleteDormantOpportunity(id: string): Promise<void> {
     await db.delete(dormantOpportunities).where(eq(dormantOpportunities.id, id));
+  }
+  
+  // Social Media Connections
+  async getAllSocialConnections(): Promise<SocialConnection[]> {
+    return await db.select().from(socialConnections).orderBy(desc(socialConnections.createdAt));
+  }
+  
+  async getSocialConnection(id: string): Promise<SocialConnection | undefined> {
+    const [connection] = await db.select().from(socialConnections).where(eq(socialConnections.id, id));
+    return connection || undefined;
+  }
+  
+  async getActiveSocialConnection(platform: string): Promise<SocialConnection | undefined> {
+    const [connection] = await db.select().from(socialConnections)
+      .where(and(
+        eq(socialConnections.platform, platform),
+        eq(socialConnections.isActive, true)
+      ));
+    return connection || undefined;
+  }
+  
+  async createSocialConnection(connection: InsertSocialConnection): Promise<SocialConnection> {
+    const [created] = await db.insert(socialConnections).values(connection).returning();
+    return created;
+  }
+  
+  async updateSocialConnection(id: string, connection: Partial<InsertSocialConnection>): Promise<SocialConnection | undefined> {
+    const [updated] = await db.update(socialConnections)
+      .set({ ...connection, updatedAt: new Date() })
+      .where(eq(socialConnections.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async deleteSocialConnection(id: string): Promise<void> {
+    await db.delete(socialConnections).where(eq(socialConnections.id, id));
+  }
+  
+  // Social Posts
+  async getAllSocialPosts(limit: number = 100): Promise<SocialPost[]> {
+    return await db.select().from(socialPosts)
+      .orderBy(desc(socialPosts.createdAt))
+      .limit(limit);
+  }
+  
+  async getSocialPost(id: string): Promise<SocialPost | undefined> {
+    const [post] = await db.select().from(socialPosts).where(eq(socialPosts.id, id));
+    return post || undefined;
+  }
+  
+  async getScheduledSocialPosts(): Promise<SocialPost[]> {
+    return await db.select().from(socialPosts)
+      .where(eq(socialPosts.status, 'scheduled'))
+      .orderBy(socialPosts.scheduledFor);
+  }
+  
+  async createSocialPost(post: InsertSocialPost): Promise<SocialPost> {
+    const [created] = await db.insert(socialPosts).values(post).returning();
+    return created;
+  }
+  
+  async updateSocialPost(id: string, post: Partial<InsertSocialPost>): Promise<SocialPost | undefined> {
+    const [updated] = await db.update(socialPosts)
+      .set({ ...post, updatedAt: new Date() })
+      .where(eq(socialPosts.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async deleteSocialPost(id: string): Promise<void> {
+    await db.delete(socialPosts).where(eq(socialPosts.id, id));
   }
 }
 

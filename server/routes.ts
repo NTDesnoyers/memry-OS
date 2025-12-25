@@ -38,6 +38,7 @@ import { eventBus } from "./event-bus";
 import { createLogger } from "./logger";
 import { verifySavedContent, verifySummary, verifyTags, type VerifierContext } from "./verifiers";
 import type { SavedContent } from "@shared/schema";
+import * as metaInstagram from "./meta-instagram";
 
 const logger = createLogger('Routes');
 
@@ -1003,6 +1004,57 @@ Respond with valid JSON only, no other text.`;
           required: ["personIds"]
         }
       }
+    },
+    {
+      type: "function",
+      function: {
+        name: "post_to_instagram",
+        description: "Post content to Instagram. Requires at least one image URL. This will publish immediately to the connected Instagram Business/Creator account.",
+        parameters: {
+          type: "object",
+          properties: {
+            caption: { 
+              type: "string", 
+              description: "The caption/text for the Instagram post. Can include hashtags." 
+            },
+            imageUrls: { 
+              type: "array",
+              items: { type: "string" },
+              description: "Array of publicly accessible image URLs to post. For a single image, provide one URL. For a carousel, provide 2-10 URLs."
+            }
+          },
+          required: ["caption", "imageUrls"]
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "post_to_facebook",
+        description: "Post content to the connected Facebook Page. Can be text-only or include an image.",
+        parameters: {
+          type: "object",
+          properties: {
+            message: { 
+              type: "string", 
+              description: "The text content for the Facebook post" 
+            },
+            imageUrl: { 
+              type: "string", 
+              description: "Optional publicly accessible image URL to include with the post" 
+            }
+          },
+          required: ["message"]
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "check_social_connection",
+        description: "Check if Instagram/Facebook is connected and get the account details",
+        parameters: { type: "object", properties: {} }
+      }
     }
   ];
 
@@ -1243,6 +1295,53 @@ Respond with valid JSON only, no other text.`;
           return `Created "${householdName}" and linked ${linkedNames.join(", ")}. They will now count as one household for FORD conversations and mailers.`;
         }
         
+        case "post_to_instagram": {
+          if (!args.caption) {
+            return `Error: caption is required for Instagram posts`;
+          }
+          if (!args.imageUrls || !Array.isArray(args.imageUrls) || args.imageUrls.length === 0) {
+            return `Error: imageUrls array with at least one URL is required for Instagram posts`;
+          }
+          
+          const result = await metaInstagram.postToInstagram(args.caption, args.imageUrls);
+          
+          if (result.success) {
+            return `Successfully posted to Instagram! View your post: ${result.permalink}`;
+          } else {
+            return `Failed to post to Instagram: ${result.error}`;
+          }
+        }
+        
+        case "post_to_facebook": {
+          if (!args.message) {
+            return `Error: message is required for Facebook posts`;
+          }
+          
+          const imageUrls = args.imageUrl ? [args.imageUrl] : undefined;
+          const result = await metaInstagram.postToFacebook(args.message, imageUrls);
+          
+          if (result.success) {
+            return `Successfully posted to Facebook! Post ID: ${result.postId}`;
+          } else {
+            return `Failed to post to Facebook: ${result.error}`;
+          }
+        }
+        
+        case "check_social_connection": {
+          const status = await metaInstagram.getMetaConnectionStatus();
+          
+          if (status.connected) {
+            return JSON.stringify({
+              connected: true,
+              accountName: status.accountName,
+              instagramUsername: status.instagramUsername,
+              expiresAt: status.expiresAt
+            });
+          } else {
+            return `Instagram/Facebook is not connected. Please go to Settings to connect your Meta account.`;
+          }
+        }
+        
         default:
           return `Unknown tool: ${toolName}`;
       }
@@ -1273,6 +1372,7 @@ YOU CAN TAKE ACTION. When the user asks you to do something, USE YOUR TOOLS to a
 - Update deal stages (warm → hot → in_contract → closed)
 - Get Hot/Warm lists and today's tasks
 - Link people together as a household (they count as one for FORD conversations)
+- POST TO INSTAGRAM AND FACEBOOK: You can post content directly to social media if connected
 
 WORKFLOW:
 1. When user mentions a person, FIRST search for them to get their ID
@@ -4045,6 +4145,194 @@ Return ONLY valid JSON, no explanations.`
       }
       
       res.json({ synced, failed, total: incompleteTasks.length });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============ META/INSTAGRAM API ROUTES ============
+  
+  // Get OAuth URL for connecting Meta account
+  app.get("/api/meta/oauth-url", async (req, res) => {
+    try {
+      const host = req.get('host') || 'localhost:5000';
+      const protocol = req.headers['x-forwarded-proto'] || 'http';
+      const redirectUri = `${protocol}://${host}/api/meta/callback`;
+      
+      const oauthUrl = metaInstagram.getMetaOAuthUrl(redirectUri);
+      res.json({ url: oauthUrl, redirectUri });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // OAuth callback from Meta
+  app.get("/api/meta/callback", async (req, res) => {
+    try {
+      const { code, error, error_description } = req.query;
+      
+      if (error) {
+        return res.redirect(`/settings?meta_error=${encodeURIComponent(error_description as string || error as string)}`);
+      }
+      
+      if (!code) {
+        return res.redirect('/settings?meta_error=No authorization code received');
+      }
+      
+      const host = req.get('host') || 'localhost:5000';
+      const protocol = req.headers['x-forwarded-proto'] || 'http';
+      const redirectUri = `${protocol}://${host}/api/meta/callback`;
+      
+      // Exchange code for short-lived token
+      const shortTokenResult = await metaInstagram.exchangeCodeForToken(code as string, redirectUri);
+      
+      // Exchange for long-lived token (60 days)
+      const longTokenResult = await metaInstagram.getLongLivedToken(shortTokenResult.access_token);
+      
+      // Get Facebook Pages
+      const pages = await metaInstagram.getFacebookPages(longTokenResult.access_token);
+      
+      if (pages.length === 0) {
+        return res.redirect('/settings?meta_error=No Facebook Pages found. Please ensure you have a Facebook Page linked to your Instagram account.');
+      }
+      
+      // Use first page (user can change later if needed)
+      const page = pages[0];
+      
+      // Get Instagram Business Account linked to the page
+      const instagramAccount = await metaInstagram.getInstagramAccount(page.id, page.access_token);
+      
+      // Deactivate any existing Meta connections
+      const existingConnections = await storage.getAllSocialConnections();
+      for (const conn of existingConnections.filter(c => c.platform === 'meta')) {
+        await storage.updateSocialConnection(conn.id, { isActive: false });
+      }
+      
+      // Calculate expiration (60 days for long-lived tokens)
+      const expiresAt = new Date();
+      expiresAt.setSeconds(expiresAt.getSeconds() + (longTokenResult.expires_in || 5184000));
+      
+      // Store the connection
+      await storage.createSocialConnection({
+        platform: 'meta',
+        accessToken: page.access_token, // Use page access token for posting
+        accessTokenExpiresAt: expiresAt,
+        platformUserId: page.id,
+        platformPageId: page.id,
+        instagramAccountId: instagramAccount?.id || null,
+        accountName: page.name,
+        scopes: ['instagram_basic', 'instagram_content_publish', 'pages_show_list'],
+        metadata: {
+          pageName: page.name,
+          instagramUsername: instagramAccount?.username,
+          instagramName: instagramAccount?.name
+        },
+        isActive: true
+      });
+      
+      res.redirect('/settings?meta_connected=true');
+    } catch (error: any) {
+      console.error('Meta OAuth error:', error);
+      res.redirect(`/settings?meta_error=${encodeURIComponent(error.message)}`);
+    }
+  });
+  
+  // Get Meta connection status
+  app.get("/api/meta/status", async (req, res) => {
+    try {
+      const status = await metaInstagram.getMetaConnectionStatus();
+      res.json(status);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Disconnect Meta account
+  app.post("/api/meta/disconnect", async (req, res) => {
+    try {
+      const connection = await storage.getActiveSocialConnection('meta');
+      if (connection) {
+        await storage.deleteSocialConnection(connection.id);
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Post to Instagram (manual API call)
+  app.post("/api/meta/post/instagram", async (req, res) => {
+    try {
+      const { caption, imageUrls } = req.body;
+      
+      if (!caption || !imageUrls || !Array.isArray(imageUrls) || imageUrls.length === 0) {
+        return res.status(400).json({ message: "Caption and at least one image URL are required" });
+      }
+      
+      const result = await metaInstagram.postToInstagram(caption, imageUrls);
+      
+      if (result.success) {
+        // Save the post record
+        await storage.createSocialPost({
+          platform: 'instagram',
+          postType: 'feed',
+          content: caption,
+          mediaUrls: imageUrls,
+          status: 'published',
+          publishedAt: new Date(),
+          platformPostId: result.postId,
+          platformPostUrl: result.permalink
+        });
+        
+        res.json(result);
+      } else {
+        res.status(400).json({ message: result.error });
+      }
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Post to Facebook (manual API call)
+  app.post("/api/meta/post/facebook", async (req, res) => {
+    try {
+      const { message, imageUrl } = req.body;
+      
+      if (!message) {
+        return res.status(400).json({ message: "Message is required" });
+      }
+      
+      const imageUrls = imageUrl ? [imageUrl] : undefined;
+      const result = await metaInstagram.postToFacebook(message, imageUrls);
+      
+      if (result.success) {
+        // Save the post record
+        await storage.createSocialPost({
+          platform: 'facebook',
+          postType: 'feed',
+          content: message,
+          mediaUrls: imageUrls || null,
+          status: 'published',
+          publishedAt: new Date(),
+          platformPostId: result.postId,
+          platformPostUrl: result.permalink
+        });
+        
+        res.json(result);
+      } else {
+        res.status(400).json({ message: result.error });
+      }
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get post history
+  app.get("/api/meta/posts", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const posts = await storage.getAllSocialPosts(limit);
+      res.json(posts);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
