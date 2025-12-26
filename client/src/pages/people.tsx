@@ -16,6 +16,7 @@ import {
   Sparkles, PenTool, ListTodo, Activity, CalendarPlus,
   StickyNote, Heart, Briefcase, Gamepad2, Star, Filter, Upload
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -376,8 +377,30 @@ export default function People() {
           {/* People List */}
           <ScrollArea className="flex-1">
             {isLoading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <div className="divide-y">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="p-3">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-9 w-9 rounded-full" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-3 w-32" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredPeople.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+                <Users className="h-10 w-10 text-muted-foreground/40 mb-3" />
+                <p className="text-sm font-medium text-muted-foreground mb-1">
+                  {people.length === 0 ? "No contacts yet" : "No matches found"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {people.length === 0 
+                    ? "Add your first contact to start building relationships"
+                    : "Try adjusting your search or filter"}
+                </p>
               </div>
             ) : (
               <div className="divide-y">

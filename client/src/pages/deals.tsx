@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart3, TrendingUp, DollarSign, Home, ArrowRight, Loader2, Plus, X } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -443,8 +444,20 @@ export default function Deals() {
           </div>
 
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="space-y-4">
+              <Skeleton className="h-7 w-36" />
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="border-none shadow-sm bg-card/80">
+                  <CardContent className="p-4 flex items-center gap-4">
+                    <Skeleton className="h-12 w-12 rounded-lg" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-5 w-40" />
+                      <Skeleton className="h-4 w-56" />
+                    </div>
+                    <Skeleton className="h-6 w-24 rounded-full" />
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           ) : deals.length === 0 ? (
             <Card className="border-dashed">
