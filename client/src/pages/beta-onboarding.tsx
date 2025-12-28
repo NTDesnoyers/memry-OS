@@ -78,7 +78,7 @@ const TOOL_OPTIONS = {
   ],
   crm: [
     { id: 'follow_up_boss', label: 'Follow Up Boss', description: 'Real estate CRM' },
-    { id: 'cloze', label: 'Cloze', description: 'Ninja Selling preferred' },
+    { id: 'cloze', label: 'Cloze', description: 'Relationship-focused CRM' },
     { id: 'kvcore', label: 'kvCORE', description: 'Real estate platform' },
     { id: 'boomtown', label: 'BoomTown', description: 'Lead gen platform' },
     { id: 'chime', label: 'Chime', description: 'Real estate CRM' },
@@ -101,7 +101,7 @@ function IntakeForm({ onSuccess }: { onSuccess: () => void }) {
     email: '',
     phone: '',
     brokerage: '',
-    isNinjaCertified: false,
+    relationshipCertified: false,
     meetingTools: [] as string[],
     callTools: [] as string[],
     messagingTools: [] as string[],
@@ -168,7 +168,7 @@ function IntakeForm({ onSuccess }: { onSuccess: () => void }) {
           email: formData.email,
           phone: formData.phone || undefined,
           brokerage: formData.brokerage || undefined,
-          isNinjaCertified: formData.isNinjaCertified,
+          isNinjaCertified: formData.relationshipCertified,
         },
         meetingTools: formData.meetingTools,
         callTools: formData.callTools,
@@ -225,7 +225,7 @@ function IntakeForm({ onSuccess }: { onSuccess: () => void }) {
       {step === 1 && (
         <Card>
           <CardHeader>
-            <CardTitle className="font-serif">Welcome to Ninja OS Beta</CardTitle>
+            <CardTitle className="font-serif">Welcome to Flow OS Beta</CardTitle>
             <CardDescription>Let's get you set up. First, tell us about yourself.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -273,12 +273,12 @@ function IntakeForm({ onSuccess }: { onSuccess: () => void }) {
               </div>
               <div className="flex items-center gap-2">
                 <Switch
-                  id="ninja-certified"
-                  data-testid="switch-ninja-certified"
-                  checked={formData.isNinjaCertified}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isNinjaCertified: checked }))}
+                  id="relationship-certified"
+                  data-testid="switch-relationship-certified"
+                  checked={formData.relationshipCertified}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, relationshipCertified: checked }))}
                 />
-                <Label htmlFor="ninja-certified">I'm Ninja Selling Certified</Label>
+                <Label htmlFor="relationship-certified">I'm certified in relationship selling</Label>
               </div>
             </div>
             <Button
@@ -553,7 +553,7 @@ function BetaDashboard() {
                   <CardDescription>{selectedUserData.email} • {selectedUserData.brokerage || 'No brokerage'}</CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
-                  {selectedUserData.isNinjaCertified && <Badge className="bg-amber-100 text-amber-700">Ninja Certified</Badge>}
+                  {selectedUserData.isNinjaCertified && <Badge className="bg-amber-100 text-amber-700">Relationship Certified</Badge>}
                   {getStatusBadge(selectedUserData.status)}
                 </div>
               </div>

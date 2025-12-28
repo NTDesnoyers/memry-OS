@@ -88,11 +88,11 @@ function NavContent({ location, setOpen, userName, userInitials, brokerage, head
     <div className={cn("flex flex-col h-full bg-sidebar border-r border-sidebar-border text-sidebar-foreground transition-all duration-200", collapsed && "w-16")}>
       <div className={cn("p-6 border-b border-sidebar-border", collapsed && "p-3 flex justify-center")}>
         {collapsed ? (
-          <span className="text-xl font-serif font-bold text-primary">N</span>
+          <span className="text-xl font-serif font-bold text-primary">F</span>
         ) : (
           <>
             <div className="flex items-center justify-between">
-              <h1 className="text-xl font-serif font-bold tracking-tight text-primary">Ninja OS</h1>
+              <h1 className="text-xl font-serif font-bold tracking-tight text-primary">Flow OS</h1>
               <div className="flex items-center gap-1">
                 {onTogglePin && (
                   <Button
@@ -285,7 +285,7 @@ export default function LayoutComponent({ children }: { children: React.ReactNod
 
   const userName = profile?.name || "Your Name";
   const userInitials = userName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
-  const brokerage = profile?.brokerage || "Ninja Selling";
+  const brokerage = profile?.brokerage || "Your Brokerage";
   const headshotUrl = profile?.headshotUrl;
 
   const navProps = { 
@@ -311,7 +311,7 @@ export default function LayoutComponent({ children }: { children: React.ReactNod
       </aside>
 
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-b px-4 py-2 flex items-center justify-between will-change-transform" style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))' }}>
-        <span className="font-serif font-bold text-primary text-lg">Ninja OS</span>
+        <span className="font-serif font-bold text-primary text-lg">Flow OS</span>
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="h-10 w-10">

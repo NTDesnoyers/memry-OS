@@ -185,14 +185,14 @@ export function VoiceLogger() {
       "/reviews": "Real Estate Reviews - annual property reviews for clients",
       "/brand-center": "Brand Center - managing logos, headshot, and branding assets",
       "/relationships": "FORD Relationships - tracking Family, Occupation, Recreation, Dreams",
-      "/weekly-report": "Weekly Meeting Agenda - Ninja Selling weekly planning",
+      "/weekly-report": "Weekly Meeting Agenda - relationship-based weekly planning",
       "/business-tracker": "Business Tracker - annual goals, transactions, and PIE metrics",
       "/haves-wants": "Haves & Wants - client matching and newsletter management",
       "/visual-pricing": "Visual Pricing - market analysis and comparable properties",
       "/automation": "Automation Hub - workflow automations and integrations",
       "/integrations": "Integrations - connected services and API settings",
     };
-    return pageContexts[currentPage] || "Ninja OS - Real Estate Business Operating System";
+    return pageContexts[currentPage] || "Flow OS - Real Estate Business Operating System";
   };
 
   const processFile = useCallback((file: File) => {
@@ -259,8 +259,8 @@ export function VoiceLogger() {
           context: {
             currentPage: currentPage,
             pageDescription: getPageContext(),
-            appName: "Ninja OS",
-            appDescription: "A real estate business operating system following Ninja Selling methodology",
+            appName: "Flow OS",
+            appDescription: "A real estate business operating system for relationship-based selling",
           }
         }),
       });

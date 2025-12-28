@@ -1134,7 +1134,7 @@ export default function BusinessTracker() {
           <header className="flex justify-between items-center mb-4">
             <div>
               <h1 className="text-3xl font-serif font-bold text-primary">Business Tracker</h1>
-              <p className="text-muted-foreground text-sm">Ninja Selling Pipeline & Transactions</p>
+              <p className="text-muted-foreground text-sm">Real Estate Pipeline & Transactions</p>
             </div>
           </header>
 

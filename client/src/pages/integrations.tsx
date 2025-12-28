@@ -32,7 +32,7 @@ type CrmIntegration = {
 
 const CRM_PROVIDERS = [
   { id: 'follow_up_boss', name: 'Follow Up Boss', description: 'Popular real estate CRM with excellent API', color: 'bg-green-600' },
-  { id: 'cloze', name: 'Cloze', description: 'Preferred CRM for Ninja Selling agents', color: 'bg-blue-600' },
+  { id: 'cloze', name: 'Cloze', description: 'Relationship-focused CRM for real estate', color: 'bg-blue-600' },
   { id: 'zapier', name: 'Zapier Webhook', description: 'Connect to any CRM via Zapier', color: 'bg-orange-600' },
 ];
 
@@ -295,7 +295,7 @@ function WebhooksSection() {
           <div>
             <CardTitle className="font-serif">Webhook Endpoints</CardTitle>
             <CardDescription>
-              Use these webhook URLs in Zapier or your capture tools to send data to Ninja OS
+              Use these webhook URLs in Zapier or your capture tools to send data to Flow OS
             </CardDescription>
           </div>
         </div>
@@ -462,7 +462,7 @@ function TodoistIntegrationCard() {
         {isConnected ? (
           <>
             <p className="text-sm text-gray-600">
-              Tasks created in Ninja OS will sync to Todoist with the "ninja-os" label.
+              Tasks created in Flow OS will sync to Todoist with the "flow-os" label.
               Following GTD principles, Todoist is your single task inbox.
             </p>
             <div className="flex gap-2">

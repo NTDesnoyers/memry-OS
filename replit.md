@@ -1,7 +1,7 @@
-# Ninja OS - Relationship Intelligence Platform
+# Flow OS - Relationship Intelligence Platform
 
 ## Overview
-Ninja OS is a single-user personal business operating system designed for real estate professionals using the Ninja Selling methodology. It integrates Weekly Meeting Agenda (WMA), FORD relationship tracking, client intelligence, business execution, and deal management. The platform acts as a central source of truth for Ninja Selling workflows, prioritizing efficiency for tasks like WMA completion and FORD interaction logging. It functions as an intelligent reference system based on Getting Things Done (GTD) principles, integrating with external task managers like Todoist. The project aims to provide an AI Chief of Staff experience, offering anticipatory intelligence, network insights, reflective analysis, memory augmentation, decision support, and skill development to enhance relationship management and business strategy.
+Flow OS is a single-user personal business operating system designed for real estate professionals focused on relationship-based selling. It integrates Weekly Meeting Agenda (WMA), FORD relationship tracking, client intelligence, business execution, and deal management. The platform acts as a central source of truth for relationship selling workflows, prioritizing efficiency for tasks like WMA completion and FORD interaction logging. It functions as an intelligent reference system based on Getting Things Done (GTD) principles, integrating with external task managers like Todoist. The project aims to provide an AI Chief of Staff experience, offering anticipatory intelligence, network insights, reflective analysis, memory augmentation, decision support, and skill development to enhance relationship management and business strategy.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -47,7 +47,7 @@ The project adheres to an event-driven, multi-agent architecture with a focus on
 - **Maintenance Scheduler**: Automatic cleanup of old system_events and agent_actions (7-day retention). API: `/api/maintenance/stats`, `/api/maintenance/cleanup`.
 
 ### UI/UX Decisions
-The design emphasizes GTD principles, making the system an intelligent reference tool focused on speed for daily reviews and interaction logging. It integrates Ninja Selling methodologies, including relationship segments (A/B/C/D), transaction stages, FORD notes, Ninja Nine habits, and core working lists. Key workflows include weekly planning, daily start-up, and 8x8 campaigns.
+The design emphasizes GTD principles, making the system an intelligent reference tool focused on speed for daily reviews and interaction logging. It integrates relationship selling methodologies, including relationship segments (A/B/C/D), transaction stages, FORD notes, core habits, and working lists. Key workflows include weekly planning, daily start-up, and 8x8 campaigns.
 
 ### Feature Specifications
 Current features include a Contact Due Calculator, D Contact Review, AI Assistant with agentic tools, voice profile learning, generated drafts, sync APIs, **In-App Observer** (queued suggestions in Weekly Review "Insights" tab), **Insight Inbox** (content capture and daily digest), **Guiding Principles Profile** (MTP, mission, values personalization), **Voice Conversation** (real-time voice AI chat via OpenAI Realtime API), **Dormant Lead Revival Engine** (Gmail scanning, dormancy scoring, approval workflow, campaign generation), and **DIA-Style Skill Packs** (Command Palette shortcuts for relationship-compounding actions: Draft Revival, Bulk Outreach, Quick Text). Future features target anticipatory, network, and reflective intelligence, memory augmentation, decision support, and skill development.
@@ -121,7 +121,7 @@ Current features include a Contact Due Calculator, D Contact Review, AI Assistan
 - Would leverage the existing suggestion engine and pattern learning infrastructure
 
 ### Orchestration Layer
-Ninja OS is a multi-agent, event-driven system that orchestrates actions while CRMs and external tools remain systems of record.
+Flow OS is a multi-agent, event-driven system that orchestrates actions while CRMs and external tools remain systems of record.
 - **Core Architectural Principles**: Event-Driven, Agent-Based, Dossier Abstraction, Guardrails First, Revenue Focus.
 - **Named Agents**: LeadIntakeAgent, NurtureAgent, OpsTransactionAgent, DataContextAgent, MarketingAgent, LifeEventAgent.
 - **Event Types**: Lead, Relationship, Transaction, Communication, and Intelligence Events.
@@ -168,18 +168,18 @@ Ninja OS is a multi-agent, event-driven system that orchestrates actions while C
 - **Reflective Analysis**: Weekly/monthly performance insights
 - **Memory Augmentation**: Never forget a detail about any relationship
 - **Decision Support**: AI-powered strategic recommendations
-- **Skill Development**: Personalized coaching for Ninja Selling mastery
+- **Skill Development**: Personalized coaching for relationship selling mastery
 
 ## Strategic Positioning
 
 **AI-Native vs AI-Bolted-On** (Inspired by Gavin Baker's "SaaS Death Trap" thesis):
 
-Traditional CRMs (Cloze, Follow Up Boss, Salesforce) are protecting 80%+ margins and reluctantly adding AI features. Ninja OS is AI-native with no legacy margins to protect—comfortable at 35-40% gross margins while delivering 10x more value.
+Traditional CRMs (Cloze, Follow Up Boss, Salesforce) are protecting 80%+ margins and reluctantly adding AI features. Flow OS is AI-native with no legacy margins to protect—comfortable at 35-40% gross margins while delivering 10x more value.
 
 **Core Differentiation:**
 1. **AI That Takes Action**: Not just data display—AI drafts, sends, schedules with user approval
 2. **Verify → Automate Pattern**: Build trust incrementally (suggest → draft → notify → autonomous)
 3. **Voice + Relationship Memory**: Voice AI and FORD notes create irreplaceable context
-4. **Ninja Selling Specialization**: Serve one methodology perfectly vs. everyone poorly
+4. **Relationship Selling Focus**: Serve relationship-based real estate professionals perfectly
 
 **See:** `docs/STRATEGIC_ROADMAP.md` for detailed 90-day sprint plan and phase breakdown.

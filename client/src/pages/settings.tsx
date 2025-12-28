@@ -331,7 +331,7 @@ export default function SettingsPage() {
               <h1 className="text-2xl font-serif font-bold">Settings</h1>
             </div>
             <p className="text-muted-foreground">
-              Configure your Ninja OS preferences and integrations.
+              Configure your Flow OS preferences and integrations.
             </p>
           </div>
 

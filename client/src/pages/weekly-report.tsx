@@ -504,7 +504,7 @@ export default function WeeklyReport() {
           </Link>
           <div className="flex-1">
             <h1 className="text-3xl font-serif font-bold text-primary">Weekly Operating Review</h1>
-            <p className="text-muted-foreground">Ninja Selling + GTD System Integrity</p>
+            <p className="text-muted-foreground">Relationship + GTD System Integrity</p>
           </div>
           
           <div className="flex gap-2">
@@ -597,7 +597,7 @@ export default function WeeklyReport() {
         {/* Print-only Header */}
         <div className="hidden print:block mb-8">
            <h1 className="text-2xl font-bold text-black">Weekly Operating Review</h1>
-           <p className="text-sm text-gray-600">Ninja Selling + GTD System Integrity</p>
+           <p className="text-sm text-gray-600">Relationship + GTD System Integrity</p>
            <div className="h-px bg-black mt-4 mb-8"></div>
         </div>
 

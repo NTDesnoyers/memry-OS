@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 
 const TOUR_STEPS = [
   {
-    title: "Welcome to Ninja OS Beta",
+    title: "Welcome to Flow OS Beta",
     description: "You're one of our first testers! Your feedback shapes this product. Use the feedback button (bottom right) to report bugs or share ideas.",
     icon: Sparkles,
   },
@@ -27,7 +27,7 @@ const TOUR_STEPS = [
   },
   {
     title: "Weekly Planning",
-    description: "Complete your Weekly Meeting Agenda to stay on track with your Ninja Nine habits and relationship touchpoints.",
+    description: "Complete your Weekly Meeting Agenda to stay on track with your relationship habits and touchpoints.",
     icon: Target,
     action: { label: "Start Weekly Report", href: "/weekly-report" },
   },
@@ -38,7 +38,7 @@ export function WelcomeTour() {
   const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
-    const hasSeenTour = localStorage.getItem("ninja-os-tour-completed");
+    const hasSeenTour = localStorage.getItem("flow-os-tour-completed");
     if (!hasSeenTour) {
       const timer = setTimeout(() => setIsOpen(true), 1000);
       return () => clearTimeout(timer);
@@ -46,7 +46,7 @@ export function WelcomeTour() {
   }, []);
 
   const handleComplete = () => {
-    localStorage.setItem("ninja-os-tour-completed", "true");
+    localStorage.setItem("flow-os-tour-completed", "true");
     setIsOpen(false);
   };
 

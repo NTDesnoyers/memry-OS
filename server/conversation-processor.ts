@@ -38,7 +38,7 @@ Return JSON:
 
 ONLY extract patterns that are clearly Nathan speaking (not the other person). Look for the host/interviewer perspective.`;
 
-const SYSTEM_PROMPT = `You are an intelligent relationship assistant for a real estate professional following the Ninja Selling methodology. Your job is to analyze conversation transcripts and extract valuable relationship intelligence.
+const SYSTEM_PROMPT = `You are an intelligent relationship assistant for a real estate professional focused on relationship-based selling. Your job is to analyze conversation transcripts and extract valuable relationship intelligence.
 
 For each conversation, extract:
 
@@ -795,7 +795,7 @@ ${interaction.title ? `TITLE: ${interaction.title}` : ''}
 TRANSCRIPT:
 ${interaction.transcript}
 
-Analyze this conversation using the Ninja Selling methodology and Question-Based Selling principles. Evaluate:
+Analyze this conversation using relationship-based selling principles. Evaluate:
 
 1. LISTENING QUALITY (0-100):
    - Did they let the other person talk more than themselves?

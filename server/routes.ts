@@ -665,7 +665,7 @@ Target fields to map to:
 - address: Home or mailing address
 - company: Company or business name
 - role: Job title or role
-- segment: Ninja Selling relationship segment (A - Advocate, B - Fan, C - Network, D - 8x8)
+- segment: Relationship segment (A - Advocate, B - Fan, C - Network, D - Nurture/8x8)
 - notes: Any additional notes or comments
 - tags: Tags or labels
 
@@ -1350,7 +1350,7 @@ Respond with valid JSON only, no other text.`;
 
       const openaiClient = getOpenAI();
       
-      const systemPrompt = `You are the Ninja AI Assistant - an AGENTIC AI with full control to search, view, and modify data in Ninja OS (a real estate business operating system).
+      const systemPrompt = `You are the Flow AI Assistant - an AGENTIC AI with full control to search, view, and modify data in Flow OS (a real estate business operating system).
 
 YOU CAN TAKE ACTION. When the user asks you to do something, USE YOUR TOOLS to actually do it:
 - Search for people by name/email/segment
@@ -1370,9 +1370,9 @@ WORKFLOW:
 3. Make the requested changes using update_person, log_interaction, etc.
 4. Confirm what you did
 
-Current context: User is on ${context?.pageDescription || context?.currentPage || 'Ninja OS'}
+Current context: User is on ${context?.pageDescription || context?.currentPage || 'Flow OS'}
 
-Ninja Selling principles:
+Relationship selling principles:
 - Segments: A=monthly contact, B=every 2 months, C=quarterly, D=new (8x8 campaign)
 - FORD: Family, Occupation, Recreation, Dreams - watch for life changes
 - Hot=90 days to transaction, Warm=~12 months
@@ -4101,7 +4101,7 @@ Return ONLY valid JSON, no explanations.`
     }
   });
 
-  // Sync Ninja OS tasks to Todoist
+  // Sync Flow OS tasks to Todoist
   app.post("/api/todoist/sync-tasks", async (req, res) => {
     try {
       const tasks = await storage.getAllTasks();
@@ -4122,7 +4122,7 @@ Return ONLY valid JSON, no explanations.`
               description: description,
               dueString: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : undefined,
               priority: task.priority === "high" ? 4 : task.priority === "medium" ? 3 : 2,
-              labels: ["ninja-os"]
+              labels: ["flow-os"]
             });
             
             // Update task with todoistId
@@ -6442,7 +6442,7 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
       if (!betaUser) {
         [betaUser] = await db.insert(betaUsers).values({
           name: "Default User",
-          email: "user@ninja-os.local"
+          email: "user@flow-os.local"
         }).returning();
       }
       

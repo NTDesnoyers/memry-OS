@@ -1,6 +1,6 @@
 /**
  * Cloze CRM Integration
- * Popular with Ninja Selling agents
+ * Popular with relationship-focused real estate agents
  * Docs: https://api.cloze.com/api-docs/
  */
 
