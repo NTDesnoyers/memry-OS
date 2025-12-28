@@ -1065,7 +1065,7 @@ export class DatabaseStorage implements IStorage {
     const results = await db
       .select({
         personId: interactions.personId,
-        latestDate: sql<Date>`MAX(${interactions.occurredAt})`.as('latest_date'),
+        latestDate: sql<string>`MAX(${interactions.occurredAt})`,
       })
       .from(interactions)
       .where(and(
