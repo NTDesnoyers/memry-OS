@@ -203,6 +203,8 @@ export interface IStorage {
   cleanupOldDeletedInteractions(daysOld: number): Promise<number>;
   /** Alias for permanentlyDeleteInteraction. */
   deleteInteraction(id: string): Promise<void>;
+  /** Get latest interaction date per person (for dormancy detection). */
+  getLatestInteractionDates(): Promise<Map<string, Date>>;
   
   // AI Conversations
   getAllAiConversations(): Promise<AiConversation[]>;
@@ -1057,6 +1059,28 @@ export class DatabaseStorage implements IStorage {
   
   async deleteInteraction(id: string): Promise<void> {
     await db.delete(interactions).where(eq(interactions.id, id));
+  }
+  
+  async getLatestInteractionDates(): Promise<Map<string, Date>> {
+    const results = await db
+      .select({
+        personId: interactions.personId,
+        latestDate: sql<Date>`MAX(${interactions.occurredAt})`.as('latest_date'),
+      })
+      .from(interactions)
+      .where(and(
+        isNotNull(interactions.personId),
+        isNull(interactions.deletedAt)
+      ))
+      .groupBy(interactions.personId);
+    
+    const dateMap = new Map<string, Date>();
+    for (const row of results) {
+      if (row.personId && row.latestDate) {
+        dateMap.set(row.personId, new Date(row.latestDate));
+      }
+    }
+    return dateMap;
   }
   
   // AI Conversations

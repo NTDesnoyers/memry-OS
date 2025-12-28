@@ -284,9 +284,10 @@ export async function scanContactsForDormantLeads(options: {
 } = {}): Promise<{ found: number; created: number; skipped: number }> {
   const { minDaysSinceContact = 180, maxResults = 50 } = options;
   
-  logger.info('Starting contact-based dormant lead scan', { minDaysSinceContact, maxResults });
+  logger.info('Starting unified dormant lead scan (all channels)', { minDaysSinceContact, maxResults });
   
   const allPeople = await storage.getAllPeople();
+  const interactionDates = await storage.getLatestInteractionDates();
   const now = new Date();
   
   let found = 0;
@@ -297,12 +298,30 @@ export async function scanContactsForDormantLeads(options: {
     person: Person;
     daysSinceContact: number;
     score: number;
+    lastContactSource: 'interaction' | 'lastContact';
   }> = [];
   
   for (const person of allPeople) {
-    if (!person.lastContact) continue;
+    const interactionDate = interactionDates.get(person.id);
+    const lastContactDate = person.lastContact;
     
-    const daysSinceContact = Math.floor((now.getTime() - person.lastContact.getTime()) / (1000 * 60 * 60 * 24));
+    let effectiveLastContact: Date | null = null;
+    let source: 'interaction' | 'lastContact' = 'lastContact';
+    
+    if (interactionDate && lastContactDate) {
+      effectiveLastContact = interactionDate > lastContactDate ? interactionDate : lastContactDate;
+      source = interactionDate > lastContactDate ? 'interaction' : 'lastContact';
+    } else if (interactionDate) {
+      effectiveLastContact = interactionDate;
+      source = 'interaction';
+    } else if (lastContactDate) {
+      effectiveLastContact = lastContactDate;
+      source = 'lastContact';
+    }
+    
+    if (!effectiveLastContact) continue;
+    
+    const daysSinceContact = Math.floor((now.getTime() - effectiveLastContact.getTime()) / (1000 * 60 * 60 * 24));
     
     if (daysSinceContact >= minDaysSinceContact) {
       const score = calculateDormancyScore({
@@ -313,7 +332,7 @@ export async function scanContactsForDormantLeads(options: {
         hasPhone: !!person.phone,
       });
       
-      candidates.push({ person, daysSinceContact, score });
+      candidates.push({ person, daysSinceContact, score, lastContactSource: source });
       found++;
     }
   }
@@ -329,16 +348,17 @@ export async function scanContactsForDormantLeads(options: {
       }
       
       const years = Math.floor(candidate.daysSinceContact / 365);
+      const channelNote = candidate.lastContactSource === 'interaction' ? ' (based on logged calls, meetings, texts)' : '';
       const revivalReason = years >= 1
-        ? `No contact in ${years} year${years > 1 ? 's' : ''}. May be worth reconnecting.`
-        : `${candidate.daysSinceContact} days since last contact. Time for a check-in.`;
+        ? `No contact in ${years} year${years > 1 ? 's' : ''}${channelNote}. May be worth reconnecting.`
+        : `${candidate.daysSinceContact} days since last contact${channelNote}. Time for a check-in.`;
       
       const opportunityData: InsertDormantOpportunity = {
         personId: candidate.person.id,
         status: 'pending',
         dormancyScore: candidate.score,
         daysSinceContact: candidate.daysSinceContact,
-        discoveredVia: 'contact_analysis',
+        discoveredVia: 'unified_channel_analysis',
         revivalReason,
         suggestedApproach: generateSuggestedApproach(candidate.person, candidate.daysSinceContact),
       };
