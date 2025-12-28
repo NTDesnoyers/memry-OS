@@ -421,6 +421,19 @@ const uploadDocuments = multer({
   },
 });
 
+const uploadAudio = multer({
+  storage: storage_multer,
+  limits: { fileSize: 25 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowedMime = /audio\/(webm|mp4|mpeg|wav|ogg|flac|m4a)|video\/webm/;
+    if (allowedMime.test(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only audio files are allowed"));
+    }
+  },
+});
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -483,6 +496,78 @@ export async function registerRoutes(
       res.json({ url, filename: file.originalname });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ==================== VOICE MEMORY ROUTES ====================
+  
+  // Transcribe voice recording using OpenAI Whisper
+  app.post("/api/voice-memories/transcribe", uploadAudio.single("audio"), async (req, res) => {
+    try {
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({ message: "No audio file uploaded" });
+      }
+      
+      const openai = getOpenAI();
+      const filePath = path.join(uploadDir, file.filename);
+      
+      const transcription = await openai.audio.transcriptions.create({
+        file: fs.createReadStream(filePath),
+        model: "whisper-1",
+      });
+      
+      // Clean up the audio file after transcription
+      fs.unlinkSync(filePath);
+      
+      res.json({ 
+        transcript: transcription.text,
+        duration: (transcription as any).duration || 0,
+      });
+    } catch (error: any) {
+      console.error("Voice transcription error:", error);
+      res.status(500).json({ message: error.message || "Failed to transcribe audio" });
+    }
+  });
+  
+  // Create voice memory interaction and process it
+  app.post("/api/voice-memories", async (req, res) => {
+    try {
+      const { transcript, personId, occurredAt } = req.body;
+      
+      if (!transcript || transcript.trim().length < 10) {
+        return res.status(400).json({ message: "Transcript is too short" });
+      }
+      
+      // Create the interaction
+      const interaction = await storage.createInteraction({
+        type: "voice_note",
+        personId: personId || null,
+        title: `Voice Memory - ${new Date(occurredAt || Date.now()).toLocaleDateString()}`,
+        summary: transcript.slice(0, 500),
+        transcript: transcript,
+        occurredAt: occurredAt ? new Date(occurredAt) : new Date(),
+        source: "voice_memory",
+      });
+      
+      // Update person's lastContact if linked
+      if (personId) {
+        await storage.updatePerson(personId, { lastContact: new Date(occurredAt || Date.now()) });
+      }
+      
+      // Process the interaction asynchronously (FORD extraction, draft generation)
+      const { processInteraction } = await import("./conversation-processor");
+      const processResult = await processInteraction(interaction.id);
+      
+      res.json({
+        success: true,
+        interactionId: interaction.id,
+        processed: processResult.success,
+        draftsCreated: processResult.draftsCreated || 0,
+      });
+    } catch (error: any) {
+      console.error("Voice memory creation error:", error);
+      res.status(500).json({ message: error.message || "Failed to create voice memory" });
     }
   });
 

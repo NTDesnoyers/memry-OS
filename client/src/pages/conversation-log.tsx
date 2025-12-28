@@ -36,7 +36,8 @@ import {
   AlertCircle,
   Edit2,
   X,
-  Trash2
+  Trash2,
+  Mic
 } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useToast } from "@/hooks/use-toast";
@@ -45,12 +46,15 @@ import type { Person, Interaction } from "@shared/schema";
 import { isFounderMode } from "@/lib/feature-mode";
 import { apiRequest } from "@/lib/queryClient";
 import { getInitials } from "@/lib/utils";
+import { VoiceRecorder } from "@/components/voice-recorder";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const interactionTypes = [
   { value: "call", label: "Phone Call", icon: Phone, color: "bg-green-50 text-green-700 border-green-200" },
   { value: "meeting", label: "Meeting / Video", icon: Video, color: "bg-blue-50 text-blue-700 border-blue-200" },
   { value: "text", label: "Text Message", icon: MessageCircle, color: "bg-purple-50 text-purple-700 border-purple-200" },
   { value: "email", label: "Email", icon: Mail, color: "bg-orange-50 text-orange-700 border-orange-200" },
+  { value: "voice_note", label: "Voice Note", icon: Mic, color: "bg-pink-50 text-pink-700 border-pink-200" },
 ];
 
 export default function ConversationLog() {
@@ -76,6 +80,13 @@ export default function ConversationLog() {
     total: number;
     errors?: string[];
   } | null>(null);
+  
+  // Voice memory state
+  const [inputMode, setInputMode] = useState<"text" | "voice">("text");
+  const [voicePersonSearch, setVoicePersonSearch] = useState("");
+  const [showVoicePersonSearch, setShowVoicePersonSearch] = useState(false);
+  const [voiceSelectedPerson, setVoiceSelectedPerson] = useState<Person | null>(null);
+  const [isProcessingVoice, setIsProcessingVoice] = useState(false);
   
   // Edit dialog state
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -130,6 +141,63 @@ export default function ConversationLog() {
       externalLink: "",
       occurredAt: new Date().toISOString().slice(0, 16),
     });
+    setInputMode("text");
+    setVoicePersonSearch("");
+    setShowVoicePersonSearch(false);
+    setVoiceSelectedPerson(null);
+  };
+  
+  const handleVoiceTranscription = async (transcript: string) => {
+    if (!transcript || transcript.length < 10) {
+      toast({
+        title: "Recording too short",
+        description: "Please record a longer voice note.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsProcessingVoice(true);
+    try {
+      const response = await fetch("/api/voice-memories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transcript,
+          personId: voiceSelectedPerson?.id || null,
+          occurredAt: new Date().toISOString(),
+        }),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to save voice memory");
+      }
+      
+      const result = await response.json();
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/interactions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/people"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/generated-drafts"] });
+      
+      setShowAddDialog(false);
+      resetForm();
+      
+      toast({
+        title: "Voice Memory Saved",
+        description: result.draftsCreated > 0 
+          ? `Logged and created ${result.draftsCreated} follow-up drafts!`
+          : "Your voice note has been saved and processed.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save voice memory",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingVoice(false);
+    }
   };
 
   const updateInteraction = useMutation({
@@ -542,34 +610,143 @@ export default function ConversationLog() {
               Log Conversation
             </DialogTitle>
             <DialogDescription>
-              Record a call, meeting, or message. Paste Fathom or Granola links to auto-import.
+              Record a call, meeting, or message with text notes or voice recording.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div>
-              <Label className="mb-2 block">Type</Label>
-              <div className="grid grid-cols-4 gap-2">
-                {interactionTypes.map(type => {
-                  const TypeIcon = type.icon;
-                  return (
-                    <button
-                      key={type.value}
-                      onClick={() => setSelectedType(type.value)}
-                      className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all ${
-                        selectedType === type.value 
-                          ? 'border-primary bg-primary/5' 
-                          : 'border-muted hover:border-muted-foreground/30'
-                      }`}
-                      data-testid={`button-type-${type.value}`}
-                    >
-                      <TypeIcon className="h-5 w-5" />
-                      <span className="text-xs">{type.label.split(" ")[0]}</span>
-                    </button>
-                  );
-                })}
+          <Tabs value={inputMode} onValueChange={(v) => setInputMode(v as "text" | "voice")} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="text" className="gap-2" data-testid="tab-text-entry">
+                <FileText className="h-4 w-4" /> Text Entry
+              </TabsTrigger>
+              <TabsTrigger value="voice" className="gap-2" data-testid="tab-voice-record">
+                <Mic className="h-4 w-4" /> Voice Record
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="voice" className="mt-4 space-y-4">
+              <div>
+                <Label className="mb-2 block">Who was this with? (optional)</Label>
+                <div className="relative">
+                  <div className="flex items-center gap-2">
+                    {voiceSelectedPerson ? (
+                      <div 
+                        className="flex items-center gap-2 p-2 bg-secondary rounded-lg flex-1 cursor-pointer hover:bg-secondary/80"
+                        onClick={() => {
+                          setVoiceSelectedPerson(null);
+                          setShowVoicePersonSearch(true);
+                        }}
+                        data-testid="voice-selected-person"
+                      >
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                            {getInitials(voiceSelectedPerson.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{voiceSelectedPerson.name}</span>
+                      </div>
+                    ) : (
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Search contacts (optional)..."
+                          value={voicePersonSearch}
+                          onChange={e => {
+                            setVoicePersonSearch(e.target.value);
+                            setShowVoicePersonSearch(true);
+                          }}
+                          onFocus={() => setShowVoicePersonSearch(true)}
+                          className="pl-10"
+                          data-testid="input-voice-person-search"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  {showVoicePersonSearch && !voiceSelectedPerson && (
+                    <Card className="absolute z-10 w-full mt-1 max-h-48 overflow-auto">
+                      <ScrollArea className="h-full">
+                        {filteredPeople.filter(p => 
+                          p.name.toLowerCase().includes(voicePersonSearch.toLowerCase())
+                        ).length === 0 ? (
+                          <div className="p-4 text-center text-muted-foreground text-sm">
+                            No contacts found
+                          </div>
+                        ) : (
+                          filteredPeople.filter(p => 
+                            p.name.toLowerCase().includes(voicePersonSearch.toLowerCase())
+                          ).slice(0, 10).map(person => (
+                            <button
+                              key={person.id}
+                              className="w-full flex items-center gap-3 p-3 hover:bg-secondary text-left"
+                              onClick={() => {
+                                setVoiceSelectedPerson(person);
+                                setShowVoicePersonSearch(false);
+                                setVoicePersonSearch("");
+                              }}
+                              data-testid={`voice-option-person-${person.id}`}
+                            >
+                              <Avatar className="h-8 w-8">
+                                <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                                  {getInitials(person.name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="font-medium">{person.name}</div>
+                                {person.email && (
+                                  <div className="text-xs text-muted-foreground">{person.email}</div>
+                                )}
+                              </div>
+                            </button>
+                          ))
+                        )}
+                      </ScrollArea>
+                    </Card>
+                  )}
+                </div>
               </div>
+              
+              {isProcessingVoice ? (
+                <div className="flex flex-col items-center justify-center py-8 gap-4">
+                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                  <p className="text-muted-foreground">Processing your voice memory...</p>
+                </div>
+              ) : (
+                <VoiceRecorder
+                  onTranscriptionComplete={handleVoiceTranscription}
+                  onCancel={() => setInputMode("text")}
+                  personId={voiceSelectedPerson?.id}
+                />
+              )}
+              
+              <p className="text-xs text-muted-foreground text-center">
+                Describe what you discussed. We'll extract FORD details, log the interaction, and draft follow-ups for your approval.
+              </p>
+            </TabsContent>
+            
+            <TabsContent value="text" className="mt-4 space-y-4">
+          <div>
+            <Label className="mb-2 block">Type</Label>
+            <div className="grid grid-cols-4 gap-2">
+              {interactionTypes.filter(t => t.value !== "voice_note").map(type => {
+                const TypeIcon = type.icon;
+                return (
+                  <button
+                    key={type.value}
+                    onClick={() => setSelectedType(type.value)}
+                    className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all ${
+                      selectedType === type.value 
+                        ? 'border-primary bg-primary/5' 
+                        : 'border-muted hover:border-muted-foreground/30'
+                    }`}
+                    data-testid={`button-type-${type.value}`}
+                  >
+                    <TypeIcon className="h-5 w-5" />
+                    <span className="text-xs">{type.label.split(" ")[0]}</span>
+                  </button>
+                );
+              })}
             </div>
+          </div>
 
             <div>
               <Label className="mb-2 block">Who was this with?</Label>
@@ -687,9 +864,8 @@ export default function ConversationLog() {
                 data-testid="input-summary"
               />
             </div>
-          </div>
-
-          <DialogFooter>
+            
+            <DialogFooter>
             <Button variant="outline" onClick={() => {
               setShowAddDialog(false);
               resetForm();
@@ -714,6 +890,8 @@ export default function ConversationLog() {
               )}
             </Button>
           </DialogFooter>
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 
