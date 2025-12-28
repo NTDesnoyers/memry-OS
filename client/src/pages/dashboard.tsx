@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,8 +6,36 @@ import { ArrowRight, Calendar, CheckCircle2, Plus, Workflow } from "lucide-react
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import LayoutComponent from "@/components/layout";
 import { DashboardWidgetGrid } from "@/components/dashboard-widgets";
+import { BetaNeedsAttention } from "@/components/beta-needs-attention";
+import { isFounderMode } from "@/lib/feature-mode";
 
 export default function Dashboard() {
+  const [founderMode, setFounderMode] = useState(false);
+  const [modeLoaded, setModeLoaded] = useState(false);
+
+  useEffect(() => {
+    setFounderMode(isFounderMode());
+    setModeLoaded(true);
+  }, []);
+
+  if (!modeLoaded) {
+    return (
+      <LayoutComponent>
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="animate-pulse text-muted-foreground">Loading...</div>
+        </div>
+      </LayoutComponent>
+    );
+  }
+
+  if (!founderMode) {
+    return (
+      <LayoutComponent>
+        <BetaNeedsAttention />
+      </LayoutComponent>
+    );
+  }
+
   return (
     <LayoutComponent>
       <div className="min-h-screen bg-background relative overflow-hidden">
