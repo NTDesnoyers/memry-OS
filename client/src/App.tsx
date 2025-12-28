@@ -7,6 +7,8 @@ import { CommandPalette } from "@/components/command-palette";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { FeedbackWidget } from "@/components/feedback-widget";
 import { WelcomeTour } from "@/components/welcome-tour";
+import { ProtectedRoute } from "@/components/protected-route";
+import { isFounderMode } from "@/lib/feature-mode";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import WeeklyReport from "@/pages/weekly-report";
@@ -44,54 +46,58 @@ import BetaWelcome from "@/pages/beta-welcome";
 
 function Router() {
   return (
-    <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/business-tracker" component={BusinessTracker} />
-      <Route path="/phone" component={PhoneDialer} />
-      <Route path="/meetings" component={Meetings} />
-      <Route path="/weekly-report" component={WeeklyReport} />
-      <Route path="/people" component={People} />
-      <Route path="/people/new" component={PersonNew} />
-      <Route path="/people/:id" component={PersonProfile} />
-      <Route path="/relationships" component={Relationships} />
-      <Route path="/flow" component={Flow} />
-      <Route path="/reviews" component={Reviews} />
-      <Route path="/reviews/:id" component={ReviewDetail} />
-      <Route path="/visual-pricing" component={VisualPricing} />
-      <Route path="/haves-wants" component={HavesWants} />
-      <Route path="/brand-center" component={BrandCenter} />
-      <Route path="/conversations" component={ConversationLog} />
-      <Route path="/drafts" component={Drafts} />
-      <Route path="/referrals" component={ReferralMatches} />
-      <Route path="/calendar" component={Calendar} />
-      <Route path="/automation" component={AutomationHub} />
-      <Route path="/integrations" component={Integrations} />
-      <Route path="/settings" component={Settings} />
-      <Route path="/voice-profile" component={VoiceProfile} />
-      <Route path="/content" component={ContentIntelligence} />
-      <Route path="/coaching" component={Coaching} />
-      <Route path="/life-events" component={LifeEvents} />
-      <Route path="/event-log" component={EventLog} />
-      <Route path="/leads" component={LeadInbox} />
-      <Route path="/beta" component={BetaOnboarding} />
-      <Route path="/insights" component={InsightInbox} />
-      <Route path="/intake" component={Intake} />
-      <Route path="/revival" component={RevivalOpportunities} />
-      <Route path="/welcome" component={BetaWelcome} />
-      <Route component={NotFound} />
-    </Switch>
+    <ProtectedRoute>
+      <Switch>
+        <Route path="/" component={Dashboard} />
+        <Route path="/business-tracker" component={BusinessTracker} />
+        <Route path="/phone" component={PhoneDialer} />
+        <Route path="/meetings" component={Meetings} />
+        <Route path="/weekly-report" component={WeeklyReport} />
+        <Route path="/people" component={People} />
+        <Route path="/people/new" component={PersonNew} />
+        <Route path="/people/:id" component={PersonProfile} />
+        <Route path="/relationships" component={Relationships} />
+        <Route path="/flow" component={Flow} />
+        <Route path="/reviews" component={Reviews} />
+        <Route path="/reviews/:id" component={ReviewDetail} />
+        <Route path="/visual-pricing" component={VisualPricing} />
+        <Route path="/haves-wants" component={HavesWants} />
+        <Route path="/brand-center" component={BrandCenter} />
+        <Route path="/conversations" component={ConversationLog} />
+        <Route path="/drafts" component={Drafts} />
+        <Route path="/referrals" component={ReferralMatches} />
+        <Route path="/calendar" component={Calendar} />
+        <Route path="/automation" component={AutomationHub} />
+        <Route path="/integrations" component={Integrations} />
+        <Route path="/settings" component={Settings} />
+        <Route path="/voice-profile" component={VoiceProfile} />
+        <Route path="/content" component={ContentIntelligence} />
+        <Route path="/coaching" component={Coaching} />
+        <Route path="/life-events" component={LifeEvents} />
+        <Route path="/event-log" component={EventLog} />
+        <Route path="/leads" component={LeadInbox} />
+        <Route path="/beta" component={BetaOnboarding} />
+        <Route path="/insights" component={InsightInbox} />
+        <Route path="/intake" component={Intake} />
+        <Route path="/revival" component={RevivalOpportunities} />
+        <Route path="/welcome" component={BetaWelcome} />
+        <Route component={NotFound} />
+      </Switch>
+    </ProtectedRoute>
   );
 }
 
 function App() {
+  const founderMode = isFounderMode();
+  
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Toaster />
           <CommandPalette />
-          <FeedbackWidget />
-          <WelcomeTour />
+          {founderMode && <FeedbackWidget />}
+          {founderMode && <WelcomeTour />}
           <Router />
         </TooltipProvider>
       </QueryClientProvider>

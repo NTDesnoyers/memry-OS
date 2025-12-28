@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -37,6 +37,7 @@ import {
   Send,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { isFounderMode, BETA_NAV_HREFS, BETA_QUICK_ACTION_IDS, BETA_SKILL_IDS } from "@/lib/feature-mode";
 
 interface Person {
   id: string;
@@ -59,10 +60,13 @@ interface Task {
   dueDate?: string;
 }
 
-const navigationCommands = [
-  { name: "Dashboard", href: "/", icon: Home, keywords: ["home", "main"] },
+const allNavigationCommands = [
+  { name: "Today", href: "/", icon: Home, keywords: ["home", "main", "dashboard"] },
   { name: "Flow", href: "/flow", icon: Repeat, keywords: ["timeline", "activity"] },
-  { name: "People", href: "/people", icon: Users, keywords: ["contacts", "clients"] },
+  { name: "Contacts", href: "/people", icon: Users, keywords: ["people", "clients"] },
+  { name: "Drafts", href: "/drafts", icon: FileText, keywords: ["follow-up", "emails"] },
+  { name: "Revival", href: "/revival", icon: Sparkles, keywords: ["dormant", "outreach"] },
+  { name: "Add Memory", href: "/conversations", icon: MessageSquare, keywords: ["log", "interaction"] },
   { name: "Lead Inbox", href: "/leads", icon: Inbox, keywords: ["leads", "prospects"] },
   { name: "Insight Inbox", href: "/insights", icon: BookOpen, keywords: ["articles", "content", "reading"] },
   { name: "Business Tracker", href: "/business-tracker", icon: TrendingUp, keywords: ["deals", "pipeline"] },
@@ -72,35 +76,38 @@ const navigationCommands = [
   { name: "Settings", href: "/settings", icon: Settings, keywords: ["preferences", "config"] },
 ];
 
-const quickActions = [
-  { name: "Log a Call", action: "log_call", icon: Phone, keywords: ["phone", "conversation"] },
-  { name: "Create Task", action: "create_task", icon: CheckSquare, keywords: ["todo", "reminder"] },
-  { name: "Add Contact", action: "add_contact", icon: UserPlus, keywords: ["new", "person"] },
-  { name: "Save URL", action: "save_url", icon: Link, keywords: ["article", "link", "content", "capture"] },
-  { name: "Ask AI", action: "ai_query", icon: Sparkles, keywords: ["assistant", "help"] },
+const allQuickActions = [
+  { name: "Log a Call", action: "log_call", icon: Phone, keywords: ["phone", "conversation"], founderOnly: true },
+  { name: "Create Task", action: "create_task", icon: CheckSquare, keywords: ["todo", "reminder"], founderOnly: true },
+  { name: "Add Contact", action: "add_contact", icon: UserPlus, keywords: ["new", "person"], founderOnly: false },
+  { name: "Save URL", action: "save_url", icon: Link, keywords: ["article", "link", "content", "capture"], founderOnly: true },
+  { name: "Ask AI", action: "ai_query", icon: Sparkles, keywords: ["assistant", "help"], founderOnly: true },
 ];
 
-const skillPacks = [
+const allSkillPacks = [
   { 
     name: "Draft Revival Email", 
     action: "draft_revival", 
     icon: Mail, 
     keywords: ["dormant", "reengage", "email", "outreach"],
-    description: "Generate personalized email for dormant contacts"
+    description: "Generate personalized email for dormant contacts",
+    founderOnly: false
   },
   { 
     name: "Bulk Lead Outreach", 
     action: "bulk_outreach", 
     icon: RefreshCw, 
     keywords: ["leads", "batch", "follow", "nurture"],
-    description: "AI-powered batch messaging for old leads"
+    description: "AI-powered batch messaging for old leads",
+    founderOnly: true
   },
   { 
     name: "Quick Text Client", 
     action: "quick_text", 
     icon: Send, 
     keywords: ["sms", "text", "message", "contact"],
-    description: "Fast compose and send text to a contact"
+    description: "Fast compose and send text to a contact",
+    founderOnly: false
   },
 ];
 
@@ -111,6 +118,23 @@ export function CommandPalette() {
   const { toast } = useToast();
   const [skillModalOpen, setSkillModalOpen] = useState(false);
   const [activeSkill, setActiveSkill] = useState<string | null>(null);
+  
+  const founderMode = isFounderMode();
+  
+  const navigationCommands = useMemo(() => {
+    if (founderMode) return allNavigationCommands;
+    return allNavigationCommands.filter(nav => BETA_NAV_HREFS.has(nav.href));
+  }, [founderMode]);
+  
+  const quickActions = useMemo(() => {
+    if (founderMode) return allQuickActions;
+    return allQuickActions.filter(action => BETA_QUICK_ACTION_IDS.has(action.action));
+  }, [founderMode]);
+  
+  const skillPacks = useMemo(() => {
+    if (founderMode) return allSkillPacks;
+    return allSkillPacks.filter(skill => BETA_SKILL_IDS.has(skill.action));
+  }, [founderMode]);
 
   const { data: people = [] } = useQuery<Person[]>({
     queryKey: ["/api/people"],
@@ -244,14 +268,14 @@ export function CommandPalette() {
   return (
     <CommandDialog open={open} onOpenChange={setOpen} title="Command Palette">
       <CommandInput
-        placeholder="Search, > for AI, / for Skills..."
+        placeholder={founderMode ? "Search, > for AI, / for Skills..." : "Search contacts..."}
         value={inputValue}
         onValueChange={setInputValue}
         data-testid="command-palette-input"
       />
       <CommandList>
         <CommandEmpty>
-          {isAiQuery ? (
+          {isAiQuery && founderMode ? (
             <div className="flex flex-col items-center gap-2 py-4">
               <Sparkles className="h-8 w-8 text-muted-foreground" />
               <p>Press Enter to ask the AI Assistant</p>
@@ -261,14 +285,14 @@ export function CommandPalette() {
             <div className="flex flex-col items-center gap-2 py-4">
               <Zap className="h-8 w-8 text-amber-500" />
               <p>Type to filter skills...</p>
-              <p className="text-xs text-muted-foreground">e.g., /compare, /email, /text</p>
+              <p className="text-xs text-muted-foreground">e.g., /draft, /text</p>
             </div>
           ) : (
             "No results found."
           )}
         </CommandEmpty>
 
-        {isAiQuery && searchTerm && (
+        {founderMode && isAiQuery && searchTerm && (
           <CommandGroup heading="AI Assistant">
             <CommandItem
               onSelect={() => handleQuickAction("ai_query")}
@@ -360,7 +384,7 @@ export function CommandPalette() {
               </CommandGroup>
             )}
 
-            {filteredDeals.length > 0 && (
+            {founderMode && filteredDeals.length > 0 && (
               <CommandGroup heading="Deals">
                 {filteredDeals.map((deal) => (
                   <CommandItem
@@ -380,7 +404,7 @@ export function CommandPalette() {
               </CommandGroup>
             )}
 
-            {filteredTasks.length > 0 && (
+            {founderMode && filteredTasks.length > 0 && (
               <CommandGroup heading="Tasks">
                 {filteredTasks.map((task) => (
                   <CommandItem

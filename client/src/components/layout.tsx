@@ -37,17 +37,18 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { VoiceLogger } from "@/components/voice-logger";
 import { useQuery } from "@tanstack/react-query";
+import { isFounderMode, BETA_NAV_HREFS, BETA_PROFILE_MENU_HREFS } from "@/lib/feature-mode";
 
-const navItems = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
+const allNavItems = [
+  { name: "Today", href: "/", icon: LayoutDashboard },
   { name: "Flow", href: "/flow", icon: Repeat },
-  { name: "People", href: "/people", icon: Users },
+  { name: "Contacts", href: "/people", icon: Users },
   { name: "Life Events", href: "/life-events", icon: Eye },
   { name: "Event Log", href: "/event-log", icon: Activity },
   { name: "Lead Inbox", href: "/leads", icon: Inbox },
@@ -60,15 +61,31 @@ const navItems = [
   { name: "Haves & Wants", href: "/haves-wants", icon: Mail },
   { name: "Referrals", href: "/referrals", icon: Handshake },
   { name: "Calendar", href: "/calendar", icon: Calendar },
+  { name: "Drafts", href: "/drafts", icon: FileEdit },
+  { name: "Add Memory", href: "/conversations", icon: MessageSquare },
 ];
 
-const profileMenuItems = [
+const allProfileMenuItems = [
   { name: "Voice Profile", href: "/voice-profile", icon: Mic },
   { name: "Brand Center", href: "/brand-center", icon: Palette },
   { name: "Integrations", href: "/integrations", icon: Plug },
   { name: "Automation", href: "/automation", icon: Workflow },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
+
+function getFilteredNavItems(founderMode: boolean) {
+  if (founderMode) {
+    return allNavItems;
+  }
+  return allNavItems.filter(item => BETA_NAV_HREFS.has(item.href));
+}
+
+function getFilteredProfileMenuItems(founderMode: boolean) {
+  if (founderMode) {
+    return allProfileMenuItems;
+  }
+  return allProfileMenuItems.filter(item => BETA_PROFILE_MENU_HREFS.has(item.href));
+}
 
 interface NavContentProps {
   location: string;
@@ -81,9 +98,12 @@ interface NavContentProps {
   onToggleCollapse?: () => void;
   pinned?: boolean;
   onTogglePin?: () => void;
+  navItems: typeof allNavItems;
+  profileMenuItems: typeof allProfileMenuItems;
+  founderMode: boolean;
 }
 
-function NavContent({ location, setOpen, userName, userInitials, brokerage, headshotUrl, collapsed, onToggleCollapse, pinned, onTogglePin }: NavContentProps) {
+function NavContent({ location, setOpen, userName, userInitials, brokerage, headshotUrl, collapsed, onToggleCollapse, pinned, onTogglePin, navItems, profileMenuItems, founderMode }: NavContentProps) {
   return (
     <div className={cn("flex flex-col h-full bg-sidebar border-r border-sidebar-border text-sidebar-foreground transition-all duration-200", collapsed && "w-16")}>
       <div className={cn("p-6 border-b border-sidebar-border", collapsed && "p-3 flex justify-center")}>
@@ -159,35 +179,37 @@ function NavContent({ location, setOpen, userName, userInitials, brokerage, head
             >
               <PanelLeft className="h-5 w-5" />
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  className="w-full h-10"
-                  data-testid="button-settings-menu-collapsed"
-                  title="Settings"
-                >
-                  <Settings className="h-5 w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" side="right" className="w-56 ml-1">
-                {profileMenuItems.map((item) => {
-                  const isActive = location === item.href;
-                  return (
-                    <Link key={item.href} href={item.href}>
-                      <DropdownMenuItem 
-                        className={cn("cursor-pointer gap-2", isActive && "bg-accent")}
-                        onClick={() => setOpen(false)}
-                      >
-                        <item.icon className="h-4 w-4" />
-                        {item.name}
-                      </DropdownMenuItem>
-                    </Link>
-                  );
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {profileMenuItems.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    className="w-full h-10"
+                    data-testid="button-settings-menu-collapsed"
+                    title="Settings"
+                  >
+                    <Settings className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" side="right" className="w-56 ml-1">
+                  {profileMenuItems.map((item) => {
+                    const isActive = location === item.href;
+                    return (
+                      <Link key={item.href} href={item.href}>
+                        <DropdownMenuItem 
+                          className={cn("cursor-pointer gap-2", isActive && "bg-accent")}
+                          onClick={() => setOpen(false)}
+                        >
+                          <item.icon className="h-4 w-4" />
+                          {item.name}
+                        </DropdownMenuItem>
+                      </Link>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             <div className="flex justify-center py-1">
               <Avatar className="h-8 w-8">
                 {headshotUrl && <AvatarImage src={headshotUrl} alt={userName} />}
@@ -199,35 +221,37 @@ function NavContent({ location, setOpen, userName, userInitials, brokerage, head
           </>
         ) : (
           <>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start gap-3 h-10 px-3 text-muted-foreground hover:text-foreground"
-                  data-testid="button-settings-menu"
-                >
-                  <Settings className="h-5 w-5" />
-                  <span className="font-medium">Settings</span>
-                  <ChevronUp className="h-4 w-4 ml-auto" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" side="top" className="w-56 mb-1">
-                {profileMenuItems.map((item) => {
-                  const isActive = location === item.href;
-                  return (
-                    <Link key={item.href} href={item.href}>
-                      <DropdownMenuItem 
-                        className={cn("cursor-pointer gap-2", isActive && "bg-accent")}
-                        onClick={() => setOpen(false)}
-                      >
-                        <item.icon className="h-4 w-4" />
-                        {item.name}
-                      </DropdownMenuItem>
-                    </Link>
-                  );
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {profileMenuItems.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start gap-3 h-10 px-3 text-muted-foreground hover:text-foreground"
+                    data-testid="button-settings-menu"
+                  >
+                    <Settings className="h-5 w-5" />
+                    <span className="font-medium">Settings</span>
+                    <ChevronUp className="h-4 w-4 ml-auto" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" side="top" className="w-56 mb-1">
+                  {profileMenuItems.map((item) => {
+                    const isActive = location === item.href;
+                    return (
+                      <Link key={item.href} href={item.href}>
+                        <DropdownMenuItem 
+                          className={cn("cursor-pointer gap-2", isActive && "bg-accent")}
+                          onClick={() => setOpen(false)}
+                        >
+                          <item.icon className="h-4 w-4" />
+                          {item.name}
+                        </DropdownMenuItem>
+                      </Link>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
 
             <div className="flex items-center gap-3 px-2 py-1">
               <Avatar className="h-8 w-8">
@@ -266,6 +290,10 @@ export default function LayoutComponent({ children }: { children: React.ReactNod
     return saved !== 'false'; // Default to pinned
   });
 
+  const founderMode = isFounderMode();
+  const navItems = useMemo(() => getFilteredNavItems(founderMode), [founderMode]);
+  const profileMenuItems = useMemo(() => getFilteredProfileMenuItems(founderMode), [founderMode]);
+
   const toggleCollapse = () => {
     const newValue = !collapsed;
     setCollapsed(newValue);
@@ -298,7 +326,10 @@ export default function LayoutComponent({ children }: { children: React.ReactNod
     collapsed,
     onToggleCollapse: toggleCollapse,
     pinned,
-    onTogglePin: togglePin
+    onTogglePin: togglePin,
+    navItems,
+    profileMenuItems,
+    founderMode
   };
 
   const sidebarWidth = collapsed ? 'w-16' : 'w-64';
@@ -328,7 +359,7 @@ export default function LayoutComponent({ children }: { children: React.ReactNod
         {children}
       </main>
       
-      <VoiceLogger />
+      {founderMode && <VoiceLogger />}
     </div>
   );
 }
