@@ -64,8 +64,8 @@ const formSchema = z.object({
   // Pulse Check
   businessDirection: z.number().min(1).max(10),
   timeManagement: z.number().min(1).max(10),
-  implementingNinja: z.number().min(1).max(10),
-  ninjaSystemAttention: z.string().optional(),
+  implementingSystem: z.number().min(1).max(10),
+  systemNeedingAttention: z.string().optional(),
   nextGetaway: z.string().optional(),
 
   // PIE Time Tracker
@@ -271,7 +271,7 @@ export default function WeeklyReport() {
       
       businessDirection: 5,
       timeManagement: 5,
-      implementingNinja: 5,
+      implementingSystem: 5,
       
       weeklyPlanning: 5,
       dailyMovement: 5,
@@ -772,10 +772,10 @@ export default function WeeklyReport() {
                         />
                         <FormField
                           control={form.control}
-                          name="implementingNinja"
+                          name="implementingSystem"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel className="text-sm font-medium">Ninja Implementation</FormLabel>
+                              <FormLabel className="text-sm font-medium">System Implementation</FormLabel>
                               <div className="flex items-center gap-3">
                                 <FormControl>
                                   <RatingSelect value={field.value} onChange={field.onChange} />
@@ -1367,10 +1367,10 @@ export default function WeeklyReport() {
                       
                       <FormField
                         control={form.control}
-                        name="ninjaSystemAttention"
+                        name="systemNeedingAttention"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Ninja System Needing Attention</FormLabel>
+                            <FormLabel>System Needing Attention</FormLabel>
                             <FormDescription>Which system needs focus this week?</FormDescription>
                             <FormControl>
                               <Input placeholder="e.g., FORD calls, Handwritten notes, Real estate reviews..." {...field} />

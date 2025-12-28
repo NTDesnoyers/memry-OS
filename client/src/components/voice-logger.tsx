@@ -460,7 +460,7 @@ export function VoiceLogger() {
                 <div className="h-8 w-8 rounded-full bg-gradient-to-r from-violet-600 to-purple-600 flex items-center justify-center">
                   <Bot className="h-4 w-4 text-white" />
                 </div>
-                Ninja AI Assistant
+                Flow AI Assistant
               </DialogTitle>
               <div className="flex items-center gap-1">
                 <Button 
