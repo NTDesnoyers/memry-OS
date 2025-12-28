@@ -319,12 +319,26 @@ export default function WeeklyReport() {
   // Load persistent data on mount
   useEffect(() => {
     const loadPersistentData = () => {
+      // Migrate old ninja_ keys to flow_ keys if they exist
+      const migrateKey = (oldKey: string, newKey: string) => {
+        const oldValue = localStorage.getItem(oldKey);
+        if (oldValue && !localStorage.getItem(newKey)) {
+          localStorage.setItem(newKey, oldValue);
+          localStorage.removeItem(oldKey);
+        }
+      };
+      migrateKey("ninja_familyMission", "flow_familyMission");
+      migrateKey("ninja_businessMission", "flow_businessMission");
+      migrateKey("ninja_quarterlyFocus", "flow_quarterlyFocus");
+      migrateKey("ninja_wordOfYear", "flow_wordOfYear");
+      migrateKey("ninja_affirmation", "flow_affirmation");
+
       const savedData = {
-        familyMission: localStorage.getItem("ninja_familyMission"),
-        businessMission: localStorage.getItem("ninja_businessMission"),
-        quarterlyFocus: localStorage.getItem("ninja_quarterlyFocus"),
-        wordOfYear: localStorage.getItem("ninja_wordOfYear"),
-        affirmation: localStorage.getItem("ninja_affirmation"),
+        familyMission: localStorage.getItem("flow_familyMission"),
+        businessMission: localStorage.getItem("flow_businessMission"),
+        quarterlyFocus: localStorage.getItem("flow_quarterlyFocus"),
+        wordOfYear: localStorage.getItem("flow_wordOfYear"),
+        affirmation: localStorage.getItem("flow_affirmation"),
       };
 
       if (savedData.familyMission) form.setValue("familyMission", savedData.familyMission);
@@ -339,7 +353,7 @@ export default function WeeklyReport() {
 
   // Persist "Static" fields when they change
   const handleStaticFieldChange = (field: string, value: string) => {
-    localStorage.setItem(`ninja_${field}`, value);
+    localStorage.setItem(`flow_${field}`, value);
   };
   
   const handleBatchUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -430,11 +444,11 @@ export default function WeeklyReport() {
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (values.familyMission) localStorage.setItem("ninja_familyMission", values.familyMission);
-    if (values.businessMission) localStorage.setItem("ninja_businessMission", values.businessMission);
-    if (values.quarterlyFocus) localStorage.setItem("ninja_quarterlyFocus", values.quarterlyFocus);
-    if (values.wordOfYear) localStorage.setItem("ninja_wordOfYear", values.wordOfYear);
-    if (values.affirmation) localStorage.setItem("ninja_affirmation", values.affirmation);
+    if (values.familyMission) localStorage.setItem("flow_familyMission", values.familyMission);
+    if (values.businessMission) localStorage.setItem("flow_businessMission", values.businessMission);
+    if (values.quarterlyFocus) localStorage.setItem("flow_quarterlyFocus", values.quarterlyFocus);
+    if (values.wordOfYear) localStorage.setItem("flow_wordOfYear", values.wordOfYear);
+    if (values.affirmation) localStorage.setItem("flow_affirmation", values.affirmation);
 
     if (noteUploads.length > 0) {
       const taggedNotes = noteUploads.filter(n => n.taggedPerson && n.uploadedUrl);
