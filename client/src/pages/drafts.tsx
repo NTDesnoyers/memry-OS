@@ -30,6 +30,7 @@ import type { Person } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { getInitials } from "@/lib/utils";
 import { Link } from "wouter";
+import { isFounderMode } from "@/lib/feature-mode";
 
 type GeneratedDraft = {
   id: string;
@@ -449,7 +450,7 @@ export default function Drafts() {
                           onDelete={() => deleteDraft.mutate(draft.id)}
                           onCopy={() => handleCopy(draft.content)}
                           onSendEmail={() => handleSendEmail(draft)}
-                          gmailConnected={gmailStatus?.connected}
+                          gmailConnected={isFounderMode() && gmailStatus?.connected}
                         />
                       ))}
                     </div>
@@ -473,7 +474,7 @@ export default function Drafts() {
                           onDelete={() => deleteDraft.mutate(draft.id)}
                           onCopy={() => handleCopy(draft.content)}
                           onSendEmail={() => handleSendEmail(draft)}
-                          gmailConnected={gmailStatus?.connected}
+                          gmailConnected={isFounderMode() && gmailStatus?.connected}
                         />
                       ))}
                     </div>

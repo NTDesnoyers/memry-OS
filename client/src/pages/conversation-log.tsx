@@ -42,6 +42,7 @@ import paperBg from "@assets/generated_images/subtle_paper_texture_background.pn
 import { useToast } from "@/hooks/use-toast";
 import { format, formatDistanceToNow } from "date-fns";
 import type { Person, Interaction } from "@shared/schema";
+import { isFounderMode } from "@/lib/feature-mode";
 import { apiRequest } from "@/lib/queryClient";
 import { getInitials } from "@/lib/utils";
 
@@ -368,6 +369,7 @@ export default function ConversationLog() {
               </p>
             </div>
             <div className="flex gap-2">
+{isFounderMode() && (
               <Button 
                 variant="outline"
                 className="gap-1 md:gap-2 text-sm" 
@@ -376,6 +378,7 @@ export default function ConversationLog() {
               >
                 <Download className="h-4 w-4" /> <span className="hidden sm:inline">Import</span>
               </Button>
+              )}
               <Button 
                 className="gap-1 md:gap-2 shadow-lg flex-1 sm:flex-none" 
                 onClick={() => setShowAddDialog(true)}
