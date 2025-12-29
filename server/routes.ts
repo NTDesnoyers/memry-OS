@@ -2,6 +2,7 @@ import type { Express } from "express";
 import type { Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
+import { eq } from "drizzle-orm";
 import { 
   insertPersonSchema, 
   insertDealSchema, 
@@ -24,7 +25,11 @@ import {
   insertDashboardWidgetSchema,
   granolaWebhookSchema,
   plaudWebhookSchema,
-  captureWebhookSchema
+  captureWebhookSchema,
+  interactions,
+  deals,
+  generatedDrafts,
+  agentActions
 } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import multer from "multer";
@@ -1843,6 +1848,73 @@ When analyzing images:
       await storage.deletePerson(req.params.id);
       res.status(204).send();
     } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Merge two people (keep primary, delete secondary, transfer data)
+  app.post("/api/people/merge", async (req, res) => {
+    try {
+      const { primaryId, secondaryId } = req.body;
+      if (!primaryId || !secondaryId) {
+        return res.status(400).json({ message: "Both primaryId and secondaryId are required" });
+      }
+      if (primaryId === secondaryId) {
+        return res.status(400).json({ message: "Cannot merge a person with themselves" });
+      }
+      
+      const primary = await storage.getPerson(primaryId);
+      const secondary = await storage.getPerson(secondaryId);
+      
+      if (!primary || !secondary) {
+        return res.status(404).json({ message: "One or both people not found" });
+      }
+      
+      // Merge fields: keep primary's value if exists, otherwise use secondary's
+      const mergedData: Record<string, any> = {};
+      const fieldsToMerge = [
+        'email', 'phone', 'role', 'address', 'company', 'profession',
+        'linkedinUrl', 'facebookUrl', 'twitterUrl', 'instagramUrl',
+        'fordFamily', 'fordOccupation', 'fordRecreation', 'fordDreams',
+        'segment', 'realtorBrokerage', 'notes'
+      ];
+      
+      for (const field of fieldsToMerge) {
+        const primaryVal = (primary as any)[field];
+        const secondaryVal = (secondary as any)[field];
+        if (!primaryVal && secondaryVal) {
+          mergedData[field] = secondaryVal;
+        } else if (field === 'notes' && primaryVal && secondaryVal && primaryVal !== secondaryVal) {
+          // Combine notes
+          mergedData[field] = `${primaryVal}\n\n--- Merged from ${secondary.name} ---\n${secondaryVal}`;
+        }
+      }
+      
+      // Update primary with merged data
+      if (Object.keys(mergedData).length > 0) {
+        await storage.updatePerson(primaryId, mergedData);
+      }
+      
+      // Transfer interactions from secondary to primary
+      await db.update(interactions).set({ personId: primaryId }).where(eq(interactions.personId, secondaryId));
+      
+      // Transfer deals from secondary to primary
+      await db.update(deals).set({ personId: primaryId }).where(eq(deals.personId, secondaryId));
+      
+      // Transfer generated drafts
+      await db.update(generatedDrafts).set({ personId: primaryId }).where(eq(generatedDrafts.personId, secondaryId));
+      
+      // Transfer agent actions
+      await db.update(agentActions).set({ personId: primaryId }).where(eq(agentActions.personId, secondaryId));
+      
+      // Now safe to delete the secondary person
+      await storage.deletePerson(secondaryId);
+      
+      // Return updated primary
+      const updated = await storage.getPerson(primaryId);
+      res.json(updated);
+    } catch (error: any) {
+      logger.error('Failed to merge people', { error: error.message });
       res.status(500).json({ message: error.message });
     }
   });
