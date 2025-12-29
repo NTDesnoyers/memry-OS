@@ -30,6 +30,24 @@ export function isBetaMode(): boolean {
   return getCurrentMode() === 'beta';
 }
 
+export function toggleMode(): FeatureMode {
+  const newMode = isFounderMode() ? 'beta' : 'founder';
+  if (newMode === 'founder') {
+    localStorage.setItem('flow_founder_mode', 'true');
+  } else {
+    localStorage.removeItem('flow_founder_mode');
+  }
+  return newMode;
+}
+
+export function setMode(mode: FeatureMode): void {
+  if (mode === 'founder') {
+    localStorage.setItem('flow_founder_mode', 'true');
+  } else {
+    localStorage.removeItem('flow_founder_mode');
+  }
+}
+
 // Routes allowed in beta mode
 // These are the ONLY routes accessible to beta users
 export const BETA_ALLOWED_ROUTES: string[] = [

@@ -43,7 +43,8 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { VoiceLogger } from "@/components/voice-logger";
 import { useQuery } from "@tanstack/react-query";
-import { isFounderMode, BETA_NAV_HREFS, BETA_PROFILE_MENU_HREFS } from "@/lib/feature-mode";
+import { isFounderMode, toggleMode, BETA_NAV_HREFS, BETA_PROFILE_MENU_HREFS } from "@/lib/feature-mode";
+import { Badge } from "@/components/ui/badge";
 
 const allNavItems = [
   { name: "Today", href: "/", icon: LayoutDashboard },
@@ -265,6 +266,18 @@ function NavContent({ location, setOpen, userName, userInitials, brokerage, head
                 <p className="text-xs text-muted-foreground truncate">{brokerage}</p>
               </div>
             </div>
+            
+            <Badge 
+              variant={founderMode ? "default" : "secondary"}
+              className="cursor-pointer hover:opacity-80 transition-opacity w-full justify-center py-1"
+              onClick={() => {
+                toggleMode();
+                window.location.reload();
+              }}
+              data-testid="mode-toggle-badge"
+            >
+              {founderMode ? "Founder Mode" : "Beta Mode"} (click to switch)
+            </Badge>
           </>
         )}
       </div>
