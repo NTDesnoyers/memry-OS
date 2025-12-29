@@ -525,6 +525,12 @@ export default function Integrations() {
   const [granolaKey, setGranolaKey] = useState(localStorage.getItem("granola_api_key") || "");
   const [showGranolaKey, setShowGranolaKey] = useState(false);
 
+  const { data: granolaIntegrations = [] } = useQuery<CrmIntegration[]>({
+    queryKey: ['/api/crm/integrations/all'],
+    select: (data) => data.filter(i => i.provider === 'granola'),
+  });
+  const granolaIntegration = granolaIntegrations[0];
+
   // Plaud State
   const [plaudKey, setPlaudKey] = useState(localStorage.getItem("plaud_api_key") || "");
   const [showPlaudKey, setShowPlaudKey] = useState(false);
