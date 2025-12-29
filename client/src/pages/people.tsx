@@ -14,7 +14,8 @@ import {
   Video, FileText, Plus, Clock, Pencil,
   Users, Linkedin, Twitter, Facebook, Instagram,
   Sparkles, PenTool, ListTodo, Activity, CalendarPlus,
-  StickyNote, Heart, Briefcase, Gamepad2, Star, Filter, Upload
+  StickyNote, Heart, Briefcase, Gamepad2, Star, Filter, Upload,
+  Trash2, GitMerge, AlertTriangle
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -44,6 +45,9 @@ export default function People() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
+  const [mergeTargetId, setMergeTargetId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState<Partial<InsertPerson>>({
@@ -114,6 +118,47 @@ export default function People() {
     },
     onError: () => {
       toast({ title: "Failed to update person", variant: "destructive" });
+    },
+  });
+
+  const deletePersonMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/people/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete person");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/people"] });
+      setDeleteDialogOpen(false);
+      setEditDialogOpen(false);
+      setSelectedPersonId(null);
+      toast({ title: "Contact deleted" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete contact", variant: "destructive" });
+    },
+  });
+
+  const mergePersonsMutation = useMutation({
+    mutationFn: async ({ primaryId, secondaryId }: { primaryId: string; secondaryId: string }) => {
+      const res = await fetch("/api/people/merge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ primaryId, secondaryId }),
+      });
+      if (!res.ok) throw new Error("Failed to merge contacts");
+      return res.json();
+    },
+    onSuccess: (mergedPerson) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/people"] });
+      setMergeDialogOpen(false);
+      setMergeTargetId(null);
+      setSelectedPersonId(mergedPerson.id);
+      toast({ title: "Contacts merged successfully" });
+    },
+    onError: () => {
+      toast({ title: "Failed to merge contacts", variant: "destructive" });
     },
   });
 
@@ -582,6 +627,26 @@ export default function People() {
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7"
+                        onClick={() => setMergeDialogOpen(true)}
+                        data-testid="merge-person-btn"
+                        title="Merge with another contact"
+                      >
+                        <GitMerge className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={() => setDeleteDialogOpen(true)}
+                        data-testid="delete-person-btn"
+                        title="Delete contact"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
                     <p className="text-muted-foreground">{selectedPerson.role || 'No role'}</p>
                     <div className="flex items-center gap-2 mt-1">
@@ -1037,6 +1102,99 @@ export default function People() {
             >
               {updatePersonMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Delete Contact
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete <span className="font-medium text-foreground">{selectedPerson?.name}</span>? 
+              This will also delete all their interactions, deals, and drafts. This action cannot be undone.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive"
+                onClick={() => selectedPersonId && deletePersonMutation.mutate(selectedPersonId)}
+                disabled={deletePersonMutation.isPending}
+                data-testid="confirm-delete-btn"
+              >
+                {deletePersonMutation.isPending ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Merge Contacts Dialog */}
+      <Dialog open={mergeDialogOpen} onOpenChange={setMergeDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <GitMerge className="h-5 w-5" />
+              Merge Contacts
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Merge <span className="font-medium text-foreground">{selectedPerson?.name}</span> with another contact. 
+              The selected contact's data will be combined, and all interactions/deals will be transferred.
+            </p>
+            <div className="space-y-2">
+              <Label>Keep and merge into:</Label>
+              <select
+                value={mergeTargetId || ""}
+                onChange={(e) => setMergeTargetId(e.target.value)}
+                className="w-full h-10 rounded border bg-background px-3"
+                data-testid="merge-target-select"
+              >
+                <option value="">Select a contact to merge into...</option>
+                {people
+                  .filter(p => p.id !== selectedPersonId)
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))
+                }
+              </select>
+            </div>
+            {mergeTargetId && (
+              <div className="p-3 bg-muted rounded-md text-sm">
+                <p className="font-medium mb-1">What will happen:</p>
+                <ul className="list-disc list-inside text-muted-foreground space-y-1">
+                  <li><span className="text-foreground">{people.find(p => p.id === mergeTargetId)?.name}</span> will be kept</li>
+                  <li><span className="text-foreground">{selectedPerson?.name}</span> will be deleted</li>
+                  <li>Missing contact info will be filled in from {selectedPerson?.name}</li>
+                  <li>All interactions and deals will be transferred</li>
+                </ul>
+              </div>
+            )}
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => { setMergeDialogOpen(false); setMergeTargetId(null); }}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => mergeTargetId && selectedPersonId && mergePersonsMutation.mutate({ 
+                  primaryId: mergeTargetId, 
+                  secondaryId: selectedPersonId 
+                })}
+                disabled={!mergeTargetId || mergePersonsMutation.isPending}
+                data-testid="confirm-merge-btn"
+              >
+                {mergePersonsMutation.isPending ? "Merging..." : "Merge Contacts"}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
