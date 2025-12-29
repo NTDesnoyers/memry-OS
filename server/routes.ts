@@ -29,7 +29,15 @@ import {
   interactions,
   deals,
   generatedDrafts,
-  agentActions
+  agentActions,
+  tasks,
+  meetings,
+  calls,
+  notes,
+  emailCampaigns,
+  lifeEventAlerts,
+  observerSuggestions,
+  dormantOpportunities
 } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import multer from "multer";
@@ -1895,19 +1903,20 @@ When analyzing images:
         await storage.updatePerson(primaryId, mergedData);
       }
       
-      // Transfer interactions from secondary to primary
+      // Transfer all related data from secondary to primary
       await db.update(interactions).set({ personId: primaryId }).where(eq(interactions.personId, secondaryId));
-      
-      // Transfer deals from secondary to primary
       await db.update(deals).set({ personId: primaryId }).where(eq(deals.personId, secondaryId));
-      
-      // Transfer generated drafts
       await db.update(generatedDrafts).set({ personId: primaryId }).where(eq(generatedDrafts.personId, secondaryId));
-      
-      // Transfer agent actions
       await db.update(agentActions).set({ personId: primaryId }).where(eq(agentActions.personId, secondaryId));
+      await db.update(tasks).set({ personId: primaryId }).where(eq(tasks.personId, secondaryId));
+      await db.update(meetings).set({ personId: primaryId }).where(eq(meetings.personId, secondaryId));
+      await db.update(calls).set({ personId: primaryId }).where(eq(calls.personId, secondaryId));
+      await db.update(notes).set({ personId: primaryId }).where(eq(notes.personId, secondaryId));
+      await db.update(lifeEventAlerts).set({ personId: primaryId }).where(eq(lifeEventAlerts.personId, secondaryId));
+      await db.update(observerSuggestions).set({ personId: primaryId }).where(eq(observerSuggestions.personId, secondaryId));
+      await db.update(dormantOpportunities).set({ personId: primaryId }).where(eq(dormantOpportunities.personId, secondaryId));
       
-      // Now safe to delete the secondary person
+      // Now safe to delete the secondary person (no remaining FK references)
       await storage.deletePerson(secondaryId);
       
       // Return updated primary
