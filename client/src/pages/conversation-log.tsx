@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
+import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   MessageSquare, 
@@ -588,9 +589,20 @@ export default function ConversationLog() {
                               )}
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                  <span className="font-medium">
-                                    {participantNames}
-                                  </span>
+                                  {primaryPerson ? (
+                                    <Link 
+                                      href={`/people/${primaryPerson.id}`}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="font-medium text-primary hover:underline"
+                                      data-testid={`link-person-${primaryPerson.id}`}
+                                    >
+                                      {participantNames}
+                                    </Link>
+                                  ) : (
+                                    <span className="font-medium">
+                                      {participantNames}
+                                    </span>
+                                  )}
                                   <Badge variant="outline" className={typeConfig.color}>
                                     <TypeIcon className="h-3 w-3 mr-1" />
                                     {typeConfig.label}
@@ -1090,25 +1102,39 @@ export default function ConversationLog() {
                   return (
                     <div className="flex items-center gap-2">
                       {editSelectedPerson ? (
-                        <div 
-                          className="flex items-center gap-2 p-2 bg-secondary rounded-lg flex-1 cursor-pointer hover:bg-secondary/80"
-                          onClick={() => {
-                            setEditForm(f => ({ ...f, personId: "" }));
-                            setShowEditPersonSearch(true);
-                          }}
-                        >
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                              {getInitials(editSelectedPerson.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">{editSelectedPerson.name}</p>
-                            {editSelectedPerson.email && (
-                              <p className="text-xs text-muted-foreground">{editSelectedPerson.email}</p>
-                            )}
+                        <div className="flex items-center gap-2 flex-1">
+                          <div 
+                            className="flex items-center gap-2 p-2 bg-secondary rounded-lg flex-1 cursor-pointer hover:bg-secondary/80"
+                            onClick={() => {
+                              setEditForm(f => ({ ...f, personId: "" }));
+                              setShowEditPersonSearch(true);
+                            }}
+                          >
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                {getInitials(editSelectedPerson.name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <p className="font-medium text-sm">{editSelectedPerson.name}</p>
+                              {editSelectedPerson.email && (
+                                <p className="text-xs text-muted-foreground">{editSelectedPerson.email}</p>
+                              )}
+                            </div>
+                            <X className="h-4 w-4 text-muted-foreground" />
                           </div>
-                          <X className="h-4 w-4 text-muted-foreground" />
+                          <Link href={`/people/${editSelectedPerson.id}`}>
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              size="sm"
+                              className="shrink-0"
+                              data-testid="button-view-profile"
+                            >
+                              <ExternalLink className="h-4 w-4 mr-1" />
+                              Profile
+                            </Button>
+                          </Link>
                         </div>
                       ) : (
                         <div className="flex-1">
