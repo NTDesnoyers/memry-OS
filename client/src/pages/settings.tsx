@@ -91,7 +91,7 @@ export default function SettingsPage() {
   const [personSearch, setPersonSearch] = useState("");
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
 
-  const { data: deletedInteractions = [], isLoading: isLoadingDeleted } = useQuery<Interaction[]>({
+  const { data: deletedInteractions = [], isLoading: isLoadingDeleted } = useQuery<(Interaction & { participantsList: any[] })[]>({
     queryKey: ["/api/interactions/deleted"],
   });
 
@@ -662,7 +662,10 @@ export default function SettingsPage() {
               ) : (
                 <div className="space-y-3">
                   {deletedInteractions.map(interaction => {
-                    const person = getPersonById(interaction.personId);
+                    const primaryParticipant = interaction.participantsList?.find(p => p.isPrimary);
+                    const person = interaction.personId 
+                      ? getPersonById(interaction.personId) 
+                      : primaryParticipant?.person;
                     const typeConfig = getTypeConfig(interaction.type);
                     const TypeIcon = typeConfig.icon;
                     const daysRemaining = getDaysRemaining(interaction.deletedAt);

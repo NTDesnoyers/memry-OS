@@ -3299,7 +3299,16 @@ Return ONLY valid JSON, no explanations.`
   app.get("/api/interactions/deleted", async (req, res) => {
     try {
       const deleted = await storage.getDeletedInteractions();
-      res.json(deleted);
+      // Ensure we load participants for deleted interactions too
+      const interactionsWithParticipants = await Promise.all(deleted.map(async (interaction) => {
+        const participants = await storage.getInteractionParticipants(interaction.id);
+        const participantsWithPeople = await Promise.all(participants.map(async (p) => {
+          const person = await storage.getPerson(p.personId);
+          return { ...p, person };
+        }));
+        return { ...interaction, participantsList: participantsWithPeople };
+      }));
+      res.json(interactionsWithParticipants);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
