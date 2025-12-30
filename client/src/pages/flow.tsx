@@ -536,74 +536,6 @@ function InteractionList({
     });
     setShowEditDialog(true);
   };
-    personId: "",
-    type: "call",
-    occurredAt: new Date().toISOString().slice(0, 16),
-    summary: "",
-  });
-
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  const createInteraction = useMutation({
-    mutationFn: async (data: any) => {
-      const res = await apiRequest("POST", "/api/interactions", {
-        ...data,
-        occurredAt: new Date(data.occurredAt),
-      });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/interactions"] });
-      toast({ title: "Interaction logged" });
-      setShowLogDialog(false);
-      setLogFormData({
-        personId: "",
-        type: "call",
-        occurredAt: new Date().toISOString().slice(0, 16),
-        summary: "",
-      });
-    },
-  });
-
-  const updateInteraction = useMutation({
-    mutationFn: async ({ id, ...data }: any) => {
-      const res = await apiRequest("PATCH", `/api/interactions/${id}`, {
-        ...data,
-        occurredAt: new Date(data.occurredAt),
-      });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/interactions"] });
-      toast({ title: "Interaction updated" });
-      setShowEditDialog(false);
-      setSelectedInteractionToEdit(null);
-    },
-  });
-
-  const handleLogSubmit = () => {
-    if (!logFormData.personId || !logFormData.summary) {
-      toast({ title: "Missing fields", variant: "destructive" });
-      return;
-    }
-    if (showEditDialog && selectedInteractionToEdit) {
-      updateInteraction.mutate({ id: selectedInteractionToEdit.id, ...logFormData });
-    } else {
-      createInteraction.mutate(logFormData);
-    }
-  };
-
-  const openEditDialog = (interaction: Interaction) => {
-    setSelectedInteractionToEdit(interaction);
-    setLogFormData({
-      personId: interaction.personId || "",
-      type: interaction.type,
-      occurredAt: new Date(interaction.occurredAt || interaction.createdAt).toISOString().slice(0, 16),
-      summary: interaction.summary || "",
-    });
-    setShowEditDialog(true);
-  };
   
   const { data: drafts = [] } = useQuery<GeneratedDraft[]>({
     queryKey: ["/api/generated-drafts"],
@@ -933,6 +865,14 @@ export default function Flow() {
     occurredAt: new Date().toISOString().slice(0, 16),
   });
 
+  const [showLogDialog, setShowLogDialog] = useState(false);
+  const [logFormData, setLogFormData] = useState({
+    personId: "",
+    type: "call",
+    occurredAt: new Date().toISOString().slice(0, 16),
+    summary: "",
+  });
+
   const { data: people = [] } = useQuery<Person[]>({
     queryKey: ["/api/people"],
   });
@@ -1045,6 +985,26 @@ export default function Flow() {
       summary: formData.summary,
       externalLink: formData.externalLink || undefined,
       occurredAt: formData.occurredAt,
+    });
+  };
+
+  const handleLogSubmit = () => {
+    if (!logFormData.personId || !logFormData.summary) {
+      toast({ title: "Missing fields", variant: "destructive" });
+      return;
+    }
+    createInteraction.mutate({
+      type: logFormData.type,
+      personId: logFormData.personId,
+      summary: logFormData.summary,
+      occurredAt: logFormData.occurredAt,
+    });
+    setShowLogDialog(false);
+    setLogFormData({
+      personId: "",
+      type: "call",
+      occurredAt: new Date().toISOString().slice(0, 16),
+      summary: "",
     });
   };
 
@@ -1487,14 +1447,6 @@ export default function Flow() {
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 )}
                 {showEditDialog ? "Save Changes" : "Log Flow"}
-              </Button>
-            </div>
-          </DialogFooter>                onClick={showEditDialog ? handleUpdate : handleSubmit} 
-                disabled={createInteraction.isPending || updateInteraction.isPending || !selectedType || !selectedPerson}
-                data-testid="button-save-flow"
-              >
-                {(createInteraction.isPending || updateInteraction.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                {showEditDialog ? "Save Changes" : "Save"}
               </Button>
             </div>
           </DialogFooter>
