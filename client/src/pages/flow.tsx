@@ -1014,9 +1014,9 @@ export default function Flow() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 py-4">
+          <div className="space-y-6 py-4">
             <div>
-              <Label className="mb-2 block">Type</Label>
+              <Label className="mb-3 block text-sm font-semibold text-foreground">Type</Label>
               <div className="grid grid-cols-4 gap-2">
                 {(addFlowType === "live" ? liveFlowTypes : autoFlowTypes).map((type) => {
                   const TypeIcon = type.icon;
@@ -1024,15 +1024,15 @@ export default function Flow() {
                     <button
                       key={type.value}
                       onClick={() => setSelectedType(type.value)}
-                      className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all ${
+                      className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border transition-all ${
                         selectedType === type.value 
-                          ? 'border-primary bg-primary/5' 
-                          : 'border-muted hover:border-muted-foreground/30'
+                          ? 'border-primary bg-primary/5 shadow-sm ring-1 ring-primary' 
+                          : 'border-muted bg-muted/20 hover:border-muted-foreground/30 hover:bg-muted/40'
                       }`}
                       data-testid={`button-type-${type.value}`}
                     >
-                      <TypeIcon className="h-5 w-5" />
-                      <span className="text-xs">{type.label.split(" ")[0]}</span>
+                      <TypeIcon className={`h-6 w-6 ${selectedType === type.value ? 'text-primary' : 'text-foreground'}`} />
+                      <span className={`text-[11px] font-bold ${selectedType === type.value ? 'text-primary' : 'text-muted-foreground'}`}>{type.label.split(" ")[0]}</span>
                     </button>
                   );
                 })}
@@ -1040,28 +1040,28 @@ export default function Flow() {
             </div>
 
             <div>
-              <Label className="mb-2 block">Who was this with?</Label>
+              <Label className="mb-3 block text-sm font-semibold text-foreground">Who was this with?</Label>
               <div className="relative">
                 {selectedPerson ? (
                   <div 
-                    className="flex items-center gap-2 p-2 bg-secondary rounded-lg flex-1 cursor-pointer hover:bg-secondary/80"
+                    className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl border border-muted flex-1 cursor-pointer hover:bg-muted/50 transition-colors group shadow-sm"
                     onClick={() => {
                       setSelectedPerson(null);
                       setShowPersonSearch(true);
                     }}
                   >
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                    <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
+                      <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
                         {getInitials(selectedPerson.name)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
-                      <p className="font-medium text-sm">{selectedPerson.name}</p>
+                      <p className="font-bold text-sm text-foreground">{selectedPerson.name}</p>
                       {selectedPerson.email && (
-                        <p className="text-xs text-muted-foreground">{selectedPerson.email}</p>
+                        <p className="text-xs text-muted-foreground font-medium">{selectedPerson.email}</p>
                       )}
                     </div>
-                    <X className="h-4 w-4 text-muted-foreground" />
+                    <X className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
                   </div>
                 ) : (
                   <div className="flex-1">
@@ -1075,17 +1075,17 @@ export default function Flow() {
                           setShowPersonSearch(true);
                         }}
                         onFocus={() => setShowPersonSearch(true)}
-                        className="pl-9"
+                        className="pl-9 h-12 rounded-xl bg-muted/20 border-muted focus-visible:ring-primary font-medium"
                         data-testid="input-person-search"
                       />
                     </div>
                     {showPersonSearch && personSearch && (
-                      <Card className="absolute z-10 w-full mt-1 max-h-48 overflow-auto">
-                        <CardContent className="p-1">
+                      <Card className="absolute z-10 w-full mt-2 max-h-48 overflow-auto shadow-2xl rounded-2xl border-muted">
+                        <CardContent className="p-1.5">
                           {filteredPeople.slice(0, 5).map((person) => (
                             <button
                               key={person.id}
-                              className="w-full flex items-center gap-2 p-2 hover:bg-secondary rounded transition-colors"
+                              className="w-full flex items-center gap-3 p-3 hover:bg-primary/5 rounded-xl transition-colors group text-left"
                               onClick={() => {
                                 setSelectedPerson(person);
                                 setPersonSearch("");
@@ -1093,21 +1093,21 @@ export default function Flow() {
                               }}
                               data-testid={`button-select-person-${person.id}`}
                             >
-                              <Avatar className="h-8 w-8">
-                                <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                              <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
+                                <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
                                   {getInitials(person.name)}
                                 </AvatarFallback>
                               </Avatar>
-                              <div className="text-left">
-                                <p className="font-medium text-sm">{person.name}</p>
+                              <div>
+                                <p className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">{person.name}</p>
                                 {person.email && (
-                                  <p className="text-xs text-muted-foreground">{person.email}</p>
+                                  <p className="text-xs text-muted-foreground font-medium">{person.email}</p>
                                 )}
                               </div>
                             </button>
                           ))}
                           {filteredPeople.length === 0 && (
-                            <p className="text-sm text-muted-foreground p-2">No contacts found</p>
+                            <p className="text-sm text-muted-foreground p-4 italic font-medium">No contacts found</p>
                           )}
                         </CardContent>
                       </Card>
@@ -1118,78 +1118,93 @@ export default function Flow() {
             </div>
 
             <div>
-              <Label htmlFor="date" className="mb-2 block">Date & Time</Label>
+              <Label htmlFor="date" className="mb-3 block text-sm font-semibold text-foreground">Date & Time</Label>
               <Input
                 id="date"
                 type="datetime-local"
                 value={formData.occurredAt}
                 onChange={(e) => setFormData({ ...formData, occurredAt: e.target.value })}
+                className="h-12 rounded-xl bg-muted/20 border-muted focus-visible:ring-primary font-medium"
                 data-testid="input-occurred-at"
               />
             </div>
 
             <div>
-              <Label htmlFor="summary" className="mb-2 block flex items-center gap-2">
+              <Label htmlFor="summary" className="mb-3 block flex items-center gap-2 text-sm font-semibold text-foreground">
                 Summary / Notes
-                <span className="text-xs text-muted-foreground ml-auto">Type @ to mention someone</span>
+                <span className="text-[10px] text-muted-foreground ml-auto font-bold uppercase tracking-wider">Type @ to mention someone</span>
               </Label>
               <MentionTextarea
                 id="summary"
                 placeholder="What did you discuss? Type @ to mention someone"
                 value={formData.summary}
                 onChange={(value) => setFormData({ ...formData, summary: value })}
-                rows={4}
+                rows={5}
+                className="rounded-xl bg-muted/20 border-muted focus-visible:ring-primary p-4 text-sm font-medium leading-relaxed resize-none"
                 data-testid="input-summary"
               />
             </div>
 
             <div>
-              <Label htmlFor="external-link" className="mb-2 block">External Link (optional)</Label>
+              <Label htmlFor="external-link" className="mb-3 block text-sm font-semibold text-foreground">External Link (optional)</Label>
               <Input
                 id="external-link"
                 placeholder="Fathom, Granola, or other link..."
                 value={formData.externalLink}
                 onChange={(e) => setFormData({ ...formData, externalLink: e.target.value })}
+                className="h-12 rounded-xl bg-muted/20 border-muted focus-visible:ring-primary font-medium"
                 data-testid="input-external-link"
               />
             </div>
           </div>
 
-          <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
-            {showEditDialog && (
+          <DialogFooter className="flex-col gap-3 pt-6 border-t sm:flex-row sm:justify-between items-center">
+            {showEditDialog ? (
               <Button 
                 variant="ghost" 
-                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                className="text-red-500 hover:text-red-600 hover:bg-red-50 font-bold text-sm px-4 gap-2 h-11 rounded-xl"
                 onClick={() => {
-                  if (selectedInteraction) {
-                    deleteInteraction.mutate(selectedInteraction.id);
+                  if (confirm("Move this conversation to Recently Deleted?")) {
+                    deleteInteraction.mutate(selectedInteraction!.id);
                   }
                 }}
                 disabled={deleteInteraction.isPending}
                 data-testid="button-edit-delete"
               >
                 {deleteInteraction.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Deleting...
-                  </>
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
-                  </>
+                  <Trash2 className="h-4 w-4" />
                 )}
+                Delete
               </Button>
-            )}
-            <div className="flex gap-2 ml-auto">
-              <Button variant="outline" onClick={() => {
-                setShowAddDialog(false);
-                setShowEditDialog(false);
-                resetForm();
-                setSelectedInteraction(null);
-              }}>Cancel</Button>
+            ) : <div className="hidden sm:block" />}
+            
+            <div className="flex gap-3 w-full sm:w-auto">
               <Button 
-                onClick={showEditDialog ? handleUpdate : handleSubmit} 
+                variant="outline" 
+                className="h-11 rounded-xl px-6 font-bold text-sm flex-1 sm:flex-none"
+                onClick={() => {
+                  setShowAddDialog(false);
+                  setShowEditDialog(false);
+                  resetForm();
+                  setSelectedInteraction(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                className="h-11 rounded-xl px-8 font-bold text-sm bg-[#16423C] hover:bg-[#0D2B27] text-white flex-1 sm:flex-none shadow-md"
+                onClick={showEditDialog ? handleUpdate : handleSubmit}
+                disabled={createInteraction.isPending || updateInteraction.isPending}
+              >
+                {(createInteraction.isPending || updateInteraction.isPending) && (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                )}
+                {showEditDialog ? "Save Changes" : "Log Flow"}
+              </Button>
+            </div>
+          </DialogFooter>                onClick={showEditDialog ? handleUpdate : handleSubmit} 
                 disabled={createInteraction.isPending || updateInteraction.isPending || !selectedType || !selectedPerson}
                 data-testid="button-save-flow"
               >
