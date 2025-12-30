@@ -80,6 +80,40 @@ For each conversation, extract:
 
 Respond in JSON format matching the AIExtractedData type.`;
 
+const MULTI_PERSON_SYSTEM_PROMPT = `You are an intelligent relationship assistant for a real estate professional. Analyze conversations involving MULTIPLE PEOPLE and extract FORD notes (Family, Occupation, Recreation, Dreams) for EACH person mentioned.
+
+IMPORTANT: This is an event-centric model. One dinner with a couple counts as ONE FORD conversation, not two separate ones. But we need to track what was learned about EACH person.
+
+For each person mentioned in the conversation, extract:
+- Their name (match to provided participant list if possible)
+- Family info (spouse, kids, parents mentioned)
+- Occupation info (job, career, company)
+- Recreation info (hobbies, interests, activities)
+- Dreams info (goals, aspirations, plans)
+- Any needs they mentioned
+- Any offers/services they provide
+
+Return JSON in this format:
+{
+  "perPersonData": [
+    {
+      "personName": "Sallie Ellett",
+      "personId": null,  // will be matched later
+      "fordFamily": "Dating Michael, ...",
+      "fordOccupation": "Works in...",
+      "fordRecreation": "Loves festivals, ...",
+      "fordDreams": "Wants to...",
+      "needs": ["looking for a..."],
+      "offers": ["works in X industry"]
+    }
+  ],
+  "eventSummary": "Dinner with Sallie and Michael discussing...",
+  "fordConversationCount": 1,  // Usually 1 for couples/groups, indicates how many FORD convos this counts as
+  "keyTopics": ["topic1", "topic2"],
+  "actionItems": ["Follow up about X"],
+  "nextSteps": ["Send email about Y"]
+}`;
+
 export async function analyzeConversation(
   interaction: Interaction,
   person: Person | null
@@ -148,6 +182,110 @@ Return JSON with the extracted data.`
       processedAt: new Date().toISOString(),
     };
   }
+}
+
+export interface PerPersonFordData {
+  personName: string;
+  personId?: string | null;
+  fordFamily?: string;
+  fordOccupation?: string;
+  fordRecreation?: string;
+  fordDreams?: string;
+  needs?: string[];
+  offers?: string[];
+}
+
+export interface MultiPersonAnalysisResult {
+  perPersonData: PerPersonFordData[];
+  eventSummary: string;
+  fordConversationCount: number;
+  keyTopics?: string[];
+  actionItems?: string[];
+  nextSteps?: string[];
+}
+
+export async function analyzeMultiPersonConversation(
+  interaction: Interaction,
+  participantNames: string[]
+): Promise<MultiPersonAnalysisResult> {
+  const transcript = interaction.transcript || interaction.summary || "";
+  
+  if (!transcript || transcript.length < 50) {
+    return {
+      perPersonData: [],
+      eventSummary: "",
+      fordConversationCount: 0,
+      keyTopics: [],
+      actionItems: [],
+    };
+  }
+
+  const participantContext = participantNames.length > 0 
+    ? `Known participants in this conversation: ${participantNames.join(", ")}`
+    : "Identify all people mentioned in this conversation.";
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: MULTI_PERSON_SYSTEM_PROMPT },
+        { 
+          role: "user", 
+          content: `${participantContext}
+
+Analyze this conversation and extract FORD notes for EACH person mentioned:
+
+---
+${transcript.slice(0, 15000)}
+---
+
+Return JSON with per-person FORD data.`
+        }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.3,
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error("No response from AI");
+    }
+
+    const result = JSON.parse(content) as MultiPersonAnalysisResult;
+    return result;
+  } catch (error) {
+    console.error("Error analyzing multi-person conversation:", error);
+    return {
+      perPersonData: [],
+      eventSummary: "",
+      fordConversationCount: 0,
+    };
+  }
+}
+
+// Match extracted person names to database people using fuzzy matching
+export async function matchPersonByName(name: string): Promise<Person | null> {
+  const allPeople = await storage.getAllPeople();
+  const nameLower = name.toLowerCase().trim();
+  
+  // Exact match
+  const exactMatch = allPeople.find(p => p.name.toLowerCase() === nameLower);
+  if (exactMatch) return exactMatch;
+  
+  // Partial match (first name or last name)
+  const nameParts = nameLower.split(' ');
+  for (const person of allPeople) {
+    const personParts = person.name.toLowerCase().split(' ');
+    // Check if first name matches
+    if (personParts[0] === nameParts[0]) return person;
+    // Check if last name matches
+    if (personParts.length > 1 && nameParts.length > 1 && 
+        personParts[personParts.length - 1] === nameParts[nameParts.length - 1]) {
+      return person;
+    }
+  }
+  
+  return null;
 }
 
 // Generate a concise summary of the conversation
