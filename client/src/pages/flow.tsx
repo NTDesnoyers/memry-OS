@@ -806,15 +806,58 @@ export default function Flow() {
     },
   });
 
+  const [selectedInteraction, setSelectedInteraction] = useState<Interaction | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+
+  const updateInteraction = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
+      return apiRequest("PATCH", `/api/interactions/${id}`, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/interactions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/interactions-with-participants"] });
+      setShowEditDialog(false);
+      setSelectedInteraction(null);
+      toast({ title: "Updated" });
+    },
+  });
+
   const deleteInteraction = useMutation({
     mutationFn: async (id: string) => {
       return apiRequest("DELETE", `/api/interactions/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/interactions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/interactions-with-participants"] });
       toast({ title: "Deleted" });
     },
   });
+
+  const handleEdit = (interaction: Interaction) => {
+    setSelectedInteraction(interaction);
+    setSelectedType(interaction.type);
+    setSelectedPerson(people.find(p => p.id === interaction.personId) || null);
+    setFormData({
+      summary: interaction.summary || "",
+      externalLink: interaction.externalLink || "",
+      occurredAt: new Date(interaction.occurredAt).toISOString().slice(0, 16),
+    });
+    setShowEditDialog(true);
+  };
+
+  const handleUpdate = () => {
+    if (!selectedInteraction || !selectedType || !selectedPerson) return;
+    updateInteraction.mutate({
+      id: selectedInteraction.id,
+      updates: {
+        type: selectedType,
+        personId: selectedPerson.id,
+        summary: formData.summary,
+        externalLink: formData.externalLink || undefined,
+        occurredAt: formData.occurredAt,
+      },
+    });
+  };
 
   const resetForm = () => {
     setSelectedType("");
@@ -896,7 +939,7 @@ export default function Flow() {
                   interactions={interactions} 
                   people={people}
                   filterTypes={liveFlowTypeValues}
-                  onEdit={() => {}}
+                  onEdit={handleEdit}
                   onDelete={(id) => deleteInteraction.mutate(id)}
                 />
               )}
@@ -919,7 +962,7 @@ export default function Flow() {
                   interactions={interactions} 
                   people={people}
                   filterTypes={autoFlowTypeValues}
-                  onEdit={() => {}}
+                  onEdit={handleEdit}
                   onDelete={(id) => deleteInteraction.mutate(id)}
                 />
               )}
@@ -932,14 +975,21 @@ export default function Flow() {
         </div>
       </div>
 
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+      <Dialog open={showAddDialog || showEditDialog} onOpenChange={(open) => {
+        if (!open) {
+          setShowAddDialog(false);
+          setShowEditDialog(false);
+          resetForm();
+          setSelectedInteraction(null);
+        }
+      }}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              Log {addFlowType === "live" ? "Live" : "Auto"} Flow
+              {showEditDialog ? "Edit" : "Log"} {addFlowType === "live" ? "Live" : "Auto"} Flow
             </DialogTitle>
             <DialogDescription>
-              Record a {addFlowType === "live" ? "call, meeting, or conversation" : "postcard, note, email, or social touch"}
+              {showEditDialog ? "Update this conversation's details" : `Record a ${addFlowType === "live" ? "call, meeting, or conversation" : "postcard, note, email, or social touch"}`}
             </DialogDescription>
           </DialogHeader>
           
@@ -1034,14 +1084,19 @@ export default function Flow() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddDialog(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => {
+              setShowAddDialog(false);
+              setShowEditDialog(false);
+              resetForm();
+              setSelectedInteraction(null);
+            }}>Cancel</Button>
             <Button 
-              onClick={handleSubmit} 
-              disabled={createInteraction.isPending || !selectedType || !selectedPerson}
+              onClick={showEditDialog ? handleUpdate : handleSubmit} 
+              disabled={createInteraction.isPending || updateInteraction.isPending || !selectedType || !selectedPerson}
               data-testid="button-save-flow"
             >
-              {createInteraction.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Save
+              {(createInteraction.isPending || updateInteraction.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {showEditDialog ? "Update" : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>
