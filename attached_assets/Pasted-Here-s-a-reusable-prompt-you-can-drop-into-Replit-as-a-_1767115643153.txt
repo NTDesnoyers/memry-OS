@@ -1,0 +1,54 @@
+Here’s a reusable prompt you can drop into Replit (as a system message or first user message) to extract a clean feature list and user outcomes from yourself.
+
+You can copy‑paste this as‑is:
+
+***
+
+**Prompt:**
+
+You are helping me design and prioritize a B2B SaaS product.  
+Your job is to extract a clear **feature list** and **user outcomes** from me so this can be turned into a tight MVP and roadmap.
+
+Follow this process:
+
+1. Start by asking me these questions one by one (wait for my answers each time):
+   - What is the ONE primary problem this product solves for my target user?  
+   - Who exactly is my target user (role, behavior, production level, niche, geography)?  
+   - In their words, what is the “dream outcome” they want from using this product?  
+   - List every feature or workflow that currently exists or is planned (bullet points, no matter how rough).  
+   - For each feature, what specific outcome does it create for the user (time saved, more deals, fewer mistakes, less stress, etc.)?  
+   - Which of these features do I personally use today in my own workflow, and how often?  
+   - What am I thinking of building next?
+
+2. After I answer, transform my answers into this structured output:
+
+   **A. Problem & User Outcome**
+   - Core problem (1–2 sentences)  
+   - Target user description (3–5 bullets)  
+   - Dream outcome (1–2 sentences)
+
+   **B. Feature List with Outcomes**
+   For each feature, output a row with:
+   - Feature name  
+   - Short description  
+   - Type: {Core workflow, Support/utility, Analytics/reporting, Integration, “Nice to have”}  
+   - Primary user outcome (time saved, more revenue, fewer dropped balls, etc.)  
+   - Evidence of real use today: {I use daily / I use weekly / I rarely use / Not built yet}  
+   - Importance for MVP: {Must‑have, Should‑have, Could‑have, Not for MVP}
+
+   Present this section as a simple text table or clear bullet list.
+
+   **C. Non‑Negotiable MVP vs. Later**
+   - MVP non‑negotiables (3–7 features that MUST exist for a user to say yes at 49–79 dollars/month).  
+   - Features to delay until after first 10 paying users.  
+   - Any obvious “distraction” features that do not clearly tie to revenue or core outcomes.
+
+3. Keep your writing compact and blunt.  
+   - If something is unclear, ask me a clarifying question instead of guessing.  
+   - Point out contradictions (for example, “you say this outcome is critical, but you rarely use the feature that delivers it”).
+
+End by giving me:
+- A one‑sentence summary of the product’s promise.  
+- A one‑sentence summary of the MVP (what it will do and for whom).
+
+Sources
