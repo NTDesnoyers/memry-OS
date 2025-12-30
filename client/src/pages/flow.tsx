@@ -462,6 +462,148 @@ function InteractionList({
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState<string>("all");
   const [selectedInteractionForDetail, setSelectedInteractionForDetail] = useState<Interaction | null>(null);
+
+  const [showLogDialog, setShowLogDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [selectedInteractionToEdit, setSelectedInteractionToEdit] = useState<Interaction | null>(null);
+
+  const [logFormData, setLogFormData] = useState({
+    personId: "",
+    type: "call",
+    occurredAt: new Date().toISOString().slice(0, 16),
+    summary: "",
+  });
+
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const createInteraction = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/interactions", {
+        ...data,
+        occurredAt: new Date(data.occurredAt),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/interactions"] });
+      toast({ title: "Interaction logged" });
+      setShowLogDialog(false);
+      setLogFormData({
+        personId: "",
+        type: "call",
+        occurredAt: new Date().toISOString().slice(0, 16),
+        summary: "",
+      });
+    },
+  });
+
+  const updateInteraction = useMutation({
+    mutationFn: async ({ id, ...data }: any) => {
+      const res = await apiRequest("PATCH", `/api/interactions/${id}`, {
+        ...data,
+        occurredAt: new Date(data.occurredAt),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/interactions"] });
+      toast({ title: "Interaction updated" });
+      setShowEditDialog(false);
+      setSelectedInteractionToEdit(null);
+    },
+  });
+
+  const handleLogSubmit = () => {
+    if (!logFormData.personId || !logFormData.summary) {
+      toast({ title: "Missing fields", variant: "destructive" });
+      return;
+    }
+    if (showEditDialog && selectedInteractionToEdit) {
+      updateInteraction.mutate({ id: selectedInteractionToEdit.id, ...logFormData });
+    } else {
+      createInteraction.mutate(logFormData);
+    }
+  };
+
+  const openEditDialog = (interaction: Interaction) => {
+    setSelectedInteractionToEdit(interaction);
+    setLogFormData({
+      personId: interaction.personId || "",
+      type: interaction.type,
+      occurredAt: new Date(interaction.occurredAt || interaction.createdAt).toISOString().slice(0, 16),
+      summary: interaction.summary || "",
+    });
+    setShowEditDialog(true);
+  };
+    personId: "",
+    type: "call",
+    occurredAt: new Date().toISOString().slice(0, 16),
+    summary: "",
+  });
+
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const createInteraction = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/interactions", {
+        ...data,
+        occurredAt: new Date(data.occurredAt),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/interactions"] });
+      toast({ title: "Interaction logged" });
+      setShowLogDialog(false);
+      setLogFormData({
+        personId: "",
+        type: "call",
+        occurredAt: new Date().toISOString().slice(0, 16),
+        summary: "",
+      });
+    },
+  });
+
+  const updateInteraction = useMutation({
+    mutationFn: async ({ id, ...data }: any) => {
+      const res = await apiRequest("PATCH", `/api/interactions/${id}`, {
+        ...data,
+        occurredAt: new Date(data.occurredAt),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/interactions"] });
+      toast({ title: "Interaction updated" });
+      setShowEditDialog(false);
+      setSelectedInteractionToEdit(null);
+    },
+  });
+
+  const handleLogSubmit = () => {
+    if (!logFormData.personId || !logFormData.summary) {
+      toast({ title: "Missing fields", variant: "destructive" });
+      return;
+    }
+    if (showEditDialog && selectedInteractionToEdit) {
+      updateInteraction.mutate({ id: selectedInteractionToEdit.id, ...logFormData });
+    } else {
+      createInteraction.mutate(logFormData);
+    }
+  };
+
+  const openEditDialog = (interaction: Interaction) => {
+    setSelectedInteractionToEdit(interaction);
+    setLogFormData({
+      personId: interaction.personId || "",
+      type: interaction.type,
+      occurredAt: new Date(interaction.occurredAt || interaction.createdAt).toISOString().slice(0, 16),
+      summary: interaction.summary || "",
+    });
+    setShowEditDialog(true);
+  };
   
   const { data: drafts = [] } = useQuery<GeneratedDraft[]>({
     queryKey: ["/api/generated-drafts"],
@@ -924,7 +1066,150 @@ export default function Flow() {
               <h1 className="text-3xl font-serif font-bold text-primary">Flow</h1>
               <p className="text-muted-foreground">Frequency of Interactions with your network</p>
             </div>
+            <Button 
+              className="gap-2 rounded-xl h-11 px-6 shadow-lg shadow-primary/20 font-bold" 
+              onClick={() => setShowLogDialog(true)}
+              data-testid="button-log-interaction"
+            >
+              <Plus className="h-5 w-5" />
+              Log Interaction
+            </Button>
           </header>
+
+          <Dialog open={showLogDialog || showEditDialog} onOpenChange={(open) => {
+            if (!open) {
+              setShowLogDialog(false);
+              setShowEditDialog(false);
+            }
+          }}>
+            <DialogContent className="max-w-2xl p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
+              <div className="bg-primary p-8 text-primary-foreground">
+                <DialogHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <DialogTitle className="text-2xl font-bold tracking-tight">
+                        {showEditDialog ? "Edit Interaction" : "Log Interaction"}
+                      </DialogTitle>
+                      <DialogDescription className="text-primary-foreground/80 font-medium">
+                        Record the details of your conversation
+                      </DialogDescription>
+                    </div>
+                    {logFormData.personId && (
+                      <Avatar className="h-12 w-12 border-2 border-primary-foreground/20 shadow-sm">
+                        <AvatarFallback className="bg-white/10 text-white font-bold">
+                          {getInitials(people.find(p => p.id === logFormData.personId)?.name || "?")}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
+                  </div>
+                </DialogHeader>
+              </div>
+
+              <div className="p-8 space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-3">
+                    <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Select Contact</Label>
+                    <Select 
+                      value={logFormData.personId} 
+                      onValueChange={(v) => setLogFormData(prev => ({ ...prev, personId: v }))}
+                    >
+                      <SelectTrigger className="h-12 rounded-xl border-muted-foreground/20 font-medium focus:ring-primary/20" data-testid="select-contact">
+                        <SelectValue placeholder="Search people..." />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl shadow-xl">
+                        {people.map(p => (
+                          <SelectItem key={p.id} value={p.id} className="rounded-lg">{p.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Date & Time</Label>
+                    <div className="relative">
+                      <Input 
+                        type="datetime-local" 
+                        value={logFormData.occurredAt}
+                        onChange={(e) => setLogFormData(prev => ({ ...prev, occurredAt: e.target.value }))}
+                        className="h-12 rounded-xl border-muted-foreground/20 font-medium pl-10 focus:ring-primary/20"
+                        data-testid="input-date"
+                      />
+                      <Calendar className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground/50" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Interaction Type</Label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {allInteractionTypes.map(type => {
+                      const Icon = type.icon;
+                      const isSelected = logFormData.type === type.value;
+                      return (
+                        <button
+                          key={type.value}
+                          onClick={() => setLogFormData(prev => ({ ...prev, type: type.value }))}
+                          className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all gap-2 group ${
+                            isSelected 
+                            ? "border-primary bg-primary/5 shadow-inner" 
+                            : "border-muted-foreground/10 hover:border-primary/50 hover:bg-muted/50"
+                          }`}
+                          data-testid={`type-${type.value}`}
+                        >
+                          <div className={`p-2 rounded-xl transition-colors ${
+                            isSelected ? "bg-primary text-white" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"
+                          }`}>
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <span className={`text-[10px] font-bold uppercase tracking-widest ${
+                            isSelected ? "text-primary" : "text-muted-foreground group-hover:text-primary"
+                          }`}>
+                            {type.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Conversation Summary</Label>
+                  <div className="relative">
+                    <MentionTextarea
+                      value={logFormData.summary}
+                      onChange={(v) => setLogFormData(prev => ({ ...prev, summary: v }))}
+                      placeholder="What did you talk about? Use @ to mention other people..."
+                      className="min-h-[160px] rounded-2xl border-muted-foreground/20 p-4 font-medium text-lg leading-relaxed focus:ring-primary/20"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter className="p-8 bg-muted/30 border-t flex flex-col sm:flex-row gap-3">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowLogDialog(false);
+                    setShowEditDialog(false);
+                  }}
+                  className="rounded-xl h-12 px-8 font-bold order-2 sm:order-1"
+                >
+                  Cancel
+                </Button>
+                <div className="flex gap-3 order-1 sm:order-2 flex-1 sm:flex-none">
+                  <Button 
+                    onClick={handleLogSubmit}
+                    disabled={createInteraction.isPending || updateInteraction.isPending}
+                    className="rounded-xl h-12 px-8 font-bold flex-1 sm:flex-none shadow-lg shadow-primary/20"
+                    data-testid="button-save-interaction"
+                  >
+                    {(createInteraction.isPending || updateInteraction.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    {showEditDialog ? "Save Changes" : "Save Interaction"}
+                  </Button>
+                </div>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-3 mb-6">
