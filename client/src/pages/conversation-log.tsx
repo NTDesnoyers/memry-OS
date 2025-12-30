@@ -42,7 +42,11 @@ import {
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useToast } from "@/hooks/use-toast";
 import { format, formatDistanceToNow } from "date-fns";
-import type { Person, Interaction } from "@shared/schema";
+import type { Person, Interaction, InteractionParticipant } from "@shared/schema";
+
+interface InteractionWithParticipants extends Interaction {
+  participantsList: (InteractionParticipant & { person?: Person })[];
+}
 import { isFounderMode } from "@/lib/feature-mode";
 import { apiRequest } from "@/lib/queryClient";
 import { getInitials } from "@/lib/utils";
@@ -105,16 +109,18 @@ export default function ConversationLog() {
     queryKey: ["/api/people"],
   });
 
-  const { data: interactions = [], isLoading } = useQuery<Interaction[]>({
-    queryKey: ["/api/interactions"],
+  const { data: interactionsWithParticipants = [], isLoading } = useQuery<InteractionWithParticipants[]>({
+    queryKey: ["/api/interactions-with-participants"],
   });
+  
+  const interactions = interactionsWithParticipants;
 
   const createInteraction = useMutation({
     mutationFn: async (data: any) => {
       return apiRequest("POST", "/api/interactions", data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/interactions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/interactions-with-participants"] });
       queryClient.invalidateQueries({ queryKey: ["/api/people"] });
       setShowAddDialog(false);
       resetForm();
@@ -533,9 +539,19 @@ export default function ConversationLog() {
                   </div>
                   <div className="space-y-3">
                     {groupedInteractions[date].map(interaction => {
-                      const person = getPersonById(interaction.personId);
+                      const interactionWithParticipants = interaction as InteractionWithParticipants;
+                      const participants = interactionWithParticipants.participantsList || [];
+                      const contactParticipants = participants.filter(p => p.role !== 'family' && p.role !== 'self');
+                      const primaryPerson = participants.find(p => p.isPrimary)?.person || 
+                                           contactParticipants[0]?.person || 
+                                           getPersonById(interaction.personId);
                       const typeConfig = getTypeConfig(interaction.type);
                       const TypeIcon = typeConfig.icon;
+                      
+                      const participantNames = contactParticipants
+                        .map(p => p.person?.name)
+                        .filter(Boolean)
+                        .join(', ') || primaryPerson?.name || 'Unknown Contact';
                       
                       return (
                         <Card 
@@ -546,20 +562,44 @@ export default function ConversationLog() {
                         >
                           <CardContent className="p-4">
                             <div className="flex items-start gap-4">
-                              <Avatar className="h-10 w-10">
-                                <AvatarFallback className="bg-primary/10 text-primary">
-                                  {person ? getInitials(person.name) : '?'}
-                                </AvatarFallback>
-                              </Avatar>
+                              {contactParticipants.length > 1 ? (
+                                <div className="flex -space-x-2">
+                                  {contactParticipants.slice(0, 3).map((p, i) => (
+                                    <Avatar key={p.id || i} className="h-9 w-9 border-2 border-background">
+                                      <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                        {p.person ? getInitials(p.person.name) : '?'}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                  ))}
+                                  {contactParticipants.length > 3 && (
+                                    <Avatar className="h-9 w-9 border-2 border-background">
+                                      <AvatarFallback className="bg-muted text-muted-foreground text-xs">
+                                        +{contactParticipants.length - 3}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                  )}
+                                </div>
+                              ) : (
+                                <Avatar className="h-10 w-10">
+                                  <AvatarFallback className="bg-primary/10 text-primary">
+                                    {primaryPerson ? getInitials(primaryPerson.name) : '?'}
+                                  </AvatarFallback>
+                                </Avatar>
+                              )}
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
                                   <span className="font-medium">
-                                    {person?.name || 'Unknown Contact'}
+                                    {participantNames}
                                   </span>
                                   <Badge variant="outline" className={typeConfig.color}>
                                     <TypeIcon className="h-3 w-3 mr-1" />
                                     {typeConfig.label}
                                   </Badge>
+                                  {contactParticipants.length > 1 && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      {contactParticipants.length} people
+                                    </Badge>
+                                  )}
                                   {interaction.transcript && (
                                     <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
                                       <FileText className="h-3 w-3 mr-1" />
