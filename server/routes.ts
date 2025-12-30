@@ -3335,6 +3335,81 @@ Return ONLY valid JSON, no explanations.`
     }
   });
 
+  // ==================== INTERACTION PARTICIPANTS ROUTES ====================
+  
+  // Get all interactions with their participants (event-centric view)
+  app.get("/api/interactions-with-participants", async (req, res) => {
+    try {
+      const interactionsWithParticipants = await storage.getAllInteractionsWithParticipants();
+      res.json(interactionsWithParticipants);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get participants for a specific interaction
+  app.get("/api/interactions/:id/participants", async (req, res) => {
+    try {
+      const participants = await storage.getInteractionParticipants(req.params.id);
+      res.json(participants);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Add participant to interaction
+  app.post("/api/interactions/:id/participants", async (req, res) => {
+    try {
+      const { personId, role = "contact", isPrimary = false, fordAttributed = false } = req.body;
+      if (!personId) {
+        return res.status(400).json({ message: "personId is required" });
+      }
+      const participant = await storage.addInteractionParticipant({
+        interactionId: req.params.id,
+        personId,
+        role,
+        isPrimary,
+        fordAttributed
+      });
+      res.status(201).json(participant);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Remove participant from interaction
+  app.delete("/api/interactions/:interactionId/participants/:personId", async (req, res) => {
+    try {
+      await storage.removeInteractionParticipant(req.params.interactionId, req.params.personId);
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Update participant role
+  app.patch("/api/interaction-participants/:id", async (req, res) => {
+    try {
+      const updated = await storage.updateInteractionParticipant(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ message: "Participant not found" });
+      }
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Get all interactions for a person via participant join (event-centric)
+  app.get("/api/people/:personId/participated-interactions", async (req, res) => {
+    try {
+      const interactions = await storage.getInteractionsByParticipant(req.params.personId);
+      res.json(interactions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Fathom API Integration - Import meetings
   app.post("/api/integrations/fathom/import", async (req, res) => {
     try {

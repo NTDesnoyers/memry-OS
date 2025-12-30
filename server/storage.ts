@@ -20,6 +20,7 @@ import {
   type AgentProfile, type InsertAgentProfile,
   type RealEstateReview, type InsertRealEstateReview,
   type Interaction, type InsertInteraction,
+  type InteractionParticipant, type InsertInteractionParticipant,
   type AiConversation, type InsertAiConversation,
   type Household, type InsertHousehold,
   type GeneratedDraft, type InsertGeneratedDraft,
@@ -47,7 +48,7 @@ import {
   type DormantOpportunity, type InsertDormantOpportunity,
   type SocialConnection, type InsertSocialConnection,
   type SocialPost, type InsertSocialPost,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions, leads, observerSuggestions, observerPatterns, aiActions, savedContent, dailyDigests, userCoreProfile, dormantOpportunities, socialConnections, socialPosts
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, interactionParticipants, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions, leads, observerSuggestions, observerPatterns, aiActions, savedContent, dailyDigests, userCoreProfile, dormantOpportunities, socialConnections, socialPosts
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt } from "drizzle-orm";
@@ -205,6 +206,20 @@ export interface IStorage {
   deleteInteraction(id: string): Promise<void>;
   /** Get latest interaction date per person (for dormancy detection). */
   getLatestInteractionDates(): Promise<Map<string, Date>>;
+  
+  // Interaction Participants - Multi-person event tracking
+  /** Get all participants for an interaction. */
+  getInteractionParticipants(interactionId: string): Promise<InteractionParticipant[]>;
+  /** Get all interactions a person participated in (via join table). */
+  getInteractionsByParticipant(personId: string): Promise<Interaction[]>;
+  /** Add participant to interaction. */
+  addInteractionParticipant(participant: InsertInteractionParticipant): Promise<InteractionParticipant>;
+  /** Remove participant from interaction. */
+  removeInteractionParticipant(interactionId: string, personId: string): Promise<void>;
+  /** Update participant role. */
+  updateInteractionParticipant(id: string, data: Partial<InsertInteractionParticipant>): Promise<InteractionParticipant | undefined>;
+  /** Get interactions with their participants loaded. */
+  getAllInteractionsWithParticipants(): Promise<(Interaction & { participantsList: (InteractionParticipant & { person?: Person })[] })[]>;
   
   // AI Conversations
   getAllAiConversations(): Promise<AiConversation[]>;
@@ -1092,6 +1107,83 @@ export class DatabaseStorage implements IStorage {
       }
     }
     return dateMap;
+  }
+  
+  // Interaction Participants - Multi-person event tracking
+  async getInteractionParticipants(interactionId: string): Promise<InteractionParticipant[]> {
+    return await db
+      .select()
+      .from(interactionParticipants)
+      .where(eq(interactionParticipants.interactionId, interactionId));
+  }
+  
+  async getInteractionsByParticipant(personId: string): Promise<Interaction[]> {
+    const participantRows = await db
+      .select({ interactionId: interactionParticipants.interactionId })
+      .from(interactionParticipants)
+      .where(eq(interactionParticipants.personId, personId));
+    
+    const interactionIds = participantRows.map(r => r.interactionId);
+    if (interactionIds.length === 0) return [];
+    
+    return await db
+      .select()
+      .from(interactions)
+      .where(and(
+        sql`${interactions.id} IN (${sql.join(interactionIds.map(id => sql`${id}`), sql`, `)})`,
+        isNull(interactions.deletedAt)
+      ))
+      .orderBy(desc(interactions.occurredAt));
+  }
+  
+  async addInteractionParticipant(participant: InsertInteractionParticipant): Promise<InteractionParticipant> {
+    const [created] = await db.insert(interactionParticipants).values(participant).returning();
+    return created;
+  }
+  
+  async removeInteractionParticipant(interactionId: string, personId: string): Promise<void> {
+    await db.delete(interactionParticipants).where(
+      and(
+        eq(interactionParticipants.interactionId, interactionId),
+        eq(interactionParticipants.personId, personId)
+      )
+    );
+  }
+  
+  async updateInteractionParticipant(id: string, data: Partial<InsertInteractionParticipant>): Promise<InteractionParticipant | undefined> {
+    const [updated] = await db
+      .update(interactionParticipants)
+      .set(data)
+      .where(eq(interactionParticipants.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async getAllInteractionsWithParticipants(): Promise<(Interaction & { participantsList: (InteractionParticipant & { person?: Person })[] })[]> {
+    const allInteractions = await db
+      .select()
+      .from(interactions)
+      .where(isNull(interactions.deletedAt))
+      .orderBy(desc(interactions.occurredAt));
+    
+    const allParticipants = await db
+      .select()
+      .from(interactionParticipants);
+    
+    const allPeople = await db.select().from(people);
+    const peopleMap = new Map(allPeople.map(p => [p.id, p]));
+    
+    const participantsByInteraction = new Map<string, (InteractionParticipant & { person?: Person })[]>();
+    for (const p of allParticipants) {
+      const list = participantsByInteraction.get(p.interactionId) || [];
+      list.push({ ...p, person: peopleMap.get(p.personId) });
+      participantsByInteraction.set(p.interactionId, list);
+    }
+    
+    return allInteractions.map(i => ({
+      ...i,
+      participantsList: participantsByInteraction.get(i.id) || []
+    }));
   }
   
   // AI Conversations
