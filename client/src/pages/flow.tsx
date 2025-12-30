@@ -452,7 +452,7 @@ function InteractionList({
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState<string>("all");
-  const [selectedInteraction, setSelectedInteraction] = useState<Interaction | null>(null);
+  const [selectedInteractionForDetail, setSelectedInteractionForDetail] = useState<Interaction | null>(null);
   
   const { data: drafts = [] } = useQuery<GeneratedDraft[]>({
     queryKey: ["/api/generated-drafts"],
@@ -551,7 +551,7 @@ function InteractionList({
             key={interaction.id} 
             className="hover:shadow-md transition-shadow cursor-pointer" 
             data-testid={`interaction-card-${interaction.id}`}
-            onClick={() => setSelectedInteraction(interaction)}
+            onClick={() => setSelectedInteractionForDetail(interaction)}
           >
             <CardContent className="p-4">
               <div className="flex items-start justify-between gap-3">
@@ -605,18 +605,18 @@ function InteractionList({
       })}
       
       {/* Conversation Detail - Mobile-friendly Drawer */}
-      <Drawer open={!!selectedInteraction} onOpenChange={(open) => !open && setSelectedInteraction(null)}>
+      <Drawer open={!!selectedInteractionForDetail} onOpenChange={(open) => !open && setSelectedInteractionForDetail(null)}>
         <DrawerContent className="max-h-[90vh]">
           <DrawerHeader className="sr-only">
             <DrawerTitle>Conversation Details</DrawerTitle>
           </DrawerHeader>
           <ScrollArea className="p-4 overflow-y-auto max-h-[85vh]">
-            {selectedInteraction && (
+            {selectedInteractionForDetail && (
               <InteractionDetailSheet
-                interaction={selectedInteraction}
-                person={getPersonById(selectedInteraction.personId)}
+                interaction={selectedInteractionForDetail}
+                person={getPersonById(selectedInteractionForDetail.personId)}
                 drafts={drafts}
-                onClose={() => setSelectedInteraction(null)}
+                onClose={() => setSelectedInteractionForDetail(null)}
               />
             )}
           </ScrollArea>
@@ -824,24 +824,35 @@ export default function Flow() {
 
   const deleteInteraction = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest("DELETE", `/api/interactions/${id}`);
+      // Use the delete endpoint which moves to Recently Deleted
+      return apiRequest("POST", `/api/interactions/${id}/delete`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/interactions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/interactions-with-participants"] });
-      toast({ title: "Deleted" });
+      toast({ 
+        title: "Deleted",
+        description: "Conversation moved to Recently Deleted."
+      });
     },
   });
 
   const handleEdit = (interaction: Interaction) => {
+    // Determine if it's live or auto based on the type
+    const isLive = liveFlowTypes.some(t => t.value === interaction.type);
+    setAddFlowType(isLive ? "live" : "auto");
+    
     setSelectedInteraction(interaction);
     setSelectedType(interaction.type);
     setSelectedPerson(people.find(p => p.id === interaction.personId) || null);
     setFormData({
       summary: interaction.summary || "",
       externalLink: interaction.externalLink || "",
-      occurredAt: new Date(interaction.occurredAt).toISOString().slice(0, 16),
+      occurredAt: new Date(interaction.occurredAt || interaction.createdAt).toISOString().slice(0, 16),
     });
+    
+    // In Flow page, detail sheet isn't used for edit triggering anymore
+    // but we still want to open the edit dialog
     setShowEditDialog(true);
   };
 
