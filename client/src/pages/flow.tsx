@@ -282,76 +282,83 @@ function InteractionDetailSheet({
   };
   
   return (
-    <div className="space-y-4" data-testid="interaction-detail-sheet">
-      <div className="flex items-center gap-3 pb-3 border-b">
-        <div className={`p-2 rounded-lg ${config.color.split(' ')[0]}`}>
-          <Icon className={`h-5 w-5 ${config.color.split(' ')[1]}`} />
+    <div className="space-y-6" data-testid="interaction-detail-sheet">
+      <div className="flex items-center gap-4 pb-4 border-b">
+        <div className={`p-3 rounded-xl ${config.color.split(' ')[0]}`}>
+          <Icon className={`h-6 w-6 ${config.color.split(' ')[1]}`} />
         </div>
         <div className="flex-1">
-          <h3 className="font-semibold">{config.label}</h3>
-          <p className="text-xs text-muted-foreground">
-            {format(new Date(interaction.occurredAt || interaction.createdAt), "MMM d, yyyy 'at' h:mm a")}
+          <h3 className="text-lg font-bold tracking-tight">{config.label}</h3>
+          <p className="text-sm text-muted-foreground font-medium">
+            {format(new Date(interaction.occurredAt || interaction.createdAt), "EEEE, MMMM d, yyyy")}
+          </p>
+          <p className="text-xs text-muted-foreground/70">
+            {format(new Date(interaction.occurredAt || interaction.createdAt), "h:mm a")}
           </p>
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose} data-testid="button-close-detail">
+        <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 hover:bg-muted" onClick={onClose} data-testid="button-close-detail">
           <X className="h-5 w-5" />
         </Button>
       </div>
       
       {interaction.summary ? (
-        <div className="bg-blue-100 border-2 border-blue-400 p-4 rounded-xl">
-          <h4 className="text-sm font-bold text-blue-800 mb-2 uppercase tracking-wide">Conversation Summary</h4>
-          <p className="text-base leading-relaxed whitespace-pre-wrap text-blue-900">
+        <div className="bg-white border shadow-sm p-6 rounded-2xl">
+          <h4 className="text-xs font-bold text-muted-foreground mb-3 uppercase tracking-widest">Conversation Summary</h4>
+          <p className="text-lg leading-relaxed whitespace-pre-wrap text-foreground font-medium">
             {getDisplayText(interaction.summary)}
           </p>
         </div>
       ) : (
-        <div className="bg-gray-100 p-4 rounded-xl text-gray-500 text-sm">
+        <div className="bg-muted/30 p-6 rounded-2xl text-muted-foreground text-sm border-2 border-dashed">
           No summary available for this conversation
         </div>
       )}
       
       {person && (
         <Link href={`/people/${person.id}`}>
-          <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg" data-testid="link-person-profile">
-            <Avatar className="h-10 w-10">
-              <AvatarFallback className="bg-primary/10 text-primary">
+          <div className="flex items-center gap-4 p-4 bg-primary/5 hover:bg-primary/10 border border-primary/10 rounded-2xl transition-all cursor-pointer group" data-testid="link-person-profile">
+            <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
+              <AvatarFallback className="bg-primary/10 text-primary font-bold">
                 {getInitials(person.name)}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <p className="font-medium">{person.name}</p>
-              <p className="text-xs text-muted-foreground">View profile</p>
+              <p className="font-bold text-foreground group-hover:text-primary transition-colors">{person.name}</p>
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Relationship Profile</p>
             </div>
-            <ExternalLink className="h-4 w-4 text-muted-foreground" />
+            <ExternalLink className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
         </Link>
       )}
       
-      <InlineCoachingWidget interaction={interaction} />
+      <div className="pt-2">
+        <InlineCoachingWidget interaction={interaction} />
+      </div>
       
       {aiData?.keyTopics && aiData.keyTopics.length > 0 && (
-        <div>
-          <h4 className="text-sm font-medium text-muted-foreground mb-2">Key Topics</h4>
+        <div className="pt-2">
+          <h4 className="text-xs font-bold text-muted-foreground mb-3 uppercase tracking-widest">Key Topics</h4>
           <div className="flex flex-wrap gap-2">
             {aiData.keyTopics.map((topic, i) => (
-              <Badge key={i} variant="secondary">{topic}</Badge>
+              <Badge key={i} variant="secondary" className="px-3 py-1 rounded-full text-xs font-bold bg-muted/80">{topic}</Badge>
             ))}
           </div>
         </div>
       )}
       
       {aiData?.actionItems && aiData.actionItems.length > 0 && (
-        <div>
-          <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+        <div className="pt-2">
+          <h4 className="text-xs font-bold text-muted-foreground mb-3 uppercase tracking-widest flex items-center gap-2">
             <CheckSquare className="h-4 w-4" />
             Action Items
           </h4>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {aiData.actionItems.map((item, i) => (
-              <div key={i} className="flex items-start gap-2 p-2 bg-green-50 rounded-lg text-sm">
-                <Check className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
-                <span>{item}</span>
+              <div key={i} className="flex items-start gap-3 p-4 bg-green-50/50 border border-green-100 rounded-2xl text-sm shadow-sm">
+                <div className="h-5 w-5 rounded-full bg-green-100 flex items-center justify-center shrink-0 mt-0.5">
+                  <Check className="h-3 w-3 text-green-600 font-bold" />
+                </div>
+                <span className="font-medium text-green-900">{item}</span>
               </div>
             ))}
           </div>
@@ -359,29 +366,29 @@ function InteractionDetailSheet({
       )}
       
       {relatedDrafts.length > 0 && (
-        <div>
-          <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
-            <Sparkles className="h-4 w-4" />
-            AI-Generated Follow-ups ({relatedDrafts.length})
+        <div className="pt-2">
+          <h4 className="text-xs font-bold text-muted-foreground mb-3 uppercase tracking-widest flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-purple-600" />
+            AI Follow-up Drafts
           </h4>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {relatedDrafts.map((draft) => {
               const draftConfig = getTypeConfig(draft.type);
               const DraftIcon = draftConfig.icon;
               return (
-                <div key={draft.id} className="p-3 border rounded-lg" data-testid={`draft-${draft.id}`}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className={`p-1 rounded ${draftConfig.color.split(' ')[0]}`}>
-                      <DraftIcon className={`h-3 w-3 ${draftConfig.color.split(' ')[1]}`} />
+                <div key={draft.id} className="p-5 bg-white border border-purple-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow" data-testid={`draft-${draft.id}`}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`p-2 rounded-xl ${draftConfig.color.split(' ')[0]}`}>
+                      <DraftIcon className={`h-4 w-4 ${draftConfig.color.split(' ')[1]}`} />
                     </div>
-                    <Badge variant="outline" className={draftConfig.color}>{draftConfig.label}</Badge>
-                    <Badge variant={draft.status === "pending" ? "default" : "secondary"}>
+                    <Badge variant="outline" className={`${draftConfig.color} rounded-full px-3`}>{draftConfig.label}</Badge>
+                    <Badge variant={draft.status === "pending" ? "default" : "secondary"} className="rounded-full px-3">
                       {draft.status}
                     </Badge>
                   </div>
-                  <p className="text-sm line-clamp-3 mb-2">{draft.content}</p>
-                  <Button size="sm" variant="outline" onClick={() => copyToClipboard(draft.content)}>
-                    <Copy className="h-3 w-3 mr-1" /> Copy
+                  <p className="text-sm leading-relaxed text-foreground font-medium mb-4">{draft.content}</p>
+                  <Button size="sm" variant="outline" className="w-full rounded-xl gap-2 font-bold" onClick={() => copyToClipboard(draft.content)}>
+                    <Copy className="h-3.5 w-3.5" /> Copy to Clipboard
                   </Button>
                 </div>
               );
@@ -391,31 +398,31 @@ function InteractionDetailSheet({
       )}
       
       {aiData?.fordUpdates && Object.values(aiData.fordUpdates).some(v => v) && (
-        <div>
-          <h4 className="text-sm font-medium text-muted-foreground mb-2">FORD Updates</h4>
-          <div className="grid grid-cols-2 gap-2">
+        <div className="pt-2">
+          <h4 className="text-xs font-bold text-muted-foreground mb-3 uppercase tracking-widest">Relationship Intelligence (FORD)</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {aiData.fordUpdates.family && (
-              <div className="p-2 bg-pink-50 rounded-lg">
-                <p className="text-xs font-medium text-pink-700">Family</p>
-                <p className="text-sm">{aiData.fordUpdates.family}</p>
+              <div className="p-4 bg-pink-50/50 border border-pink-100 rounded-2xl shadow-sm">
+                <p className="text-[10px] font-bold text-pink-700 uppercase tracking-widest mb-1">Family</p>
+                <p className="text-sm font-bold text-pink-900">{aiData.fordUpdates.family}</p>
               </div>
             )}
             {aiData.fordUpdates.occupation && (
-              <div className="p-2 bg-blue-50 rounded-lg">
-                <p className="text-xs font-medium text-blue-700">Occupation</p>
-                <p className="text-sm">{aiData.fordUpdates.occupation}</p>
+              <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-2xl shadow-sm">
+                <p className="text-[10px] font-bold text-blue-700 uppercase tracking-widest mb-1">Occupation</p>
+                <p className="text-sm font-bold text-blue-900">{aiData.fordUpdates.occupation}</p>
               </div>
             )}
             {aiData.fordUpdates.recreation && (
-              <div className="p-2 bg-green-50 rounded-lg">
-                <p className="text-xs font-medium text-green-700">Recreation</p>
-                <p className="text-sm">{aiData.fordUpdates.recreation}</p>
+              <div className="p-4 bg-green-50/50 border border-green-100 rounded-2xl shadow-sm">
+                <p className="text-[10px] font-bold text-green-700 uppercase tracking-widest mb-1">Recreation</p>
+                <p className="text-sm font-bold text-green-900">{aiData.fordUpdates.recreation}</p>
               </div>
             )}
             {aiData.fordUpdates.dreams && (
-              <div className="p-2 bg-purple-50 rounded-lg">
-                <p className="text-xs font-medium text-purple-700">Dreams</p>
-                <p className="text-sm">{aiData.fordUpdates.dreams}</p>
+              <div className="p-4 bg-purple-50/50 border border-purple-100 rounded-2xl shadow-sm">
+                <p className="text-[10px] font-bold text-purple-700 uppercase tracking-widest mb-1">Dreams</p>
+                <p className="text-sm font-bold text-purple-900">{aiData.fordUpdates.dreams}</p>
               </div>
             )}
           </div>
@@ -423,15 +430,17 @@ function InteractionDetailSheet({
       )}
       
       {interaction.externalLink && (
-        <a 
-          href={interaction.externalLink} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg text-sm text-primary hover:underline"
-        >
-          <ExternalLink className="h-4 w-4" />
-          Open in Fathom/External Source
-        </a>
+        <div className="pt-2">
+          <a 
+            href={interaction.externalLink} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-3 p-4 bg-slate-900 rounded-2xl text-sm font-bold text-white hover:bg-slate-800 transition-colors shadow-lg"
+          >
+            <ExternalLink className="h-5 w-5" />
+            Open Meeting Source (Fathom / Granola)
+          </a>
+        </div>
       )}
     </div>
   );
