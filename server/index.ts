@@ -31,6 +31,11 @@ app.use(
 
 app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 
+// Health check endpoint - must be early for deployment health probes
+app.get('/health', (_req, res) => {
+  res.status(200).send('ok');
+});
+
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",
@@ -95,18 +100,25 @@ app.use((req, res, next) => {
   runCleanup();
   setInterval(runCleanup, 24 * 60 * 60 * 1000);
 
-  // Start Fathom.video automatic sync scheduler
-  startFathomSyncScheduler();
+  // Only start heavy background schedulers if not disabled (for production resource management)
+  if (process.env.DISABLE_SCHEDULERS !== 'true') {
+    // Start Fathom.video automatic sync scheduler
+    startFathomSyncScheduler();
 
-  // Register agents and start schedulers
-  registerNurtureAgent();
-  registerLeadIntakeAgent();
-  registerWorkflowCoachAgent();
-  startRelationshipChecker();
-  startMaintenanceScheduler(7);
-  
-  // Setup voice relay WebSocket server
-  setupVoiceRelay(httpServer);
+    // Register agents and start schedulers
+    registerNurtureAgent();
+    registerLeadIntakeAgent();
+    registerWorkflowCoachAgent();
+    startRelationshipChecker();
+    startMaintenanceScheduler(7);
+    
+    // Setup voice relay WebSocket server
+    setupVoiceRelay(httpServer);
+    
+    log('Background schedulers started');
+  } else {
+    log('Background schedulers disabled (DISABLE_SCHEDULERS=true)');
+  }
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
