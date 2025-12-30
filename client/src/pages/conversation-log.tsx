@@ -182,7 +182,7 @@ export default function ConversationLog() {
       
       const result = await response.json();
       
-      queryClient.invalidateQueries({ queryKey: ["/api/interactions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/interactions-with-participants"] });
       queryClient.invalidateQueries({ queryKey: ["/api/people"] });
       queryClient.invalidateQueries({ queryKey: ["/api/generated-drafts"] });
       
@@ -220,7 +220,7 @@ export default function ConversationLog() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/interactions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/interactions-with-participants"] });
       queryClient.invalidateQueries({ queryKey: ["/api/people"] });
       setShowEditDialog(false);
       setSelectedInteraction(null);
@@ -250,7 +250,7 @@ export default function ConversationLog() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/interactions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/interactions-with-participants"] });
       queryClient.invalidateQueries({ queryKey: ["/api/people"] });
       setShowEditDialog(false);
       setSelectedInteraction(null);
