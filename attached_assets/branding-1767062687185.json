@@ -1,0 +1,109 @@
+{
+  "colorScheme": "light",
+  "fonts": [
+    {
+      "family": "ProximaNova",
+      "count": 40
+    },
+    {
+      "family": "Helvetica Neue",
+      "count": 40
+    },
+    {
+      "family": "Helvetica",
+      "count": 40
+    },
+    {
+      "family": "Arial",
+      "count": 40
+    },
+    {
+      "family": "sans-serif",
+      "count": 40
+    }
+  ],
+  "colors": {
+    "primary": "#2BB673",
+    "accent": "#A63755",
+    "background": "#FBFAFA",
+    "textPrimary": "#A63755",
+    "link": "#A63755"
+  },
+  "typography": {
+    "fontFamilies": {
+      "primary": "ProximaNova",
+      "heading": "ProximaNova"
+    },
+    "fontStacks": {
+      "body": [
+        "ProximaNova",
+        "Helvetica Neue",
+        "Helvetica",
+        "Arial",
+        "sans-serif"
+      ],
+      "heading": [
+        "ProximaNova",
+        "Helvetica Neue",
+        "Helvetica",
+        "Arial",
+        "sans-serif"
+      ],
+      "paragraph": [
+        "ProximaNova",
+        "Helvetica Neue",
+        "Helvetica",
+        "Arial",
+        "sans-serif"
+      ]
+    },
+    "fontSizes": {
+      "h1": "14px",
+      "h2": "14px",
+      "body": "15px"
+    }
+  },
+  "spacing": {
+    "baseUnit": 4,
+    "borderRadius": "5px"
+  },
+  "components": {
+    "input": {
+      "background": "#FFFFFF",
+      "textColor": "#333333",
+      "borderColor": "#CCCCCC",
+      "borderRadius": "2px",
+      "borderRadiusCorners": {
+        "topLeft": "2px",
+        "topRight": "2px",
+        "bottomRight": "2px",
+        "bottomLeft": "2px"
+      },
+      "shadow": "none"
+    }
+  },
+  "images": {
+    "logo": null,
+    "favicon": "https://www.cloze.com/in/img/favicon.ico",
+    "ogImage": null
+  },
+  "__framework_hints": [],
+  "__llm_button_reasoning": {
+    "primary": {
+      "index": -1,
+      "text": "N/A",
+      "reasoning": "LLM failed"
+    },
+    "secondary": {
+      "index": -1,
+      "text": "N/A",
+      "reasoning": "LLM failed"
+    },
+    "confidence": 0
+  },
+  "confidence": {
+    "buttons": 0,
+    "colors": 0,
+    "overall": 0
+  }
+}
