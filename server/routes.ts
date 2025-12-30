@@ -1200,7 +1200,13 @@ Respond with valid JSON only, no other text.`;
         
         case "update_person": {
           if (!args.updates || typeof args.updates !== 'object') {
-            return `Error: updates must be an object with fields to update`;
+            // Check if fields were passed directly at root (common AI mistake)
+            const { personId, ...rootUpdates } = args;
+            if (Object.keys(rootUpdates).length > 0) {
+              args.updates = rootUpdates;
+            } else {
+              return `Error: updates must be an object with fields to update`;
+            }
           }
           // Filter out null/undefined values
           const cleanUpdates: Record<string, any> = {};
