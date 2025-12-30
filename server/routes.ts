@@ -3575,6 +3575,7 @@ Return ONLY valid JSON, no explanations.`
         transcriptText = typeof transcript === "string" ? transcript : JSON.stringify(transcript);
       }
 
+      // Create the interaction
       const interaction = await storage.createInteraction({
         type: type as any,
         personId: null, // Will be assigned manually in UI
@@ -3587,11 +3588,13 @@ Return ONLY valid JSON, no explanations.`
         occurredAt: occurredAt ? new Date(occurredAt) : new Date(),
       });
 
+      // Avoid duplication by returning if we just created it
       res.status(201).json({ 
         success: true, 
         id: interaction.id,
         message: "Conversation created"
       });
+      return; // Add return to prevent any accidental double response or execution
     } catch (error: any) {
       console.error("Webhook error:", error);
       res.status(400).json({ success: false, message: error.message });
