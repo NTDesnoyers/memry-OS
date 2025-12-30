@@ -697,9 +697,47 @@ export type InsertInteraction = z.infer<typeof insertInteractionSchema>;
 export type Interaction = typeof interactions.$inferSelect;
 
 // Relations for Interactions
-export const interactionsRelations = relations(interactions, ({ one }) => ({
+export const interactionsRelations = relations(interactions, ({ one, many }) => ({
   person: one(people, {
     fields: [interactions.personId],
+    references: [people.id],
+  }),
+  interactionParticipants: many(interactionParticipants),
+}));
+
+/** Interaction Participants - Links interactions to multiple people with roles.
+ * Enables event-centric model where one dinner with 3 people = 1 event with 3 participants.
+ * Role types: 'contact' (counts for FORD), 'family' (user's spouse/family, doesn't count for FORD)
+ */
+export const interactionParticipants = pgTable("interaction_participants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  interactionId: varchar("interaction_id").references(() => interactions.id).notNull(),
+  personId: varchar("person_id").references(() => people.id).notNull(),
+  role: text("role").default("contact"), // 'contact', 'family', 'self'
+  isPrimary: boolean("is_primary").default(false), // Primary person for backwards compat
+  fordAttributed: boolean("ford_attributed").default(false), // Whether FORD notes were extracted for this person
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("interaction_participants_interaction_id_idx").on(table.interactionId),
+  index("interaction_participants_person_id_idx").on(table.personId),
+]);
+
+export const insertInteractionParticipantSchema = createInsertSchema(interactionParticipants).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertInteractionParticipant = z.infer<typeof insertInteractionParticipantSchema>;
+export type InteractionParticipant = typeof interactionParticipants.$inferSelect;
+
+// Relations for Interaction Participants
+export const interactionParticipantsRelations = relations(interactionParticipants, ({ one }) => ({
+  interaction: one(interactions, {
+    fields: [interactionParticipants.interactionId],
+    references: [interactions.id],
+  }),
+  person: one(people, {
+    fields: [interactionParticipants.personId],
     references: [people.id],
   }),
 }));
