@@ -1233,7 +1233,7 @@ export default function Flow() {
             <TabsList className="grid w-full grid-cols-3 mb-6">
               <TabsTrigger value="live" className="gap-2" data-testid="tab-live-flow">
                 <Phone className="h-4 w-4" />
-                Live Flow
+                Flow
               </TabsTrigger>
               <TabsTrigger value="auto" className="gap-2" data-testid="tab-auto-flow">
                 <Mail className="h-4 w-4" />
@@ -1248,7 +1248,7 @@ export default function Flow() {
             <TabsContent value="live">
               <div className="mb-4">
                 <Button onClick={() => openAddDialog("live")} data-testid="button-add-live-flow">
-                  <Plus className="h-4 w-4 mr-2" /> Log Live Flow
+                  <Plus className="h-4 w-4 mr-2" /> Log Flow
                 </Button>
                 <p className="text-sm text-muted-foreground mt-2">
                   Calls, meetings, face-to-face conversations

@@ -64,7 +64,7 @@ const allNavItems = [
   { name: "Referrals", href: "/referrals", icon: Handshake },
   { name: "Calendar", href: "/calendar", icon: Calendar },
   { name: "Drafts", href: "/drafts", icon: FileEdit },
-  { name: "Flow", href: "/conversations", icon: MessageSquare },
+  { name: "Add Memory", href: "/conversations", icon: MessageSquare }, // Beta-only: simple conversation log
 ];
 
 const allProfileMenuItems = [
@@ -77,7 +77,8 @@ const allProfileMenuItems = [
 
 function getFilteredNavItems(founderMode: boolean) {
   if (founderMode) {
-    return allNavItems;
+    // In founders mode, exclude the beta-only /conversations route
+    return allNavItems.filter(item => item.href !== '/conversations');
   }
   return allNavItems.filter(item => BETA_NAV_HREFS.has(item.href));
 }
