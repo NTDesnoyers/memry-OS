@@ -87,11 +87,18 @@ export const people = pgTable("people", {
   contactAttempts: integer("contact_attempts").default(0),
   contactResponses: integer("contact_responses").default(0),
   reviewStatus: text("review_status"), // null, 'needs_review', 'keep', 'delete_pending'
+  // Sphere vs Extended contacts (Cloze-like concept)
+  // inSphere = true: Active A/B/C/D relationships you actively manage
+  // inSphere = false: Auto-captured contacts from emails, meetings, etc.
+  inSphere: boolean("in_sphere").default(true),
+  autoCapturedFrom: text("auto_captured_from"), // 'fathom', 'granola', 'gmail', null for manual
+  firstSeenAt: timestamp("first_seen_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [
   index("people_segment_idx").on(table.segment),
   index("people_last_contact_idx").on(table.lastContact),
+  index("people_in_sphere_idx").on(table.inSphere),
 ]);
 
 export const insertPersonSchema = createInsertSchema(people).omit({

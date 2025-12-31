@@ -3650,16 +3650,44 @@ Return ONLY valid JSON, no explanations.`
           const externalLink = meeting.share_url || meeting.url || `https://fathom.video/${meetingId}`;
 
           // Try to auto-match participant to a person in database by email
+          // If not found, auto-create as extended contact
           let matchedPersonId: string | null = null;
-          if (participantEmails.length > 0) {
-            const allPeople = await storage.getAllPeople();
-            for (const email of participantEmails) {
-              const matchedPerson = allPeople.find(p => 
-                p.email?.toLowerCase() === email.toLowerCase()
+          const allPeople = await storage.getAllPeople();
+          const autoCreatedContacts: string[] = [];
+          
+          if (meeting.calendar_invitees && meeting.calendar_invitees.length > 0) {
+            for (const invitee of meeting.calendar_invitees) {
+              const email = invitee.email?.toLowerCase();
+              const name = invitee.name || email?.split('@')[0] || 'Unknown';
+              
+              if (!email) continue;
+              
+              // Check if contact already exists
+              let existingPerson = allPeople.find(p => 
+                p.email?.toLowerCase() === email
               );
-              if (matchedPerson) {
-                matchedPersonId = matchedPerson.id;
-                break; // Use first match
+              
+              if (!existingPerson) {
+                // Auto-create as extended (non-sphere) contact
+                try {
+                  existingPerson = await storage.createPerson({
+                    name,
+                    email,
+                    inSphere: false,
+                    autoCapturedFrom: 'fathom',
+                    firstSeenAt: new Date(occurredAt),
+                  });
+                  autoCreatedContacts.push(name);
+                  // Add to allPeople so we don't create duplicates in same batch
+                  allPeople.push(existingPerson);
+                } catch (createErr) {
+                  console.log("Failed to auto-create contact:", email, createErr);
+                }
+              }
+              
+              // Use first matched person as primary
+              if (!matchedPersonId && existingPerson) {
+                matchedPersonId = existingPerson.id;
               }
             }
           }
@@ -7376,6 +7404,39 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
       
       const { title, notes, transcript, date, attendees, enhanced_notes } = parsed.data;
       
+      // Auto-create extended contacts from attendees (only from emails, not names)
+      let matchedPersonId: string | null = null;
+      if (attendees && Array.isArray(attendees)) {
+        for (const attendee of attendees) {
+          const attendeeStr = String(attendee).trim();
+          const isEmail = attendeeStr.includes('@');
+          
+          if (!isEmail) continue; // Only process email addresses to avoid name collisions
+          
+          // Use targeted lookup instead of full table scan
+          let existingPerson = await storage.getPersonByEmail(attendeeStr.toLowerCase());
+          
+          if (!existingPerson) {
+            // Auto-create from email
+            try {
+              existingPerson = await storage.createPerson({
+                name: attendeeStr.split('@')[0],
+                email: attendeeStr.toLowerCase(),
+                inSphere: false,
+                autoCapturedFrom: 'granola',
+                firstSeenAt: date ? new Date(date) : new Date(),
+              });
+            } catch (err) {
+              console.log("Failed to auto-create contact from Granola:", attendeeStr);
+            }
+          }
+          
+          if (existingPerson && !matchedPersonId) {
+            matchedPersonId = existingPerson.id;
+          }
+        }
+      }
+      
       const interaction = await storage.createInteraction({
         type: 'meeting',
         source: 'granola',
@@ -7385,6 +7446,7 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
         occurredAt: date ? new Date(date) : new Date(),
         participants: attendees,
         externalId: req.body.id || `granola-${Date.now()}`,
+        personId: matchedPersonId,
       });
       
       eventBus.emit({

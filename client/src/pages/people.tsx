@@ -40,6 +40,7 @@ export default function People() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [segmentFilter, setSegmentFilter] = useState<string>("all");
+  const [sphereFilter, setSphereFilter] = useState<"all" | "sphere" | "extended">("sphere");
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("timeline");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -169,9 +170,15 @@ export default function People() {
         p.phone?.includes(searchQuery);
       const matchesSegment = segmentFilter === "all" || 
         p.segment?.toLowerCase().startsWith(segmentFilter.toLowerCase());
-      return matchesSearch && matchesSegment;
+      const matchesSphere = sphereFilter === "all" || 
+        (sphereFilter === "sphere" && (p.inSphere !== false)) ||
+        (sphereFilter === "extended" && p.inSphere === false);
+      return matchesSearch && matchesSegment && matchesSphere;
     })
     .sort((a, b) => a.name.localeCompare(b.name));
+
+  const sphereCount = people.filter(p => p.inSphere !== false).length;
+  const extendedCount = people.filter(p => p.inSphere === false).length;
 
   useEffect(() => {
     if (!selectedPersonId && filteredPeople.length > 0) {
@@ -402,21 +409,58 @@ export default function People() {
                 data-testid="people-search"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-              <select
-                value={segmentFilter}
-                onChange={(e) => setSegmentFilter(e.target.value)}
-                className="flex-1 h-8 text-xs rounded border bg-background px-2"
-                data-testid="people-filter"
+            <div className="flex rounded-md overflow-hidden border">
+              <button
+                className={`flex-1 px-2 py-1.5 text-xs font-medium transition-colors ${
+                  sphereFilter === "sphere" 
+                    ? "bg-primary text-primary-foreground" 
+                    : "bg-background hover:bg-accent"
+                }`}
+                onClick={() => setSphereFilter("sphere")}
+                data-testid="filter-sphere"
               >
-                <option value="all">All Segments</option>
-                <option value="a">A - Advocates</option>
-                <option value="b">B - Fans</option>
-                <option value="c">C - Network</option>
-                <option value="d">D - Develop</option>
-              </select>
+                Sphere ({sphereCount})
+              </button>
+              <button
+                className={`flex-1 px-2 py-1.5 text-xs font-medium transition-colors ${
+                  sphereFilter === "extended" 
+                    ? "bg-primary text-primary-foreground" 
+                    : "bg-background hover:bg-accent"
+                }`}
+                onClick={() => setSphereFilter("extended")}
+                data-testid="filter-extended"
+              >
+                Extended ({extendedCount})
+              </button>
+              <button
+                className={`px-2 py-1.5 text-xs font-medium transition-colors ${
+                  sphereFilter === "all" 
+                    ? "bg-primary text-primary-foreground" 
+                    : "bg-background hover:bg-accent"
+                }`}
+                onClick={() => setSphereFilter("all")}
+                data-testid="filter-all"
+              >
+                All
+              </button>
             </div>
+            {sphereFilter !== "extended" && (
+              <div className="flex items-center gap-2">
+                <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+                <select
+                  value={segmentFilter}
+                  onChange={(e) => setSegmentFilter(e.target.value)}
+                  className="flex-1 h-8 text-xs rounded border bg-background px-2"
+                  data-testid="people-filter"
+                >
+                  <option value="all">All Segments</option>
+                  <option value="a">A - Advocates</option>
+                  <option value="b">B - Fans</option>
+                  <option value="c">C - Network</option>
+                  <option value="d">D - Develop</option>
+                </select>
+              </div>
+            )}
           </div>
 
           {/* People List */}

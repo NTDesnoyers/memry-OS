@@ -123,25 +123,46 @@ async function syncMeeting(meeting: any): Promise<{ success: boolean; action: st
   }
   
   let personId: string | undefined;
+  const occurredAt = meeting.created_at || meeting.recording_start_time || new Date().toISOString();
+  
   for (const participant of participants) {
     if (participant.isHost) continue;
     
+    let person = null;
+    
+    // Try to find by email first
     if (participant.email) {
-      const person = await storage.getPersonByEmail(participant.email);
-      if (person) {
-        personId = person.id;
-        break;
+      person = await storage.getPersonByEmail(participant.email);
+    }
+    
+    // Try to find by name if no email match
+    if (!person) {
+      const peopleByName = await storage.searchPeopleByName(participant.name);
+      if (peopleByName.length > 0) {
+        person = peopleByName[0];
       }
     }
     
-    const peopleByName = await storage.searchPeopleByName(participant.name);
-    if (peopleByName.length > 0) {
-      personId = peopleByName[0].id;
-      break;
+    // Auto-create as extended contact if not found and has email
+    if (!person && participant.email) {
+      try {
+        person = await storage.createPerson({
+          name: participant.name || participant.email.split('@')[0],
+          email: participant.email,
+          inSphere: false,
+          autoCapturedFrom: 'fathom',
+          firstSeenAt: new Date(occurredAt),
+        });
+        logger.info(`Auto-created extended contact: ${person.name} (${participant.email})`);
+      } catch (err) {
+        logger.error(`Failed to auto-create contact for ${participant.email}:`, err);
+      }
+    }
+    
+    if (person && !personId) {
+      personId = person.id;
     }
   }
-  
-  const occurredAt = meeting.created_at || meeting.recording_start_time || new Date().toISOString();
   
   const newInteraction = await storage.createInteraction({
     externalId,

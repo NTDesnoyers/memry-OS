@@ -38,7 +38,8 @@ import {
   Edit2,
   X,
   Trash2,
-  Mic
+  Mic,
+  UserPlus
 } from "lucide-react";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { useToast } from "@/hooks/use-toast";
@@ -258,6 +259,42 @@ export default function ConversationLog() {
       toast({
         title: "Deleted",
         description: "Conversation moved to Recently Deleted. You can restore it from Settings within 30 days.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createQuickContact = useMutation({
+    mutationFn: async (name: string) => {
+      const res = await fetch("/api/people", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          name, 
+          inSphere: false,
+          autoCapturedFrom: "manual"
+        }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to create contact");
+      }
+      return res.json();
+    },
+    onSuccess: (newPerson: Person) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/people"] });
+      setSelectedPerson(newPerson);
+      setShowPersonSearch(false);
+      setPersonSearch("");
+      toast({
+        title: "Contact Created",
+        description: `${newPerson.name} added as extended contact.`,
       });
     },
     onError: (error: any) => {
@@ -857,11 +894,33 @@ export default function ConversationLog() {
                   )}
                 </div>
                 {showPersonSearch && !selectedPerson && (
-                  <Card className="absolute z-10 w-full mt-1 max-h-48 overflow-auto">
+                  <Card className="absolute z-10 w-full mt-1 max-h-60 overflow-auto">
                     <ScrollArea className="h-full">
-                      {filteredPeople.length === 0 ? (
+                      {personSearch.trim() && (
+                        <button
+                          className="w-full flex items-center gap-3 p-3 hover:bg-primary/10 text-left border-b"
+                          onClick={() => {
+                            createQuickContact.mutate(personSearch.trim());
+                          }}
+                          disabled={createQuickContact.isPending}
+                          data-testid="button-create-contact"
+                        >
+                          <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+                            {createQuickContact.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                            ) : (
+                              <UserPlus className="h-4 w-4 text-primary" />
+                            )}
+                          </div>
+                          <div>
+                            <div className="font-medium">Create "{personSearch.trim()}"</div>
+                            <div className="text-xs text-muted-foreground">Add as new contact</div>
+                          </div>
+                        </button>
+                      )}
+                      {filteredPeople.length === 0 && !personSearch.trim() ? (
                         <div className="p-4 text-center text-muted-foreground text-sm">
-                          No contacts found
+                          Type a name to search or create
                         </div>
                       ) : (
                         filteredPeople.slice(0, 10).map(person => (
@@ -1172,8 +1231,49 @@ export default function ConversationLog() {
                             />
                           </div>
                           {showEditPersonSearch && editPersonSearch && (
-                            <Card className="absolute z-10 w-full mt-1 max-h-48 overflow-auto">
+                            <Card className="absolute z-10 w-full mt-1 max-h-60 overflow-auto">
                               <CardContent className="p-1">
+                                <button
+                                  className="w-full flex items-center gap-2 p-2 hover:bg-primary/10 rounded transition-colors border-b"
+                                  onClick={async () => {
+                                    try {
+                                      const res = await fetch("/api/people", {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ 
+                                          name: editPersonSearch.trim(), 
+                                          inSphere: false,
+                                          autoCapturedFrom: "manual"
+                                        }),
+                                      });
+                                      if (!res.ok) throw new Error("Failed to create contact");
+                                      const newPerson = await res.json();
+                                      queryClient.invalidateQueries({ queryKey: ["/api/people"] });
+                                      setEditForm(f => ({ ...f, personId: newPerson.id }));
+                                      setEditPersonSearch("");
+                                      setShowEditPersonSearch(false);
+                                      toast({
+                                        title: "Contact Created",
+                                        description: `${newPerson.name} added as extended contact.`,
+                                      });
+                                    } catch (error) {
+                                      toast({
+                                        title: "Error",
+                                        description: "Failed to create contact",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  }}
+                                  data-testid="button-edit-create-contact"
+                                >
+                                  <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+                                    <UserPlus className="h-4 w-4 text-primary" />
+                                  </div>
+                                  <div className="text-left">
+                                    <p className="font-medium text-sm">Create "{editPersonSearch.trim()}"</p>
+                                    <p className="text-xs text-muted-foreground">Add as new contact</p>
+                                  </div>
+                                </button>
                                 {people
                                   .filter(p => 
                                     p.name.toLowerCase().includes(editPersonSearch.toLowerCase()) ||
@@ -1204,12 +1304,6 @@ export default function ConversationLog() {
                                       </div>
                                     </button>
                                   ))}
-                                {people.filter(p => 
-                                  p.name.toLowerCase().includes(editPersonSearch.toLowerCase()) ||
-                                  p.email?.toLowerCase().includes(editPersonSearch.toLowerCase())
-                                ).length === 0 && (
-                                  <p className="text-sm text-muted-foreground p-2">No contacts found</p>
-                                )}
                               </CardContent>
                             </Card>
                           )}
