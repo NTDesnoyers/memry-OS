@@ -545,15 +545,25 @@ function InteractionList({
   const openEditDialog = (interaction: Interaction) => {
     setSelectedInteractionToEdit(interaction);
     
-    // Safely format date for datetime-local input
+    // Format date for datetime-local input using LOCAL time (not UTC)
+    // datetime-local expects format: YYYY-MM-DDTHH:mm
+    const formatDateTimeLocal = (d: Date): string => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+    
     let formattedDate: string;
     try {
       const date = new Date(interaction.occurredAt || interaction.createdAt);
       formattedDate = isNaN(date.getTime()) 
-        ? new Date().toISOString().slice(0, 16)
-        : date.toISOString().slice(0, 16);
+        ? formatDateTimeLocal(new Date())
+        : formatDateTimeLocal(date);
     } catch {
-      formattedDate = new Date().toISOString().slice(0, 16);
+      formattedDate = formatDateTimeLocal(new Date());
     }
     
     setLogFormData({
@@ -961,15 +971,24 @@ export default function Flow() {
     const isLive = liveFlowTypes.some(t => t.value === interaction.type);
     setAddFlowType(isLive ? "live" : "auto");
     
-    // Safely format date for datetime-local input
+    // Format date for datetime-local input using LOCAL time (not UTC)
+    const formatDateTimeLocal = (d: Date): string => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+    
     let formattedDate: string;
     try {
       const date = new Date(interaction.occurredAt || interaction.createdAt);
       formattedDate = isNaN(date.getTime()) 
-        ? new Date().toISOString().slice(0, 16)
-        : date.toISOString().slice(0, 16);
+        ? formatDateTimeLocal(new Date())
+        : formatDateTimeLocal(date);
     } catch {
-      formattedDate = new Date().toISOString().slice(0, 16);
+      formattedDate = formatDateTimeLocal(new Date());
     }
     
     setSelectedInteraction(interaction);

@@ -272,18 +272,28 @@ export default function ConversationLog() {
   const openEditDialog = (interaction: Interaction) => {
     setSelectedInteraction(interaction);
     
-    // Safely format date for datetime-local input
+    // Format date for datetime-local input using LOCAL time (not UTC)
+    // datetime-local expects format: YYYY-MM-DDTHH:mm
+    const formatDateTimeLocal = (d: Date): string => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+    
     let formattedDate: string;
     try {
       const date = new Date(interaction.occurredAt);
       // Check for Invalid Date
       if (isNaN(date.getTime())) {
-        formattedDate = new Date().toISOString().slice(0, 16);
+        formattedDate = formatDateTimeLocal(new Date());
       } else {
-        formattedDate = date.toISOString().slice(0, 16);
+        formattedDate = formatDateTimeLocal(date);
       }
     } catch {
-      formattedDate = new Date().toISOString().slice(0, 16);
+      formattedDate = formatDateTimeLocal(new Date());
     }
     
     setEditForm({
