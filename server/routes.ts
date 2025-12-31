@@ -1976,12 +1976,22 @@ When analyzing images:
   // Update person
   app.patch("/api/people/:id", async (req, res) => {
     try {
-      const person = await storage.updatePerson(req.params.id, req.body);
+      // Remove fields that shouldn't be updated directly
+      const { id, createdAt, updatedAt, ...updates } = req.body;
+      
+      // Convert lastContact to Date if it's a string
+      if (updates.lastContact && typeof updates.lastContact === 'string') {
+        const parsed = new Date(updates.lastContact);
+        updates.lastContact = isNaN(parsed.getTime()) ? null : parsed;
+      }
+      
+      const person = await storage.updatePerson(req.params.id, updates);
       if (!person) {
         return res.status(404).json({ message: "Person not found" });
       }
       res.json(person);
     } catch (error: any) {
+      console.error("Person update error:", error);
       res.status(400).json({ message: error.message });
     }
   });
