@@ -52,6 +52,15 @@ The design emphasizes GTD principles, making the system an intelligent reference
 ### Feature Specifications
 Current features include a Contact Due Calculator, D Contact Review, AI Assistant with agentic tools, voice profile learning, generated drafts, sync APIs, **In-App Observer** (queued suggestions in Weekly Review "Insights" tab), **Insight Inbox** (content capture and daily digest), **Guiding Principles Profile** (MTP, mission, values personalization), **Voice Conversation** (real-time voice AI chat via OpenAI Realtime API), **Dormant Lead Revival Engine** (Gmail scanning, dormancy scoring, approval workflow, campaign generation), and **DIA-Style Skill Packs** (Command Palette shortcuts for relationship-compounding actions: Draft Revival, Bulk Outreach, Quick Text). Future features target anticipatory, network, and reflective intelligence, memory augmentation, decision support, and skill development.
 
+### Sphere vs Extended Contacts
+**Cloze-like Contact Management (Implemented)**:
+- Distinguishes between "Sphere" (active A/B/C/D relationships) and "Extended" (auto-captured from meetings/emails)
+- Schema: `inSphere` boolean field, `autoCapturedFrom` text, `firstSeenAt` timestamp on `people` table
+- Auto-capture: Fathom/Granola syncs automatically create extended contacts from participant emails
+- Manual creation: Conversation log allows creating new contacts on-the-fly when person not found
+- People page: Toggle between Sphere/Extended/All with counts; segment filter hidden for extended view
+- Design: Extended contacts stay out of the way until promoted to sphere
+
 ### Dormant Lead Revival Engine
 **Lead Revival System (Implemented)**:
 - Gmail scanner identifies dormant contacts (180+ days no interaction)
