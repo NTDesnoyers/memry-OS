@@ -584,6 +584,136 @@ export async function registerRoutes(
     }
   });
 
+  // Quick voice log - AI parses transcript to find person and extract summary
+  app.post("/api/voice-memories/quick-log", async (req, res) => {
+    try {
+      const { transcript } = req.body;
+      
+      if (!transcript || transcript.trim().length < 5) {
+        return res.status(400).json({ message: "Please say more than a few words" });
+      }
+
+      const openai = getOpenAI();
+      
+      // Get all people for fuzzy matching
+      const allPeople = await storage.getPeople();
+      const peopleNames = allPeople.map(p => ({ id: p.id, name: `${p.firstName} ${p.lastName}`.trim() }));
+      
+      // Use AI to parse the transcript
+      const parseResult = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are a conversation log parser for a real estate agent. Extract information from voice notes about conversations or interactions.
+            
+Known contacts (name and ID):
+${peopleNames.map(p => `- "${p.name}" (id: ${p.id})`).join('\n')}
+
+Parse the voice note and return JSON with:
+- personId: The ID of the matching person if mentioned (must be exact ID from list above, or null if no match)
+- personName: The name of the person being discussed (even if not in contacts)
+- summary: A concise 1-2 sentence summary of what was discussed or happened
+- fordNotes: Object with any personal details mentioned:
+  - family: any family mentions (kids, spouse, parents)
+  - occupation: job/work mentions
+  - recreation: hobbies, interests, activities
+  - dreams: goals, aspirations, future plans
+- followUpNeeded: boolean - does this need a follow-up action?
+- suggestedFollowUp: brief description of follow-up if needed
+
+Be forgiving with name matching - "John" should match "John Smith", etc.
+If the person mentions multiple people, pick the primary one being discussed.`
+          },
+          {
+            role: "user",
+            content: transcript
+          }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.3,
+      });
+
+      const parsed = JSON.parse(parseResult.choices[0].message.content || "{}");
+      
+      // Validate personId exists in our known contacts (protect against AI hallucinations)
+      const validPersonIds = new Set(peopleNames.map(p => p.id));
+      const validatedPersonId = parsed.personId && validPersonIds.has(parsed.personId) 
+        ? parsed.personId 
+        : null;
+      
+      // Create the interaction
+      const interaction = await storage.createInteraction({
+        type: "voice_note",
+        personId: validatedPersonId,
+        title: parsed.personName ? `Note about ${parsed.personName}` : "Voice Note",
+        summary: parsed.summary || transcript.slice(0, 200),
+        transcript: transcript,
+        occurredAt: new Date(),
+        source: "quick_voice",
+        aiExtractedData: {
+          fordNotes: parsed.fordNotes || {},
+          followUpNeeded: parsed.followUpNeeded || false,
+          suggestedFollowUp: parsed.suggestedFollowUp || null,
+        },
+      });
+      
+      // Update person's lastContact if matched
+      if (validatedPersonId) {
+        await storage.updatePerson(validatedPersonId, { lastContact: new Date() });
+        
+        // Also update FORD notes on the person record if we have any
+        if (parsed.fordNotes) {
+          const person = await storage.getPerson(validatedPersonId);
+          if (person) {
+            const updates: any = {};
+            if (parsed.fordNotes.family && !person.family) {
+              updates.family = parsed.fordNotes.family;
+            }
+            if (parsed.fordNotes.occupation && !person.occupation) {
+              updates.occupation = parsed.fordNotes.occupation;
+            }
+            if (parsed.fordNotes.recreation && !person.interests) {
+              updates.interests = parsed.fordNotes.recreation;
+            }
+            if (parsed.fordNotes.dreams && !person.dreams) {
+              updates.dreams = parsed.fordNotes.dreams;
+            }
+            if (Object.keys(updates).length > 0) {
+              await storage.updatePerson(validatedPersonId, updates);
+            }
+          }
+        }
+      }
+      
+      // Create a task if follow-up is needed
+      if (parsed.followUpNeeded && parsed.suggestedFollowUp) {
+        await storage.createTask({
+          title: parsed.suggestedFollowUp,
+          description: `From voice note: ${parsed.summary}`,
+          personId: validatedPersonId || undefined,
+          dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
+          priority: "medium",
+          status: "pending",
+        });
+      }
+
+      res.json({
+        success: true,
+        interactionId: interaction.id,
+        personId: validatedPersonId,
+        personName: parsed.personName,
+        summary: parsed.summary,
+        isNewContact: !validatedPersonId && parsed.personName,
+        fordNotes: parsed.fordNotes,
+        followUpCreated: parsed.followUpNeeded && parsed.suggestedFollowUp,
+      });
+    } catch (error: any) {
+      console.error("Quick voice log error:", error);
+      res.status(500).json({ message: error.message || "Failed to log voice note" });
+    }
+  });
+
   // Parse MLS spreadsheet file (CSV, Excel) and return structured data
   app.get("/api/parse-mls-csv", async (req, res) => {
     try {
