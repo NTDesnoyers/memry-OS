@@ -327,23 +327,6 @@ function WebhooksSection() {
           </p>
         </div>
 
-        {/* Granola Webhook Status */}
-        {granolaIntegration && (
-          <div className="p-4 border rounded-lg bg-green-50/50 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-green-600 flex items-center justify-center text-white">
-                <CheckCircle2 className="h-5 w-5" />
-              </div>
-              <div>
-                <h4 className="font-semibold text-sm">Granola Webhook Active</h4>
-                <p className="text-xs text-muted-foreground">Ready to receive meeting notes from Zapier</p>
-              </div>
-            </div>
-            <Badge variant="outline" className="bg-white">
-              {new Date(granolaIntegration.lastSyncAt || Date.now()).toLocaleDateString()}
-            </Badge>
-          </div>
-        )}
 
         <div className="space-y-2">
           <Label className="flex items-center gap-2">
