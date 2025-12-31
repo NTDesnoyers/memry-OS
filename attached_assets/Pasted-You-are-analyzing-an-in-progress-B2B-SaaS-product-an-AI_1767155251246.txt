@@ -1,0 +1,84 @@
+You are analyzing an in‑progress B2B SaaS product: an “AI chief of staff / relationship OS for real estate agents.”  
+You must act like a brutally honest product strategist with Alex Hormozi’s mindset: prioritize revenue, adoption, and speed over elegance or feature count.[1][2]
+
+Your tasks:
+
+1. **Scan and summarize the product as it exists now**  
+   Using whatever information you can infer from the current repository (code, comments, docs, filenames, routes, components, config, etc.), produce a concise but complete picture of the product in its current state.  
+   Organize your output as:
+
+   **A. Problem, User, Outcome (your best inference)**  
+   - Core problem this product appears to solve (1–2 sentences).  
+   - Target user description (3–5 bullets: role, behavior, production level, niche, geography if obvious).  
+   - Implied “dream outcome” for that user if this product works perfectly (1–2 sentences).[3][4]
+
+   **B. Feature and Workflow List (current + clearly implied)**  
+   Create a table or structured list where each row is one feature or workflow you can infer from the codebase. For each, include:  
+   - Feature name.  
+   - Brief description of what it does.  
+   - Type: {Core workflow, Support/utility, Analytics/reporting, Integration, “Nice to have”}.  
+   - Likely primary user outcome: {time saved, more revenue / more deals, fewer dropped balls, better visibility, less stress, etc.}.  
+   - Status: {Implemented, Partially implemented, Stubbed/empty shell, Planned/implied}.  
+   - Your assessment of importance for MVP: {Must‑have, Should‑have, Could‑have, Not for MVP}.[5][3]
+
+   Focus on things that are visible in the code: core flows, models, routes, background jobs, agents, integrations, UI modules, etc. If something is ambiguous, label it as such rather than pretending certainty.[6][7]
+
+   **C. Key objects and data model**  
+   - List the main domain objects/entities (e.g., Agent, Contact, Conversation, Task, Deal, Note, AI Agent, etc.).  
+   - For each, briefly describe its role in the system and any relationships that seem central to how value is delivered.  
+   This is just enough detail so another AI can reason about workflows and user value.[8][6]
+
+2. **Apply ruthless prioritization (Hormozi lens)**  
+
+   Using your best judgment, and ignoring sunk cost in the code:
+
+   **D. Non‑negotiable MVP**  
+   Identify the **3–7 features/workflows** that are absolutely required for a realtor to get an “aha” moment and realistically pay 49–79 dollars/month as a Founding Agent.  
+   For each, explain in one sentence how it directly contributes to a measurable outcome (more deals, more referrals, less time wasted, fewer dropped balls).[3][8]
+
+   **E. Cut / delay list**  
+   Identify features that look like distractions for a first revenue‑focused MVP:  
+   - Things that are complex but don’t obviously drive deals, referrals, or daily time savings.  
+   - Things that look like “platform” or “OS” ideas that can wait until after 10–20 paying users.  
+   For each, briefly justify why it should be cut or delayed (“no clear impact on revenue,” “helps only edge cases,” “heavy effort for small perceived value,” etc.).[9][10][3]
+
+   **F. Quick‑win improvements**  
+   Propose 3–5 **specific, low‑effort changes** that would likely increase perceived value or make it easier to sell and onboard (e.g., one streamlined onboarding path, one killer dashboard, clearer daily brief, a single integration that unlocks more utility, etc.).[11][3]
+
+3. **Generate better questions for the founder to ask**  
+
+   Output a short section called:
+
+   **G. Better questions to ask next**
+
+   Give 5–10 sharp, uncomfortable questions the founder should answer before building more features.  
+   These questions should aim at:  
+   - Clarifying the core promise and ICP.  
+   - Forcing trade‑offs between building and selling.  
+   - Exposing features that are ego or novelty rather than revenue.[4][12][13]
+
+   Examples of the style (adapt, don’t repeat verbatim):  
+   - “If I had to close 10 agents at 79 dollars/month using what exists today, what exact workflow would I demo and why?”  
+   - “Which features, if removed, would NOT cause any current user (including me) to cancel?”  
+   - “What is the one promise I can make that is both true and compelling enough to get a busy agent’s attention?”[2][14][1]
+
+Constraints for your response:  
+- Be blunt, concise, and practical.  
+- Do not sugarcoat; if the product looks scattered or overbuilt for its stage, say so explicitly.  
+- Assume this analysis will be pasted into another AI for further ruthless critique and MVP scoping.
+
+Sources
+[1] Start Here - Acquisition.com https://www.acquisition.com/training/offers
+[2] $100M Offers by Alex Hormozi (Summary) - Greg Faxon https://www.gregfaxon.com/blog/100m-offers-summary
+[3] SaaS MVP Feature Prioritization: The Blueprint to Winning the Game https://benny.ghost.io/blog/saas-mvp-feature-prioritization-checklist/
+[4] Strategic Discovery Questions Every Founder Should Ask - Upsilon https://www.upsilonit.com/blog/product-discovery-questions-founders-should-answer
+[5] How to Leverage the MoSCoW Method for MVP Prioritisation - Altar.io https://altar.io/leveraging-the-moscow-method-for-mvp-prioritisation/
+[6] The Best Product Discovery guide for building a Saas MVP https://www.henryikoh.com/blog/the-best-product-discovery-guide-for-building-a-saas-mvp
+[7] 50 Essential Product Discovery Questions to Align Your Team https://devsquad.com/blog/product-discovery-questions
+[8] Building Your First Product: The Ultimate MVP Guide - Founder FAQs https://founderfaqs.com/blogs/ultimate-mvp-guide
+[9] This mistake will ruin your MVP and chances of scaling fast (How to ... https://www.reddit.com/r/SaaS/comments/1jlpy1q/this_mistake_will_ruin_your_mvp_and_chances_of/
+[10] How to Launch a Minimum Viable Product in 30 Days - Startup Stash https://blog.startupstash.com/how-to-launch-a-minimum-viable-product-in-30-days-1f4bc6c7adf9
+[11] How to Launch a SaaS Product That Succeeds - VeryCreatives https://verycreatives.com/blog/how-to-launch-a-saas-product
+[12] 40 product discovery questions for product managers | Zeda.io https://zeda.io/blog/40-product-discovery-questions-for-product-managers
+[13] 30 Essential Product Discovery Questions to Uncover User Needs https://usersnap.com/blog/product-discovery-questions/
+[14] How to Create Irresistible Offers with Alex Hormozi's Framework https://www.linkedin.com/posts/robbychoucair_most-offers-fail-before-they-even-hit-the-activity-7376520273921019905-yeWH
