@@ -367,12 +367,21 @@ export default function ConversationLog() {
       return;
     }
 
+    // Safely parse the date
+    let occurredAtISO: string;
+    try {
+      const dateValue = formData.occurredAt ? new Date(formData.occurredAt) : new Date();
+      occurredAtISO = isNaN(dateValue.getTime()) ? new Date().toISOString() : dateValue.toISOString();
+    } catch {
+      occurredAtISO = new Date().toISOString();
+    }
+    
     createInteraction.mutate({
       personId: selectedPerson.id,
       type: selectedType,
       summary: formData.summary || null,
       externalLink: formData.externalLink || null,
-      occurredAt: new Date(formData.occurredAt).toISOString(),
+      occurredAt: occurredAtISO,
       source: formData.externalLink?.includes("fathom") ? "fathom" : 
               formData.externalLink?.includes("granola") ? "granola" : "manual",
     });

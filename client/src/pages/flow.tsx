@@ -479,9 +479,17 @@ function InteractionList({
 
   const createInteraction = useMutation({
     mutationFn: async (data: any) => {
+      // Safely parse datetime-local to ISO string
+      let occurredAt: string;
+      try {
+        const date = new Date(data.occurredAt);
+        occurredAt = isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+      } catch {
+        occurredAt = new Date().toISOString();
+      }
       const res = await apiRequest("POST", "/api/interactions", {
         ...data,
-        occurredAt: new Date(data.occurredAt),
+        occurredAt,
       });
       return res.json();
     },
@@ -500,9 +508,17 @@ function InteractionList({
 
   const updateInteraction = useMutation({
     mutationFn: async ({ id, ...data }: any) => {
+      // Safely parse datetime-local to ISO string
+      let occurredAt: string;
+      try {
+        const date = new Date(data.occurredAt);
+        occurredAt = isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+      } catch {
+        occurredAt = new Date().toISOString();
+      }
       const res = await apiRequest("PATCH", `/api/interactions/${id}`, {
         ...data,
-        occurredAt: new Date(data.occurredAt),
+        occurredAt,
       });
       return res.json();
     },
@@ -528,10 +544,22 @@ function InteractionList({
 
   const openEditDialog = (interaction: Interaction) => {
     setSelectedInteractionToEdit(interaction);
+    
+    // Safely format date for datetime-local input
+    let formattedDate: string;
+    try {
+      const date = new Date(interaction.occurredAt || interaction.createdAt);
+      formattedDate = isNaN(date.getTime()) 
+        ? new Date().toISOString().slice(0, 16)
+        : date.toISOString().slice(0, 16);
+    } catch {
+      formattedDate = new Date().toISOString().slice(0, 16);
+    }
+    
     setLogFormData({
       personId: interaction.personId || "",
       type: interaction.type,
-      occurredAt: new Date(interaction.occurredAt || interaction.createdAt).toISOString().slice(0, 16),
+      occurredAt: formattedDate,
       summary: interaction.summary || "",
     });
     setShowEditDialog(true);
@@ -933,13 +961,24 @@ export default function Flow() {
     const isLive = liveFlowTypes.some(t => t.value === interaction.type);
     setAddFlowType(isLive ? "live" : "auto");
     
+    // Safely format date for datetime-local input
+    let formattedDate: string;
+    try {
+      const date = new Date(interaction.occurredAt || interaction.createdAt);
+      formattedDate = isNaN(date.getTime()) 
+        ? new Date().toISOString().slice(0, 16)
+        : date.toISOString().slice(0, 16);
+    } catch {
+      formattedDate = new Date().toISOString().slice(0, 16);
+    }
+    
     setSelectedInteraction(interaction);
     setSelectedType(interaction.type);
     setSelectedPerson(people.find(p => p.id === interaction.personId) || null);
     setFormData({
       summary: interaction.summary || "",
       externalLink: interaction.externalLink || "",
-      occurredAt: new Date(interaction.occurredAt || interaction.createdAt).toISOString().slice(0, 16),
+      occurredAt: formattedDate,
     });
     
     // In Flow page, detail sheet isn't used for edit triggering anymore
