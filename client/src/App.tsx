@@ -9,6 +9,7 @@ import { FeedbackWidget } from "@/components/feedback-widget";
 import { WelcomeTour } from "@/components/welcome-tour";
 import { ProtectedRoute } from "@/components/protected-route";
 import { isFounderMode } from "@/lib/feature-mode";
+import { useAuth } from "@/hooks/use-auth";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import WeeklyReport from "@/pages/weekly-report";
@@ -43,6 +44,7 @@ import InsightInbox from "@/pages/insight-inbox";
 import Intake from "@/pages/intake";
 import RevivalOpportunities from "@/pages/revival-opportunities";
 import BetaWelcome from "@/pages/beta-welcome";
+import Landing from "@/pages/landing";
 
 function Router() {
   return (
@@ -87,18 +89,39 @@ function Router() {
   );
 }
 
-function App() {
+function AuthenticatedApp() {
   const founderMode = isFounderMode();
+  const { isAuthenticated, isLoading } = useAuth();
   
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+  
+  if (!founderMode && !isAuthenticated) {
+    return <Landing />;
+  }
+  
+  return (
+    <>
+      <CommandPalette />
+      {founderMode && <FeedbackWidget />}
+      {founderMode && <WelcomeTour />}
+      <Router />
+    </>
+  );
+}
+
+function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Toaster />
-          <CommandPalette />
-          {founderMode && <FeedbackWidget />}
-          {founderMode && <WelcomeTour />}
-          <Router />
+          <AuthenticatedApp />
         </TooltipProvider>
       </QueryClientProvider>
     </ErrorBoundary>
