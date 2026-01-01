@@ -388,7 +388,6 @@ export default function People() {
         fordRecreation: selectedPerson.fordRecreation || "",
         fordDreams: selectedPerson.fordDreams || "",
         address: selectedPerson.address || "",
-        birthday: selectedPerson.birthday || null,
         inSphere: selectedPerson.inSphere !== false,
       });
       setEditDialogOpen(true);
@@ -774,24 +773,51 @@ export default function People() {
                           Tip: Map either "Name" OR "First Name" + "Last Name" to identify contacts.
                         </div>
                         
-                        {csvPreview.rows.length > 0 && (
-                          <div className="border rounded overflow-hidden">
-                            <div className="bg-muted px-3 py-2 text-xs font-medium">Preview (first 3 rows)</div>
-                            <div className="divide-y text-xs max-h-32 overflow-y-auto">
-                              {csvPreview.rows.slice(0, 3).map((row, i) => {
-                                const name = fieldMappings.name ? row[fieldMappings.name] : 
-                                  `${fieldMappings.firstName ? row[fieldMappings.firstName] : ''} ${fieldMappings.lastName ? row[fieldMappings.lastName] : ''}`.trim();
-                                return (
-                                  <div key={i} className="px-3 py-2 flex gap-4">
-                                    <span className="font-medium">{name || '(no name)'}</span>
-                                    {fieldMappings.email && row[fieldMappings.email] && <span className="text-muted-foreground">{row[fieldMappings.email]}</span>}
-                                    {fieldMappings.phone && row[fieldMappings.phone] && <span className="text-muted-foreground">{row[fieldMappings.phone]}</span>}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
+                        {csvPreview.rows.length > 0 && (() => {
+                          const nameCol = fieldMappings.name;
+                          const firstCol = fieldMappings.firstName;
+                          const lastCol = fieldMappings.lastName;
+                          
+                          const validRows = csvPreview.rows.filter(row => {
+                            let name = '';
+                            if (nameCol && row[nameCol]) name = String(row[nameCol]).trim();
+                            if (!name && (firstCol || lastCol)) {
+                              const f = firstCol && row[firstCol] ? String(row[firstCol]).trim() : '';
+                              const l = lastCol && row[lastCol] ? String(row[lastCol]).trim() : '';
+                              name = `${f} ${l}`.trim();
+                            }
+                            return name.length > 0;
+                          });
+                          const skippedCount = csvPreview.rows.length - validRows.length;
+                          
+                          return (
+                            <>
+                              <div className="border rounded overflow-hidden">
+                                <div className="bg-muted px-3 py-2 text-xs font-medium">Preview (first 3 rows)</div>
+                                <div className="divide-y text-xs max-h-32 overflow-y-auto">
+                                  {csvPreview.rows.slice(0, 3).map((row, i) => {
+                                    const name = fieldMappings.name ? row[fieldMappings.name] : 
+                                      `${fieldMappings.firstName ? row[fieldMappings.firstName] : ''} ${fieldMappings.lastName ? row[fieldMappings.lastName] : ''}`.trim();
+                                    return (
+                                      <div key={i} className="px-3 py-2 flex gap-4">
+                                        <span className="font-medium">{name || '(no name)'}</span>
+                                        {fieldMappings.email && row[fieldMappings.email] && <span className="text-muted-foreground">{row[fieldMappings.email]}</span>}
+                                        {fieldMappings.phone && row[fieldMappings.phone] && <span className="text-muted-foreground">{row[fieldMappings.phone]}</span>}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                              
+                              {skippedCount > 0 && (
+                                <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded text-amber-800 text-xs">
+                                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                                  <span>{skippedCount} row{skippedCount > 1 ? 's' : ''} will be skipped (no name found)</span>
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
                         
                         <div className="flex gap-2">
                           <Button variant="outline" onClick={resetImport} className="flex-1">
@@ -799,11 +825,26 @@ export default function People() {
                           </Button>
                           <Button 
                             onClick={executeImport} 
-                            disabled={isImporting || (!fieldMappings.name && !fieldMappings.firstName)}
+                            disabled={isImporting || (!fieldMappings.name && !fieldMappings.firstName && !fieldMappings.lastName)}
                             className="flex-1"
                             data-testid="execute-import"
                           >
-                            {isImporting ? "Importing..." : `Import ${csvPreview.rows.length} Contacts`}
+                            {isImporting ? "Importing..." : (() => {
+                              const nameCol = fieldMappings.name;
+                              const firstCol = fieldMappings.firstName;
+                              const lastCol = fieldMappings.lastName;
+                              const validCount = csvPreview.rows.filter(row => {
+                                let name = '';
+                                if (nameCol && row[nameCol]) name = String(row[nameCol]).trim();
+                                if (!name && (firstCol || lastCol)) {
+                                  const f = firstCol && row[firstCol] ? String(row[firstCol]).trim() : '';
+                                  const l = lastCol && row[lastCol] ? String(row[lastCol]).trim() : '';
+                                  name = `${f} ${l}`.trim();
+                                }
+                                return name.length > 0;
+                              }).length;
+                              return `Import ${validCount} Contact${validCount !== 1 ? 's' : ''}`;
+                            })()}
                           </Button>
                         </div>
                       </>
@@ -1267,15 +1308,6 @@ export default function People() {
                   value={formData.phone || ""}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   data-testid="edit-phone"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Birthday</Label>
-                <Input
-                  type="date"
-                  value={formData.birthday ? new Date(formData.birthday).toISOString().split('T')[0] : ""}
-                  onChange={(e) => setFormData({ ...formData, birthday: e.target.value ? new Date(e.target.value) : null })}
-                  data-testid="edit-birthday"
                 />
               </div>
             </div>
