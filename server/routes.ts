@@ -1,8 +1,8 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import type { Server } from "http";
-import { storage } from "./storage";
+import { storage, type TenantContext } from "./storage";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { 
   insertPersonSchema, 
   insertDealSchema, 
@@ -54,6 +54,16 @@ import type { SavedContent } from "@shared/schema";
 import * as metaInstagram from "./meta-instagram";
 
 const logger = createLogger('Routes');
+
+/**
+ * Extract TenantContext from authenticated request.
+ * Returns context with userId from Replit Auth claims, or undefined for founder mode.
+ */
+function getTenantContext(req: Request): TenantContext | undefined {
+  const user = req.user as any;
+  const userId = user?.claims?.sub;
+  return userId ? { userId } : undefined;
+}
 
 // Background processing for batch operations
 let processingStatus = {
@@ -1920,7 +1930,7 @@ When analyzing images:
   // Get all people
   app.get("/api/people", async (req, res) => {
     try {
-      const people = await storage.getAllPeople();
+      const people = await storage.getAllPeople(getTenantContext(req));
       res.json(people);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1940,7 +1950,7 @@ When analyzing images:
   // Get person by ID
   app.get("/api/people/:id", async (req, res) => {
     try {
-      const person = await storage.getPerson(req.params.id);
+      const person = await storage.getPerson(req.params.id, getTenantContext(req));
       if (!person) {
         return res.status(404).json({ message: "Person not found" });
       }
@@ -1967,7 +1977,7 @@ When analyzing images:
   app.post("/api/people", async (req, res) => {
     try {
       const data = validate(insertPersonSchema, req.body);
-      const person = await storage.createPerson(data);
+      const person = await storage.createPerson(data, getTenantContext(req));
       res.status(201).json(person);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1986,7 +1996,7 @@ When analyzing images:
         updates.lastContact = isNaN(parsed.getTime()) ? null : parsed;
       }
       
-      const person = await storage.updatePerson(req.params.id, updates);
+      const person = await storage.updatePerson(req.params.id, updates, getTenantContext(req));
       if (!person) {
         return res.status(404).json({ message: "Person not found" });
       }
@@ -2000,7 +2010,7 @@ When analyzing images:
   // Delete person
   app.delete("/api/people/:id", async (req, res) => {
     try {
-      await storage.deletePerson(req.params.id);
+      await storage.deletePerson(req.params.id, getTenantContext(req));
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2018,8 +2028,8 @@ When analyzing images:
         return res.status(400).json({ message: "Cannot merge a person with themselves" });
       }
       
-      const primary = await storage.getPerson(primaryId);
-      const secondary = await storage.getPerson(secondaryId);
+      const primary = await storage.getPerson(primaryId, getTenantContext(req));
+      const secondary = await storage.getPerson(secondaryId, getTenantContext(req));
       
       if (!primary || !secondary) {
         return res.status(404).json({ message: "One or both people not found" });
@@ -2047,7 +2057,7 @@ When analyzing images:
       
       // Update primary with merged data
       if (Object.keys(mergedData).length > 0) {
-        await storage.updatePerson(primaryId, mergedData);
+        await storage.updatePerson(primaryId, mergedData, getTenantContext(req));
       }
       
       // Transfer all related data from secondary to primary
@@ -2064,10 +2074,10 @@ When analyzing images:
       await db.update(dormantOpportunities).set({ personId: primaryId }).where(eq(dormantOpportunities.personId, secondaryId));
       
       // Now safe to delete the secondary person (no remaining FK references)
-      await storage.deletePerson(secondaryId);
+      await storage.deletePerson(secondaryId, getTenantContext(req));
       
       // Return updated primary
-      const updated = await storage.getPerson(primaryId);
+      const updated = await storage.getPerson(primaryId, getTenantContext(req));
       res.json(updated);
     } catch (error: any) {
       logger.error('Failed to merge people', { error: error.message });
@@ -2080,7 +2090,7 @@ When analyzing images:
   // Get all deals
   app.get("/api/deals", async (req, res) => {
     try {
-      const deals = await storage.getAllDeals();
+      const deals = await storage.getAllDeals(getTenantContext(req));
       res.json(deals);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2090,7 +2100,7 @@ When analyzing images:
   // Get deal by ID
   app.get("/api/deals/:id", async (req, res) => {
     try {
-      const deal = await storage.getDeal(req.params.id);
+      const deal = await storage.getDeal(req.params.id, getTenantContext(req));
       if (!deal) {
         return res.status(404).json({ message: "Deal not found" });
       }
@@ -2104,7 +2114,7 @@ When analyzing images:
   app.post("/api/deals", async (req, res) => {
     try {
       const data = validate(insertDealSchema, req.body);
-      const deal = await storage.createDeal(data);
+      const deal = await storage.createDeal(data, getTenantContext(req));
       
       // Emit deal created event
       eventBus.emitDealCreated(deal.id, deal.personId, { 
@@ -2124,12 +2134,12 @@ When analyzing images:
   app.patch("/api/deals/:id", async (req, res) => {
     try {
       // Get current deal to check for stage changes
-      const currentDeal = await storage.getDeal(req.params.id);
+      const currentDeal = await storage.getDeal(req.params.id, getTenantContext(req));
       if (!currentDeal) {
         return res.status(404).json({ message: "Deal not found" });
       }
       
-      const deal = await storage.updateDeal(req.params.id, req.body);
+      const deal = await storage.updateDeal(req.params.id, req.body, getTenantContext(req));
       if (!deal) {
         return res.status(404).json({ message: "Deal not found" });
       }
@@ -2148,7 +2158,7 @@ When analyzing images:
   // Delete deal
   app.delete("/api/deals/:id", async (req, res) => {
     try {
-      await storage.deleteDeal(req.params.id);
+      await storage.deleteDeal(req.params.id, getTenantContext(req));
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2160,7 +2170,7 @@ When analyzing images:
   // Get all tasks
   app.get("/api/tasks", async (req, res) => {
     try {
-      const tasks = await storage.getAllTasks();
+      const tasks = await storage.getAllTasks(getTenantContext(req));
       res.json(tasks);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2170,7 +2180,7 @@ When analyzing images:
   // Get task by ID
   app.get("/api/tasks/:id", async (req, res) => {
     try {
-      const task = await storage.getTask(req.params.id);
+      const task = await storage.getTask(req.params.id, getTenantContext(req));
       if (!task) {
         return res.status(404).json({ message: "Task not found" });
       }
@@ -2184,7 +2194,7 @@ When analyzing images:
   app.post("/api/tasks", async (req, res) => {
     try {
       const data = validate(insertTaskSchema, req.body);
-      const task = await storage.createTask(data);
+      const task = await storage.createTask(data, getTenantContext(req));
       res.status(201).json(task);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -2194,7 +2204,7 @@ When analyzing images:
   // Update task
   app.patch("/api/tasks/:id", async (req, res) => {
     try {
-      const task = await storage.updateTask(req.params.id, req.body);
+      const task = await storage.updateTask(req.params.id, req.body, getTenantContext(req));
       if (!task) {
         return res.status(404).json({ message: "Task not found" });
       }
@@ -2207,7 +2217,7 @@ When analyzing images:
   // Delete task
   app.delete("/api/tasks/:id", async (req, res) => {
     try {
-      await storage.deleteTask(req.params.id);
+      await storage.deleteTask(req.params.id, getTenantContext(req));
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2479,7 +2489,7 @@ When analyzing images:
   // Get all meetings
   app.get("/api/meetings", async (req, res) => {
     try {
-      const meetings = await storage.getAllMeetings();
+      const meetings = await storage.getAllMeetings(getTenantContext(req));
       res.json(meetings);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2489,7 +2499,7 @@ When analyzing images:
   // Get meeting by ID
   app.get("/api/meetings/:id", async (req, res) => {
     try {
-      const meeting = await storage.getMeeting(req.params.id);
+      const meeting = await storage.getMeeting(req.params.id, getTenantContext(req));
       if (!meeting) {
         return res.status(404).json({ message: "Meeting not found" });
       }
@@ -2503,7 +2513,7 @@ When analyzing images:
   app.post("/api/meetings", async (req, res) => {
     try {
       const data = validate(insertMeetingSchema, req.body);
-      const meeting = await storage.createMeeting(data);
+      const meeting = await storage.createMeeting(data, getTenantContext(req));
       res.status(201).json(meeting);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -2513,7 +2523,7 @@ When analyzing images:
   // Update meeting
   app.patch("/api/meetings/:id", async (req, res) => {
     try {
-      const meeting = await storage.updateMeeting(req.params.id, req.body);
+      const meeting = await storage.updateMeeting(req.params.id, req.body, getTenantContext(req));
       if (!meeting) {
         return res.status(404).json({ message: "Meeting not found" });
       }
@@ -2526,7 +2536,7 @@ When analyzing images:
   // Delete meeting
   app.delete("/api/meetings/:id", async (req, res) => {
     try {
-      await storage.deleteMeeting(req.params.id);
+      await storage.deleteMeeting(req.params.id, getTenantContext(req));
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2538,7 +2548,7 @@ When analyzing images:
   // Get all calls
   app.get("/api/calls", async (req, res) => {
     try {
-      const calls = await storage.getAllCalls();
+      const calls = await storage.getAllCalls(getTenantContext(req));
       res.json(calls);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2548,7 +2558,7 @@ When analyzing images:
   // Get call by ID
   app.get("/api/calls/:id", async (req, res) => {
     try {
-      const call = await storage.getCall(req.params.id);
+      const call = await storage.getCall(req.params.id, getTenantContext(req));
       if (!call) {
         return res.status(404).json({ message: "Call not found" });
       }
@@ -2562,7 +2572,7 @@ When analyzing images:
   app.post("/api/calls", async (req, res) => {
     try {
       const data = validate(insertCallSchema, req.body);
-      const call = await storage.createCall(data);
+      const call = await storage.createCall(data, getTenantContext(req));
       res.status(201).json(call);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -2572,7 +2582,7 @@ When analyzing images:
   // Update call
   app.patch("/api/calls/:id", async (req, res) => {
     try {
-      const call = await storage.updateCall(req.params.id, req.body);
+      const call = await storage.updateCall(req.params.id, req.body, getTenantContext(req));
       if (!call) {
         return res.status(404).json({ message: "Call not found" });
       }
@@ -2585,7 +2595,7 @@ When analyzing images:
   // Delete call
   app.delete("/api/calls/:id", async (req, res) => {
     try {
-      await storage.deleteCall(req.params.id);
+      await storage.deleteCall(req.params.id, getTenantContext(req));
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2656,7 +2666,7 @@ When analyzing images:
   // Get all notes
   app.get("/api/notes", async (req, res) => {
     try {
-      const notes = await storage.getAllNotes();
+      const notes = await storage.getAllNotes(getTenantContext(req));
       res.json(notes);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2666,7 +2676,7 @@ When analyzing images:
   // Get note by ID
   app.get("/api/notes/:id", async (req, res) => {
     try {
-      const note = await storage.getNote(req.params.id);
+      const note = await storage.getNote(req.params.id, getTenantContext(req));
       if (!note) {
         return res.status(404).json({ message: "Note not found" });
       }
@@ -2680,7 +2690,7 @@ When analyzing images:
   app.post("/api/notes", async (req, res) => {
     try {
       const data = validate(insertNoteSchema, req.body);
-      const note = await storage.createNote(data);
+      const note = await storage.createNote(data, getTenantContext(req));
       res.status(201).json(note);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -2690,7 +2700,7 @@ When analyzing images:
   // Update note
   app.patch("/api/notes/:id", async (req, res) => {
     try {
-      const note = await storage.updateNote(req.params.id, req.body);
+      const note = await storage.updateNote(req.params.id, req.body, getTenantContext(req));
       if (!note) {
         return res.status(404).json({ message: "Note not found" });
       }
@@ -2703,7 +2713,7 @@ When analyzing images:
   // Delete note
   app.delete("/api/notes/:id", async (req, res) => {
     try {
-      await storage.deleteNote(req.params.id);
+      await storage.deleteNote(req.params.id, getTenantContext(req));
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -3344,7 +3354,7 @@ Return ONLY valid JSON, no explanations.`
   // Get all interactions
   app.get("/api/interactions", async (req, res) => {
     try {
-      const interactions = await storage.getAllInteractions();
+      const interactions = await storage.getAllInteractions(getTenantContext(req));
       res.json(interactions);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -3359,7 +3369,7 @@ Return ONLY valid JSON, no explanations.`
   // Get interactions for a specific person
   app.get("/api/people/:personId/interactions", async (req, res) => {
     try {
-      const interactions = await storage.getInteractionsByPerson(req.params.personId);
+      const interactions = await storage.getInteractionsByPerson(req.params.personId, getTenantContext(req));
       res.json(interactions);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -3369,7 +3379,7 @@ Return ONLY valid JSON, no explanations.`
   // Get interaction by ID
   app.get("/api/interactions/:id", async (req, res) => {
     try {
-      const interaction = await storage.getInteraction(req.params.id);
+      const interaction = await storage.getInteraction(req.params.id, getTenantContext(req));
       if (!interaction) {
         return res.status(404).json({ message: "Interaction not found" });
       }
@@ -3388,16 +3398,16 @@ Return ONLY valid JSON, no explanations.`
         occurredAt: req.body.occurredAt ? new Date(req.body.occurredAt) : new Date(),
       };
       const data = validate(insertInteractionSchema, body);
-      const interaction = await storage.createInteraction(data);
+      const interaction = await storage.createInteraction(data, getTenantContext(req));
       
       // Update person's lastContact if personId is provided
       if (data.personId) {
-        await storage.updatePerson(data.personId, { lastContact: new Date(data.occurredAt) });
+        await storage.updatePerson(data.personId, { lastContact: new Date(data.occurredAt) }, getTenantContext(req));
         // Emit contact made event
         eventBus.emitContactMade(data.personId, interaction.id, interaction.type);
         
         // Record decision trace for context graph
-        const person = await storage.getPerson(data.personId);
+        const person = await storage.getPerson(data.personId, getTenantContext(req));
         if (person) {
           contextGraph.recordInteractionLogged({
             interactionId: interaction.id,
@@ -3420,7 +3430,7 @@ Return ONLY valid JSON, no explanations.`
   // Update interaction
   app.patch("/api/interactions/:id", async (req, res) => {
     try {
-      const interaction = await storage.updateInteraction(req.params.id, req.body);
+      const interaction = await storage.updateInteraction(req.params.id, req.body, getTenantContext(req));
       if (!interaction) {
         return res.status(404).json({ message: "Interaction not found" });
       }
@@ -3433,7 +3443,7 @@ Return ONLY valid JSON, no explanations.`
   // Soft delete interaction (move to Recently Deleted)
   app.post("/api/interactions/:id/delete", async (req, res) => {
     try {
-      const interaction = await storage.softDeleteInteraction(req.params.id);
+      const interaction = await storage.softDeleteInteraction(req.params.id, getTenantContext(req));
       if (!interaction) {
         return res.status(404).json({ message: "Interaction not found" });
       }
@@ -3446,7 +3456,7 @@ Return ONLY valid JSON, no explanations.`
   // Restore interaction from Recently Deleted
   app.post("/api/interactions/:id/restore", async (req, res) => {
     try {
-      const interaction = await storage.restoreInteraction(req.params.id);
+      const interaction = await storage.restoreInteraction(req.params.id, getTenantContext(req));
       if (!interaction) {
         return res.status(404).json({ message: "Interaction not found" });
       }
@@ -3459,12 +3469,12 @@ Return ONLY valid JSON, no explanations.`
   // Get all deleted interactions (Recently Deleted)
   app.get("/api/interactions/deleted", async (req, res) => {
     try {
-      const deleted = await storage.getDeletedInteractions();
+      const deleted = await storage.getDeletedInteractions(getTenantContext(req));
       // Ensure we load participants for deleted interactions too
       const interactionsWithParticipants = await Promise.all(deleted.map(async (interaction) => {
         const participants = await storage.getInteractionParticipants(interaction.id);
         const participantsWithPeople = await Promise.all(participants.map(async (p) => {
-          const person = await storage.getPerson(p.personId);
+          const person = await storage.getPerson(p.personId, getTenantContext(req));
           return { ...p, person };
         }));
         return { ...interaction, participantsList: participantsWithPeople };
@@ -3478,7 +3488,7 @@ Return ONLY valid JSON, no explanations.`
   // Permanently delete interaction
   app.delete("/api/interactions/:id/permanent", async (req, res) => {
     try {
-      await storage.permanentlyDeleteInteraction(req.params.id);
+      await storage.permanentlyDeleteInteraction(req.params.id, getTenantContext(req));
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -3488,7 +3498,7 @@ Return ONLY valid JSON, no explanations.`
   // Cleanup old deleted interactions (older than 30 days)
   app.post("/api/interactions/cleanup-deleted", async (req, res) => {
     try {
-      const count = await storage.cleanupOldDeletedInteractions(30);
+      const count = await storage.cleanupOldDeletedInteractions(30, getTenantContext(req));
       res.json({ deletedCount: count });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -3498,7 +3508,7 @@ Return ONLY valid JSON, no explanations.`
   // Hard delete interaction (kept for compatibility, but prefer soft delete)
   app.delete("/api/interactions/:id", async (req, res) => {
     try {
-      await storage.deleteInteraction(req.params.id);
+      await storage.deleteInteraction(req.params.id, getTenantContext(req));
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -7661,6 +7671,75 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
       const retentionDays = req.body.retentionDays || 7;
       const result = await cleanupOldEvents(retentionDays);
       res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============================================================
+  // Admin: Multi-tenancy Migration
+  // ============================================================
+  
+  // Get founder's user ID from current authenticated session
+  app.get("/api/admin/founder-id", async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated - log in first to get your user ID" });
+      }
+      res.json({ 
+        userId,
+        instruction: "Set this as FOUNDER_USER_ID environment variable to claim existing data"
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Migrate all null userId records to the founder
+  app.post("/api/admin/migrate-founder-data", async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      // Only allow if this is the founder (first auth user or matches FOUNDER_USER_ID)
+      const founderUserId = process.env.FOUNDER_USER_ID;
+      if (founderUserId && userId !== founderUserId) {
+        return res.status(403).json({ message: "Only the founder can migrate data" });
+      }
+      
+      // Update all tables with null userId to the founder's userId
+      const tables = [
+        'people', 'deals', 'tasks', 'meetings', 'calls', 'weekly_reviews', 
+        'notes', 'listings', 'email_campaigns', 'interactions', 
+        'generated_drafts', 'observer_suggestions', 'saved_content', 
+        'daily_digests', 'dormant_opportunities', 'leads',
+        'content_topics', 'content_ideas', 'content_calendar',
+        'households', 'business_settings', 'agent_profile', 'pie_entries',
+        'voice_profile', 'user_core_profile'
+      ];
+      
+      const results: Record<string, number> = {};
+      
+      for (const table of tables) {
+        try {
+          const result = await db.execute(
+            sql`UPDATE ${sql.identifier(table)} SET user_id = ${userId} WHERE user_id IS NULL`
+          );
+          results[table] = result.rowCount || 0;
+        } catch (e: any) {
+          // Table might not have userId column or doesn't exist
+          results[table] = -1;
+        }
+      }
+      
+      res.json({ 
+        success: true,
+        founderId: userId,
+        migrated: results
+      });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

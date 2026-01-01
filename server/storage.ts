@@ -2,6 +2,30 @@
  * Storage module - Database access layer using Drizzle ORM.
  * All CRUD operations go through IStorage interface for testability.
  */
+
+/** 
+ * Multi-tenancy: TenantContext carries the authenticated user's ID.
+ * In founder mode (single-user), userId is undefined and we fall back to FOUNDER_USER_ID.
+ */
+export type TenantContext = {
+  userId?: string;
+};
+
+/** 
+ * Founder's user ID - existing data with null userId belongs to founder.
+ * Set this to the founder's Replit auth ID after first login.
+ */
+export const FOUNDER_USER_ID = process.env.FOUNDER_USER_ID || null;
+
+/**
+ * Get effective userId for queries: use context userId, or fall back to founder.
+ * Returns undefined if no userId and no founder ID is set (founder mode, all data visible).
+ */
+export function getEffectiveUserId(ctx?: TenantContext): string | undefined {
+  if (ctx?.userId) return ctx.userId;
+  return FOUNDER_USER_ID || undefined;
+}
+
 import { 
   type User, type InsertUser,
   type Person, type InsertPerson,
@@ -66,69 +90,69 @@ export interface IStorage {
   /** Create new user. Returns created user with generated ID. */
   createUser(user: InsertUser): Promise<User>;
   
-  // People (Contacts)
-  /** Get all people/contacts. */
-  getAllPeople(): Promise<Person[]>;
-  /** Get person by ID. Returns undefined if not found. */
-  getPerson(id: string): Promise<Person | undefined>;
-  /** Create new person. Returns created person with generated ID. */
-  createPerson(person: InsertPerson): Promise<Person>;
-  /** Update person fields. Returns updated person or undefined if not found. */
-  updatePerson(id: string, person: Partial<InsertPerson>): Promise<Person | undefined>;
-  /** Delete person by ID. */
-  deletePerson(id: string): Promise<void>;
+  // People (Contacts) - Multi-tenant: filtered by userId
+  /** Get all people/contacts for the authenticated user. */
+  getAllPeople(ctx?: TenantContext): Promise<Person[]>;
+  /** Get person by ID (only if owned by user). */
+  getPerson(id: string, ctx?: TenantContext): Promise<Person | undefined>;
+  /** Create new person for the authenticated user. */
+  createPerson(person: InsertPerson, ctx?: TenantContext): Promise<Person>;
+  /** Update person fields (only if owned by user). */
+  updatePerson(id: string, person: Partial<InsertPerson>, ctx?: TenantContext): Promise<Person | undefined>;
+  /** Delete person by ID (only if owned by user). */
+  deletePerson(id: string, ctx?: TenantContext): Promise<void>;
   
   // Deals - Pipeline management (warm → hot → in_contract → closed)
-  /** Get all deals. */
-  getAllDeals(): Promise<Deal[]>;
-  /** Get deal by ID. */
-  getDeal(id: string): Promise<Deal | undefined>;
-  /** Create deal linked to a person. */
-  createDeal(deal: InsertDeal): Promise<Deal>;
-  /** Update deal fields (including stage transitions). */
-  updateDeal(id: string, deal: Partial<InsertDeal>): Promise<Deal | undefined>;
-  /** Delete deal by ID. */
-  deleteDeal(id: string): Promise<void>;
+  /** Get all deals for the authenticated user. */
+  getAllDeals(ctx?: TenantContext): Promise<Deal[]>;
+  /** Get deal by ID (only if owned by user). */
+  getDeal(id: string, ctx?: TenantContext): Promise<Deal | undefined>;
+  /** Create deal for the authenticated user. */
+  createDeal(deal: InsertDeal, ctx?: TenantContext): Promise<Deal>;
+  /** Update deal fields (only if owned by user). */
+  updateDeal(id: string, deal: Partial<InsertDeal>, ctx?: TenantContext): Promise<Deal | undefined>;
+  /** Delete deal by ID (only if owned by user). */
+  deleteDeal(id: string, ctx?: TenantContext): Promise<void>;
   
   // Tasks - Follow-up actions (syncs to Todoist)
-  /** Get all tasks. */
-  getAllTasks(): Promise<Task[]>;
-  /** Get task by ID. */
-  getTask(id: string): Promise<Task | undefined>;
-  /** Create task, optionally linked to a person. */
-  createTask(task: InsertTask): Promise<Task>;
-  /** Update task fields (including marking complete). */
-  updateTask(id: string, task: Partial<InsertTask>): Promise<Task | undefined>;
-  /** Delete task by ID. */
-  deleteTask(id: string): Promise<void>;
+  /** Get all tasks for the authenticated user. */
+  getAllTasks(ctx?: TenantContext): Promise<Task[]>;
+  /** Get task by ID (only if owned by user). */
+  getTask(id: string, ctx?: TenantContext): Promise<Task | undefined>;
+  /** Create task for the authenticated user. */
+  createTask(task: InsertTask, ctx?: TenantContext): Promise<Task>;
+  /** Update task fields (only if owned by user). */
+  updateTask(id: string, task: Partial<InsertTask>, ctx?: TenantContext): Promise<Task | undefined>;
+  /** Delete task by ID (only if owned by user). */
+  deleteTask(id: string, ctx?: TenantContext): Promise<void>;
   
-  // Meetings
-  getAllMeetings(): Promise<Meeting[]>;
-  getMeeting(id: string): Promise<Meeting | undefined>;
-  createMeeting(meeting: InsertMeeting): Promise<Meeting>;
-  updateMeeting(id: string, meeting: Partial<InsertMeeting>): Promise<Meeting | undefined>;
-  deleteMeeting(id: string): Promise<void>;
+  // Meetings - Multi-tenant
+  getAllMeetings(ctx?: TenantContext): Promise<Meeting[]>;
+  getMeeting(id: string, ctx?: TenantContext): Promise<Meeting | undefined>;
+  createMeeting(meeting: InsertMeeting, ctx?: TenantContext): Promise<Meeting>;
+  updateMeeting(id: string, meeting: Partial<InsertMeeting>, ctx?: TenantContext): Promise<Meeting | undefined>;
+  deleteMeeting(id: string, ctx?: TenantContext): Promise<void>;
   
-  // Calls
-  getAllCalls(): Promise<Call[]>;
-  getCall(id: string): Promise<Call | undefined>;
-  createCall(call: InsertCall): Promise<Call>;
-  updateCall(id: string, call: Partial<InsertCall>): Promise<Call | undefined>;
-  deleteCall(id: string): Promise<void>;
+  // Calls - Multi-tenant
+  getAllCalls(ctx?: TenantContext): Promise<Call[]>;
+  getCall(id: string, ctx?: TenantContext): Promise<Call | undefined>;
+  createCall(call: InsertCall, ctx?: TenantContext): Promise<Call>;
+  updateCall(id: string, call: Partial<InsertCall>, ctx?: TenantContext): Promise<Call | undefined>;
+  deleteCall(id: string, ctx?: TenantContext): Promise<void>;
   
-  // Weekly Reviews
-  getAllWeeklyReviews(): Promise<WeeklyReview[]>;
-  getWeeklyReview(id: string): Promise<WeeklyReview | undefined>;
-  createWeeklyReview(review: InsertWeeklyReview): Promise<WeeklyReview>;
-  updateWeeklyReview(id: string, review: Partial<InsertWeeklyReview>): Promise<WeeklyReview | undefined>;
-  deleteWeeklyReview(id: string): Promise<void>;
+  // Weekly Reviews - Multi-tenant
+  getAllWeeklyReviews(ctx?: TenantContext): Promise<WeeklyReview[]>;
+  getWeeklyReview(id: string, ctx?: TenantContext): Promise<WeeklyReview | undefined>;
+  createWeeklyReview(review: InsertWeeklyReview, ctx?: TenantContext): Promise<WeeklyReview>;
+  updateWeeklyReview(id: string, review: Partial<InsertWeeklyReview>, ctx?: TenantContext): Promise<WeeklyReview | undefined>;
+  deleteWeeklyReview(id: string, ctx?: TenantContext): Promise<void>;
   
-  // Notes
-  getAllNotes(): Promise<Note[]>;
-  getNote(id: string): Promise<Note | undefined>;
-  createNote(note: InsertNote): Promise<Note>;
-  updateNote(id: string, note: Partial<InsertNote>): Promise<Note | undefined>;
-  deleteNote(id: string): Promise<void>;
+  // Notes - Multi-tenant
+  getAllNotes(ctx?: TenantContext): Promise<Note[]>;
+  getNote(id: string, ctx?: TenantContext): Promise<Note | undefined>;
+  createNote(note: InsertNote, ctx?: TenantContext): Promise<Note>;
+  updateNote(id: string, note: Partial<InsertNote>, ctx?: TenantContext): Promise<Note | undefined>;
+  deleteNote(id: string, ctx?: TenantContext): Promise<void>;
   
   // Listings (Haves)
   getAllListings(): Promise<Listing[]>;
@@ -182,33 +206,33 @@ export interface IStorage {
   deleteRealEstateReview(id: string): Promise<void>;
   getTasksByReviewId(reviewId: string): Promise<Task[]>;
   
-  // Interactions - Calls, meetings, texts, emails with transcripts
-  /** Get all non-deleted interactions. */
-  getAllInteractions(): Promise<Interaction[]>;
+  // Interactions - Multi-tenant: Calls, meetings, texts, emails with transcripts
+  /** Get all non-deleted interactions for authenticated user. */
+  getAllInteractions(ctx?: TenantContext): Promise<Interaction[]>;
   /** Get soft-deleted interactions (for recovery). */
-  getDeletedInteractions(): Promise<Interaction[]>;
+  getDeletedInteractions(ctx?: TenantContext): Promise<Interaction[]>;
   /** Get all interactions for a specific person. */
-  getInteractionsByPerson(personId: string): Promise<Interaction[]>;
-  /** Get interaction by ID. */
-  getInteraction(id: string): Promise<Interaction | undefined>;
+  getInteractionsByPerson(personId: string, ctx?: TenantContext): Promise<Interaction[]>;
+  /** Get interaction by ID (only if owned by user). */
+  getInteraction(id: string, ctx?: TenantContext): Promise<Interaction | undefined>;
   /** Get interaction by external source ID (for deduplication). */
-  getInteractionByExternalId(externalId: string): Promise<Interaction | undefined>;
-  /** Create interaction. Auto-updates person's lastContact if linked. */
-  createInteraction(interaction: InsertInteraction): Promise<Interaction>;
-  /** Update interaction fields. */
-  updateInteraction(id: string, interaction: Partial<InsertInteraction>): Promise<Interaction | undefined>;
+  getInteractionByExternalId(externalId: string, ctx?: TenantContext): Promise<Interaction | undefined>;
+  /** Create interaction for authenticated user. */
+  createInteraction(interaction: InsertInteraction, ctx?: TenantContext): Promise<Interaction>;
+  /** Update interaction fields (only if owned by user). */
+  updateInteraction(id: string, interaction: Partial<InsertInteraction>, ctx?: TenantContext): Promise<Interaction | undefined>;
   /** Soft-delete interaction (sets deletedAt, recoverable). */
-  softDeleteInteraction(id: string): Promise<Interaction | undefined>;
+  softDeleteInteraction(id: string, ctx?: TenantContext): Promise<Interaction | undefined>;
   /** Restore soft-deleted interaction. */
-  restoreInteraction(id: string): Promise<Interaction | undefined>;
+  restoreInteraction(id: string, ctx?: TenantContext): Promise<Interaction | undefined>;
   /** Permanently delete interaction (no recovery). */
-  permanentlyDeleteInteraction(id: string): Promise<void>;
+  permanentlyDeleteInteraction(id: string, ctx?: TenantContext): Promise<void>;
   /** Delete interactions soft-deleted more than N days ago. Returns count deleted. */
-  cleanupOldDeletedInteractions(daysOld: number): Promise<number>;
+  cleanupOldDeletedInteractions(daysOld: number, ctx?: TenantContext): Promise<number>;
   /** Alias for permanentlyDeleteInteraction. */
-  deleteInteraction(id: string): Promise<void>;
+  deleteInteraction(id: string, ctx?: TenantContext): Promise<void>;
   /** Get latest interaction date per person (for dormancy detection). */
-  getLatestInteractionDates(): Promise<Map<string, Date>>;
+  getLatestInteractionDates(ctx?: TenantContext): Promise<Map<string, Date>>;
   
   // Interaction Participants - Multi-person event tracking
   /** Get all participants for an interaction. */
@@ -541,6 +565,20 @@ export type DContactReviewResult = {
 };
 
 export class DatabaseStorage implements IStorage {
+  /**
+   * Build tenant filter condition for queries.
+   * Returns condition that matches: userId = ctx.userId OR (userId IS NULL AND ctx is founder mode)
+   */
+  private getTenantFilter(table: { userId: any }, ctx?: TenantContext) {
+    const userId = getEffectiveUserId(ctx);
+    if (!userId) {
+      // Founder mode: no userId set, see all data (including null userId)
+      return undefined;
+    }
+    // Multi-tenant: match userId OR null (legacy founder data)
+    return or(eq(table.userId, userId), isNull(table.userId));
+  }
+
   // Users
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
@@ -560,36 +598,48 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
   
-  // People
-  async getAllPeople(): Promise<Person[]> {
+  // People - Multi-tenant
+  async getAllPeople(ctx?: TenantContext): Promise<Person[]> {
+    const filter = this.getTenantFilter(people, ctx);
+    if (filter) {
+      return await db.select().from(people).where(filter).orderBy(desc(people.createdAt));
+    }
     return await db.select().from(people).orderBy(desc(people.createdAt));
   }
   
-  async getPerson(id: string): Promise<Person | undefined> {
-    const [person] = await db.select().from(people).where(eq(people.id, id));
+  async getPerson(id: string, ctx?: TenantContext): Promise<Person | undefined> {
+    const filter = this.getTenantFilter(people, ctx);
+    const conditions = filter ? and(eq(people.id, id), filter) : eq(people.id, id);
+    const [person] = await db.select().from(people).where(conditions);
     return person || undefined;
   }
   
-  async createPerson(insertPerson: InsertPerson): Promise<Person> {
+  async createPerson(insertPerson: InsertPerson, ctx?: TenantContext): Promise<Person> {
+    const userId = getEffectiveUserId(ctx);
     const [person] = await db
       .insert(people)
-      .values({ ...insertPerson, updatedAt: new Date() })
+      .values({ ...insertPerson, userId, updatedAt: new Date() })
       .returning();
     return person;
   }
   
-  async updatePerson(id: string, person: Partial<InsertPerson>): Promise<Person | undefined> {
+  async updatePerson(id: string, person: Partial<InsertPerson>, ctx?: TenantContext): Promise<Person | undefined> {
+    const filter = this.getTenantFilter(people, ctx);
+    const conditions = filter ? and(eq(people.id, id), filter) : eq(people.id, id);
     const [updated] = await db
       .update(people)
       .set({ ...person, updatedAt: new Date() })
-      .where(eq(people.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async deletePerson(id: string): Promise<void> {
+  async deletePerson(id: string, ctx?: TenantContext): Promise<void> {
+    // Verify ownership first
+    const person = await this.getPerson(id, ctx);
+    if (!person) return;
+    
     // Delete all related data first to avoid foreign key constraints
-    // Order matters: delete dependent tables before parent tables
     await db.delete(agentActions).where(eq(agentActions.personId, id));
     await db.delete(generatedDrafts).where(eq(generatedDrafts.personId, id));
     await db.delete(observerSuggestions).where(eq(observerSuggestions.personId, id));
@@ -601,194 +651,259 @@ export class DatabaseStorage implements IStorage {
     await db.delete(tasks).where(eq(tasks.personId, id));
     await db.delete(interactions).where(eq(interactions.personId, id));
     await db.delete(deals).where(eq(deals.personId, id));
-    // Delete the person
     await db.delete(people).where(eq(people.id, id));
   }
   
-  // Deals
-  async getAllDeals(): Promise<Deal[]> {
+  // Deals - Multi-tenant
+  async getAllDeals(ctx?: TenantContext): Promise<Deal[]> {
+    const filter = this.getTenantFilter(deals, ctx);
+    if (filter) {
+      return await db.select().from(deals).where(filter).orderBy(desc(deals.createdAt));
+    }
     return await db.select().from(deals).orderBy(desc(deals.createdAt));
   }
   
-  async getDeal(id: string): Promise<Deal | undefined> {
-    const [deal] = await db.select().from(deals).where(eq(deals.id, id));
+  async getDeal(id: string, ctx?: TenantContext): Promise<Deal | undefined> {
+    const filter = this.getTenantFilter(deals, ctx);
+    const conditions = filter ? and(eq(deals.id, id), filter) : eq(deals.id, id);
+    const [deal] = await db.select().from(deals).where(conditions);
     return deal || undefined;
   }
   
-  async createDeal(insertDeal: InsertDeal): Promise<Deal> {
+  async createDeal(insertDeal: InsertDeal, ctx?: TenantContext): Promise<Deal> {
+    const userId = getEffectiveUserId(ctx);
     const [deal] = await db
       .insert(deals)
-      .values({ ...insertDeal, updatedAt: new Date() })
+      .values({ ...insertDeal, userId, updatedAt: new Date() })
       .returning();
     return deal;
   }
   
-  async updateDeal(id: string, deal: Partial<InsertDeal>): Promise<Deal | undefined> {
+  async updateDeal(id: string, deal: Partial<InsertDeal>, ctx?: TenantContext): Promise<Deal | undefined> {
+    const filter = this.getTenantFilter(deals, ctx);
+    const conditions = filter ? and(eq(deals.id, id), filter) : eq(deals.id, id);
     const [updated] = await db
       .update(deals)
       .set({ ...deal, updatedAt: new Date() })
-      .where(eq(deals.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async deleteDeal(id: string): Promise<void> {
-    await db.delete(deals).where(eq(deals.id, id));
+  async deleteDeal(id: string, ctx?: TenantContext): Promise<void> {
+    const filter = this.getTenantFilter(deals, ctx);
+    const conditions = filter ? and(eq(deals.id, id), filter) : eq(deals.id, id);
+    await db.delete(deals).where(conditions);
   }
   
-  // Tasks
-  async getAllTasks(): Promise<Task[]> {
+  // Tasks - Multi-tenant
+  async getAllTasks(ctx?: TenantContext): Promise<Task[]> {
+    const filter = this.getTenantFilter(tasks, ctx);
+    if (filter) {
+      return await db.select().from(tasks).where(filter).orderBy(desc(tasks.createdAt));
+    }
     return await db.select().from(tasks).orderBy(desc(tasks.createdAt));
   }
   
-  async getTask(id: string): Promise<Task | undefined> {
-    const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
+  async getTask(id: string, ctx?: TenantContext): Promise<Task | undefined> {
+    const filter = this.getTenantFilter(tasks, ctx);
+    const conditions = filter ? and(eq(tasks.id, id), filter) : eq(tasks.id, id);
+    const [task] = await db.select().from(tasks).where(conditions);
     return task || undefined;
   }
   
-  async createTask(insertTask: InsertTask): Promise<Task> {
+  async createTask(insertTask: InsertTask, ctx?: TenantContext): Promise<Task> {
+    const userId = getEffectiveUserId(ctx);
     const [task] = await db
       .insert(tasks)
-      .values({ ...insertTask, updatedAt: new Date() })
+      .values({ ...insertTask, userId, updatedAt: new Date() })
       .returning();
     return task;
   }
   
-  async updateTask(id: string, task: Partial<InsertTask>): Promise<Task | undefined> {
+  async updateTask(id: string, task: Partial<InsertTask>, ctx?: TenantContext): Promise<Task | undefined> {
+    const filter = this.getTenantFilter(tasks, ctx);
+    const conditions = filter ? and(eq(tasks.id, id), filter) : eq(tasks.id, id);
     const [updated] = await db
       .update(tasks)
       .set({ ...task, updatedAt: new Date() })
-      .where(eq(tasks.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async deleteTask(id: string): Promise<void> {
-    await db.delete(tasks).where(eq(tasks.id, id));
+  async deleteTask(id: string, ctx?: TenantContext): Promise<void> {
+    const filter = this.getTenantFilter(tasks, ctx);
+    const conditions = filter ? and(eq(tasks.id, id), filter) : eq(tasks.id, id);
+    await db.delete(tasks).where(conditions);
   }
   
-  // Meetings
-  async getAllMeetings(): Promise<Meeting[]> {
+  // Meetings - Multi-tenant
+  async getAllMeetings(ctx?: TenantContext): Promise<Meeting[]> {
+    const filter = this.getTenantFilter(meetings, ctx);
+    if (filter) {
+      return await db.select().from(meetings).where(filter).orderBy(desc(meetings.createdAt));
+    }
     return await db.select().from(meetings).orderBy(desc(meetings.createdAt));
   }
   
-  async getMeeting(id: string): Promise<Meeting | undefined> {
-    const [meeting] = await db.select().from(meetings).where(eq(meetings.id, id));
+  async getMeeting(id: string, ctx?: TenantContext): Promise<Meeting | undefined> {
+    const filter = this.getTenantFilter(meetings, ctx);
+    const conditions = filter ? and(eq(meetings.id, id), filter) : eq(meetings.id, id);
+    const [meeting] = await db.select().from(meetings).where(conditions);
     return meeting || undefined;
   }
   
-  async createMeeting(insertMeeting: InsertMeeting): Promise<Meeting> {
+  async createMeeting(insertMeeting: InsertMeeting, ctx?: TenantContext): Promise<Meeting> {
+    const userId = getEffectiveUserId(ctx);
     const [meeting] = await db
       .insert(meetings)
-      .values({ ...insertMeeting, updatedAt: new Date() })
+      .values({ ...insertMeeting, userId, updatedAt: new Date() })
       .returning();
     return meeting;
   }
   
-  async updateMeeting(id: string, meeting: Partial<InsertMeeting>): Promise<Meeting | undefined> {
+  async updateMeeting(id: string, meeting: Partial<InsertMeeting>, ctx?: TenantContext): Promise<Meeting | undefined> {
+    const filter = this.getTenantFilter(meetings, ctx);
+    const conditions = filter ? and(eq(meetings.id, id), filter) : eq(meetings.id, id);
     const [updated] = await db
       .update(meetings)
       .set({ ...meeting, updatedAt: new Date() })
-      .where(eq(meetings.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async deleteMeeting(id: string): Promise<void> {
-    await db.delete(meetings).where(eq(meetings.id, id));
+  async deleteMeeting(id: string, ctx?: TenantContext): Promise<void> {
+    const filter = this.getTenantFilter(meetings, ctx);
+    const conditions = filter ? and(eq(meetings.id, id), filter) : eq(meetings.id, id);
+    await db.delete(meetings).where(conditions);
   }
   
-  // Calls
-  async getAllCalls(): Promise<Call[]> {
+  // Calls - Multi-tenant
+  async getAllCalls(ctx?: TenantContext): Promise<Call[]> {
+    const filter = this.getTenantFilter(calls, ctx);
+    if (filter) {
+      return await db.select().from(calls).where(filter).orderBy(desc(calls.createdAt));
+    }
     return await db.select().from(calls).orderBy(desc(calls.createdAt));
   }
   
-  async getCall(id: string): Promise<Call | undefined> {
-    const [call] = await db.select().from(calls).where(eq(calls.id, id));
+  async getCall(id: string, ctx?: TenantContext): Promise<Call | undefined> {
+    const filter = this.getTenantFilter(calls, ctx);
+    const conditions = filter ? and(eq(calls.id, id), filter) : eq(calls.id, id);
+    const [call] = await db.select().from(calls).where(conditions);
     return call || undefined;
   }
   
-  async createCall(insertCall: InsertCall): Promise<Call> {
+  async createCall(insertCall: InsertCall, ctx?: TenantContext): Promise<Call> {
+    const userId = getEffectiveUserId(ctx);
     const [call] = await db
       .insert(calls)
-      .values({ ...insertCall, updatedAt: new Date() })
+      .values({ ...insertCall, userId, updatedAt: new Date() })
       .returning();
     return call;
   }
   
-  async updateCall(id: string, call: Partial<InsertCall>): Promise<Call | undefined> {
+  async updateCall(id: string, call: Partial<InsertCall>, ctx?: TenantContext): Promise<Call | undefined> {
+    const filter = this.getTenantFilter(calls, ctx);
+    const conditions = filter ? and(eq(calls.id, id), filter) : eq(calls.id, id);
     const [updated] = await db
       .update(calls)
       .set({ ...call, updatedAt: new Date() })
-      .where(eq(calls.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async deleteCall(id: string): Promise<void> {
-    await db.delete(calls).where(eq(calls.id, id));
+  async deleteCall(id: string, ctx?: TenantContext): Promise<void> {
+    const filter = this.getTenantFilter(calls, ctx);
+    const conditions = filter ? and(eq(calls.id, id), filter) : eq(calls.id, id);
+    await db.delete(calls).where(conditions);
   }
   
-  // Weekly Reviews
-  async getAllWeeklyReviews(): Promise<WeeklyReview[]> {
+  // Weekly Reviews - Multi-tenant
+  async getAllWeeklyReviews(ctx?: TenantContext): Promise<WeeklyReview[]> {
+    const filter = this.getTenantFilter(weeklyReviews, ctx);
+    if (filter) {
+      return await db.select().from(weeklyReviews).where(filter).orderBy(desc(weeklyReviews.weekStartDate));
+    }
     return await db.select().from(weeklyReviews).orderBy(desc(weeklyReviews.weekStartDate));
   }
   
-  async getWeeklyReview(id: string): Promise<WeeklyReview | undefined> {
-    const [review] = await db.select().from(weeklyReviews).where(eq(weeklyReviews.id, id));
+  async getWeeklyReview(id: string, ctx?: TenantContext): Promise<WeeklyReview | undefined> {
+    const filter = this.getTenantFilter(weeklyReviews, ctx);
+    const conditions = filter ? and(eq(weeklyReviews.id, id), filter) : eq(weeklyReviews.id, id);
+    const [review] = await db.select().from(weeklyReviews).where(conditions);
     return review || undefined;
   }
   
-  async createWeeklyReview(insertReview: InsertWeeklyReview): Promise<WeeklyReview> {
+  async createWeeklyReview(insertReview: InsertWeeklyReview, ctx?: TenantContext): Promise<WeeklyReview> {
+    const userId = getEffectiveUserId(ctx);
     const [review] = await db
       .insert(weeklyReviews)
-      .values({ ...insertReview, updatedAt: new Date() })
+      .values({ ...insertReview, userId, updatedAt: new Date() })
       .returning();
     return review;
   }
   
-  async updateWeeklyReview(id: string, review: Partial<InsertWeeklyReview>): Promise<WeeklyReview | undefined> {
+  async updateWeeklyReview(id: string, review: Partial<InsertWeeklyReview>, ctx?: TenantContext): Promise<WeeklyReview | undefined> {
+    const filter = this.getTenantFilter(weeklyReviews, ctx);
+    const conditions = filter ? and(eq(weeklyReviews.id, id), filter) : eq(weeklyReviews.id, id);
     const [updated] = await db
       .update(weeklyReviews)
       .set({ ...review, updatedAt: new Date() })
-      .where(eq(weeklyReviews.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async deleteWeeklyReview(id: string): Promise<void> {
-    await db.delete(weeklyReviews).where(eq(weeklyReviews.id, id));
+  async deleteWeeklyReview(id: string, ctx?: TenantContext): Promise<void> {
+    const filter = this.getTenantFilter(weeklyReviews, ctx);
+    const conditions = filter ? and(eq(weeklyReviews.id, id), filter) : eq(weeklyReviews.id, id);
+    await db.delete(weeklyReviews).where(conditions);
   }
   
-  // Notes
-  async getAllNotes(): Promise<Note[]> {
+  // Notes - Multi-tenant
+  async getAllNotes(ctx?: TenantContext): Promise<Note[]> {
+    const filter = this.getTenantFilter(notes, ctx);
+    if (filter) {
+      return await db.select().from(notes).where(filter).orderBy(desc(notes.createdAt));
+    }
     return await db.select().from(notes).orderBy(desc(notes.createdAt));
   }
   
-  async getNote(id: string): Promise<Note | undefined> {
-    const [note] = await db.select().from(notes).where(eq(notes.id, id));
+  async getNote(id: string, ctx?: TenantContext): Promise<Note | undefined> {
+    const filter = this.getTenantFilter(notes, ctx);
+    const conditions = filter ? and(eq(notes.id, id), filter) : eq(notes.id, id);
+    const [note] = await db.select().from(notes).where(conditions);
     return note || undefined;
   }
   
-  async createNote(insertNote: InsertNote): Promise<Note> {
+  async createNote(insertNote: InsertNote, ctx?: TenantContext): Promise<Note> {
+    const userId = getEffectiveUserId(ctx);
     const [note] = await db
       .insert(notes)
-      .values({ ...insertNote, updatedAt: new Date() })
+      .values({ ...insertNote, userId, updatedAt: new Date() })
       .returning();
     return note;
   }
   
-  async updateNote(id: string, note: Partial<InsertNote>): Promise<Note | undefined> {
+  async updateNote(id: string, note: Partial<InsertNote>, ctx?: TenantContext): Promise<Note | undefined> {
+    const filter = this.getTenantFilter(notes, ctx);
+    const conditions = filter ? and(eq(notes.id, id), filter) : eq(notes.id, id);
     const [updated] = await db
       .update(notes)
       .set({ ...note, updatedAt: new Date() })
-      .where(eq(notes.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async deleteNote(id: string): Promise<void> {
-    await db.delete(notes).where(eq(notes.id, id));
+  async deleteNote(id: string, ctx?: TenantContext): Promise<void> {
+    const filter = this.getTenantFilter(notes, ctx);
+    const conditions = filter ? and(eq(notes.id, id), filter) : eq(notes.id, id);
+    await db.delete(notes).where(conditions);
   }
   
   // Listings (Haves)
@@ -1021,98 +1136,128 @@ export class DatabaseStorage implements IStorage {
       .orderBy(tasks.createdAt);
   }
   
-  // Interactions
-  async getAllInteractions(): Promise<Interaction[]> {
+  // Interactions - Multi-tenant
+  async getAllInteractions(ctx?: TenantContext): Promise<Interaction[]> {
+    const filter = this.getTenantFilter(interactions, ctx);
+    const baseCondition = isNull(interactions.deletedAt);
+    const conditions = filter ? and(baseCondition, filter) : baseCondition;
     return await db.select().from(interactions)
-      .where(isNull(interactions.deletedAt))
+      .where(conditions)
       .orderBy(desc(interactions.occurredAt));
   }
   
-  async getDeletedInteractions(): Promise<Interaction[]> {
+  async getDeletedInteractions(ctx?: TenantContext): Promise<Interaction[]> {
+    const filter = this.getTenantFilter(interactions, ctx);
+    const baseCondition = isNotNull(interactions.deletedAt);
+    const conditions = filter ? and(baseCondition, filter) : baseCondition;
     return await db.select().from(interactions)
-      .where(isNotNull(interactions.deletedAt))
+      .where(conditions)
       .orderBy(desc(interactions.deletedAt));
   }
   
-  async getInteractionsByPerson(personId: string): Promise<Interaction[]> {
+  async getInteractionsByPerson(personId: string, ctx?: TenantContext): Promise<Interaction[]> {
+    const filter = this.getTenantFilter(interactions, ctx);
+    const baseCondition = and(eq(interactions.personId, personId), isNull(interactions.deletedAt));
+    const conditions = filter ? and(baseCondition, filter) : baseCondition;
     return await db.select().from(interactions)
-      .where(and(eq(interactions.personId, personId), isNull(interactions.deletedAt)))
+      .where(conditions)
       .orderBy(desc(interactions.occurredAt));
   }
   
-  async getInteraction(id: string): Promise<Interaction | undefined> {
-    const [interaction] = await db.select().from(interactions).where(eq(interactions.id, id));
+  async getInteraction(id: string, ctx?: TenantContext): Promise<Interaction | undefined> {
+    const filter = this.getTenantFilter(interactions, ctx);
+    const conditions = filter ? and(eq(interactions.id, id), filter) : eq(interactions.id, id);
+    const [interaction] = await db.select().from(interactions).where(conditions);
     return interaction || undefined;
   }
   
-  async getInteractionByExternalId(externalId: string): Promise<Interaction | undefined> {
-    const [interaction] = await db.select().from(interactions).where(eq(interactions.externalId, externalId));
+  async getInteractionByExternalId(externalId: string, ctx?: TenantContext): Promise<Interaction | undefined> {
+    const filter = this.getTenantFilter(interactions, ctx);
+    const conditions = filter ? and(eq(interactions.externalId, externalId), filter) : eq(interactions.externalId, externalId);
+    const [interaction] = await db.select().from(interactions).where(conditions);
     return interaction || undefined;
   }
   
-  async createInteraction(insertInteraction: InsertInteraction): Promise<Interaction> {
+  async createInteraction(insertInteraction: InsertInteraction, ctx?: TenantContext): Promise<Interaction> {
+    const userId = getEffectiveUserId(ctx);
     const [interaction] = await db
       .insert(interactions)
-      .values({ ...insertInteraction, updatedAt: new Date() })
+      .values({ ...insertInteraction, userId, updatedAt: new Date() })
       .returning();
     return interaction;
   }
   
-  async updateInteraction(id: string, interaction: Partial<InsertInteraction>): Promise<Interaction | undefined> {
+  async updateInteraction(id: string, interaction: Partial<InsertInteraction>, ctx?: TenantContext): Promise<Interaction | undefined> {
+    const filter = this.getTenantFilter(interactions, ctx);
+    const conditions = filter ? and(eq(interactions.id, id), filter) : eq(interactions.id, id);
     const [updated] = await db
       .update(interactions)
       .set({ ...interaction, updatedAt: new Date() })
-      .where(eq(interactions.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async softDeleteInteraction(id: string): Promise<Interaction | undefined> {
+  async softDeleteInteraction(id: string, ctx?: TenantContext): Promise<Interaction | undefined> {
+    const filter = this.getTenantFilter(interactions, ctx);
+    const conditions = filter ? and(eq(interactions.id, id), filter) : eq(interactions.id, id);
     const [updated] = await db
       .update(interactions)
       .set({ deletedAt: new Date(), updatedAt: new Date() })
-      .where(eq(interactions.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async restoreInteraction(id: string): Promise<Interaction | undefined> {
+  async restoreInteraction(id: string, ctx?: TenantContext): Promise<Interaction | undefined> {
+    const filter = this.getTenantFilter(interactions, ctx);
+    const conditions = filter ? and(eq(interactions.id, id), filter) : eq(interactions.id, id);
     const [updated] = await db
       .update(interactions)
       .set({ deletedAt: null, updatedAt: new Date() })
-      .where(eq(interactions.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async permanentlyDeleteInteraction(id: string): Promise<void> {
-    await db.delete(interactions).where(eq(interactions.id, id));
+  async permanentlyDeleteInteraction(id: string, ctx?: TenantContext): Promise<void> {
+    const filter = this.getTenantFilter(interactions, ctx);
+    const conditions = filter ? and(eq(interactions.id, id), filter) : eq(interactions.id, id);
+    await db.delete(interactions).where(conditions);
   }
   
-  async cleanupOldDeletedInteractions(daysOld: number): Promise<number> {
+  async cleanupOldDeletedInteractions(daysOld: number, ctx?: TenantContext): Promise<number> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+    const filter = this.getTenantFilter(interactions, ctx);
+    const baseCondition = and(isNotNull(interactions.deletedAt), lt(interactions.deletedAt, cutoffDate));
+    const conditions = filter ? and(baseCondition, filter) : baseCondition;
     const result = await db.delete(interactions)
-      .where(and(isNotNull(interactions.deletedAt), lt(interactions.deletedAt, cutoffDate)))
+      .where(conditions)
       .returning();
     return result.length;
   }
   
-  async deleteInteraction(id: string): Promise<void> {
-    await db.delete(interactions).where(eq(interactions.id, id));
+  async deleteInteraction(id: string, ctx?: TenantContext): Promise<void> {
+    const filter = this.getTenantFilter(interactions, ctx);
+    const conditions = filter ? and(eq(interactions.id, id), filter) : eq(interactions.id, id);
+    await db.delete(interactions).where(conditions);
   }
   
-  async getLatestInteractionDates(): Promise<Map<string, Date>> {
+  async getLatestInteractionDates(ctx?: TenantContext): Promise<Map<string, Date>> {
+    const filter = this.getTenantFilter(interactions, ctx);
+    const baseCondition = and(
+      isNotNull(interactions.personId),
+      isNull(interactions.deletedAt)
+    );
+    const conditions = filter ? and(baseCondition, filter) : baseCondition;
     const results = await db
       .select({
         personId: interactions.personId,
         latestDate: sql<string>`MAX(${interactions.occurredAt})`,
       })
       .from(interactions)
-      .where(and(
-        isNotNull(interactions.personId),
-        isNull(interactions.deletedAt)
-      ))
+      .where(conditions)
       .groupBy(interactions.personId);
     
     const dateMap = new Map<string, Date>();
