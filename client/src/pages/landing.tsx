@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, MessageSquare, Calendar, TrendingUp, Sparkles } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Users, MessageSquare, FileText, Calendar, ArrowRight, Sparkles } from "lucide-react";
 
 export default function Landing() {
   return (
@@ -13,6 +13,7 @@ export default function Landing() {
           <span className="text-xl font-semibold text-white">Flow OS</span>
         </div>
         <Button 
+          variant="outline"
           onClick={() => window.location.href = "/api/login"}
           data-testid="button-login"
         >
@@ -20,77 +21,115 @@ export default function Landing() {
         </Button>
       </header>
 
-      <main className="flex-1 flex flex-col items-center justify-center px-6 py-12">
-        <div className="text-center max-w-3xl mx-auto mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            Your AI Chief of Staff for<br />Relationship Selling
+      <main className="flex-1 flex flex-col px-6 py-12">
+        <div className="text-center max-w-3xl mx-auto mb-16">
+          <p className="text-primary font-medium mb-4">For Relationship-Based Real Estate Agents</p>
+          
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight">
+            Stop Losing Referrals Because You Dropped the Ball
           </h1>
-          <p className="text-lg text-slate-300 mb-8">
-            Never drop the ball on a relationship again. Flow OS captures conversations, 
-            generates follow-ups, and surfaces the contacts who need your attention.
+          
+          <p className="text-lg md:text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
+            Flow OS captures your key conversations, shows you who needs your attention today, and drafts your follow-ups so you never forget another relationship.
           </p>
-          <Button 
-            size="lg" 
-            onClick={() => window.location.href = "/api/login"}
-            className="text-lg px-8 py-6"
-            data-testid="button-get-started"
-          >
-            Get Started
-          </Button>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Button 
+              size="lg" 
+              onClick={() => window.location.href = "/api/login"}
+              className="text-lg px-8 py-6"
+              data-testid="button-get-started"
+            >
+              Join the Founding Agent Beta
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </div>
+          
+          <p className="text-sm text-slate-400 mt-4">
+            Limited spots. Early pricing. Built with your feedback.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl w-full">
-          <Card className="bg-slate-800/50 border-slate-700">
-            <CardHeader className="pb-2">
-              <Users className="h-8 w-8 text-primary mb-2" />
-              <CardTitle className="text-white">Relationship CRM</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CardDescription className="text-slate-400">
-                Track FORD notes, segments, and never forget a detail about your sphere.
-              </CardDescription>
-            </CardContent>
-          </Card>
+        <div className="max-w-4xl mx-auto w-full mb-16">
+          <h2 className="text-xl font-semibold text-white text-center mb-8">What you get in the beta</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Users className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-white mb-1">Relationship CRM</h3>
+                    <p className="text-slate-400 text-sm">
+                      FORD notes + A/B/C/D segments so you always know who matters most.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="bg-slate-800/50 border-slate-700">
-            <CardHeader className="pb-2">
-              <MessageSquare className="h-8 w-8 text-primary mb-2" />
-              <CardTitle className="text-white">Conversation Capture</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CardDescription className="text-slate-400">
-                Auto-import from Fathom, Granola, or log voice memos on the go.
-              </CardDescription>
-            </CardContent>
-          </Card>
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <MessageSquare className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-white mb-1">Conversation Capture</h3>
+                    <p className="text-slate-400 text-sm">
+                      Auto-imports from Fathom meetings + quick manual logging on mobile.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="bg-slate-800/50 border-slate-700">
-            <CardHeader className="pb-2">
-              <Calendar className="h-8 w-8 text-primary mb-2" />
-              <CardTitle className="text-white">Weekly Reviews</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CardDescription className="text-slate-400">
-                GTD-inspired workflow to stay on top of your relationships.
-              </CardDescription>
-            </CardContent>
-          </Card>
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <FileText className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-white mb-1">AI Follow-ups</h3>
+                    <p className="text-slate-400 text-sm">
+                      Drafts thank-you emails and check-ins from your recent conversations.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card className="bg-slate-800/50 border-slate-700">
-            <CardHeader className="pb-2">
-              <TrendingUp className="h-8 w-8 text-primary mb-2" />
-              <CardTitle className="text-white">AI Follow-ups</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CardDescription className="text-slate-400">
-                Automatic draft generation for thank-you notes and next steps.
-              </CardDescription>
-            </CardContent>
-          </Card>
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Calendar className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-white mb-1">Today View</h3>
+                    <p className="text-slate-400 text-sm">
+                      Shows overdue relationships and suggested touches each morning.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        <div className="max-w-2xl mx-auto w-full text-center">
+          <h3 className="text-lg font-medium text-slate-400 mb-4">What we're building next</h3>
+          <p className="text-slate-500 text-sm">
+            Coming for founding agents: more conversation sources (calls, texts), 
+            deeper automations, and additional CRM integrations.
+          </p>
         </div>
       </main>
 
-      <footer className="p-6 text-center text-slate-500 text-sm">
+      <footer className="p-6 text-center text-slate-500 text-sm border-t border-slate-800">
         Flow OS Beta
       </footer>
     </div>
