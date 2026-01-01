@@ -321,7 +321,9 @@ export default function People() {
       
       if (nameCol && row[nameCol]) {
         name = String(row[nameCol]).trim();
-      } else if (firstCol || lastCol) {
+      }
+      
+      if (!name && (firstCol || lastCol)) {
         const firstName = firstCol && row[firstCol] ? String(row[firstCol]).trim() : '';
         const lastName = lastCol && row[lastCol] ? String(row[lastCol]).trim() : '';
         name = `${firstName} ${lastName}`.trim();
