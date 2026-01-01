@@ -52,6 +52,10 @@ export default function People() {
   const [mobileView, setMobileView] = useState<"list" | "detail">("list");
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  const [csvPreview, setCsvPreview] = useState<{ headers: string[]; rows: Record<string, string>[] } | null>(null);
+  const [fieldMappings, setFieldMappings] = useState<Record<string, string>>({});
+  const [isImporting, setIsImporting] = useState(false);
+  
   const [formData, setFormData] = useState<Partial<InsertPerson>>({
     name: "",
     email: "",
@@ -255,7 +259,32 @@ export default function People() {
       Papa.parse(file, {
         header: true,
         complete: (results) => {
-          importContacts(results.data as any[]);
+          const headers = results.meta.fields || [];
+          const rows = (results.data as any[]).filter((r: any) => Object.values(r).some(v => v));
+          setCsvPreview({ headers, rows: rows.slice(0, 100) });
+          
+          const autoMappings: Record<string, string> = {};
+          const fieldPatterns: Record<string, string[]> = {
+            name: ['name', 'full name', 'fullname', 'contact name', 'contact'],
+            email: ['email', 'e-mail', 'email address', 'mail'],
+            phone: ['phone', 'mobile', 'cell', 'telephone', 'tel', 'phone number'],
+            role: ['role', 'title', 'job title', 'position', 'occupation'],
+            segment: ['segment', 'category', 'group', 'type'],
+            address: ['address', 'street', 'location', 'mailing address'],
+          };
+          
+          headers.forEach(h => {
+            const lower = h.toLowerCase().trim();
+            for (const [field, patterns] of Object.entries(fieldPatterns)) {
+              if (patterns.some(p => lower === p || lower.includes(p))) {
+                if (!autoMappings[field]) autoMappings[field] = h;
+              }
+            }
+            if (lower === 'first name' || lower === 'firstname') autoMappings['firstName'] = h;
+            if (lower === 'last name' || lower === 'lastname') autoMappings['lastName'] = h;
+          });
+          
+          setFieldMappings(autoMappings);
         },
         error: () => {
           toast({ title: "Failed to parse CSV file", variant: "destructive" });
@@ -270,33 +299,77 @@ export default function People() {
     }
   };
 
-  const importContacts = async (data: any[]) => {
+  const executeImport = async () => {
+    if (!csvPreview) return;
+    
+    setIsImporting(true);
     let imported = 0;
-    for (const row of data) {
-      const name = row.name || row.Name || row['Full Name'] || `${row['First Name'] || ''} ${row['Last Name'] || ''}`.trim();
-      if (!name) continue;
+    let skipped = 0;
+    let errors = 0;
+    
+    const nameCol = fieldMappings.name;
+    const firstCol = fieldMappings.firstName;
+    const lastCol = fieldMappings.lastName;
+    const emailCol = fieldMappings.email;
+    const phoneCol = fieldMappings.phone;
+    const roleCol = fieldMappings.role;
+    const segmentCol = fieldMappings.segment;
+    const addressCol = fieldMappings.address;
+    
+    for (const row of csvPreview.rows) {
+      let name = '';
+      
+      if (nameCol && row[nameCol]) {
+        name = String(row[nameCol]).trim();
+      } else if (firstCol || lastCol) {
+        const firstName = firstCol && row[firstCol] ? String(row[firstCol]).trim() : '';
+        const lastName = lastCol && row[lastCol] ? String(row[lastCol]).trim() : '';
+        name = `${firstName} ${lastName}`.trim();
+      }
+      
+      if (!name) {
+        skipped++;
+        continue;
+      }
       
       try {
-        await fetch("/api/people", {
+        const payload: Record<string, any> = { name };
+        if (emailCol && row[emailCol]) payload.email = String(row[emailCol]).trim();
+        if (phoneCol && row[phoneCol]) payload.phone = String(row[phoneCol]).trim();
+        if (roleCol && row[roleCol]) payload.role = String(row[roleCol]).trim();
+        if (segmentCol && row[segmentCol]) payload.segment = String(row[segmentCol]).trim();
+        if (addressCol && row[addressCol]) payload.address = String(row[addressCol]).trim();
+        
+        const res = await fetch("/api/people", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name,
-            email: row.email || row.Email || row['E-mail'] || null,
-            phone: row.phone || row.Phone || row['Mobile'] || null,
-            role: row.role || row.Role || row.Title || null,
-            segment: row.segment || row.Segment || null,
-          }),
+          body: JSON.stringify(payload),
         });
+        if (!res.ok) throw new Error('Failed');
         imported++;
       } catch (e) {
-        console.error('Failed to import:', row);
+        errors++;
       }
     }
     
     queryClient.invalidateQueries({ queryKey: ["/api/people"] });
+    setIsImporting(false);
+    setCsvPreview(null);
+    setFieldMappings({});
     setUploadDialogOpen(false);
-    toast({ title: `Imported ${imported} contacts` });
+    
+    let msg = `Imported ${imported} contacts`;
+    if (skipped > 0) msg += ` (${skipped} skipped - no name)`;
+    if (errors > 0) msg += ` (${errors} failed)`;
+    toast({ title: msg });
+  };
+  
+  const resetImport = () => {
+    setCsvPreview(null);
+    setFieldMappings({});
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const openEditDialog = () => {
@@ -313,6 +386,8 @@ export default function People() {
         fordRecreation: selectedPerson.fordRecreation || "",
         fordDreams: selectedPerson.fordDreams || "",
         address: selectedPerson.address || "",
+        birthday: selectedPerson.birthday || null,
+        inSphere: selectedPerson.inSphere !== false,
       });
       setEditDialogOpen(true);
     }
@@ -634,27 +709,103 @@ export default function People() {
                 </DialogContent>
               </Dialog>
               
-              <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+              <Dialog open={uploadDialogOpen} onOpenChange={(open) => { setUploadDialogOpen(open); if (!open) resetImport(); }}>
                 <DialogTrigger asChild>
                   <Button size="sm" variant="outline" className="gap-1.5" data-testid="import-btn">
                     <Upload className="h-4 w-4" />
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className={csvPreview ? "max-w-2xl" : ""}>
                   <DialogHeader>
                     <DialogTitle>Import Contacts</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
-                    <p className="text-sm text-muted-foreground">
-                      Upload a CSV or Excel file with columns like: Name, Email, Phone, Role, Segment
-                    </p>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".csv"
-                      onChange={handleFileUpload}
-                      className="w-full"
-                    />
+                    {!csvPreview ? (
+                      <>
+                        <p className="text-sm text-muted-foreground">
+                          Upload a CSV file with columns like: Name, Email, Phone, Role, Segment
+                        </p>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept=".csv"
+                          onChange={handleFileUpload}
+                          className="w-full"
+                          data-testid="csv-file-input"
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm text-muted-foreground">
+                          Map your CSV columns to contact fields. Found {csvPreview.rows.length} rows.
+                        </p>
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                          {[
+                            { key: 'name', label: 'Name *', required: true },
+                            { key: 'firstName', label: 'First Name' },
+                            { key: 'lastName', label: 'Last Name' },
+                            { key: 'email', label: 'Email' },
+                            { key: 'phone', label: 'Phone' },
+                            { key: 'role', label: 'Role/Title' },
+                            { key: 'segment', label: 'Segment' },
+                            { key: 'address', label: 'Address' },
+                          ].map(({ key, label }) => (
+                            <div key={key} className="flex items-center gap-2">
+                              <Label className="w-24 text-sm">{label}</Label>
+                              <select
+                                value={fieldMappings[key] || ''}
+                                onChange={(e) => setFieldMappings({ ...fieldMappings, [key]: e.target.value })}
+                                className="flex-1 h-8 text-sm rounded border bg-background px-2"
+                                data-testid={`mapping-${key}`}
+                              >
+                                <option value="">-- Skip --</option>
+                                {csvPreview.headers.map(h => (
+                                  <option key={h} value={h}>{h}</option>
+                                ))}
+                              </select>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <div className="text-xs text-muted-foreground p-2 bg-muted rounded">
+                          Tip: Map either "Name" OR "First Name" + "Last Name" to identify contacts.
+                        </div>
+                        
+                        {csvPreview.rows.length > 0 && (
+                          <div className="border rounded overflow-hidden">
+                            <div className="bg-muted px-3 py-2 text-xs font-medium">Preview (first 3 rows)</div>
+                            <div className="divide-y text-xs max-h-32 overflow-y-auto">
+                              {csvPreview.rows.slice(0, 3).map((row, i) => {
+                                const name = fieldMappings.name ? row[fieldMappings.name] : 
+                                  `${fieldMappings.firstName ? row[fieldMappings.firstName] : ''} ${fieldMappings.lastName ? row[fieldMappings.lastName] : ''}`.trim();
+                                return (
+                                  <div key={i} className="px-3 py-2 flex gap-4">
+                                    <span className="font-medium">{name || '(no name)'}</span>
+                                    {fieldMappings.email && row[fieldMappings.email] && <span className="text-muted-foreground">{row[fieldMappings.email]}</span>}
+                                    {fieldMappings.phone && row[fieldMappings.phone] && <span className="text-muted-foreground">{row[fieldMappings.phone]}</span>}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className="flex gap-2">
+                          <Button variant="outline" onClick={resetImport} className="flex-1">
+                            Choose Different File
+                          </Button>
+                          <Button 
+                            onClick={executeImport} 
+                            disabled={isImporting || (!fieldMappings.name && !fieldMappings.firstName)}
+                            className="flex-1"
+                            data-testid="execute-import"
+                          >
+                            {isImporting ? "Importing..." : `Import ${csvPreview.rows.length} Contacts`}
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </DialogContent>
               </Dialog>
@@ -1098,7 +1249,7 @@ export default function People() {
                 </select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Email</Label>
                 <Input
@@ -1114,6 +1265,15 @@ export default function People() {
                   value={formData.phone || ""}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   data-testid="edit-phone"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Birthday</Label>
+                <Input
+                  type="date"
+                  value={formData.birthday ? new Date(formData.birthday).toISOString().split('T')[0] : ""}
+                  onChange={(e) => setFormData({ ...formData, birthday: e.target.value ? new Date(e.target.value) : null })}
+                  data-testid="edit-birthday"
                 />
               </div>
             </div>
@@ -1134,6 +1294,19 @@ export default function People() {
                   data-testid="edit-address"
                 />
               </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+              <input
+                type="checkbox"
+                id="inSphere"
+                checked={formData.inSphere !== false}
+                onChange={(e) => setFormData({ ...formData, inSphere: e.target.checked })}
+                className="h-4 w-4"
+                data-testid="edit-in-sphere"
+              />
+              <Label htmlFor="inSphere" className="cursor-pointer">
+                In My Sphere (active A/B/C/D relationship)
+              </Label>
             </div>
             
             <Separator />
