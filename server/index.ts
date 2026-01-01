@@ -10,6 +10,7 @@ import { registerWorkflowCoachAgent } from "./workflow-coach-agent";
 import { startRelationshipChecker } from "./relationship-checker";
 import { startMaintenanceScheduler } from "./maintenance";
 import { setupVoiceRelay } from "./voice-relay";
+import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 
 const app = express();
 const httpServer = createServer(app);
@@ -74,6 +75,10 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Setup Replit Auth (must be before other routes)
+  await setupAuth(app);
+  registerAuthRoutes(app);
+  
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

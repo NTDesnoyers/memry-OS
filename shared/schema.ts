@@ -2147,3 +2147,6 @@ export const decisionTracesRelations = relations(decisionTraces, ({ one }) => ({
     references: [decisionTraces.id],
   }),
 }));
+
+/** Replit Auth - Sessions and Auth Users */
+export * from "./models/auth";
