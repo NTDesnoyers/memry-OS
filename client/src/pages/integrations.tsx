@@ -515,6 +515,67 @@ function FathomIntegrationCard() {
   );
 }
 
+function GmailIntegrationCard() {
+  const { data: status, isLoading: statusLoading } = useQuery<{
+    connected: boolean;
+    email?: string;
+    error?: string;
+  }>({
+    queryKey: ["/api/gmail/status"],
+  });
+  
+  const isConnected = status?.connected === true;
+  
+  return (
+    <Card className="border-none shadow-md" data-testid="gmail-integration-card">
+      <CardHeader className="bg-red-50/50 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-full bg-red-600 flex items-center justify-center text-white font-bold">
+            <Mail className="h-6 w-6" />
+          </div>
+          <div className="flex-1">
+            <CardTitle className="font-serif">Gmail</CardTitle>
+            <CardDescription>Read, draft, and send emails directly</CardDescription>
+          </div>
+          {statusLoading ? (
+            <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+          ) : isConnected ? (
+            <Badge className="bg-green-100 text-green-700 border-green-200">
+              <CheckCircle2 className="h-3 w-3 mr-1" />
+              Connected
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-gray-500">
+              <AlertCircle className="h-3 w-3 mr-1" />
+              Not Connected
+            </Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="pt-6 space-y-4">
+        {isConnected ? (
+          <>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Connected as:</span>
+              <span className="font-medium">{status?.email || 'Unknown'}</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Flow OS can send emails, create drafts, and scan for dormant leads on your behalf.
+            </p>
+          </>
+        ) : (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Gmail connection is managed by Replit. Reconnect your Google account in the Secrets panel if needed.
+            </AlertDescription>
+          </Alert>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function TodoistIntegrationCard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -640,10 +701,6 @@ export default function Integrations() {
   // Plaud State
   const [plaudKey, setPlaudKey] = useState(localStorage.getItem("plaud_api_key") || "");
   const [showPlaudKey, setShowPlaudKey] = useState(false);
-
-  // Gmail State
-  const [gmailKey, setGmailKey] = useState(localStorage.getItem("gmail_api_key") || "");
-  const [showGmailKey, setShowGmailKey] = useState(false);
 
   // Superhuman State
   const [superhumanKey, setSuperhumanKey] = useState(localStorage.getItem("superhuman_api_key") || "");
@@ -867,26 +924,7 @@ export default function Integrations() {
               </Card>
 
               {/* Gmail Integration */}
-              <Card className="border-none shadow-md">
-                <CardHeader className="bg-red-50/50 pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-red-600 flex items-center justify-center text-white font-bold">
-                      <Mail className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <CardTitle className="font-serif">Gmail</CardTitle>
-                      <CardDescription>Read, draft, and send emails directly</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-6 space-y-4">
-                  <Alert>
-                    <AlertDescription>
-                      Gmail integration is managed via Replit OAuth. The connection is automatic.
-                    </AlertDescription>
-                  </Alert>
-                </CardContent>
-              </Card>
+              <GmailIntegrationCard />
 
               {/* Google Calendar Integration */}
               <Card className="border-none shadow-md">
