@@ -344,6 +344,59 @@ class ContextGraphService {
   }
   
   /**
+   * Record when a life event is detected for a contact
+   */
+  async recordLifeEventDetected(params: {
+    alertId: string;
+    personId: string;
+    personName: string;
+    eventType: string;
+    eventCategory: string;
+    confidence: string | null;
+    summary: string | null;
+    sourcePlatform: string | null;
+  }): Promise<DecisionTrace> {
+    const evidence: DecisionInput['evidence'] = [];
+    
+    if (params.sourcePlatform) {
+      evidence.push({
+        type: 'social_signal',
+        summary: `Detected on ${params.sourcePlatform}`,
+        sourceId: params.alertId,
+      });
+    }
+    
+    const trace = await this.recordDecision({
+      traceType: 'system_event',
+      actor: 'system:life_event_scanner',
+      action: 'life_event_detected',
+      entityType: 'person',
+      entityId: params.personId,
+      inputs: { evidence },
+      reasoning: `${params.eventType} detected for ${params.personName}${params.confidence ? ` (${params.confidence} confidence)` : ''}`,
+      outcome: {
+        success: true,
+        newState: { 
+          lifeEvent: params.eventType,
+          category: params.eventCategory,
+        },
+        sideEffects: [
+          { type: 'outreach_opportunity', description: params.summary || `Potential real estate opportunity from ${params.eventType}` }
+        ],
+      },
+    });
+    
+    await this.linkEntities(
+      { type: 'life_event', id: params.alertId, label: `${params.eventType}: ${params.summary || 'Life event detected'}` },
+      { type: 'person', id: params.personId, label: params.personName },
+      ContextEdgeType.TRIGGERED,
+      'Life event may trigger real estate activity'
+    );
+    
+    return trace;
+  }
+  
+  /**
    * Record when an observer suggestion is accepted or dismissed
    */
   async recordSuggestionAction(params: {

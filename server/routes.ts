@@ -597,8 +597,8 @@ export async function registerRoutes(
       const openai = getOpenAI();
       
       // Get all people for fuzzy matching
-      const allPeople = await storage.getPeople();
-      const peopleNames = allPeople.map(p => ({ id: p.id, name: `${p.firstName} ${p.lastName}`.trim() }));
+      const allPeople = await storage.getAllPeople();
+      const peopleNames = allPeople.map((p: any) => ({ id: p.id, name: p.name }));
       
       // Use AI to parse the transcript
       const parseResult = await openai.chat.completions.create({
@@ -638,7 +638,7 @@ If the person mentions multiple people, pick the primary one being discussed.`
       const parsed = JSON.parse(parseResult.choices[0].message.content || "{}");
       
       // Validate personId exists in our known contacts (protect against AI hallucinations)
-      const validPersonIds = new Set(peopleNames.map(p => p.id));
+      const validPersonIds = new Set(peopleNames.map((p: any) => p.id));
       const validatedPersonId = parsed.personId && validPersonIds.has(parsed.personId) 
         ? parsed.personId 
         : null;
@@ -668,17 +668,17 @@ If the person mentions multiple people, pick the primary one being discussed.`
           const person = await storage.getPerson(validatedPersonId);
           if (person) {
             const updates: any = {};
-            if (parsed.fordNotes.family && !person.family) {
-              updates.family = parsed.fordNotes.family;
+            if (parsed.fordNotes.family && !person.fordFamily) {
+              updates.fordFamily = parsed.fordNotes.family;
             }
-            if (parsed.fordNotes.occupation && !person.occupation) {
-              updates.occupation = parsed.fordNotes.occupation;
+            if (parsed.fordNotes.occupation && !person.fordOccupation) {
+              updates.fordOccupation = parsed.fordNotes.occupation;
             }
-            if (parsed.fordNotes.recreation && !person.interests) {
-              updates.interests = parsed.fordNotes.recreation;
+            if (parsed.fordNotes.recreation && !person.fordRecreation) {
+              updates.fordRecreation = parsed.fordNotes.recreation;
             }
-            if (parsed.fordNotes.dreams && !person.dreams) {
-              updates.dreams = parsed.fordNotes.dreams;
+            if (parsed.fordNotes.dreams && !person.fordDreams) {
+              updates.fordDreams = parsed.fordNotes.dreams;
             }
             if (Object.keys(updates).length > 0) {
               await storage.updatePerson(validatedPersonId, updates);
@@ -6012,6 +6012,21 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
       // Emit life event detected event
       if (alert.personId) {
         eventBus.emitLifeEventDetected(alert.personId, alert.id, alert.eventType, alert.eventCategory);
+        
+        // Record in context graph for ontology
+        const person = await storage.getPerson(alert.personId);
+        if (person) {
+          contextGraph.recordLifeEventDetected({
+            alertId: alert.id,
+            personId: alert.personId,
+            personName: person.name,
+            eventType: alert.eventType,
+            eventCategory: alert.eventCategory,
+            confidence: alert.confidence,
+            summary: alert.summary,
+            sourcePlatform: alert.sourcePlatform,
+          });
+        }
       }
       
       res.status(201).json(alert);

@@ -15,7 +15,7 @@ import {
   Users, Linkedin, Twitter, Facebook, Instagram,
   Sparkles, PenTool, ListTodo, Activity, CalendarPlus,
   StickyNote, Heart, Briefcase, Gamepad2, Star, Filter, Upload,
-  Trash2, GitMerge, AlertTriangle
+  Trash2, GitMerge, AlertTriangle, ChevronLeft
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -49,6 +49,7 @@ export default function People() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
   const [mergeTargetId, setMergeTargetId] = useState<string | null>(null);
+  const [mobileView, setMobileView] = useState<"list" | "detail">("list");
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState<Partial<InsertPerson>>({
@@ -323,10 +324,22 @@ export default function People() {
         {/* Top Action Bar */}
         <div className="h-14 border-b bg-card flex items-center justify-between px-4 flex-shrink-0">
           <div className="flex items-center gap-2">
+            {/* Mobile back button */}
+            {mobileView === "detail" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="md:hidden -ml-2"
+                onClick={() => setMobileView("list")}
+                data-testid="mobile-back"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+            )}
             <Users className="h-5 w-5 text-primary" />
             <h1 className="text-lg font-semibold">People</h1>
           {selectedPerson && (
-            <span className="text-muted-foreground">/ {selectedPerson.name}</span>
+            <span className="text-muted-foreground hidden md:inline">/ {selectedPerson.name}</span>
           )}
         </div>
         
@@ -395,8 +408,8 @@ export default function People() {
 
       {/* Main 3-Column Layout */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar - People List */}
-        <div className="w-64 border-r bg-card flex flex-col flex-shrink-0">
+        {/* Left Sidebar - People List (hidden on mobile when viewing detail) */}
+        <div className={`w-full md:w-64 border-r bg-card flex flex-col flex-shrink-0 ${mobileView === "detail" ? "hidden md:flex" : "flex"}`}>
           {/* Search and Filter */}
           <div className="p-3 space-y-2 border-b">
             <div className="relative">
@@ -499,7 +512,10 @@ export default function People() {
                     className={`p-3 cursor-pointer hover:bg-accent/50 transition-colors ${
                       selectedPersonId === person.id ? 'bg-accent border-l-2 border-l-primary' : ''
                     }`}
-                    onClick={() => setSelectedPersonId(person.id)}
+                    onClick={() => {
+                      setSelectedPersonId(person.id);
+                      setMobileView("detail");
+                    }}
                     data-testid={`person-row-${person.id}`}
                   >
                     <div className="flex items-center gap-3">
@@ -649,8 +665,8 @@ export default function People() {
           </div>
         </div>
 
-        {/* Center - Timeline */}
-        <div className="flex-1 flex flex-col min-w-0 bg-secondary/30">
+        {/* Center - Timeline (hidden on mobile when viewing list) */}
+        <div className={`flex-1 flex flex-col min-w-0 bg-secondary/30 ${mobileView === "list" ? "hidden md:flex" : "flex"}`}>
           {selectedPerson ? (
             <>
               {/* Person Header */}
@@ -702,6 +718,52 @@ export default function People() {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Mobile Contact Info - visible only on smaller screens */}
+              <div className="lg:hidden border-b bg-card/50 p-3 space-y-2">
+                <div className="flex flex-wrap items-center gap-3">
+                  {selectedPerson.phone && (
+                    <a href={`tel:${selectedPerson.phone}`} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary">
+                      <Phone className="h-4 w-4" />
+                      <span>{selectedPerson.phone}</span>
+                    </a>
+                  )}
+                  {selectedPerson.email && (
+                    <a href={`mailto:${selectedPerson.email}`} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary truncate max-w-[200px]">
+                      <Mail className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">{selectedPerson.email}</span>
+                    </a>
+                  )}
+                </div>
+                {(selectedPerson.fordFamily || selectedPerson.fordOccupation || selectedPerson.fordRecreation || selectedPerson.fordDreams) && (
+                  <div className="space-y-1 text-xs">
+                    {selectedPerson.fordFamily && (
+                      <div className="flex items-start gap-1 text-pink-600">
+                        <Heart className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                        <span className="line-clamp-1">{selectedPerson.fordFamily}</span>
+                      </div>
+                    )}
+                    {selectedPerson.fordOccupation && (
+                      <div className="flex items-start gap-1 text-blue-600">
+                        <Briefcase className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                        <span className="line-clamp-1">{selectedPerson.fordOccupation}</span>
+                      </div>
+                    )}
+                    {selectedPerson.fordRecreation && (
+                      <div className="flex items-start gap-1 text-green-600">
+                        <Star className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                        <span className="line-clamp-1">{selectedPerson.fordRecreation}</span>
+                      </div>
+                    )}
+                    {selectedPerson.fordDreams && (
+                      <div className="flex items-start gap-1 text-purple-600">
+                        <Sparkles className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                        <span className="line-clamp-1">{selectedPerson.fordDreams}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Timeline Tabs */}
@@ -808,9 +870,9 @@ export default function People() {
           )}
         </div>
 
-        {/* Right Sidebar - Contact Info & Details */}
+        {/* Right Sidebar - Contact Info & Details (hidden on mobile) */}
         {selectedPerson && (
-          <div className="w-72 border-l bg-card flex flex-col flex-shrink-0">
+          <div className="hidden lg:flex w-72 border-l bg-card flex-col flex-shrink-0">
             <ScrollArea className="flex-1">
               <div className="p-4 space-y-6">
                 {/* Relationship Segment */}
