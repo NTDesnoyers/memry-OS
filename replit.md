@@ -112,6 +112,17 @@ Current features include a Contact Due Calculator, D Contact Review, AI Assistan
 - API: `/api/content/capture`, `/api/digests/today`, `/api/digests/generate`
 - Dashboard widget shows unread count and digest preview
 
+### Context Graph (Decision Traces)
+**Organizational World Model (Phase 1 Implemented)**:
+- Captures the "event clock" - not just what's true now, but WHY it became true
+- Inspired by context graph / decision traces architecture pattern
+- Schema: `context_nodes` (graph entities), `context_edges` (typed relationships), `decision_traces` (full reasoning chains)
+- Edge types: `informed_by`, `resulted_in`, `led_to`, `contradicts`, `supports`, `triggered`, `references`, `supersedes`
+- Service: `server/context-graph.ts` with `recordDecision()`, `linkEntities()`, `getReasoningChain()`
+- Auto-recording: Interactions and observer suggestion actions automatically create decision traces
+- API: `GET /api/context/:entityType/:entityId`, `GET /api/context/:entityType/:entityId/chain`, `GET /api/context/traces/recent`
+- Future: UI for "Why this?" explainer, Context Timeline, simulation/what-if queries
+
 ### Observer Feature
 **In-App Observer (Refactored for Quiet Intelligence)**:
 - WorkflowCoachAgent generates context-aware suggestions based on real data (leads, contacts, tasks)

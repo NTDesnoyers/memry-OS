@@ -1994,3 +1994,156 @@ export const insertSocialPostSchema = createInsertSchema(socialPosts).omit({
 
 export type InsertSocialPost = z.infer<typeof insertSocialPostSchema>;
 export type SocialPost = typeof socialPosts.$inferSelect;
+
+// =============================================================================
+// CONTEXT GRAPH - Decision Traces & Organizational World Model
+// =============================================================================
+// Captures the "event clock" - not just what's true now, but WHY it became true.
+// Enables traversing decision chains to answer "why did this happen?"
+
+/** Entity types that can be nodes in the context graph */
+export const ContextNodeType = {
+  PERSON: 'person',
+  DEAL: 'deal',
+  LEAD: 'lead',
+  INTERACTION: 'interaction',
+  TASK: 'task',
+  SUGGESTION: 'suggestion',
+  DECISION: 'decision',
+  OBSERVATION: 'observation',
+} as const;
+
+export type ContextNodeTypeValue = typeof ContextNodeType[keyof typeof ContextNodeType];
+
+/** Edge types representing relationships between context nodes */
+export const ContextEdgeType = {
+  INFORMED_BY: 'informed_by',       // This decision was informed by that evidence
+  RESULTED_IN: 'resulted_in',       // This action resulted in that outcome
+  LED_TO: 'led_to',                 // This observation led to that decision
+  CONTRADICTS: 'contradicts',       // This evidence contradicts that conclusion
+  SUPPORTS: 'supports',             // This evidence supports that conclusion
+  TRIGGERED: 'triggered',           // This event triggered that action
+  REFERENCES: 'references',         // This entity references that entity
+  SUPERSEDES: 'supersedes',         // This decision supersedes that prior decision
+} as const;
+
+export type ContextEdgeTypeValue = typeof ContextEdgeType[keyof typeof ContextEdgeType];
+
+/** Context Nodes - Entities in the decision graph */
+export const contextNodes = pgTable("context_nodes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  nodeType: text("node_type").notNull(), // person, deal, interaction, decision, observation
+  entityId: varchar("entity_id"), // ID of the actual entity (person.id, interaction.id, etc.) - null for pure graph nodes
+  label: text("label").notNull(), // Human-readable label for the node
+  summary: text("summary"), // Brief description of what this node represents
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(), // Additional context-specific data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("context_nodes_type_idx").on(table.nodeType),
+  index("context_nodes_entity_idx").on(table.entityId),
+]);
+
+export const insertContextNodeSchema = createInsertSchema(contextNodes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertContextNode = z.infer<typeof insertContextNodeSchema>;
+export type ContextNode = typeof contextNodes.$inferSelect;
+
+/** Context Edges - Typed relationships between nodes */
+export const contextEdges = pgTable("context_edges", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fromNodeId: varchar("from_node_id").references(() => contextNodes.id).notNull(),
+  toNodeId: varchar("to_node_id").references(() => contextNodes.id).notNull(),
+  edgeType: text("edge_type").notNull(), // informed_by, resulted_in, led_to, etc.
+  weight: integer("weight").default(1), // Strength of the relationship (1-10)
+  reasoning: text("reasoning"), // Why this edge exists - the connective tissue
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("context_edges_from_idx").on(table.fromNodeId),
+  index("context_edges_to_idx").on(table.toNodeId),
+  index("context_edges_type_idx").on(table.edgeType),
+]);
+
+export const insertContextEdgeSchema = createInsertSchema(contextEdges).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertContextEdge = z.infer<typeof insertContextEdgeSchema>;
+export type ContextEdge = typeof contextEdges.$inferSelect;
+
+/** Decision Traces - Full capture of a decision with reasoning chain */
+export const decisionTraces = pgTable("decision_traces", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  traceType: text("trace_type").notNull(), // user_action, ai_action, system_event
+  actor: text("actor").notNull(), // 'user', 'ai:workflow_coach', 'system:relationship_checker', etc.
+  action: text("action").notNull(), // What action was taken (e.g., 'logged_call', 'promoted_to_sphere', 'set_followup')
+  entityType: text("entity_type"), // Primary entity affected (person, deal, interaction)
+  entityId: varchar("entity_id"), // ID of the primary entity affected
+  contextNodeId: varchar("context_node_id").references(() => contextNodes.id), // Link to graph node
+  inputs: jsonb("inputs").$type<{
+    evidence: { type: string; summary: string; sourceId?: string }[];
+    constraints?: string[];
+    priorState?: Record<string, unknown>;
+  }>(), // What informed the decision
+  reasoning: text("reasoning"), // The "why" - natural language explanation
+  outcome: jsonb("outcome").$type<{
+    newState?: Record<string, unknown>;
+    sideEffects?: { type: string; description: string }[];
+    success: boolean;
+    errorMessage?: string;
+  }>(), // What resulted from the decision
+  confidence: integer("confidence"), // 0-100 confidence in the decision
+  reversible: boolean("reversible").default(true), // Can this decision be undone?
+  linkedTraceId: varchar("linked_trace_id"), // Chain to previous decision
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("decision_traces_entity_idx").on(table.entityType, table.entityId),
+  index("decision_traces_actor_idx").on(table.actor),
+  index("decision_traces_action_idx").on(table.action),
+  index("decision_traces_created_idx").on(table.createdAt),
+]);
+
+export const insertDecisionTraceSchema = createInsertSchema(decisionTraces).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertDecisionTrace = z.infer<typeof insertDecisionTraceSchema>;
+export type DecisionTrace = typeof decisionTraces.$inferSelect;
+
+/** Context Node Relations */
+export const contextNodesRelations = relations(contextNodes, ({ many }) => ({
+  outgoingEdges: many(contextEdges, { relationName: 'fromNode' }),
+  incomingEdges: many(contextEdges, { relationName: 'toNode' }),
+  decisionTraces: many(decisionTraces),
+}));
+
+/** Context Edge Relations */
+export const contextEdgesRelations = relations(contextEdges, ({ one }) => ({
+  fromNode: one(contextNodes, {
+    fields: [contextEdges.fromNodeId],
+    references: [contextNodes.id],
+    relationName: 'fromNode',
+  }),
+  toNode: one(contextNodes, {
+    fields: [contextEdges.toNodeId],
+    references: [contextNodes.id],
+    relationName: 'toNode',
+  }),
+}));
+
+/** Decision Trace Relations */
+export const decisionTracesRelations = relations(decisionTraces, ({ one }) => ({
+  contextNode: one(contextNodes, {
+    fields: [decisionTraces.contextNodeId],
+    references: [contextNodes.id],
+  }),
+  linkedTrace: one(decisionTraces, {
+    fields: [decisionTraces.linkedTraceId],
+    references: [decisionTraces.id],
+  }),
+}));

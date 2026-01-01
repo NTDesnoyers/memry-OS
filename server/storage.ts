@@ -48,7 +48,10 @@ import {
   type DormantOpportunity, type InsertDormantOpportunity,
   type SocialConnection, type InsertSocialConnection,
   type SocialPost, type InsertSocialPost,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, interactionParticipants, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions, leads, observerSuggestions, observerPatterns, aiActions, savedContent, dailyDigests, userCoreProfile, dormantOpportunities, socialConnections, socialPosts
+  type ContextNode, type InsertContextNode,
+  type ContextEdge, type InsertContextEdge,
+  type DecisionTrace, type InsertDecisionTrace,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, interactionParticipants, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions, leads, observerSuggestions, observerPatterns, aiActions, savedContent, dailyDigests, userCoreProfile, dormantOpportunities, socialConnections, socialPosts, contextNodes, contextEdges, decisionTraces
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt } from "drizzle-orm";
@@ -489,6 +492,18 @@ export interface IStorage {
   createSocialPost(post: InsertSocialPost): Promise<SocialPost>;
   updateSocialPost(id: string, post: Partial<InsertSocialPost>): Promise<SocialPost | undefined>;
   deleteSocialPost(id: string): Promise<void>;
+  
+  // Context Graph - Decision Traces & World Model
+  createContextNode(node: InsertContextNode): Promise<ContextNode>;
+  getContextNode(id: string): Promise<ContextNode | undefined>;
+  getContextNodeByEntity(entityType: string, entityId: string): Promise<ContextNode | undefined>;
+  createContextEdge(edge: InsertContextEdge): Promise<ContextEdge>;
+  getContextEdgesFrom(nodeId: string): Promise<ContextEdge[]>;
+  getContextEdgesTo(nodeId: string): Promise<ContextEdge[]>;
+  createDecisionTrace(trace: InsertDecisionTrace): Promise<DecisionTrace>;
+  getDecisionTrace(id: string): Promise<DecisionTrace | undefined>;
+  getDecisionTracesForEntity(entityType: string, entityId: string, limit?: number): Promise<DecisionTrace[]>;
+  getRecentDecisionTraces(limit?: number): Promise<DecisionTrace[]>;
 }
 
 /** Full context for a person - unified data layer response */
@@ -2787,6 +2802,69 @@ export class DatabaseStorage implements IStorage {
   
   async deleteSocialPost(id: string): Promise<void> {
     await db.delete(socialPosts).where(eq(socialPosts.id, id));
+  }
+  
+  // Context Graph - Decision Traces & World Model
+  async createContextNode(node: InsertContextNode): Promise<ContextNode> {
+    const [created] = await db.insert(contextNodes).values(node).returning();
+    return created;
+  }
+  
+  async getContextNode(id: string): Promise<ContextNode | undefined> {
+    const [node] = await db.select().from(contextNodes).where(eq(contextNodes.id, id));
+    return node || undefined;
+  }
+  
+  async getContextNodeByEntity(entityType: string, entityId: string): Promise<ContextNode | undefined> {
+    const [node] = await db.select().from(contextNodes)
+      .where(and(
+        eq(contextNodes.nodeType, entityType),
+        eq(contextNodes.entityId, entityId)
+      ));
+    return node || undefined;
+  }
+  
+  async createContextEdge(edge: InsertContextEdge): Promise<ContextEdge> {
+    const [created] = await db.insert(contextEdges).values(edge).returning();
+    return created;
+  }
+  
+  async getContextEdgesFrom(nodeId: string): Promise<ContextEdge[]> {
+    return await db.select().from(contextEdges)
+      .where(eq(contextEdges.fromNodeId, nodeId))
+      .orderBy(desc(contextEdges.createdAt));
+  }
+  
+  async getContextEdgesTo(nodeId: string): Promise<ContextEdge[]> {
+    return await db.select().from(contextEdges)
+      .where(eq(contextEdges.toNodeId, nodeId))
+      .orderBy(desc(contextEdges.createdAt));
+  }
+  
+  async createDecisionTrace(trace: InsertDecisionTrace): Promise<DecisionTrace> {
+    const [created] = await db.insert(decisionTraces).values(trace).returning();
+    return created;
+  }
+  
+  async getDecisionTrace(id: string): Promise<DecisionTrace | undefined> {
+    const [trace] = await db.select().from(decisionTraces).where(eq(decisionTraces.id, id));
+    return trace || undefined;
+  }
+  
+  async getDecisionTracesForEntity(entityType: string, entityId: string, limit: number = 50): Promise<DecisionTrace[]> {
+    return await db.select().from(decisionTraces)
+      .where(and(
+        eq(decisionTraces.entityType, entityType),
+        eq(decisionTraces.entityId, entityId)
+      ))
+      .orderBy(desc(decisionTraces.createdAt))
+      .limit(limit);
+  }
+  
+  async getRecentDecisionTraces(limit: number = 100): Promise<DecisionTrace[]> {
+    return await db.select().from(decisionTraces)
+      .orderBy(desc(decisionTraces.createdAt))
+      .limit(limit);
   }
 }
 

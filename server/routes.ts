@@ -48,6 +48,7 @@ import * as googleCalendar from "./google-calendar";
 import { processInteraction, extractContentTopics } from "./conversation-processor";
 import { eventBus } from "./event-bus";
 import { createLogger } from "./logger";
+import { contextGraph } from "./context-graph";
 import { verifySavedContent, verifySummary, verifyTags, type VerifierContext } from "./verifiers";
 import type { SavedContent } from "@shared/schema";
 import * as metaInstagram from "./meta-instagram";
@@ -3394,6 +3395,20 @@ Return ONLY valid JSON, no explanations.`
         await storage.updatePerson(data.personId, { lastContact: new Date(data.occurredAt) });
         // Emit contact made event
         eventBus.emitContactMade(data.personId, interaction.id, interaction.type);
+        
+        // Record decision trace for context graph
+        const person = await storage.getPerson(data.personId);
+        if (person) {
+          contextGraph.recordInteractionLogged({
+            interactionId: interaction.id,
+            personId: data.personId,
+            personName: person.name,
+            interactionType: interaction.type,
+            summary: interaction.summary || undefined,
+            aiExtractedData: interaction.aiExtractedData as Record<string, unknown> | undefined,
+            source: (interaction.source as 'manual' | 'fathom' | 'granola' | 'plaud') || 'manual',
+          }).catch(err => logger.error('Failed to record decision trace:', err));
+        }
       }
       
       res.status(201).json(interaction);
@@ -6345,6 +6360,17 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
       if (!suggestion) {
         return res.status(404).json({ message: "Suggestion not found" });
       }
+      
+      // Record decision trace for context graph
+      const person = suggestion.personId ? await storage.getPerson(suggestion.personId) : null;
+      contextGraph.recordSuggestionAction({
+        suggestionId: suggestion.id,
+        suggestionTitle: suggestion.title,
+        action: 'accepted',
+        personId: suggestion.personId || undefined,
+        personName: person?.name,
+      }).catch(err => logger.error('Failed to record suggestion accept trace:', err));
+      
       res.json(suggestion);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -6372,6 +6398,18 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
       if (!suggestion) {
         return res.status(404).json({ message: "Suggestion not found" });
       }
+      
+      // Record decision trace for context graph
+      const person = suggestion.personId ? await storage.getPerson(suggestion.personId) : null;
+      contextGraph.recordSuggestionAction({
+        suggestionId: suggestion.id,
+        suggestionTitle: suggestion.title,
+        action: 'dismissed',
+        personId: suggestion.personId || undefined,
+        personName: person?.name,
+        feedbackNote,
+      }).catch(err => logger.error('Failed to record suggestion dismiss trace:', err));
+      
       res.json(suggestion);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -6427,6 +6465,47 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
       const { triggerContextSuggestions } = await import("./workflow-coach-agent");
       await triggerContextSuggestions(route || '/', entityType, entityId);
       res.json({ success: true, message: "Context suggestions triggered" });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============================================================
+  // Context Graph API - Decision Traces & Reasoning Chains
+  // ============================================================
+  
+  // Get decision traces for an entity (the "why" behind current state)
+  app.get("/api/context/:entityType/:entityId", async (req, res) => {
+    try {
+      const { entityType, entityId } = req.params;
+      const limit = parseInt(req.query.limit as string) || 50;
+      
+      const traces = await storage.getDecisionTracesForEntity(entityType, entityId, limit);
+      res.json({ entityType, entityId, traces });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get full reasoning chain (traces + connected nodes)
+  app.get("/api/context/:entityType/:entityId/chain", async (req, res) => {
+    try {
+      const { entityType, entityId } = req.params;
+      const depth = parseInt(req.query.depth as string) || 3;
+      
+      const chain = await contextGraph.getReasoningChain(entityType, entityId, depth);
+      res.json({ entityType, entityId, ...chain });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get recent decision traces across all entities
+  app.get("/api/context/traces/recent", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const traces = await storage.getRecentDecisionTraces(limit);
+      res.json(traces);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
