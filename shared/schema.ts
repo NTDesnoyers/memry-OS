@@ -26,6 +26,7 @@ export type User = typeof users.$inferSelect;
 /** Households - Groups people living at the same address for mailers. */
 export const households = pgTable("households", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   name: text("name").notNull(), // e.g. "Cohen & Davis Household" or auto-generated
   address: text("address"),
   primaryPersonId: varchar("primary_person_id"), // For mailers, which name to use
@@ -35,6 +36,7 @@ export const households = pgTable("households", {
 
 export const insertHouseholdSchema = createInsertSchema(households).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -45,6 +47,7 @@ export type Household = typeof households.$inferSelect;
 /** People (Contacts) - Core entity with FORD notes, segment (A/B/C/D), buyer needs. */
 export const people = pgTable("people", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   name: text("name").notNull(),
   nickname: text("nickname"),
   email: text("email"),
@@ -99,10 +102,12 @@ export const people = pgTable("people", {
   index("people_segment_idx").on(table.segment),
   index("people_last_contact_idx").on(table.lastContact),
   index("people_in_sphere_idx").on(table.inSphere),
+  index("people_user_id_idx").on(table.userId),
 ]);
 
 export const insertPersonSchema = createInsertSchema(people).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -113,6 +118,7 @@ export type Person = typeof people.$inferSelect;
 /** Business Settings - Annual goals, fee structures, split tiers. */
 export const businessSettings = pgTable("business_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   year: integer("year").notNull().default(2025),
   annualGCIGoal: integer("annual_gci_goal").default(200000),
   franchiseFeeFlat: integer("franchise_fee_flat").default(0),
@@ -131,6 +137,7 @@ export const businessSettings = pgTable("business_settings", {
 
 export const insertBusinessSettingsSchema = createInsertSchema(businessSettings).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -141,6 +148,7 @@ export type BusinessSettings = typeof businessSettings.$inferSelect;
 /** Agent Profile - User's personal and business info (single-user system). */
 export const agentProfile = pgTable("agent_profile", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   name: text("name").notNull().default("Agent Name"),
   email: text("email"),
   phone: text("phone"),
@@ -174,6 +182,7 @@ export const agentProfile = pgTable("agent_profile", {
 
 export const insertAgentProfileSchema = createInsertSchema(agentProfile).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -184,6 +193,7 @@ export type AgentProfile = typeof agentProfile.$inferSelect;
 /** Deals - Pipeline management with stages: warm → hot → in_contract → closed. */
 export const deals = pgTable("deals", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   personId: varchar("person_id").references(() => people.id),
   title: text("title").notNull(),
   address: text("address"),
@@ -206,10 +216,12 @@ export const deals = pgTable("deals", {
 }, (table) => [
   index("deals_person_id_idx").on(table.personId),
   index("deals_stage_idx").on(table.stage),
+  index("deals_user_id_idx").on(table.userId),
 ]);
 
 export const insertDealSchema = createInsertSchema(deals).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -220,6 +232,7 @@ export type Deal = typeof deals.$inferSelect;
 // PIE Time Entries
 export const pieEntries = pgTable("pie_entries", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   date: timestamp("date").notNull(),
   pTime: integer("p_time").default(0),
   iTime: integer("i_time").default(0),
@@ -231,6 +244,7 @@ export const pieEntries = pgTable("pie_entries", {
 
 export const insertPieEntrySchema = createInsertSchema(pieEntries).omit({
   id: true,
+  userId: true,
   createdAt: true,
 });
 
@@ -240,6 +254,7 @@ export type PieEntry = typeof pieEntries.$inferSelect;
 /** Tasks - Follow-up actions, optionally linked to person/deal. Syncs to Todoist. */
 export const tasks = pgTable("tasks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   personId: varchar("person_id").references(() => people.id),
   dealId: varchar("deal_id").references(() => deals.id),
   reviewId: varchar("review_id"),
@@ -256,10 +271,12 @@ export const tasks = pgTable("tasks", {
   index("tasks_person_id_idx").on(table.personId),
   index("tasks_due_date_idx").on(table.dueDate),
   index("tasks_status_idx").on(table.status),
+  index("tasks_user_id_idx").on(table.userId),
 ]);
 
 export const insertTaskSchema = createInsertSchema(tasks).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -270,6 +287,7 @@ export type Task = typeof tasks.$inferSelect;
 // Meetings (Zoom, Google Meet, etc.)
 export const meetings = pgTable("meetings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   personId: varchar("person_id").references(() => people.id),
   title: text("title").notNull(),
   platform: text("platform"),
@@ -285,6 +303,7 @@ export const meetings = pgTable("meetings", {
 
 export const insertMeetingSchema = createInsertSchema(meetings).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -295,6 +314,7 @@ export type Meeting = typeof meetings.$inferSelect;
 // Calls (Phone calls)
 export const calls = pgTable("calls", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   personId: varchar("person_id").references(() => people.id),
   phoneNumber: text("phone_number"),
   direction: text("direction"),
@@ -309,6 +329,7 @@ export const calls = pgTable("calls", {
 
 export const insertCallSchema = createInsertSchema(calls).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -319,6 +340,7 @@ export type Call = typeof calls.$inferSelect;
 // Weekly Reviews
 export const weeklyReviews = pgTable("weekly_reviews", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   weekStartDate: timestamp("week_start_date").notNull(),
   accomplishments: text("accomplishments").array(),
   challenges: text("challenges").array(),
@@ -332,6 +354,7 @@ export const weeklyReviews = pgTable("weekly_reviews", {
 
 export const insertWeeklyReviewSchema = createInsertSchema(weeklyReviews).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -342,6 +365,7 @@ export type WeeklyReview = typeof weeklyReviews.$inferSelect;
 // Notes (for voice dictation and general notes)
 export const notes = pgTable("notes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   personId: varchar("person_id").references(() => people.id),
   dealId: varchar("deal_id").references(() => deals.id),
   content: text("content").notNull(),
@@ -352,10 +376,12 @@ export const notes = pgTable("notes", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [
   index("notes_person_id_idx").on(table.personId),
+  index("notes_user_id_idx").on(table.userId),
 ]);
 
 export const insertNoteSchema = createInsertSchema(notes).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -366,6 +392,7 @@ export type Note = typeof notes.$inferSelect;
 // Listings (Haves - properties you have available)
 export const listings = pgTable("listings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   address: text("address").notNull(),
   price: integer("price"),
   beds: integer("beds"),
@@ -386,6 +413,7 @@ export const listings = pgTable("listings", {
 
 export const insertListingSchema = createInsertSchema(listings).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -396,6 +424,7 @@ export type Listing = typeof listings.$inferSelect;
 // Email Campaigns (for tracking Haves & Wants newsletters)
 export const emailCampaigns = pgTable("email_campaigns", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   subject: text("subject").notNull(),
   htmlContent: text("html_content"),
   recipientCount: integer("recipient_count"),
@@ -408,6 +437,7 @@ export const emailCampaigns = pgTable("email_campaigns", {
 
 export const insertEmailCampaignSchema = createInsertSchema(emailCampaigns).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -418,6 +448,7 @@ export type EmailCampaign = typeof emailCampaigns.$inferSelect;
 // 8x8 Campaigns (8 touches in 8 weeks for D segment contacts)
 export const eightByEightCampaigns = pgTable("eight_by_eight_campaigns", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   personId: varchar("person_id").references(() => people.id).notNull(),
   startedAt: timestamp("started_at").defaultNow().notNull(),
   currentStep: integer("current_step").default(1).notNull(), // 1-8
@@ -439,6 +470,7 @@ export const eightByEightCampaigns = pgTable("eight_by_eight_campaigns", {
 
 export const insertEightByEightCampaignSchema = createInsertSchema(eightByEightCampaigns).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -449,6 +481,7 @@ export type EightByEightCampaign = typeof eightByEightCampaigns.$inferSelect;
 // Pricing Reviews (Visual Pricing / Focus1st style analysis)
 export const pricingReviews = pgTable("pricing_reviews", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   personId: varchar("person_id").references(() => people.id),
   title: text("title").notNull(),
   neighborhood: text("neighborhood"),
@@ -466,6 +499,7 @@ export const pricingReviews = pgTable("pricing_reviews", {
 
 export const insertPricingReviewSchema = createInsertSchema(pricingReviews).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -476,6 +510,7 @@ export type PricingReview = typeof pricingReviews.$inferSelect;
 // Life Event Alerts - tracking life changes that signal real estate needs
 export const lifeEventAlerts = pgTable("life_event_alerts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   personId: varchar("person_id").references(() => people.id),
   eventType: text("event_type").notNull(), // e.g., "new_baby", "job_change", "engagement"
   eventCategory: text("event_category").notNull(), // "family", "career", "life_transition", "property"
@@ -495,6 +530,7 @@ export const lifeEventAlerts = pgTable("life_event_alerts", {
 
 export const insertLifeEventAlertSchema = createInsertSchema(lifeEventAlerts).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -671,6 +707,7 @@ export const realEstateReviewsRelations = relations(realEstateReviews, ({ one })
 /** Interactions - Unified log of calls, meetings, texts, emails. Stores transcripts for AI processing. */
 export const interactions = pgTable("interactions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   personId: varchar("person_id").references(() => people.id),
   type: text("type").notNull(), // call, meeting, text, email, note
   source: text("source"), // fathom, granola, plaud, manual, phone, email
@@ -692,10 +729,12 @@ export const interactions = pgTable("interactions", {
   index("interactions_person_id_idx").on(table.personId),
   index("interactions_occurred_at_idx").on(table.occurredAt),
   index("interactions_type_idx").on(table.type),
+  index("interactions_user_id_idx").on(table.userId),
 ]);
 
 export const insertInteractionSchema = createInsertSchema(interactions).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -770,6 +809,7 @@ export type AiConversation = typeof aiConversations.$inferSelect;
 /** Generated Drafts - AI-generated emails and handwritten notes using user's voice profile. */
 export const generatedDrafts = pgTable("generated_drafts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   personId: varchar("person_id").references(() => people.id),
   interactionId: varchar("interaction_id").references(() => interactions.id),
   type: text("type").notNull(), // email, handwritten_note, task, referral_intro
@@ -784,6 +824,7 @@ export const generatedDrafts = pgTable("generated_drafts", {
 
 export const insertGeneratedDraftSchema = createInsertSchema(generatedDrafts).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -806,6 +847,7 @@ export const generatedDraftsRelations = relations(generatedDrafts, ({ one }) => 
 // Voice Profile - Stores learned communication patterns from Nathan's conversations
 export const voiceProfile = pgTable("voice_profile", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   category: text("category").notNull(), // greetings, signoffs, phrases, tone_notes, expressions
   value: text("value").notNull(), // The actual phrase or pattern
   context: text("context"), // Where this was observed (email, phone call, meeting)
@@ -817,6 +859,7 @@ export const voiceProfile = pgTable("voice_profile", {
 
 export const insertVoiceProfileSchema = createInsertSchema(voiceProfile).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -1006,6 +1049,7 @@ export type AIExtractedData = {
 /** Content Topics - Recurring themes/pain points mined from conversations. */
 export const contentTopics = pgTable("content_topics", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   title: text("title").notNull(),
   description: text("description"),
   category: text("category"), // inspection, financing, negotiation, closing, etc.
@@ -1028,6 +1072,7 @@ export const contentTopics = pgTable("content_topics", {
 
 export const insertContentTopicSchema = createInsertSchema(contentTopics).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -1038,6 +1083,7 @@ export type ContentTopic = typeof contentTopics.$inferSelect;
 /** Content Ideas - Specific content pieces to create, tied to topics. */
 export const contentIdeas = pgTable("content_ideas", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   topicId: varchar("topic_id").references(() => contentTopics.id),
   title: text("title").notNull(),
   description: text("description"),
@@ -1056,6 +1102,7 @@ export const contentIdeas = pgTable("content_ideas", {
 
 export const insertContentIdeaSchema = createInsertSchema(contentIdeas).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -1066,6 +1113,7 @@ export type ContentIdea = typeof contentIdeas.$inferSelect;
 /** Content Calendar - Scheduled content for publishing. */
 export const contentCalendar = pgTable("content_calendar", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   contentIdeaId: varchar("content_idea_id").references(() => contentIdeas.id),
   title: text("title").notNull(),
   contentType: text("content_type").notNull(), // blog, video_short, video_long, podcast, email_newsletter, social
@@ -1079,6 +1127,7 @@ export const contentCalendar = pgTable("content_calendar", {
 
 export const insertContentCalendarSchema = createInsertSchema(contentCalendar).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -1162,6 +1211,7 @@ export type LeadStatusType = typeof LeadStatus[keyof typeof LeadStatus];
 /** Leads - Top-of-funnel lead tracking before conversion to contacts. */
 export const leads = pgTable("leads", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   name: text("name").notNull(),
   email: text("email"),
   phone: text("phone"),
@@ -1185,10 +1235,12 @@ export const leads = pgTable("leads", {
   index("leads_status_idx").on(table.status),
   index("leads_source_idx").on(table.source),
   index("leads_created_at_idx").on(table.createdAt),
+  index("leads_user_id_idx").on(table.userId),
 ]);
 
 export const insertLeadSchema = createInsertSchema(leads).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -1211,6 +1263,7 @@ export type DormantOpportunityStatusType = typeof DormantOpportunityStatus[keyof
 /** Dormant Opportunities - Old leads/contacts identified for revival. */
 export const dormantOpportunities = pgTable("dormant_opportunities", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   personId: varchar("person_id").references(() => people.id),
   leadId: varchar("lead_id").references(() => leads.id),
   status: text("status").notNull().default('pending'),
@@ -1232,10 +1285,12 @@ export const dormantOpportunities = pgTable("dormant_opportunities", {
   index("dormant_opportunities_status_idx").on(table.status),
   index("dormant_opportunities_score_idx").on(table.dormancyScore),
   index("dormant_opportunities_person_idx").on(table.personId),
+  index("dormant_opportunities_user_id_idx").on(table.userId),
 ]);
 
 export const insertDormantOpportunitySchema = createInsertSchema(dormantOpportunities).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -1442,6 +1497,7 @@ export type ObserverSuggestionStatusType = typeof ObserverSuggestionStatus[keyof
 /** Observer Suggestions - Proactive suggestions from the AI observer */
 export const observerSuggestions = pgTable("observer_suggestions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   agentName: text("agent_name").notNull(),
   intent: text("intent").notNull(), // 'delegate', 'automate', 'shortcut', 'insight'
   status: text("status").notNull().default('pending'),
@@ -1468,6 +1524,7 @@ export const observerSuggestions = pgTable("observer_suggestions", {
 
 export const insertObserverSuggestionSchema = createInsertSchema(observerSuggestions).omit({
   id: true,
+  userId: true,
   createdAt: true,
 });
 
@@ -1811,6 +1868,7 @@ export type AiAction = typeof aiActions.$inferSelect;
 /** Saved Content - Articles, posts, links saved for later reading and daily digest */
 export const savedContent = pgTable("saved_content", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   url: text("url").notNull(),
   title: text("title"),
   author: text("author"),
@@ -1831,10 +1889,12 @@ export const savedContent = pgTable("saved_content", {
 }, (table) => [
   index("saved_content_status_idx").on(table.status),
   index("saved_content_created_idx").on(table.createdAt),
+  index("saved_content_user_id_idx").on(table.userId),
 ]);
 
 export const insertSavedContentSchema = createInsertSchema(savedContent).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -1845,6 +1905,7 @@ export type SavedContent = typeof savedContent.$inferSelect;
 /** Daily Digests - Generated daily summaries of saved content */
 export const dailyDigests = pgTable("daily_digests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   digestDate: timestamp("digest_date").notNull(),
   itemCount: integer("item_count").default(0),
   summaryHtml: text("summary_html"), // Rendered digest content
@@ -1861,10 +1922,12 @@ export const dailyDigests = pgTable("daily_digests", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
   index("daily_digests_date_idx").on(table.digestDate),
+  index("daily_digests_user_id_idx").on(table.userId),
 ]);
 
 export const insertDailyDigestSchema = createInsertSchema(dailyDigests).omit({
   id: true,
+  userId: true,
   createdAt: true,
 });
 
@@ -1882,6 +1945,7 @@ export const savedContentRelations = relations(savedContent, ({ one }) => ({
 /** User Core Profile - Guiding principles, mission, values for AI Chief of Staff personalization */
 export const userCoreProfile = pgTable("user_core_profile", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   betaUserId: varchar("beta_user_id").notNull().unique().references(() => betaUsers.id),
   mtp: text("mtp"), // Master Transformative Purpose
   missionStatement: text("mission_statement"),
@@ -1905,6 +1969,7 @@ export const userCoreProfile = pgTable("user_core_profile", {
 
 export const insertUserCoreProfileSchema = createInsertSchema(userCoreProfile).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
