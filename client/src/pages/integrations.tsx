@@ -406,6 +406,115 @@ function WebhooksSection() {
   );
 }
 
+function FathomIntegrationCard() {
+  const queryClient = useQueryClient();
+  
+  const { data: status, isLoading: statusLoading, refetch: refetchStatus } = useQuery<{
+    isConfigured: boolean;
+    isRunning: boolean;
+    lastSync: string | null;
+    lastResult: { synced: number; failed: number } | null;
+    error: string | null;
+    schedulerRunning: boolean;
+  }>({
+    queryKey: ["/api/fathom/status"],
+    refetchInterval: 30000,
+  });
+  
+  const syncMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/fathom/sync");
+      return res.json();
+    },
+    onSuccess: (data: { synced: number; failed: number; message?: string }) => {
+      toast.success(`Fathom sync complete: ${data.synced} meetings synced${data.failed > 0 ? `, ${data.failed} failed` : ''}`);
+      queryClient.invalidateQueries({ queryKey: ["/api/people"] });
+      refetchStatus();
+    },
+    onError: (error: Error) => {
+      toast.error(`Sync failed: ${error.message}`);
+    },
+  });
+  
+  const isConfigured = status?.isConfigured === true;
+  const isSyncing = status?.isRunning || syncMutation.isPending;
+  
+  return (
+    <Card className="border-none shadow-md" data-testid="fathom-integration-card">
+      <CardHeader className="bg-emerald-50/50 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold">
+            <Video className="h-6 w-6" />
+          </div>
+          <div className="flex-1">
+            <CardTitle className="font-serif">Fathom.video</CardTitle>
+            <CardDescription>Import meeting recordings and transcripts</CardDescription>
+          </div>
+          {statusLoading ? (
+            <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+          ) : isConfigured ? (
+            <Badge className="bg-green-100 text-green-700 border-green-200">
+              <CheckCircle2 className="h-3 w-3 mr-1" />
+              Connected
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-gray-500">
+              <AlertCircle className="h-3 w-3 mr-1" />
+              Not Configured
+            </Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="pt-6 space-y-4">
+        {isConfigured ? (
+          <>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Last sync:</span>
+              <span>{status?.lastSync ? new Date(status.lastSync).toLocaleString() : 'Never'}</span>
+            </div>
+            {status?.lastResult && (
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Last sync result:</span>
+                <span>{status.lastResult.synced} synced{status.lastResult.failed > 0 ? `, ${status.lastResult.failed} failed` : ''}</span>
+              </div>
+            )}
+            {status?.error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{status.error}</AlertDescription>
+              </Alert>
+            )}
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => syncMutation.mutate()} 
+                disabled={isSyncing}
+                data-testid="button-sync-fathom"
+              >
+                {isSyncing ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                Sync Now
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Auto-syncs every 5 minutes. Meetings from the last 7 days are imported with transcripts.
+            </p>
+          </>
+        ) : (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Add your Fathom API key in Settings → Secrets as <code className="bg-gray-100 px-1 rounded">FATHOM_API_KEY</code> to enable sync.
+            </AlertDescription>
+          </Alert>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function TodoistIntegrationCard() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -518,10 +627,6 @@ export default function Integrations() {
   const [geminiKey, setGeminiKey] = useState(localStorage.getItem("gemini_api_key") || "");
   const [showGeminiKey, setShowGeminiKey] = useState(false);
 
-  // Fathom State
-  const [fathomKey, setFathomKey] = useState(localStorage.getItem("fathom_api_key") || "");
-  const [showFathomKey, setShowFathomKey] = useState(false);
-
   // Granola State
   const [granolaKey, setGranolaKey] = useState(localStorage.getItem("granola_api_key") || "");
   const [showGranolaKey, setShowGranolaKey] = useState(false);
@@ -610,37 +715,7 @@ export default function Integrations() {
 
             <TabsContent value="capture" className="space-y-4">
               {/* Fathom */}
-              <Card className="border-none shadow-md">
-                <CardHeader className="bg-emerald-50/50 pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold">
-                      <Video className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <CardTitle className="font-serif">Fathom.video</CardTitle>
-                      <CardDescription>Import meeting recordings and transcripts</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-6 space-y-4">
-                  <div className="space-y-2">
-                    <Label>API Key</Label>
-                    <div className="flex gap-2">
-                      <Input 
-                        type={showFathomKey ? "text" : "password"} 
-                        value={fathomKey}
-                        onChange={(e) => setFathomKey(e.target.value)}
-                        placeholder="fathom_..."
-                        className="bg-background/50"
-                      />
-                      <Button variant="outline" size="icon" onClick={() => setShowFathomKey(!showFathomKey)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button onClick={() => saveKey("Fathom", fathomKey, "fathom_api_key")}>Save</Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <FathomIntegrationCard />
 
               {/* Granola */}
               <Card className="border-none shadow-md">
