@@ -42,7 +42,6 @@ import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { VoiceLogger } from "@/components/voice-logger";
-import { QuickVoiceLog } from "@/components/quick-voice-log";
 import { useQuery } from "@tanstack/react-query";
 import { isFounderMode, toggleMode, BETA_NAV_HREFS, BETA_PROFILE_MENU_HREFS } from "@/lib/feature-mode";
 import { Badge } from "@/components/ui/badge";
@@ -374,7 +373,7 @@ export default function LayoutComponent({ children }: { children: React.ReactNod
         {children}
       </main>
       
-      {founderMode ? <VoiceLogger /> : <QuickVoiceLog />}
+      <VoiceLogger />
     </div>
   );
 }
