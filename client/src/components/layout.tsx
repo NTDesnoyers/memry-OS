@@ -64,7 +64,7 @@ const allNavItems = [
   { name: "Referrals", href: "/referrals", icon: Handshake },
   { name: "Calendar", href: "/calendar", icon: Calendar },
   { name: "Drafts", href: "/drafts", icon: FileEdit },
-  { name: "Add Memory", href: "/conversations", icon: MessageSquare }, // Beta-only: simple conversation log
+  { name: "Flow", href: "/conversations", icon: MessageSquare }, // Beta-only: simple conversation log
 ];
 
 const allProfileMenuItems = [
