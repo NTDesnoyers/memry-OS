@@ -470,9 +470,17 @@ export default function ConversationLog() {
   });
 
   const groupedInteractions = filteredInteractions.reduce((acc, interaction) => {
-    const date = format(new Date(interaction.occurredAt), "yyyy-MM-dd");
-    if (!acc[date]) acc[date] = [];
-    acc[date].push(interaction);
+    // Safely parse date, fallback to createdAt or current date
+    let dateKey: string;
+    try {
+      const dateValue = interaction.occurredAt || interaction.createdAt;
+      const parsed = new Date(dateValue);
+      dateKey = isNaN(parsed.getTime()) ? format(new Date(), "yyyy-MM-dd") : format(parsed, "yyyy-MM-dd");
+    } catch {
+      dateKey = format(new Date(), "yyyy-MM-dd");
+    }
+    if (!acc[dateKey]) acc[dateKey] = [];
+    acc[dateKey].push(interaction);
     return acc;
   }, {} as Record<string, Interaction[]>);
 
@@ -590,7 +598,14 @@ export default function ConversationLog() {
                   <div className="flex items-center gap-3 mb-4">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium text-muted-foreground">
-                      {format(new Date(date), "EEEE, MMMM d, yyyy")}
+                      {(() => {
+                        try {
+                          const parsed = new Date(date);
+                          return isNaN(parsed.getTime()) ? "Unknown Date" : format(parsed, "EEEE, MMMM d, yyyy");
+                        } catch {
+                          return "Unknown Date";
+                        }
+                      })()}
                     </span>
                     <Separator className="flex-1" />
                   </div>
@@ -688,9 +703,16 @@ export default function ConversationLog() {
                                 </div>
                                 <p className="text-sm text-muted-foreground flex items-center gap-1">
                                   <Clock className="h-3 w-3" />
-                                  {format(new Date(interaction.occurredAt), "h:mm a")}
-                                  {" · "}
-                                  {formatDistanceToNow(new Date(interaction.occurredAt), { addSuffix: true })}
+                                  {(() => {
+                                    try {
+                                      const dateValue = interaction.occurredAt || interaction.createdAt;
+                                      const parsed = new Date(dateValue);
+                                      if (isNaN(parsed.getTime())) return "Unknown time";
+                                      return `${format(parsed, "h:mm a")} · ${formatDistanceToNow(parsed, { addSuffix: true })}`;
+                                    } catch {
+                                      return "Unknown time";
+                                    }
+                                  })()}
                                 </p>
                                 {interaction.summary && (
                                   <p className="text-sm mt-2 line-clamp-2">{interaction.summary}</p>
