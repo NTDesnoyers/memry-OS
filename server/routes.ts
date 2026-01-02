@@ -624,6 +624,12 @@ ${peopleNames.map(p => `- "${p.name}" (id: ${p.id})`).join('\n')}
 Parse the voice note and return JSON with:
 - personId: The ID of the matching person if mentioned (must be exact ID from list above, or null if no match)
 - personName: The name of the person being discussed (even if not in contacts)
+- type: The type of interaction. MUST be one of: "call", "meeting", "text", "email", "voice_note"
+  - Use "call" if they mention: called, phone call, voicemail, left a message, spoke on the phone, rang, dialed
+  - Use "meeting" if they mention: met with, had coffee, lunch with, saw them, in-person, visited, showed a house, toured
+  - Use "text" if they mention: texted, sent a text, messaged, SMS, iMessage
+  - Use "email" if they mention: emailed, sent an email, got an email
+  - Use "voice_note" only if it's a personal note/reminder not about a specific interaction
 - summary: A concise 1-2 sentence summary of what was discussed or happened
 - fordNotes: Object with any personal details mentioned:
   - family: any family mentions (kids, spouse, parents)
@@ -634,7 +640,8 @@ Parse the voice note and return JSON with:
 - suggestedFollowUp: brief description of follow-up if needed
 
 Be forgiving with name matching - "John" should match "John Smith", etc.
-If the person mentions multiple people, pick the primary one being discussed.`
+If the person mentions multiple people, pick the primary one being discussed.
+IMPORTANT: Infer the interaction type from context clues. If they say "left a voicemail", that's a "call" not a "voice_note".`
           },
           {
             role: "user",
@@ -653,9 +660,13 @@ If the person mentions multiple people, pick the primary one being discussed.`
         ? parsed.personId 
         : null;
       
-      // Create the interaction
+      // Validate and use the detected type
+      const validTypes = ["call", "meeting", "text", "email", "voice_note"];
+      const detectedType = validTypes.includes(parsed.type) ? parsed.type : "voice_note";
+      
+      // Create the interaction with detected type
       const interaction = await storage.createInteraction({
-        type: "voice_note",
+        type: detectedType,
         personId: validatedPersonId,
         title: parsed.personName ? `Note about ${parsed.personName}` : "Voice Note",
         summary: parsed.summary || transcript.slice(0, 200),
@@ -715,6 +726,7 @@ If the person mentions multiple people, pick the primary one being discussed.`
         personId: validatedPersonId,
         personName: parsed.personName,
         summary: parsed.summary,
+        type: detectedType,
         isNewContact: !validatedPersonId && parsed.personName,
         fordNotes: parsed.fordNotes,
         followUpCreated: parsed.followUpNeeded && parsed.suggestedFollowUp,
