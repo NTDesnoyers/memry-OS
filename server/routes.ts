@@ -119,18 +119,18 @@ async function processAllInBackground(interactionIds: string[], ctx?: TenantCont
 // Content Processing Functions (Insight Inbox)
 // ============================================================
 
-async function processContentAsync(contentId: string): Promise<void> {
+async function processContentAsync(contentId: string, ctx?: TenantContext): Promise<void> {
   try {
-    const content = await storage.getSavedContent(contentId);
+    const content = await storage.getSavedContent(contentId, ctx);
     if (!content) return;
     
-    await processContentWithAI(content);
+    await processContentWithAI(content, ctx);
   } catch (error: any) {
     logger.error('Async content processing failed', { contentId, error: error.message });
   }
 }
 
-async function processContentWithAI(content: SavedContent): Promise<SavedContent> {
+async function processContentWithAI(content: SavedContent, ctx?: TenantContext): Promise<SavedContent> {
   const openaiClient = getOpenAI();
   
   // Audit this action
@@ -138,7 +138,7 @@ async function processContentWithAI(content: SavedContent): Promise<SavedContent
     actionType: 'process_content',
     proposedBy: 'ai',
     input: { contentId: content.id, url: content.url }
-  });
+  }, ctx);
   
   try {
     // Step 1: Fetch and extract article content if not already present
@@ -199,7 +199,7 @@ async function processContentWithAI(content: SavedContent): Promise<SavedContent
         verifierErrors: contentVerification.errors,
         verifierScore: contentVerification.score,
         outcome: 'rejected'
-      });
+      }, ctx);
       
       // Still save what we have
       return await storage.updateSavedContent(content.id, {
@@ -207,7 +207,7 @@ async function processContentWithAI(content: SavedContent): Promise<SavedContent
         content: articleText || undefined,
         author,
         siteName
-      }) || content;
+      }, ctx) || content;
     }
     
     // Step 2: Generate summary and tags with AI
@@ -272,7 +272,7 @@ Article content: ${articleText.slice(0, 4000)}`
       tags,
       author,
       siteName
-    });
+    }, ctx);
     
     // Record successful action
     await storage.updateAiAction(aiAction.id, {
@@ -282,7 +282,7 @@ Article content: ${articleText.slice(0, 4000)}`
       outcome: 'executed',
       resultData: { summary, keyPointsCount: keyPoints.length, tagsCount: tags.length },
       executedAt: new Date()
-    });
+    }, ctx);
     
     logger.info('Content processed successfully', { 
       contentId: content.id, 
@@ -295,16 +295,16 @@ Article content: ${articleText.slice(0, 4000)}`
     await storage.updateAiAction(aiAction.id, {
       outcome: 'rejected',
       verifierErrors: [error.message]
-    });
+    }, ctx);
     throw error;
   }
 }
 
-async function generateDailyDigest() {
+async function generateDailyDigest(ctx?: TenantContext) {
   const openaiClient = getOpenAI();
   
   // Get unread content from the last 24 hours
-  const allContent = await storage.getUnreadSavedContent();
+  const allContent = await storage.getUnreadSavedContent(ctx);
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   
@@ -319,7 +319,7 @@ async function generateDailyDigest() {
       itemCount: 0,
       contentIds: [],
       summaryHtml: '<p>No new content saved today.</p>'
-    });
+    }, ctx);
     return digest;
   }
   
@@ -361,13 +361,13 @@ ${contentSummaries}`
     itemCount: recentContent.length,
     contentIds: recentContent.map(c => c.id),
     summaryHtml
-  });
+  }, ctx);
   
   // Mark content as included in digest
   for (const content of recentContent) {
     await storage.updateSavedContent(content.id, {
       digestIncludedAt: new Date()
-    });
+    }, ctx);
   }
   
   logger.info('Daily digest generated', { 
@@ -4364,7 +4364,8 @@ Return ONLY valid JSON, no explanations.`
   // Get all referral opportunities across the network
   app.get("/api/referral-opportunities", async (req, res) => {
     try {
-      const allPeople = await storage.getAllPeople();
+      const ctx = getTenantContext(req);
+      const allPeople = await storage.getAllPeople(ctx);
       const opportunities: {
         id: string;
         personWithNeed: { id: string; name: string; segment: string | null };
@@ -4587,7 +4588,8 @@ Return ONLY valid JSON, no explanations.`
         try {
           // Only sync tasks that haven't been synced yet (no todoistId)
           if (!task.todoistId) {
-            const person = task.personId ? await storage.getPerson(task.personId) : null;
+            const ctx = getTenantContext(req);
+            const person = task.personId ? await storage.getPerson(task.personId, ctx) : null;
             const description = person ? `Contact: ${person.name}` : undefined;
             
             const todoistTask = await todoistClient.createTodoistTask({
@@ -4868,24 +4870,25 @@ Return ONLY valid JSON, no explanations.`
           let personId: string | undefined;
           
           // Try by phone number from participants
+          const ctx = getTenantContext(req);
           if (participants && Array.isArray(participants)) {
             for (const participant of participants) {
               if (participant.phone) {
-                const person = await storage.getPersonByPhone(participant.phone);
+                const person = await storage.getPersonByPhone(participant.phone, ctx);
                 if (person) {
                   personId = person.id;
                   break;
                 }
               }
               if (participant.email) {
-                const person = await storage.getPersonByEmail(participant.email);
+                const person = await storage.getPersonByEmail(participant.email, ctx);
                 if (person) {
                   personId = person.id;
                   break;
                 }
               }
               if (participant.name) {
-                const matches = await storage.searchPeopleByName(participant.name);
+                const matches = await storage.searchPeopleByName(participant.name, ctx);
                 if (matches.length === 1) {
                   personId = matches[0].id;
                   break;
@@ -4899,13 +4902,13 @@ Return ONLY valid JSON, no explanations.`
             if (personHint.id) {
               personId = personHint.id;
             } else if (personHint.phone) {
-              const person = await storage.getPersonByPhone(personHint.phone);
+              const person = await storage.getPersonByPhone(personHint.phone, ctx);
               if (person) personId = person.id;
             } else if (personHint.email) {
-              const person = await storage.getPersonByEmail(personHint.email);
+              const person = await storage.getPersonByEmail(personHint.email, ctx);
               if (person) personId = person.id;
             } else if (personHint.name) {
-              const matches = await storage.searchPeopleByName(personHint.name);
+              const matches = await storage.searchPeopleByName(personHint.name, ctx);
               if (matches.length === 1) personId = matches[0].id;
             }
           }
@@ -4932,7 +4935,7 @@ Return ONLY valid JSON, no explanations.`
           if (personId) {
             await storage.updatePerson(personId, { 
               lastContact: interaction.occurredAt 
-            });
+            }, ctx);
           }
           
           results.push({ 
@@ -5030,15 +5033,16 @@ Return ONLY valid JSON, no explanations.`
       }
       
       // Try to match person
+      const ctx = getTenantContext(req);
       let personId: string | undefined;
       if (personHint) {
         if (personHint.id) {
           personId = personHint.id;
         } else if (personHint.phone) {
-          const person = await storage.getPersonByPhone(personHint.phone);
+          const person = await storage.getPersonByPhone(personHint.phone, ctx);
           if (person) personId = person.id;
         } else if (personHint.name) {
-          const matches = await storage.searchPeopleByName(personHint.name);
+          const matches = await storage.searchPeopleByName(personHint.name, ctx);
           if (matches.length === 1) personId = matches[0].id;
         }
       }
@@ -5063,7 +5067,7 @@ Return ONLY valid JSON, no explanations.`
       
       // Update person's lastContact if matched
       if (personId) {
-        await storage.updatePerson(personId, { lastContact: interaction.occurredAt });
+        await storage.updatePerson(personId, { lastContact: interaction.occurredAt }, ctx);
       }
       
       res.json({
@@ -5081,19 +5085,20 @@ Return ONLY valid JSON, no explanations.`
   app.get("/api/sync/search-person", async (req, res) => {
     try {
       const { phone, email, name } = req.query;
+      const ctx = getTenantContext(req);
       
       if (phone) {
-        const person = await storage.getPersonByPhone(phone as string);
+        const person = await storage.getPersonByPhone(phone as string, ctx);
         return res.json({ matches: person ? [person] : [] });
       }
       
       if (email) {
-        const person = await storage.getPersonByEmail(email as string);
+        const person = await storage.getPersonByEmail(email as string, ctx);
         return res.json({ matches: person ? [person] : [] });
       }
       
       if (name) {
-        const matches = await storage.searchPeopleByName(name as string);
+        const matches = await storage.searchPeopleByName(name as string, ctx);
         return res.json({ matches });
       }
       
@@ -6041,6 +6046,7 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
 
   app.post("/api/life-event-alerts", async (req, res) => {
     try {
+      const ctx = getTenantContext(req);
       const alert = await storage.createLifeEventAlert(req.body);
       
       // Emit life event detected event
@@ -6048,7 +6054,7 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
         eventBus.emitLifeEventDetected(alert.personId, alert.id, alert.eventType, alert.eventCategory);
         
         // Record in context graph for ontology
-        const person = await storage.getPerson(alert.personId);
+        const person = await storage.getPerson(alert.personId, ctx);
         if (person) {
           contextGraph.recordLifeEventDetected({
             alertId: alert.id,
@@ -6405,13 +6411,14 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
 
   app.post("/api/observer/suggestions/:id/accept", async (req, res) => {
     try {
+      const ctx = getTenantContext(req);
       const suggestion = await storage.acceptObserverSuggestion(req.params.id);
       if (!suggestion) {
         return res.status(404).json({ message: "Suggestion not found" });
       }
       
       // Record decision trace for context graph
-      const person = suggestion.personId ? await storage.getPerson(suggestion.personId) : null;
+      const person = suggestion.personId ? await storage.getPerson(suggestion.personId, ctx) : null;
       contextGraph.recordSuggestionAction({
         suggestionId: suggestion.id,
         suggestionTitle: suggestion.title,
@@ -6442,6 +6449,7 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
 
   app.post("/api/observer/suggestions/:id/dismiss", async (req, res) => {
     try {
+      const ctx = getTenantContext(req);
       const { feedbackNote } = req.body;
       const suggestion = await storage.dismissObserverSuggestion(req.params.id, feedbackNote);
       if (!suggestion) {
@@ -6449,7 +6457,7 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
       }
       
       // Record decision trace for context graph
-      const person = suggestion.personId ? await storage.getPerson(suggestion.personId) : null;
+      const person = suggestion.personId ? await storage.getPerson(suggestion.personId, ctx) : null;
       contextGraph.recordSuggestionAction({
         suggestionId: suggestion.id,
         suggestionTitle: suggestion.title,
@@ -6578,11 +6586,12 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
   // Get pending opportunities only (review queue)
   app.get("/api/dormant-opportunities/pending", async (req, res) => {
     try {
+      const ctx = getTenantContext(req);
       const opportunities = await storage.getPendingDormantOpportunities();
       
       // Enrich with person data
       const enriched = await Promise.all(opportunities.map(async (opp) => {
-        const person = opp.personId ? await storage.getPerson(opp.personId) : null;
+        const person = opp.personId ? await storage.getPerson(opp.personId, ctx) : null;
         return { ...opp, person };
       }));
       
@@ -6595,12 +6604,13 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
   // Get single opportunity
   app.get("/api/dormant-opportunities/:id", async (req, res) => {
     try {
+      const ctx = getTenantContext(req);
       const opportunity = await storage.getDormantOpportunity(req.params.id);
       if (!opportunity) {
         return res.status(404).json({ message: "Opportunity not found" });
       }
       
-      const person = opportunity.personId ? await storage.getPerson(opportunity.personId) : null;
+      const person = opportunity.personId ? await storage.getPerson(opportunity.personId, ctx) : null;
       res.json({ ...opportunity, person });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -6711,8 +6721,9 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
   // Get all saved content
   app.get("/api/content", async (req, res) => {
     try {
+      const ctx = getTenantContext(req);
       const limit = parseInt(req.query.limit as string) || 100;
-      const content = await storage.getAllSavedContent(limit);
+      const content = await storage.getAllSavedContent(limit, ctx);
       res.json(content);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -6722,7 +6733,8 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
   // Get unread content only
   app.get("/api/content/unread", async (req, res) => {
     try {
-      const content = await storage.getUnreadSavedContent();
+      const ctx = getTenantContext(req);
+      const content = await storage.getUnreadSavedContent(ctx);
       res.json(content);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -6732,7 +6744,8 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
   // Get single content item
   app.get("/api/content/:id", async (req, res) => {
     try {
-      const content = await storage.getSavedContent(req.params.id);
+      const ctx = getTenantContext(req);
+      const content = await storage.getSavedContent(req.params.id, ctx);
       if (!content) {
         return res.status(404).json({ message: "Content not found" });
       }
@@ -6745,6 +6758,7 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
   // Capture new content (URL submission)
   app.post("/api/content/capture", async (req, res) => {
     try {
+      const ctx = getTenantContext(req);
       const { url, source = 'manual', notes } = req.body;
       
       if (!url) {
@@ -6752,7 +6766,7 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
       }
       
       // Check if URL already exists
-      const existing = await storage.getSavedContentByUrl(url);
+      const existing = await storage.getSavedContentByUrl(url, ctx);
       if (existing) {
         return res.status(409).json({ 
           message: "Content already saved",
@@ -6766,10 +6780,10 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
         source,
         notes,
         status: 'unread'
-      });
+      }, ctx);
       
       // Queue for AI processing (async - don't wait)
-      processContentAsync(content.id).catch(err => {
+      processContentAsync(content.id, ctx).catch(err => {
         logger.error('Content processing failed', { contentId: content.id, error: err.message });
       });
       
@@ -6782,7 +6796,8 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
   // Update content
   app.put("/api/content/:id", async (req, res) => {
     try {
-      const content = await storage.updateSavedContent(req.params.id, req.body);
+      const ctx = getTenantContext(req);
+      const content = await storage.updateSavedContent(req.params.id, req.body, ctx);
       if (!content) {
         return res.status(404).json({ message: "Content not found" });
       }
@@ -6795,7 +6810,8 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
   // Mark content as read
   app.post("/api/content/:id/read", async (req, res) => {
     try {
-      const content = await storage.markContentRead(req.params.id);
+      const ctx = getTenantContext(req);
+      const content = await storage.markContentRead(req.params.id, ctx);
       if (!content) {
         return res.status(404).json({ message: "Content not found" });
       }
@@ -6808,7 +6824,8 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
   // Archive content
   app.post("/api/content/:id/archive", async (req, res) => {
     try {
-      const content = await storage.archiveContent(req.params.id);
+      const ctx = getTenantContext(req);
+      const content = await storage.archiveContent(req.params.id, ctx);
       if (!content) {
         return res.status(404).json({ message: "Content not found" });
       }
@@ -6821,7 +6838,8 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
   // Delete content
   app.delete("/api/content/:id", async (req, res) => {
     try {
-      await storage.deleteSavedContent(req.params.id);
+      const ctx = getTenantContext(req);
+      await storage.deleteSavedContent(req.params.id, ctx);
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -6831,12 +6849,13 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
   // Process content with AI (manual trigger)
   app.post("/api/content/:id/process", async (req, res) => {
     try {
-      const content = await storage.getSavedContent(req.params.id);
+      const ctx = getTenantContext(req);
+      const content = await storage.getSavedContent(req.params.id, ctx);
       if (!content) {
         return res.status(404).json({ message: "Content not found" });
       }
       
-      const processed = await processContentWithAI(content);
+      const processed = await processContentWithAI(content, ctx);
       res.json(processed);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -6846,8 +6865,9 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
   // Daily Digest API
   app.get("/api/digests", async (req, res) => {
     try {
+      const ctx = getTenantContext(req);
       const limit = parseInt(req.query.limit as string) || 30;
-      const digests = await storage.getAllDailyDigests(limit);
+      const digests = await storage.getAllDailyDigests(limit, ctx);
       res.json(digests);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -6856,7 +6876,8 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
   
   app.get("/api/digests/today", async (req, res) => {
     try {
-      const digest = await storage.getTodaysDigest();
+      const ctx = getTenantContext(req);
+      const digest = await storage.getTodaysDigest(ctx);
       if (!digest) {
         return res.status(404).json({ message: "No digest for today yet" });
       }
@@ -6868,7 +6889,8 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
   
   app.get("/api/digests/:id", async (req, res) => {
     try {
-      const digest = await storage.getDailyDigest(req.params.id);
+      const ctx = getTenantContext(req);
+      const digest = await storage.getDailyDigest(req.params.id, ctx);
       if (!digest) {
         return res.status(404).json({ message: "Digest not found" });
       }
@@ -6881,7 +6903,8 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
   // Generate today's digest manually
   app.post("/api/digests/generate", async (req, res) => {
     try {
-      const digest = await generateDailyDigest();
+      const ctx = getTenantContext(req);
+      const digest = await generateDailyDigest(ctx);
       res.json(digest);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -6891,8 +6914,9 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
   // AI Actions audit trail
   app.get("/api/ai-actions", async (req, res) => {
     try {
+      const ctx = getTenantContext(req);
       const limit = parseInt(req.query.limit as string) || 100;
-      const actions = await storage.getAllAiActions(limit);
+      const actions = await storage.getAllAiActions(limit, ctx);
       res.json(actions);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -6901,8 +6925,9 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
   
   app.get("/api/ai-actions/:type", async (req, res) => {
     try {
+      const ctx = getTenantContext(req);
       const limit = parseInt(req.query.limit as string) || 50;
-      const actions = await storage.getAiActionsByType(req.params.type, limit);
+      const actions = await storage.getAiActionsByType(req.params.type, limit, ctx);
       res.json(actions);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -7533,6 +7558,7 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
       const { title, notes, transcript, date, attendees, enhanced_notes } = parsed.data;
       
       // Auto-create extended contacts from attendees (only from emails, not names)
+      const ctx = getTenantContext(req);
       let matchedPersonId: string | null = null;
       if (attendees && Array.isArray(attendees)) {
         for (const attendee of attendees) {
@@ -7542,7 +7568,7 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
           if (!isEmail) continue; // Only process email addresses to avoid name collisions
           
           // Use targeted lookup instead of full table scan
-          let existingPerson = await storage.getPersonByEmail(attendeeStr.toLowerCase());
+          let existingPerson = await storage.getPersonByEmail(attendeeStr.toLowerCase(), ctx);
           
           if (!existingPerson) {
             // Auto-create from email

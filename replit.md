@@ -29,7 +29,12 @@ Flow OS uses an event-driven, multi-agent architecture specifically tailored for
 
 ### Key Design Patterns
 - **Shared Schema**: Single definition for database schema and TypeScript types.
-- **Multi-Tenancy**: Data isolation using `userId` for beta users, with backward compatibility for founder data.
+- **Multi-Tenancy**: Data isolation using `userId` with `TenantContext` pattern:
+  - All tenant-scoped storage methods accept optional `ctx?: TenantContext` parameter
+  - `getTenantContext(req)` extracts user context from authenticated requests
+  - `getTenantFilter(table, ctx)` returns WHERE filter for `userId = ctx.userId OR userId IS NULL`
+  - `getEffectiveUserId(ctx)` returns userId for CREATE operations
+  - Backward compatibility: allows `userId IS NULL` for founder/legacy data
 - **Structured Logging**: Centralized logging via `server/logger.ts`.
 - **Maintenance Scheduler**: Automatic cleanup of old system events and agent actions.
 

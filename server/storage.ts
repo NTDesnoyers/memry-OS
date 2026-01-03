@@ -249,37 +249,37 @@ export interface IStorage {
   getAllInteractionsWithParticipants(): Promise<(Interaction & { participantsList: (InteractionParticipant & { person?: Person })[] })[]>;
   
   // AI Conversations
-  getAllAiConversations(): Promise<AiConversation[]>;
-  getAiConversation(id: string): Promise<AiConversation | undefined>;
-  createAiConversation(conversation: InsertAiConversation): Promise<AiConversation>;
-  updateAiConversation(id: string, conversation: Partial<InsertAiConversation>): Promise<AiConversation | undefined>;
-  deleteAiConversation(id: string): Promise<void>;
+  getAllAiConversations(ctx?: TenantContext): Promise<AiConversation[]>;
+  getAiConversation(id: string, ctx?: TenantContext): Promise<AiConversation | undefined>;
+  createAiConversation(conversation: InsertAiConversation, ctx?: TenantContext): Promise<AiConversation>;
+  updateAiConversation(id: string, conversation: Partial<InsertAiConversation>, ctx?: TenantContext): Promise<AiConversation | undefined>;
+  deleteAiConversation(id: string, ctx?: TenantContext): Promise<void>;
   
   // Generated Drafts - AI-generated emails and handwritten notes
   /** Get all generated drafts. */
-  getAllGeneratedDrafts(): Promise<GeneratedDraft[]>;
+  getAllGeneratedDrafts(ctx?: TenantContext): Promise<GeneratedDraft[]>;
   /** Get drafts for a specific person. */
-  getGeneratedDraftsByPerson(personId: string): Promise<GeneratedDraft[]>;
+  getGeneratedDraftsByPerson(personId: string, ctx?: TenantContext): Promise<GeneratedDraft[]>;
   /** Get drafts by status (pending/approved/sent). */
-  getGeneratedDraftsByStatus(status: string): Promise<GeneratedDraft[]>;
+  getGeneratedDraftsByStatus(status: string, ctx?: TenantContext): Promise<GeneratedDraft[]>;
   /** Get draft by ID. */
-  getGeneratedDraft(id: string): Promise<GeneratedDraft | undefined>;
+  getGeneratedDraft(id: string, ctx?: TenantContext): Promise<GeneratedDraft | undefined>;
   /** Create draft (typically from AI processing). */
   createGeneratedDraft(draft: InsertGeneratedDraft, ctx?: TenantContext): Promise<GeneratedDraft>;
   /** Update draft (edit content, change status). */
-  updateGeneratedDraft(id: string, draft: Partial<InsertGeneratedDraft>): Promise<GeneratedDraft | undefined>;
+  updateGeneratedDraft(id: string, draft: Partial<InsertGeneratedDraft>, ctx?: TenantContext): Promise<GeneratedDraft | undefined>;
   /** Delete draft by ID. */
-  deleteGeneratedDraft(id: string): Promise<void>;
+  deleteGeneratedDraft(id: string, ctx?: TenantContext): Promise<void>;
   
   // Households
-  getAllHouseholds(): Promise<Household[]>;
-  getHousehold(id: string): Promise<Household | undefined>;
-  createHousehold(household: InsertHousehold): Promise<Household>;
-  updateHousehold(id: string, household: Partial<InsertHousehold>): Promise<Household | undefined>;
-  deleteHousehold(id: string): Promise<void>;
-  getHouseholdMembers(householdId: string): Promise<Person[]>;
-  addPersonToHousehold(personId: string, householdId: string): Promise<Person | undefined>;
-  removePersonFromHousehold(personId: string): Promise<Person | undefined>;
+  getAllHouseholds(ctx?: TenantContext): Promise<Household[]>;
+  getHousehold(id: string, ctx?: TenantContext): Promise<Household | undefined>;
+  createHousehold(household: InsertHousehold, ctx?: TenantContext): Promise<Household>;
+  updateHousehold(id: string, household: Partial<InsertHousehold>, ctx?: TenantContext): Promise<Household | undefined>;
+  deleteHousehold(id: string, ctx?: TenantContext): Promise<void>;
+  getHouseholdMembers(householdId: string, ctx?: TenantContext): Promise<Person[]>;
+  addPersonToHousehold(personId: string, householdId: string, ctx?: TenantContext): Promise<Person | undefined>;
+  removePersonFromHousehold(personId: string, ctx?: TenantContext): Promise<Person | undefined>;
   
   // Voice Profile
   getAllVoiceProfiles(ctx?: TenantContext): Promise<VoiceProfile[]>;
@@ -297,39 +297,39 @@ export interface IStorage {
   updateSyncLog(id: string, log: Partial<InsertSyncLog>): Promise<SyncLog | undefined>;
   
   // People search by phone/email for matching
-  getPersonByPhone(phone: string): Promise<Person | undefined>;
-  getPersonByEmail(email: string): Promise<Person | undefined>;
-  searchPeopleByName(name: string): Promise<Person[]>;
+  getPersonByPhone(phone: string, ctx?: TenantContext): Promise<Person | undefined>;
+  getPersonByEmail(email: string, ctx?: TenantContext): Promise<Person | undefined>;
+  searchPeopleByName(name: string, ctx?: TenantContext): Promise<Person[]>;
   
   // Contact Due Calculator
   /** Get contacts due for follow-up based on segment and hot/warm status. */
-  getContactsDueForFollowUp(): Promise<ContactDueResult[]>;
+  getContactsDueForFollowUp(ctx?: TenantContext): Promise<ContactDueResult[]>;
   
   // 8x8 Campaigns
-  getAll8x8Campaigns(): Promise<EightByEightCampaign[]>;
-  get8x8Campaign(id: string): Promise<EightByEightCampaign | undefined>;
-  get8x8CampaignByPerson(personId: string): Promise<EightByEightCampaign | undefined>;
-  create8x8Campaign(campaign: InsertEightByEightCampaign): Promise<EightByEightCampaign>;
-  update8x8Campaign(id: string, campaign: Partial<InsertEightByEightCampaign>): Promise<EightByEightCampaign | undefined>;
-  delete8x8Campaign(id: string): Promise<void>;
+  getAll8x8Campaigns(ctx?: TenantContext): Promise<EightByEightCampaign[]>;
+  get8x8Campaign(id: string, ctx?: TenantContext): Promise<EightByEightCampaign | undefined>;
+  get8x8CampaignByPerson(personId: string, ctx?: TenantContext): Promise<EightByEightCampaign | undefined>;
+  create8x8Campaign(campaign: InsertEightByEightCampaign, ctx?: TenantContext): Promise<EightByEightCampaign>;
+  update8x8Campaign(id: string, campaign: Partial<InsertEightByEightCampaign>, ctx?: TenantContext): Promise<EightByEightCampaign | undefined>;
+  delete8x8Campaign(id: string, ctx?: TenantContext): Promise<void>;
   
   // D Contact Review
   /** Get D contacts that have been in segment for 6+ months without promotion */
-  getStaleDContacts(): Promise<Person[]>;
+  getStaleDContacts(ctx?: TenantContext): Promise<Person[]>;
   /** Get D contacts with low engagement (3+ attempts, 0 responses) */
-  getLowEngagementDContacts(): Promise<Person[]>;
+  getLowEngagementDContacts(ctx?: TenantContext): Promise<Person[]>;
   /** Get all D contacts needing review (stale or low engagement) */
-  getDContactsNeedingReview(): Promise<DContactReviewResult[]>;
+  getDContactsNeedingReview(ctx?: TenantContext): Promise<DContactReviewResult[]>;
   /** Flag a contact for review */
-  flagContactForReview(personId: string, status: string): Promise<Person | undefined>;
+  flagContactForReview(personId: string, status: string, ctx?: TenantContext): Promise<Person | undefined>;
   
   // Handwritten Note Uploads
-  getAllHandwrittenNoteUploads(): Promise<HandwrittenNoteUpload[]>;
-  getHandwrittenNoteUploadsByStatus(status: string): Promise<HandwrittenNoteUpload[]>;
-  getHandwrittenNoteUpload(id: string): Promise<HandwrittenNoteUpload | undefined>;
-  createHandwrittenNoteUpload(upload: InsertHandwrittenNoteUpload): Promise<HandwrittenNoteUpload>;
-  updateHandwrittenNoteUpload(id: string, upload: Partial<InsertHandwrittenNoteUpload>): Promise<HandwrittenNoteUpload | undefined>;
-  deleteHandwrittenNoteUpload(id: string): Promise<void>;
+  getAllHandwrittenNoteUploads(ctx?: TenantContext): Promise<HandwrittenNoteUpload[]>;
+  getHandwrittenNoteUploadsByStatus(status: string, ctx?: TenantContext): Promise<HandwrittenNoteUpload[]>;
+  getHandwrittenNoteUpload(id: string, ctx?: TenantContext): Promise<HandwrittenNoteUpload | undefined>;
+  createHandwrittenNoteUpload(upload: InsertHandwrittenNoteUpload, ctx?: TenantContext): Promise<HandwrittenNoteUpload>;
+  updateHandwrittenNoteUpload(id: string, upload: Partial<InsertHandwrittenNoteUpload>, ctx?: TenantContext): Promise<HandwrittenNoteUpload | undefined>;
+  deleteHandwrittenNoteUpload(id: string, ctx?: TenantContext): Promise<void>;
   
   // Content Topics - Recurring themes from conversations
   getAllContentTopics(ctx?: TenantContext): Promise<ContentTopic[]>;
@@ -350,63 +350,63 @@ export interface IStorage {
   deleteContentIdea(id: string, ctx?: TenantContext): Promise<void>;
   
   // Content Calendar - Scheduled publishing
-  getAllContentCalendarItems(): Promise<ContentCalendarItem[]>;
-  getContentCalendarByDateRange(start: Date, end: Date): Promise<ContentCalendarItem[]>;
-  getContentCalendarItem(id: string): Promise<ContentCalendarItem | undefined>;
-  createContentCalendarItem(item: InsertContentCalendar): Promise<ContentCalendarItem>;
-  updateContentCalendarItem(id: string, item: Partial<InsertContentCalendar>): Promise<ContentCalendarItem | undefined>;
-  deleteContentCalendarItem(id: string): Promise<void>;
+  getAllContentCalendarItems(ctx?: TenantContext): Promise<ContentCalendarItem[]>;
+  getContentCalendarByDateRange(start: Date, end: Date, ctx?: TenantContext): Promise<ContentCalendarItem[]>;
+  getContentCalendarItem(id: string, ctx?: TenantContext): Promise<ContentCalendarItem | undefined>;
+  createContentCalendarItem(item: InsertContentCalendar, ctx?: TenantContext): Promise<ContentCalendarItem>;
+  updateContentCalendarItem(id: string, item: Partial<InsertContentCalendar>, ctx?: TenantContext): Promise<ContentCalendarItem | undefined>;
+  deleteContentCalendarItem(id: string, ctx?: TenantContext): Promise<void>;
   
   // Listening Analysis - NVC + Question-Based Selling
-  getAllListeningAnalysis(): Promise<ListeningAnalysis[]>;
-  getListeningAnalysisByInteraction(interactionId: string): Promise<ListeningAnalysis | undefined>;
-  createListeningAnalysis(analysis: InsertListeningAnalysis): Promise<ListeningAnalysis>;
-  getInteractionsWithTranscripts(): Promise<Interaction[]>;
+  getAllListeningAnalysis(ctx?: TenantContext): Promise<ListeningAnalysis[]>;
+  getListeningAnalysisByInteraction(interactionId: string, ctx?: TenantContext): Promise<ListeningAnalysis | undefined>;
+  createListeningAnalysis(analysis: InsertListeningAnalysis, ctx?: TenantContext): Promise<ListeningAnalysis>;
+  getInteractionsWithTranscripts(ctx?: TenantContext): Promise<Interaction[]>;
   
   // Coaching Insights
-  getAllCoachingInsights(): Promise<CoachingInsight[]>;
-  getActiveCoachingInsights(): Promise<CoachingInsight[]>;
-  getCoachingInsight(id: string): Promise<CoachingInsight | undefined>;
-  createCoachingInsight(insight: InsertCoachingInsight): Promise<CoachingInsight>;
-  updateCoachingInsight(id: string, insight: Partial<InsertCoachingInsight>): Promise<CoachingInsight | undefined>;
-  deleteCoachingInsight(id: string): Promise<void>;
+  getAllCoachingInsights(ctx?: TenantContext): Promise<CoachingInsight[]>;
+  getActiveCoachingInsights(ctx?: TenantContext): Promise<CoachingInsight[]>;
+  getCoachingInsight(id: string, ctx?: TenantContext): Promise<CoachingInsight | undefined>;
+  createCoachingInsight(insight: InsertCoachingInsight, ctx?: TenantContext): Promise<CoachingInsight>;
+  updateCoachingInsight(id: string, insight: Partial<InsertCoachingInsight>, ctx?: TenantContext): Promise<CoachingInsight | undefined>;
+  deleteCoachingInsight(id: string, ctx?: TenantContext): Promise<void>;
   
   // Listening Patterns
-  getAllListeningPatterns(): Promise<ListeningPattern[]>;
-  getListeningPattern(id: string): Promise<ListeningPattern | undefined>;
-  createListeningPattern(pattern: InsertListeningPattern): Promise<ListeningPattern>;
-  updateListeningPattern(id: string, pattern: Partial<InsertListeningPattern>): Promise<ListeningPattern | undefined>;
+  getAllListeningPatterns(ctx?: TenantContext): Promise<ListeningPattern[]>;
+  getListeningPattern(id: string, ctx?: TenantContext): Promise<ListeningPattern | undefined>;
+  createListeningPattern(pattern: InsertListeningPattern, ctx?: TenantContext): Promise<ListeningPattern>;
+  updateListeningPattern(id: string, pattern: Partial<InsertListeningPattern>, ctx?: TenantContext): Promise<ListeningPattern | undefined>;
   
   // Dashboard Widgets
-  getAllDashboardWidgets(): Promise<DashboardWidget[]>;
-  getDashboardWidget(id: string): Promise<DashboardWidget | undefined>;
-  createDashboardWidget(widget: InsertDashboardWidget): Promise<DashboardWidget>;
-  updateDashboardWidget(id: string, widget: Partial<InsertDashboardWidget>): Promise<DashboardWidget | undefined>;
-  deleteDashboardWidget(id: string): Promise<void>;
-  updateDashboardWidgetPositions(widgets: { id: string; position: number }[]): Promise<void>;
+  getAllDashboardWidgets(ctx?: TenantContext): Promise<DashboardWidget[]>;
+  getDashboardWidget(id: string, ctx?: TenantContext): Promise<DashboardWidget | undefined>;
+  createDashboardWidget(widget: InsertDashboardWidget, ctx?: TenantContext): Promise<DashboardWidget>;
+  updateDashboardWidget(id: string, widget: Partial<InsertDashboardWidget>, ctx?: TenantContext): Promise<DashboardWidget | undefined>;
+  deleteDashboardWidget(id: string, ctx?: TenantContext): Promise<void>;
+  updateDashboardWidgetPositions(widgets: { id: string; position: number }[], ctx?: TenantContext): Promise<void>;
   
   // Life Event Alerts
-  getAllLifeEventAlerts(): Promise<LifeEventAlert[]>;
-  getLifeEventAlert(id: string): Promise<LifeEventAlert | undefined>;
-  getLifeEventAlertsByPerson(personId: string): Promise<LifeEventAlert[]>;
-  createLifeEventAlert(alert: InsertLifeEventAlert): Promise<LifeEventAlert>;
-  updateLifeEventAlert(id: string, alert: Partial<InsertLifeEventAlert>): Promise<LifeEventAlert | undefined>;
-  deleteLifeEventAlert(id: string): Promise<void>;
+  getAllLifeEventAlerts(ctx?: TenantContext): Promise<LifeEventAlert[]>;
+  getLifeEventAlert(id: string, ctx?: TenantContext): Promise<LifeEventAlert | undefined>;
+  getLifeEventAlertsByPerson(personId: string, ctx?: TenantContext): Promise<LifeEventAlert[]>;
+  createLifeEventAlert(alert: InsertLifeEventAlert, ctx?: TenantContext): Promise<LifeEventAlert>;
+  updateLifeEventAlert(id: string, alert: Partial<InsertLifeEventAlert>, ctx?: TenantContext): Promise<LifeEventAlert | undefined>;
+  deleteLifeEventAlert(id: string, ctx?: TenantContext): Promise<void>;
   
   // Unified Person Context
-  getPersonFullContext(personId: string): Promise<PersonFullContext | undefined>;
+  getPersonFullContext(personId: string, ctx?: TenantContext): Promise<PersonFullContext | undefined>;
   
   // Leads - Top of funnel
-  getAllLeads(): Promise<Lead[]>;
-  getLead(id: string): Promise<Lead | undefined>;
-  getLeadsByStatus(status: string): Promise<Lead[]>;
-  getLeadsBySource(source: string): Promise<Lead[]>;
-  getNewLeads(): Promise<Lead[]>;
-  findDuplicateLead(email?: string, phone?: string): Promise<Lead | undefined>;
-  createLead(lead: InsertLead): Promise<Lead>;
-  updateLead(id: string, lead: Partial<InsertLead>): Promise<Lead | undefined>;
-  deleteLead(id: string): Promise<void>;
-  convertLeadToPerson(leadId: string): Promise<{ lead: Lead; person: Person } | undefined>;
+  getAllLeads(ctx?: TenantContext): Promise<Lead[]>;
+  getLead(id: string, ctx?: TenantContext): Promise<Lead | undefined>;
+  getLeadsByStatus(status: string, ctx?: TenantContext): Promise<Lead[]>;
+  getLeadsBySource(source: string, ctx?: TenantContext): Promise<Lead[]>;
+  getNewLeads(ctx?: TenantContext): Promise<Lead[]>;
+  findDuplicateLead(email?: string, phone?: string, ctx?: TenantContext): Promise<Lead | undefined>;
+  createLead(lead: InsertLead, ctx?: TenantContext): Promise<Lead>;
+  updateLead(id: string, lead: Partial<InsertLead>, ctx?: TenantContext): Promise<Lead | undefined>;
+  deleteLead(id: string, ctx?: TenantContext): Promise<void>;
+  convertLeadToPerson(leadId: string, ctx?: TenantContext): Promise<{ lead: Lead; person: Person } | undefined>;
   
   // System Events - Event Bus
   getAllSystemEvents(limit?: number): Promise<SystemEvent[]>;
@@ -439,49 +439,49 @@ export interface IStorage {
   deleteAgentSubscription(id: string): Promise<void>;
   
   // Observer Suggestions - AI Chief of Staff proactive suggestions
-  getAllObserverSuggestions(limit?: number): Promise<ObserverSuggestion[]>;
-  getPendingObserverSuggestions(): Promise<ObserverSuggestion[]>;
-  getObserverSuggestion(id: string): Promise<ObserverSuggestion | undefined>;
-  createObserverSuggestion(suggestion: InsertObserverSuggestion): Promise<ObserverSuggestion>;
-  updateObserverSuggestion(id: string, suggestion: Partial<InsertObserverSuggestion>): Promise<ObserverSuggestion | undefined>;
-  acceptObserverSuggestion(id: string): Promise<ObserverSuggestion | undefined>;
-  snoozeObserverSuggestion(id: string, until: Date): Promise<ObserverSuggestion | undefined>;
-  dismissObserverSuggestion(id: string, feedbackNote?: string): Promise<ObserverSuggestion | undefined>;
-  expireOldSuggestions(): Promise<number>;
+  getAllObserverSuggestions(limit?: number, ctx?: TenantContext): Promise<ObserverSuggestion[]>;
+  getPendingObserverSuggestions(ctx?: TenantContext): Promise<ObserverSuggestion[]>;
+  getObserverSuggestion(id: string, ctx?: TenantContext): Promise<ObserverSuggestion | undefined>;
+  createObserverSuggestion(suggestion: InsertObserverSuggestion, ctx?: TenantContext): Promise<ObserverSuggestion>;
+  updateObserverSuggestion(id: string, suggestion: Partial<InsertObserverSuggestion>, ctx?: TenantContext): Promise<ObserverSuggestion | undefined>;
+  acceptObserverSuggestion(id: string, ctx?: TenantContext): Promise<ObserverSuggestion | undefined>;
+  snoozeObserverSuggestion(id: string, until: Date, ctx?: TenantContext): Promise<ObserverSuggestion | undefined>;
+  dismissObserverSuggestion(id: string, feedbackNote?: string, ctx?: TenantContext): Promise<ObserverSuggestion | undefined>;
+  expireOldSuggestions(ctx?: TenantContext): Promise<number>;
   
   // Observer Patterns - Learned behavior patterns
-  getAllObserverPatterns(): Promise<ObserverPattern[]>;
-  getEnabledObserverPatterns(): Promise<ObserverPattern[]>;
-  getObserverPattern(id: string): Promise<ObserverPattern | undefined>;
-  createObserverPattern(pattern: InsertObserverPattern): Promise<ObserverPattern>;
-  updateObserverPattern(id: string, pattern: Partial<InsertObserverPattern>): Promise<ObserverPattern | undefined>;
-  incrementPatternOccurrence(id: string): Promise<ObserverPattern | undefined>;
-  updatePatternFeedback(id: string, delta: number): Promise<ObserverPattern | undefined>;
+  getAllObserverPatterns(ctx?: TenantContext): Promise<ObserverPattern[]>;
+  getEnabledObserverPatterns(ctx?: TenantContext): Promise<ObserverPattern[]>;
+  getObserverPattern(id: string, ctx?: TenantContext): Promise<ObserverPattern | undefined>;
+  createObserverPattern(pattern: InsertObserverPattern, ctx?: TenantContext): Promise<ObserverPattern>;
+  updateObserverPattern(id: string, pattern: Partial<InsertObserverPattern>, ctx?: TenantContext): Promise<ObserverPattern | undefined>;
+  incrementPatternOccurrence(id: string, ctx?: TenantContext): Promise<ObserverPattern | undefined>;
+  updatePatternFeedback(id: string, delta: number, ctx?: TenantContext): Promise<ObserverPattern | undefined>;
   
   // AI Actions - Verify → Automate audit trail
-  getAllAiActions(limit?: number): Promise<AiAction[]>;
-  getAiAction(id: string): Promise<AiAction | undefined>;
-  getAiActionsByType(actionType: string, limit?: number): Promise<AiAction[]>;
-  createAiAction(action: InsertAiAction): Promise<AiAction>;
-  updateAiAction(id: string, action: Partial<InsertAiAction>): Promise<AiAction | undefined>;
+  getAllAiActions(limit?: number, ctx?: TenantContext): Promise<AiAction[]>;
+  getAiAction(id: string, ctx?: TenantContext): Promise<AiAction | undefined>;
+  getAiActionsByType(actionType: string, limit?: number, ctx?: TenantContext): Promise<AiAction[]>;
+  createAiAction(action: InsertAiAction, ctx?: TenantContext): Promise<AiAction>;
+  updateAiAction(id: string, action: Partial<InsertAiAction>, ctx?: TenantContext): Promise<AiAction | undefined>;
   
   // Saved Content - Insight Inbox
-  getAllSavedContent(limit?: number): Promise<SavedContent[]>;
-  getUnreadSavedContent(): Promise<SavedContent[]>;
-  getSavedContent(id: string): Promise<SavedContent | undefined>;
-  getSavedContentByUrl(url: string): Promise<SavedContent | undefined>;
-  createSavedContent(content: InsertSavedContent): Promise<SavedContent>;
-  updateSavedContent(id: string, content: Partial<InsertSavedContent>): Promise<SavedContent | undefined>;
-  markContentRead(id: string): Promise<SavedContent | undefined>;
-  archiveContent(id: string): Promise<SavedContent | undefined>;
-  deleteSavedContent(id: string): Promise<void>;
+  getAllSavedContent(limit?: number, ctx?: TenantContext): Promise<SavedContent[]>;
+  getUnreadSavedContent(ctx?: TenantContext): Promise<SavedContent[]>;
+  getSavedContent(id: string, ctx?: TenantContext): Promise<SavedContent | undefined>;
+  getSavedContentByUrl(url: string, ctx?: TenantContext): Promise<SavedContent | undefined>;
+  createSavedContent(content: InsertSavedContent, ctx?: TenantContext): Promise<SavedContent>;
+  updateSavedContent(id: string, content: Partial<InsertSavedContent>, ctx?: TenantContext): Promise<SavedContent | undefined>;
+  markContentRead(id: string, ctx?: TenantContext): Promise<SavedContent | undefined>;
+  archiveContent(id: string, ctx?: TenantContext): Promise<SavedContent | undefined>;
+  deleteSavedContent(id: string, ctx?: TenantContext): Promise<void>;
   
   // Daily Digests
-  getAllDailyDigests(limit?: number): Promise<DailyDigest[]>;
-  getDailyDigest(id: string): Promise<DailyDigest | undefined>;
-  getTodaysDigest(): Promise<DailyDigest | undefined>;
-  createDailyDigest(digest: InsertDailyDigest): Promise<DailyDigest>;
-  updateDailyDigest(id: string, digest: Partial<InsertDailyDigest>): Promise<DailyDigest | undefined>;
+  getAllDailyDigests(limit?: number, ctx?: TenantContext): Promise<DailyDigest[]>;
+  getDailyDigest(id: string, ctx?: TenantContext): Promise<DailyDigest | undefined>;
+  getTodaysDigest(ctx?: TenantContext): Promise<DailyDigest | undefined>;
+  createDailyDigest(digest: InsertDailyDigest, ctx?: TenantContext): Promise<DailyDigest>;
+  updateDailyDigest(id: string, digest: Partial<InsertDailyDigest>, ctx?: TenantContext): Promise<DailyDigest | undefined>;
   
   // User Core Profile - Guiding Principles & Personalization
   getUserCoreProfile(betaUserId: string): Promise<UserCoreProfile | undefined>;
@@ -491,31 +491,31 @@ export interface IStorage {
   upsertUserCoreProfile(profile: InsertUserCoreProfile): Promise<UserCoreProfile>;
   
   // Dormant Opportunities - Revival lead finder
-  getAllDormantOpportunities(limit?: number): Promise<DormantOpportunity[]>;
-  getPendingDormantOpportunities(): Promise<DormantOpportunity[]>;
-  getDormantOpportunity(id: string): Promise<DormantOpportunity | undefined>;
-  getDormantOpportunityByPersonId(personId: string): Promise<DormantOpportunity | undefined>;
-  createDormantOpportunity(opportunity: InsertDormantOpportunity): Promise<DormantOpportunity>;
-  updateDormantOpportunity(id: string, opportunity: Partial<InsertDormantOpportunity>): Promise<DormantOpportunity | undefined>;
-  approveDormantOpportunity(id: string): Promise<DormantOpportunity | undefined>;
-  dismissDormantOpportunity(id: string, reason?: string): Promise<DormantOpportunity | undefined>;
-  deleteDormantOpportunity(id: string): Promise<void>;
+  getAllDormantOpportunities(limit?: number, ctx?: TenantContext): Promise<DormantOpportunity[]>;
+  getPendingDormantOpportunities(ctx?: TenantContext): Promise<DormantOpportunity[]>;
+  getDormantOpportunity(id: string, ctx?: TenantContext): Promise<DormantOpportunity | undefined>;
+  getDormantOpportunityByPersonId(personId: string, ctx?: TenantContext): Promise<DormantOpportunity | undefined>;
+  createDormantOpportunity(opportunity: InsertDormantOpportunity, ctx?: TenantContext): Promise<DormantOpportunity>;
+  updateDormantOpportunity(id: string, opportunity: Partial<InsertDormantOpportunity>, ctx?: TenantContext): Promise<DormantOpportunity | undefined>;
+  approveDormantOpportunity(id: string, ctx?: TenantContext): Promise<DormantOpportunity | undefined>;
+  dismissDormantOpportunity(id: string, reason?: string, ctx?: TenantContext): Promise<DormantOpportunity | undefined>;
+  deleteDormantOpportunity(id: string, ctx?: TenantContext): Promise<void>;
   
   // Social Media Connections
-  getAllSocialConnections(): Promise<SocialConnection[]>;
-  getSocialConnection(id: string): Promise<SocialConnection | undefined>;
-  getActiveSocialConnection(platform: string): Promise<SocialConnection | undefined>;
-  createSocialConnection(connection: InsertSocialConnection): Promise<SocialConnection>;
-  updateSocialConnection(id: string, connection: Partial<InsertSocialConnection>): Promise<SocialConnection | undefined>;
-  deleteSocialConnection(id: string): Promise<void>;
+  getAllSocialConnections(ctx?: TenantContext): Promise<SocialConnection[]>;
+  getSocialConnection(id: string, ctx?: TenantContext): Promise<SocialConnection | undefined>;
+  getActiveSocialConnection(platform: string, ctx?: TenantContext): Promise<SocialConnection | undefined>;
+  createSocialConnection(connection: InsertSocialConnection, ctx?: TenantContext): Promise<SocialConnection>;
+  updateSocialConnection(id: string, connection: Partial<InsertSocialConnection>, ctx?: TenantContext): Promise<SocialConnection | undefined>;
+  deleteSocialConnection(id: string, ctx?: TenantContext): Promise<void>;
   
   // Social Posts
-  getAllSocialPosts(limit?: number): Promise<SocialPost[]>;
-  getSocialPost(id: string): Promise<SocialPost | undefined>;
-  getScheduledSocialPosts(): Promise<SocialPost[]>;
-  createSocialPost(post: InsertSocialPost): Promise<SocialPost>;
-  updateSocialPost(id: string, post: Partial<InsertSocialPost>): Promise<SocialPost | undefined>;
-  deleteSocialPost(id: string): Promise<void>;
+  getAllSocialPosts(limit?: number, ctx?: TenantContext): Promise<SocialPost[]>;
+  getSocialPost(id: string, ctx?: TenantContext): Promise<SocialPost | undefined>;
+  getScheduledSocialPosts(ctx?: TenantContext): Promise<SocialPost[]>;
+  createSocialPost(post: InsertSocialPost, ctx?: TenantContext): Promise<SocialPost>;
+  updateSocialPost(id: string, post: Partial<InsertSocialPost>, ctx?: TenantContext): Promise<SocialPost | undefined>;
+  deleteSocialPost(id: string, ctx?: TenantContext): Promise<void>;
   
   // Context Graph - Decision Traces & World Model
   createContextNode(node: InsertContextNode): Promise<ContextNode>;
@@ -1347,110 +1347,148 @@ export class DatabaseStorage implements IStorage {
   }
   
   // AI Conversations
-  async getAllAiConversations(): Promise<AiConversation[]> {
+  async getAllAiConversations(ctx?: TenantContext): Promise<AiConversation[]> {
+    const filter = this.getTenantFilter(aiConversations, ctx);
+    if (filter) {
+      return await db.select().from(aiConversations).where(filter).orderBy(desc(aiConversations.updatedAt));
+    }
     return await db.select().from(aiConversations).orderBy(desc(aiConversations.updatedAt));
   }
   
-  async getAiConversation(id: string): Promise<AiConversation | undefined> {
-    const [conversation] = await db.select().from(aiConversations).where(eq(aiConversations.id, id));
+  async getAiConversation(id: string, ctx?: TenantContext): Promise<AiConversation | undefined> {
+    const filter = this.getTenantFilter(aiConversations, ctx);
+    const conditions = filter ? and(eq(aiConversations.id, id), filter) : eq(aiConversations.id, id);
+    const [conversation] = await db.select().from(aiConversations).where(conditions);
     return conversation || undefined;
   }
   
-  async createAiConversation(insertConversation: InsertAiConversation): Promise<AiConversation> {
+  async createAiConversation(insertConversation: InsertAiConversation, ctx?: TenantContext): Promise<AiConversation> {
+    const userId = getEffectiveUserId(ctx);
     const [conversation] = await db
       .insert(aiConversations)
-      .values({ ...insertConversation, updatedAt: new Date() })
+      .values({ ...insertConversation, userId, updatedAt: new Date() })
       .returning();
     return conversation;
   }
   
-  async updateAiConversation(id: string, conversation: Partial<InsertAiConversation>): Promise<AiConversation | undefined> {
+  async updateAiConversation(id: string, conversation: Partial<InsertAiConversation>, ctx?: TenantContext): Promise<AiConversation | undefined> {
+    const filter = this.getTenantFilter(aiConversations, ctx);
+    const conditions = filter ? and(eq(aiConversations.id, id), filter) : eq(aiConversations.id, id);
     const [updated] = await db
       .update(aiConversations)
       .set({ ...conversation, updatedAt: new Date() })
-      .where(eq(aiConversations.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async deleteAiConversation(id: string): Promise<void> {
-    await db.delete(aiConversations).where(eq(aiConversations.id, id));
+  async deleteAiConversation(id: string, ctx?: TenantContext): Promise<void> {
+    const filter = this.getTenantFilter(aiConversations, ctx);
+    const conditions = filter ? and(eq(aiConversations.id, id), filter) : eq(aiConversations.id, id);
+    await db.delete(aiConversations).where(conditions);
   }
   
   // Households
-  async getAllHouseholds(): Promise<Household[]> {
+  async getAllHouseholds(ctx?: TenantContext): Promise<Household[]> {
+    const filter = this.getTenantFilter(households, ctx);
+    if (filter) {
+      return await db.select().from(households).where(filter).orderBy(desc(households.createdAt));
+    }
     return await db.select().from(households).orderBy(desc(households.createdAt));
   }
   
-  async getHousehold(id: string): Promise<Household | undefined> {
-    const [household] = await db.select().from(households).where(eq(households.id, id));
+  async getHousehold(id: string, ctx?: TenantContext): Promise<Household | undefined> {
+    const filter = this.getTenantFilter(households, ctx);
+    const conditions = filter ? and(eq(households.id, id), filter) : eq(households.id, id);
+    const [household] = await db.select().from(households).where(conditions);
     return household || undefined;
   }
   
-  async createHousehold(insertHousehold: InsertHousehold): Promise<Household> {
+  async createHousehold(insertHousehold: InsertHousehold, ctx?: TenantContext): Promise<Household> {
+    const userId = getEffectiveUserId(ctx);
     const [household] = await db
       .insert(households)
-      .values({ ...insertHousehold, updatedAt: new Date() })
+      .values({ ...insertHousehold, userId, updatedAt: new Date() })
       .returning();
     return household;
   }
   
-  async updateHousehold(id: string, household: Partial<InsertHousehold>): Promise<Household | undefined> {
+  async updateHousehold(id: string, household: Partial<InsertHousehold>, ctx?: TenantContext): Promise<Household | undefined> {
+    const filter = this.getTenantFilter(households, ctx);
+    const conditions = filter ? and(eq(households.id, id), filter) : eq(households.id, id);
     const [updated] = await db
       .update(households)
       .set({ ...household, updatedAt: new Date() })
-      .where(eq(households.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async deleteHousehold(id: string): Promise<void> {
+  async deleteHousehold(id: string, ctx?: TenantContext): Promise<void> {
+    const filter = this.getTenantFilter(households, ctx);
+    const conditions = filter ? and(eq(households.id, id), filter) : eq(households.id, id);
     // Remove household reference from all members first
     await db.update(people).set({ householdId: null }).where(eq(people.householdId, id));
-    await db.delete(households).where(eq(households.id, id));
+    await db.delete(households).where(conditions);
   }
   
-  async getHouseholdMembers(householdId: string): Promise<Person[]> {
-    return await db.select().from(people).where(eq(people.householdId, householdId));
+  async getHouseholdMembers(householdId: string, ctx?: TenantContext): Promise<Person[]> {
+    const filter = this.getTenantFilter(people, ctx);
+    const conditions = filter ? and(eq(people.householdId, householdId), filter) : eq(people.householdId, householdId);
+    return await db.select().from(people).where(conditions);
   }
   
-  async addPersonToHousehold(personId: string, householdId: string): Promise<Person | undefined> {
+  async addPersonToHousehold(personId: string, householdId: string, ctx?: TenantContext): Promise<Person | undefined> {
+    const filter = this.getTenantFilter(people, ctx);
+    const conditions = filter ? and(eq(people.id, personId), filter) : eq(people.id, personId);
     const [updated] = await db
       .update(people)
       .set({ householdId, updatedAt: new Date() })
-      .where(eq(people.id, personId))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async removePersonFromHousehold(personId: string): Promise<Person | undefined> {
+  async removePersonFromHousehold(personId: string, ctx?: TenantContext): Promise<Person | undefined> {
+    const filter = this.getTenantFilter(people, ctx);
+    const conditions = filter ? and(eq(people.id, personId), filter) : eq(people.id, personId);
     const [updated] = await db
       .update(people)
       .set({ householdId: null, updatedAt: new Date() })
-      .where(eq(people.id, personId))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
   // Generated Drafts
-  async getAllGeneratedDrafts(): Promise<GeneratedDraft[]> {
+  async getAllGeneratedDrafts(ctx?: TenantContext): Promise<GeneratedDraft[]> {
+    const filter = this.getTenantFilter(generatedDrafts, ctx);
+    if (filter) {
+      return await db.select().from(generatedDrafts).where(filter).orderBy(desc(generatedDrafts.createdAt));
+    }
     return await db.select().from(generatedDrafts).orderBy(desc(generatedDrafts.createdAt));
   }
   
-  async getGeneratedDraftsByPerson(personId: string): Promise<GeneratedDraft[]> {
+  async getGeneratedDraftsByPerson(personId: string, ctx?: TenantContext): Promise<GeneratedDraft[]> {
+    const filter = this.getTenantFilter(generatedDrafts, ctx);
+    const conditions = filter ? and(eq(generatedDrafts.personId, personId), filter) : eq(generatedDrafts.personId, personId);
     return await db.select().from(generatedDrafts)
-      .where(eq(generatedDrafts.personId, personId))
+      .where(conditions)
       .orderBy(desc(generatedDrafts.createdAt));
   }
   
-  async getGeneratedDraftsByStatus(status: string): Promise<GeneratedDraft[]> {
+  async getGeneratedDraftsByStatus(status: string, ctx?: TenantContext): Promise<GeneratedDraft[]> {
+    const filter = this.getTenantFilter(generatedDrafts, ctx);
+    const conditions = filter ? and(eq(generatedDrafts.status, status), filter) : eq(generatedDrafts.status, status);
     return await db.select().from(generatedDrafts)
-      .where(eq(generatedDrafts.status, status))
+      .where(conditions)
       .orderBy(desc(generatedDrafts.createdAt));
   }
   
-  async getGeneratedDraft(id: string): Promise<GeneratedDraft | undefined> {
-    const [draft] = await db.select().from(generatedDrafts).where(eq(generatedDrafts.id, id));
+  async getGeneratedDraft(id: string, ctx?: TenantContext): Promise<GeneratedDraft | undefined> {
+    const filter = this.getTenantFilter(generatedDrafts, ctx);
+    const conditions = filter ? and(eq(generatedDrafts.id, id), filter) : eq(generatedDrafts.id, id);
+    const [draft] = await db.select().from(generatedDrafts).where(conditions);
     return draft || undefined;
   }
   
@@ -1463,32 +1501,36 @@ export class DatabaseStorage implements IStorage {
     return draft;
   }
   
-  async updateGeneratedDraft(id: string, draft: Partial<InsertGeneratedDraft>): Promise<GeneratedDraft | undefined> {
+  async updateGeneratedDraft(id: string, draft: Partial<InsertGeneratedDraft>, ctx?: TenantContext): Promise<GeneratedDraft | undefined> {
+    const filter = this.getTenantFilter(generatedDrafts, ctx);
+    const conditions = filter ? and(eq(generatedDrafts.id, id), filter) : eq(generatedDrafts.id, id);
     const [updated] = await db
       .update(generatedDrafts)
       .set({ ...draft, updatedAt: new Date() })
-      .where(eq(generatedDrafts.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async deleteGeneratedDraft(id: string): Promise<void> {
-    await db.delete(generatedDrafts).where(eq(generatedDrafts.id, id));
+  async deleteGeneratedDraft(id: string, ctx?: TenantContext): Promise<void> {
+    const filter = this.getTenantFilter(generatedDrafts, ctx);
+    const conditions = filter ? and(eq(generatedDrafts.id, id), filter) : eq(generatedDrafts.id, id);
+    await db.delete(generatedDrafts).where(conditions);
   }
   
   // Voice Profile
   async getAllVoiceProfiles(ctx?: TenantContext): Promise<VoiceProfile[]> {
-    const userId = getEffectiveUserId(ctx);
-    return await db.select().from(voiceProfile)
-      .where(eq(voiceProfile.userId, userId))
-      .orderBy(desc(voiceProfile.frequency));
+    const filter = this.getTenantFilter(voiceProfile, ctx);
+    if (filter) {
+      return await db.select().from(voiceProfile).where(filter).orderBy(desc(voiceProfile.frequency));
+    }
+    return await db.select().from(voiceProfile).orderBy(desc(voiceProfile.frequency));
   }
   
   async getVoiceProfilesByCategory(category: string, ctx?: TenantContext): Promise<VoiceProfile[]> {
-    const userId = getEffectiveUserId(ctx);
-    return await db.select().from(voiceProfile)
-      .where(and(eq(voiceProfile.category, category), eq(voiceProfile.userId, userId)))
-      .orderBy(desc(voiceProfile.frequency));
+    const filter = this.getTenantFilter(voiceProfile, ctx);
+    const conditions = filter ? and(eq(voiceProfile.category, category), filter) : eq(voiceProfile.category, category);
+    return await db.select().from(voiceProfile).where(conditions).orderBy(desc(voiceProfile.frequency));
   }
   
   async createVoiceProfile(insertProfile: InsertVoiceProfile, ctx?: TenantContext): Promise<VoiceProfile> {
@@ -1501,25 +1543,29 @@ export class DatabaseStorage implements IStorage {
   }
   
   async updateVoiceProfile(id: string, profile: Partial<InsertVoiceProfile>, ctx?: TenantContext): Promise<VoiceProfile | undefined> {
-    const userId = getEffectiveUserId(ctx);
+    const filter = this.getTenantFilter(voiceProfile, ctx);
+    const conditions = filter ? and(eq(voiceProfile.id, id), filter) : eq(voiceProfile.id, id);
     const [updated] = await db
       .update(voiceProfile)
       .set({ ...profile, updatedAt: new Date() })
-      .where(and(eq(voiceProfile.id, id), eq(voiceProfile.userId, userId)))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
   async deleteVoiceProfile(id: string, ctx?: TenantContext): Promise<void> {
-    const userId = getEffectiveUserId(ctx);
-    await db.delete(voiceProfile).where(and(eq(voiceProfile.id, id), eq(voiceProfile.userId, userId)));
+    const filter = this.getTenantFilter(voiceProfile, ctx);
+    const conditions = filter ? and(eq(voiceProfile.id, id), filter) : eq(voiceProfile.id, id);
+    await db.delete(voiceProfile).where(conditions);
   }
   
   async upsertVoicePattern(category: string, value: string, context?: string, source?: string, ctx?: TenantContext): Promise<VoiceProfile> {
     const userId = getEffectiveUserId(ctx);
+    const filter = this.getTenantFilter(voiceProfile, ctx);
     // Check if this pattern already exists for this user
-    const [existing] = await db.select().from(voiceProfile)
-      .where(and(eq(voiceProfile.category, category), eq(voiceProfile.value, value), eq(voiceProfile.userId, userId)));
+    const baseConditions = and(eq(voiceProfile.category, category), eq(voiceProfile.value, value));
+    const conditions = filter ? and(baseConditions, filter) : baseConditions;
+    const [existing] = await db.select().from(voiceProfile).where(conditions);
     
     if (existing) {
       // Increment frequency
@@ -1576,10 +1622,13 @@ export class DatabaseStorage implements IStorage {
   }
   
   // People search by phone/email for matching
-  async getPersonByPhone(phone: string): Promise<Person | undefined> {
+  async getPersonByPhone(phone: string, ctx?: TenantContext): Promise<Person | undefined> {
     // Normalize phone for matching (strip non-digits)
     const normalized = phone.replace(/\D/g, '');
-    const allPeople = await db.select().from(people);
+    const filter = this.getTenantFilter(people, ctx);
+    const allPeople = filter 
+      ? await db.select().from(people).where(filter)
+      : await db.select().from(people);
     const match = allPeople.find(p => {
       if (!p.phone) return false;
       const pNormalized = p.phone.replace(/\D/g, '');
@@ -1588,19 +1637,25 @@ export class DatabaseStorage implements IStorage {
     return match || undefined;
   }
   
-  async getPersonByEmail(email: string): Promise<Person | undefined> {
-    const [person] = await db.select().from(people)
-      .where(eq(sql`LOWER(${people.email})`, email.toLowerCase()));
+  async getPersonByEmail(email: string, ctx?: TenantContext): Promise<Person | undefined> {
+    const filter = this.getTenantFilter(people, ctx);
+    const conditions = filter 
+      ? and(eq(sql`LOWER(${people.email})`, email.toLowerCase()), filter)
+      : eq(sql`LOWER(${people.email})`, email.toLowerCase());
+    const [person] = await db.select().from(people).where(conditions);
     return person || undefined;
   }
   
-  async searchPeopleByName(name: string): Promise<Person[]> {
+  async searchPeopleByName(name: string, ctx?: TenantContext): Promise<Person[]> {
     const lowerName = name.toLowerCase();
-    return await db.select().from(people)
-      .where(sql`LOWER(${people.name}) LIKE ${'%' + lowerName + '%'}`);
+    const filter = this.getTenantFilter(people, ctx);
+    const conditions = filter
+      ? and(sql`LOWER(${people.name}) LIKE ${'%' + lowerName + '%'}`, filter)
+      : sql`LOWER(${people.name}) LIKE ${'%' + lowerName + '%'}`;
+    return await db.select().from(people).where(conditions);
   }
   
-  async getContactsDueForFollowUp(): Promise<ContactDueResult[]> {
+  async getContactsDueForFollowUp(ctx?: TenantContext): Promise<ContactDueResult[]> {
     const FREQUENCY = {
       hot: 7,        // weekly
       warm: 30,      // monthly
@@ -1610,8 +1665,14 @@ export class DatabaseStorage implements IStorage {
       segment_d: 90, // quarterly (develop or delete)
     };
     
-    const allPeople = await db.select().from(people);
-    const allDeals = await db.select().from(deals);
+    const peopleFilter = this.getTenantFilter(people, ctx);
+    const dealsFilter = this.getTenantFilter(deals, ctx);
+    const allPeople = peopleFilter 
+      ? await db.select().from(people).where(peopleFilter)
+      : await db.select().from(people);
+    const allDeals = dealsFilter
+      ? await db.select().from(deals).where(dealsFilter)
+      : await db.select().from(deals);
     
     // Build map of personId -> highest priority deal stage
     const personDealStage = new Map<string, 'hot' | 'warm'>();
@@ -1686,48 +1747,60 @@ export class DatabaseStorage implements IStorage {
   }
   
   // 8x8 Campaigns
-  async getAll8x8Campaigns(): Promise<EightByEightCampaign[]> {
+  async getAll8x8Campaigns(ctx?: TenantContext): Promise<EightByEightCampaign[]> {
+    const filter = this.getTenantFilter(eightByEightCampaigns, ctx);
+    if (filter) {
+      return await db.select().from(eightByEightCampaigns).where(filter).orderBy(desc(eightByEightCampaigns.createdAt));
+    }
     return await db.select().from(eightByEightCampaigns).orderBy(desc(eightByEightCampaigns.createdAt));
   }
   
-  async get8x8Campaign(id: string): Promise<EightByEightCampaign | undefined> {
-    const [campaign] = await db.select().from(eightByEightCampaigns).where(eq(eightByEightCampaigns.id, id));
+  async get8x8Campaign(id: string, ctx?: TenantContext): Promise<EightByEightCampaign | undefined> {
+    const filter = this.getTenantFilter(eightByEightCampaigns, ctx);
+    const conditions = filter ? and(eq(eightByEightCampaigns.id, id), filter) : eq(eightByEightCampaigns.id, id);
+    const [campaign] = await db.select().from(eightByEightCampaigns).where(conditions);
     return campaign || undefined;
   }
   
-  async get8x8CampaignByPerson(personId: string): Promise<EightByEightCampaign | undefined> {
-    const [campaign] = await db.select().from(eightByEightCampaigns)
-      .where(and(
-        eq(eightByEightCampaigns.personId, personId),
-        eq(eightByEightCampaigns.status, 'active')
-      ));
+  async get8x8CampaignByPerson(personId: string, ctx?: TenantContext): Promise<EightByEightCampaign | undefined> {
+    const filter = this.getTenantFilter(eightByEightCampaigns, ctx);
+    const baseConditions = and(eq(eightByEightCampaigns.personId, personId), eq(eightByEightCampaigns.status, 'active'));
+    const conditions = filter ? and(baseConditions, filter) : baseConditions;
+    const [campaign] = await db.select().from(eightByEightCampaigns).where(conditions);
     return campaign || undefined;
   }
   
-  async create8x8Campaign(campaign: InsertEightByEightCampaign): Promise<EightByEightCampaign> {
-    const [created] = await db.insert(eightByEightCampaigns).values(campaign).returning();
+  async create8x8Campaign(campaign: InsertEightByEightCampaign, ctx?: TenantContext): Promise<EightByEightCampaign> {
+    const userId = getEffectiveUserId(ctx);
+    const [created] = await db.insert(eightByEightCampaigns).values({ ...campaign, userId }).returning();
     return created;
   }
   
-  async update8x8Campaign(id: string, campaign: Partial<InsertEightByEightCampaign>): Promise<EightByEightCampaign | undefined> {
+  async update8x8Campaign(id: string, campaign: Partial<InsertEightByEightCampaign>, ctx?: TenantContext): Promise<EightByEightCampaign | undefined> {
+    const filter = this.getTenantFilter(eightByEightCampaigns, ctx);
+    const conditions = filter ? and(eq(eightByEightCampaigns.id, id), filter) : eq(eightByEightCampaigns.id, id);
     const [updated] = await db.update(eightByEightCampaigns)
       .set({ ...campaign, updatedAt: new Date() })
-      .where(eq(eightByEightCampaigns.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async delete8x8Campaign(id: string): Promise<void> {
-    await db.delete(eightByEightCampaigns).where(eq(eightByEightCampaigns.id, id));
+  async delete8x8Campaign(id: string, ctx?: TenantContext): Promise<void> {
+    const filter = this.getTenantFilter(eightByEightCampaigns, ctx);
+    const conditions = filter ? and(eq(eightByEightCampaigns.id, id), filter) : eq(eightByEightCampaigns.id, id);
+    await db.delete(eightByEightCampaigns).where(conditions);
   }
   
   // D Contact Review
-  async getStaleDContacts(): Promise<Person[]> {
+  async getStaleDContacts(ctx?: TenantContext): Promise<Person[]> {
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
     
-    const allDContacts = await db.select().from(people)
-      .where(sql`UPPER(SUBSTRING(${people.segment}, 1, 1)) = 'D'`);
+    const filter = this.getTenantFilter(people, ctx);
+    const baseCondition = sql`UPPER(SUBSTRING(${people.segment}, 1, 1)) = 'D'`;
+    const conditions = filter ? and(baseCondition, filter) : baseCondition;
+    const allDContacts = await db.select().from(people).where(conditions);
     
     // Filter to those in segment for 6+ months
     return allDContacts.filter(p => {
@@ -1739,31 +1812,40 @@ export class DatabaseStorage implements IStorage {
     });
   }
   
-  async getLowEngagementDContacts(): Promise<Person[]> {
-    return await db.select().from(people)
-      .where(and(
-        sql`UPPER(SUBSTRING(${people.segment}, 1, 1)) = 'D'`,
-        gte(people.contactAttempts, 3),
-        eq(people.contactResponses, 0)
-      ));
+  async getLowEngagementDContacts(ctx?: TenantContext): Promise<Person[]> {
+    const filter = this.getTenantFilter(people, ctx);
+    const baseConditions = and(
+      sql`UPPER(SUBSTRING(${people.segment}, 1, 1)) = 'D'`,
+      gte(people.contactAttempts, 3),
+      eq(people.contactResponses, 0)
+    );
+    const conditions = filter ? and(baseConditions, filter) : baseConditions;
+    return await db.select().from(people).where(conditions);
   }
   
-  async getDContactsNeedingReview(): Promise<DContactReviewResult[]> {
+  async getDContactsNeedingReview(ctx?: TenantContext): Promise<DContactReviewResult[]> {
     const results: DContactReviewResult[] = [];
     const now = new Date();
     
     // Get all D contacts
-    const allDContacts = await db.select().from(people)
-      .where(sql`UPPER(SUBSTRING(${people.segment}, 1, 1)) = 'D'`);
+    const peopleFilter = this.getTenantFilter(people, ctx);
+    const baseCondition = sql`UPPER(SUBSTRING(${people.segment}, 1, 1)) = 'D'`;
+    const conditions = peopleFilter ? and(baseCondition, peopleFilter) : baseCondition;
+    const allDContacts = await db.select().from(people).where(conditions);
     
     // Get completed 8x8 campaigns
-    const completedCampaigns = await db.select().from(eightByEightCampaigns)
-      .where(eq(eightByEightCampaigns.status, 'completed'));
+    const campaignFilter = this.getTenantFilter(eightByEightCampaigns, ctx);
+    const completedConditions = campaignFilter 
+      ? and(eq(eightByEightCampaigns.status, 'completed'), campaignFilter)
+      : eq(eightByEightCampaigns.status, 'completed');
+    const completedCampaigns = await db.select().from(eightByEightCampaigns).where(completedConditions);
     const completedPersonIds = new Set(completedCampaigns.map(c => c.personId));
     
     // Get active campaigns for reference
-    const activeCampaigns = await db.select().from(eightByEightCampaigns)
-      .where(eq(eightByEightCampaigns.status, 'active'));
+    const activeConditions = campaignFilter 
+      ? and(eq(eightByEightCampaigns.status, 'active'), campaignFilter)
+      : eq(eightByEightCampaigns.status, 'active');
+    const activeCampaigns = await db.select().from(eightByEightCampaigns).where(activeConditions);
     const activeCampaignMap = new Map(activeCampaigns.map(c => [c.personId, c]));
     
     const sixMonthsAgo = new Date();
@@ -1818,45 +1900,60 @@ export class DatabaseStorage implements IStorage {
     return results;
   }
   
-  async flagContactForReview(personId: string, status: string): Promise<Person | undefined> {
+  async flagContactForReview(personId: string, status: string, ctx?: TenantContext): Promise<Person | undefined> {
+    const filter = this.getTenantFilter(people, ctx);
+    const conditions = filter ? and(eq(people.id, personId), filter) : eq(people.id, personId);
     const [updated] = await db.update(people)
       .set({ reviewStatus: status, updatedAt: new Date() })
-      .where(eq(people.id, personId))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
   // Handwritten Note Uploads
-  async getAllHandwrittenNoteUploads(): Promise<HandwrittenNoteUpload[]> {
+  async getAllHandwrittenNoteUploads(ctx?: TenantContext): Promise<HandwrittenNoteUpload[]> {
+    const filter = this.getTenantFilter(handwrittenNoteUploads, ctx);
+    if (filter) {
+      return await db.select().from(handwrittenNoteUploads).where(filter).orderBy(desc(handwrittenNoteUploads.createdAt));
+    }
     return await db.select().from(handwrittenNoteUploads).orderBy(desc(handwrittenNoteUploads.createdAt));
   }
   
-  async getHandwrittenNoteUploadsByStatus(status: string): Promise<HandwrittenNoteUpload[]> {
+  async getHandwrittenNoteUploadsByStatus(status: string, ctx?: TenantContext): Promise<HandwrittenNoteUpload[]> {
+    const filter = this.getTenantFilter(handwrittenNoteUploads, ctx);
+    const conditions = filter ? and(eq(handwrittenNoteUploads.status, status), filter) : eq(handwrittenNoteUploads.status, status);
     return await db.select().from(handwrittenNoteUploads)
-      .where(eq(handwrittenNoteUploads.status, status))
+      .where(conditions)
       .orderBy(desc(handwrittenNoteUploads.createdAt));
   }
   
-  async getHandwrittenNoteUpload(id: string): Promise<HandwrittenNoteUpload | undefined> {
-    const [upload] = await db.select().from(handwrittenNoteUploads).where(eq(handwrittenNoteUploads.id, id));
+  async getHandwrittenNoteUpload(id: string, ctx?: TenantContext): Promise<HandwrittenNoteUpload | undefined> {
+    const filter = this.getTenantFilter(handwrittenNoteUploads, ctx);
+    const conditions = filter ? and(eq(handwrittenNoteUploads.id, id), filter) : eq(handwrittenNoteUploads.id, id);
+    const [upload] = await db.select().from(handwrittenNoteUploads).where(conditions);
     return upload || undefined;
   }
   
-  async createHandwrittenNoteUpload(upload: InsertHandwrittenNoteUpload): Promise<HandwrittenNoteUpload> {
-    const [created] = await db.insert(handwrittenNoteUploads).values(upload).returning();
+  async createHandwrittenNoteUpload(upload: InsertHandwrittenNoteUpload, ctx?: TenantContext): Promise<HandwrittenNoteUpload> {
+    const userId = getEffectiveUserId(ctx);
+    const [created] = await db.insert(handwrittenNoteUploads).values({ ...upload, userId }).returning();
     return created;
   }
   
-  async updateHandwrittenNoteUpload(id: string, upload: Partial<InsertHandwrittenNoteUpload>): Promise<HandwrittenNoteUpload | undefined> {
+  async updateHandwrittenNoteUpload(id: string, upload: Partial<InsertHandwrittenNoteUpload>, ctx?: TenantContext): Promise<HandwrittenNoteUpload | undefined> {
+    const filter = this.getTenantFilter(handwrittenNoteUploads, ctx);
+    const conditions = filter ? and(eq(handwrittenNoteUploads.id, id), filter) : eq(handwrittenNoteUploads.id, id);
     const [updated] = await db.update(handwrittenNoteUploads)
       .set({ ...upload, updatedAt: new Date() })
-      .where(eq(handwrittenNoteUploads.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async deleteHandwrittenNoteUpload(id: string): Promise<void> {
-    await db.delete(handwrittenNoteUploads).where(eq(handwrittenNoteUploads.id, id));
+  async deleteHandwrittenNoteUpload(id: string, ctx?: TenantContext): Promise<void> {
+    const filter = this.getTenantFilter(handwrittenNoteUploads, ctx);
+    const conditions = filter ? and(eq(handwrittenNoteUploads.id, id), filter) : eq(handwrittenNoteUploads.id, id);
+    await db.delete(handwrittenNoteUploads).where(conditions);
   }
   
   // Content Topics
@@ -1937,30 +2034,29 @@ export class DatabaseStorage implements IStorage {
   
   // Content Ideas
   async getAllContentIdeas(ctx?: TenantContext): Promise<ContentIdea[]> {
-    const userId = getEffectiveUserId(ctx);
-    return await db.select().from(contentIdeas)
-      .where(eq(contentIdeas.userId, userId))
-      .orderBy(desc(contentIdeas.priority), desc(contentIdeas.createdAt));
+    const filter = this.getTenantFilter(contentIdeas, ctx);
+    if (filter) {
+      return await db.select().from(contentIdeas).where(filter).orderBy(desc(contentIdeas.priority), desc(contentIdeas.createdAt));
+    }
+    return await db.select().from(contentIdeas).orderBy(desc(contentIdeas.priority), desc(contentIdeas.createdAt));
   }
   
   async getContentIdeasByTopic(topicId: string, ctx?: TenantContext): Promise<ContentIdea[]> {
-    const userId = getEffectiveUserId(ctx);
-    return await db.select().from(contentIdeas)
-      .where(and(eq(contentIdeas.topicId, topicId), eq(contentIdeas.userId, userId)))
-      .orderBy(desc(contentIdeas.priority));
+    const filter = this.getTenantFilter(contentIdeas, ctx);
+    const conditions = filter ? and(eq(contentIdeas.topicId, topicId), filter) : eq(contentIdeas.topicId, topicId);
+    return await db.select().from(contentIdeas).where(conditions).orderBy(desc(contentIdeas.priority));
   }
   
   async getContentIdeasByStatus(status: string, ctx?: TenantContext): Promise<ContentIdea[]> {
-    const userId = getEffectiveUserId(ctx);
-    return await db.select().from(contentIdeas)
-      .where(and(eq(contentIdeas.status, status), eq(contentIdeas.userId, userId)))
-      .orderBy(desc(contentIdeas.priority));
+    const filter = this.getTenantFilter(contentIdeas, ctx);
+    const conditions = filter ? and(eq(contentIdeas.status, status), filter) : eq(contentIdeas.status, status);
+    return await db.select().from(contentIdeas).where(conditions).orderBy(desc(contentIdeas.priority));
   }
   
   async getContentIdea(id: string, ctx?: TenantContext): Promise<ContentIdea | undefined> {
-    const userId = getEffectiveUserId(ctx);
-    const [idea] = await db.select().from(contentIdeas)
-      .where(and(eq(contentIdeas.id, id), eq(contentIdeas.userId, userId)));
+    const filter = this.getTenantFilter(contentIdeas, ctx);
+    const conditions = filter ? and(eq(contentIdeas.id, id), filter) : eq(contentIdeas.id, id);
+    const [idea] = await db.select().from(contentIdeas).where(conditions);
     return idea || undefined;
   }
   
@@ -1971,216 +2067,294 @@ export class DatabaseStorage implements IStorage {
   }
   
   async updateContentIdea(id: string, idea: Partial<InsertContentIdea>, ctx?: TenantContext): Promise<ContentIdea | undefined> {
-    const userId = getEffectiveUserId(ctx);
+    const filter = this.getTenantFilter(contentIdeas, ctx);
+    const conditions = filter ? and(eq(contentIdeas.id, id), filter) : eq(contentIdeas.id, id);
     const [updated] = await db.update(contentIdeas)
       .set({ ...idea, updatedAt: new Date() })
-      .where(and(eq(contentIdeas.id, id), eq(contentIdeas.userId, userId)))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
   async deleteContentIdea(id: string, ctx?: TenantContext): Promise<void> {
-    const userId = getEffectiveUserId(ctx);
-    await db.delete(contentIdeas).where(and(eq(contentIdeas.id, id), eq(contentIdeas.userId, userId)));
+    const filter = this.getTenantFilter(contentIdeas, ctx);
+    const conditions = filter ? and(eq(contentIdeas.id, id), filter) : eq(contentIdeas.id, id);
+    await db.delete(contentIdeas).where(conditions);
   }
   
   // Content Calendar
-  async getAllContentCalendarItems(): Promise<ContentCalendarItem[]> {
+  async getAllContentCalendarItems(ctx?: TenantContext): Promise<ContentCalendarItem[]> {
+    const filter = this.getTenantFilter(contentCalendar, ctx);
+    if (filter) {
+      return await db.select().from(contentCalendar).where(filter).orderBy(contentCalendar.scheduledDate);
+    }
     return await db.select().from(contentCalendar).orderBy(contentCalendar.scheduledDate);
   }
   
-  async getContentCalendarByDateRange(start: Date, end: Date): Promise<ContentCalendarItem[]> {
+  async getContentCalendarByDateRange(start: Date, end: Date, ctx?: TenantContext): Promise<ContentCalendarItem[]> {
+    const filter = this.getTenantFilter(contentCalendar, ctx);
+    const baseConditions = and(
+      gte(contentCalendar.scheduledDate, start),
+      lte(contentCalendar.scheduledDate, end)
+    );
+    const conditions = filter ? and(baseConditions, filter) : baseConditions;
     return await db.select().from(contentCalendar)
-      .where(and(
-        gte(contentCalendar.scheduledDate, start),
-        lte(contentCalendar.scheduledDate, end)
-      ))
+      .where(conditions)
       .orderBy(contentCalendar.scheduledDate);
   }
   
-  async getContentCalendarItem(id: string): Promise<ContentCalendarItem | undefined> {
-    const [item] = await db.select().from(contentCalendar).where(eq(contentCalendar.id, id));
+  async getContentCalendarItem(id: string, ctx?: TenantContext): Promise<ContentCalendarItem | undefined> {
+    const filter = this.getTenantFilter(contentCalendar, ctx);
+    const conditions = filter ? and(eq(contentCalendar.id, id), filter) : eq(contentCalendar.id, id);
+    const [item] = await db.select().from(contentCalendar).where(conditions);
     return item || undefined;
   }
   
-  async createContentCalendarItem(item: InsertContentCalendar): Promise<ContentCalendarItem> {
-    const [created] = await db.insert(contentCalendar).values(item).returning();
+  async createContentCalendarItem(item: InsertContentCalendar, ctx?: TenantContext): Promise<ContentCalendarItem> {
+    const userId = getEffectiveUserId(ctx);
+    const [created] = await db.insert(contentCalendar).values({ ...item, userId }).returning();
     return created;
   }
   
-  async updateContentCalendarItem(id: string, item: Partial<InsertContentCalendar>): Promise<ContentCalendarItem | undefined> {
+  async updateContentCalendarItem(id: string, item: Partial<InsertContentCalendar>, ctx?: TenantContext): Promise<ContentCalendarItem | undefined> {
+    const filter = this.getTenantFilter(contentCalendar, ctx);
+    const conditions = filter ? and(eq(contentCalendar.id, id), filter) : eq(contentCalendar.id, id);
     const [updated] = await db.update(contentCalendar)
       .set({ ...item, updatedAt: new Date() })
-      .where(eq(contentCalendar.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async deleteContentCalendarItem(id: string): Promise<void> {
-    await db.delete(contentCalendar).where(eq(contentCalendar.id, id));
+  async deleteContentCalendarItem(id: string, ctx?: TenantContext): Promise<void> {
+    const filter = this.getTenantFilter(contentCalendar, ctx);
+    const conditions = filter ? and(eq(contentCalendar.id, id), filter) : eq(contentCalendar.id, id);
+    await db.delete(contentCalendar).where(conditions);
   }
   
   // Listening Analysis - NVC + Question-Based Selling
-  async getAllListeningAnalysis(): Promise<ListeningAnalysis[]> {
+  async getAllListeningAnalysis(ctx?: TenantContext): Promise<ListeningAnalysis[]> {
+    const filter = this.getTenantFilter(listeningAnalysis, ctx);
+    if (filter) {
+      return await db.select().from(listeningAnalysis).where(filter).orderBy(desc(listeningAnalysis.createdAt));
+    }
     return await db.select().from(listeningAnalysis).orderBy(desc(listeningAnalysis.createdAt));
   }
   
-  async getListeningAnalysisByInteraction(interactionId: string): Promise<ListeningAnalysis | undefined> {
-    const [analysis] = await db.select().from(listeningAnalysis)
-      .where(eq(listeningAnalysis.interactionId, interactionId));
+  async getListeningAnalysisByInteraction(interactionId: string, ctx?: TenantContext): Promise<ListeningAnalysis | undefined> {
+    const filter = this.getTenantFilter(listeningAnalysis, ctx);
+    const conditions = filter ? and(eq(listeningAnalysis.interactionId, interactionId), filter) : eq(listeningAnalysis.interactionId, interactionId);
+    const [analysis] = await db.select().from(listeningAnalysis).where(conditions);
     return analysis || undefined;
   }
   
-  async createListeningAnalysis(analysis: InsertListeningAnalysis): Promise<ListeningAnalysis> {
-    const [created] = await db.insert(listeningAnalysis).values(analysis).returning();
+  async createListeningAnalysis(analysis: InsertListeningAnalysis, ctx?: TenantContext): Promise<ListeningAnalysis> {
+    const userId = getEffectiveUserId(ctx);
+    const [created] = await db.insert(listeningAnalysis).values({ ...analysis, userId }).returning();
     return created;
   }
   
-  async getInteractionsWithTranscripts(): Promise<Interaction[]> {
+  async getInteractionsWithTranscripts(ctx?: TenantContext): Promise<Interaction[]> {
+    const filter = this.getTenantFilter(interactions, ctx);
+    const baseConditions = and(
+      isNotNull(interactions.transcript),
+      isNull(interactions.deletedAt)
+    );
+    const conditions = filter ? and(baseConditions, filter) : baseConditions;
     return await db.select().from(interactions)
-      .where(and(
-        isNotNull(interactions.transcript),
-        isNull(interactions.deletedAt)
-      ))
+      .where(conditions)
       .orderBy(desc(interactions.occurredAt));
   }
   
   // Coaching Insights
-  async getAllCoachingInsights(): Promise<CoachingInsight[]> {
+  async getAllCoachingInsights(ctx?: TenantContext): Promise<CoachingInsight[]> {
+    const filter = this.getTenantFilter(coachingInsights, ctx);
+    if (filter) {
+      return await db.select().from(coachingInsights).where(filter).orderBy(desc(coachingInsights.createdAt));
+    }
     return await db.select().from(coachingInsights).orderBy(desc(coachingInsights.createdAt));
   }
   
-  async getActiveCoachingInsights(): Promise<CoachingInsight[]> {
+  async getActiveCoachingInsights(ctx?: TenantContext): Promise<CoachingInsight[]> {
+    const filter = this.getTenantFilter(coachingInsights, ctx);
+    const conditions = filter ? and(eq(coachingInsights.status, "active"), filter) : eq(coachingInsights.status, "active");
     return await db.select().from(coachingInsights)
-      .where(eq(coachingInsights.status, "active"))
+      .where(conditions)
       .orderBy(desc(coachingInsights.confidenceScore));
   }
   
-  async getCoachingInsight(id: string): Promise<CoachingInsight | undefined> {
-    const [insight] = await db.select().from(coachingInsights).where(eq(coachingInsights.id, id));
+  async getCoachingInsight(id: string, ctx?: TenantContext): Promise<CoachingInsight | undefined> {
+    const filter = this.getTenantFilter(coachingInsights, ctx);
+    const conditions = filter ? and(eq(coachingInsights.id, id), filter) : eq(coachingInsights.id, id);
+    const [insight] = await db.select().from(coachingInsights).where(conditions);
     return insight || undefined;
   }
   
-  async createCoachingInsight(insight: InsertCoachingInsight): Promise<CoachingInsight> {
-    const [created] = await db.insert(coachingInsights).values(insight).returning();
+  async createCoachingInsight(insight: InsertCoachingInsight, ctx?: TenantContext): Promise<CoachingInsight> {
+    const userId = getEffectiveUserId(ctx);
+    const [created] = await db.insert(coachingInsights).values({ ...insight, userId }).returning();
     return created;
   }
   
-  async updateCoachingInsight(id: string, insight: Partial<InsertCoachingInsight>): Promise<CoachingInsight | undefined> {
+  async updateCoachingInsight(id: string, insight: Partial<InsertCoachingInsight>, ctx?: TenantContext): Promise<CoachingInsight | undefined> {
+    const filter = this.getTenantFilter(coachingInsights, ctx);
+    const conditions = filter ? and(eq(coachingInsights.id, id), filter) : eq(coachingInsights.id, id);
     const [updated] = await db.update(coachingInsights)
       .set({ ...insight, updatedAt: new Date() })
-      .where(eq(coachingInsights.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async deleteCoachingInsight(id: string): Promise<void> {
-    await db.delete(coachingInsights).where(eq(coachingInsights.id, id));
+  async deleteCoachingInsight(id: string, ctx?: TenantContext): Promise<void> {
+    const filter = this.getTenantFilter(coachingInsights, ctx);
+    const conditions = filter ? and(eq(coachingInsights.id, id), filter) : eq(coachingInsights.id, id);
+    await db.delete(coachingInsights).where(conditions);
   }
   
   // Listening Patterns
-  async getAllListeningPatterns(): Promise<ListeningPattern[]> {
+  async getAllListeningPatterns(ctx?: TenantContext): Promise<ListeningPattern[]> {
+    const filter = this.getTenantFilter(listeningPatterns, ctx);
+    if (filter) {
+      return await db.select().from(listeningPatterns).where(filter).orderBy(desc(listeningPatterns.frequency));
+    }
     return await db.select().from(listeningPatterns).orderBy(desc(listeningPatterns.frequency));
   }
   
-  async getListeningPattern(id: string): Promise<ListeningPattern | undefined> {
-    const [pattern] = await db.select().from(listeningPatterns).where(eq(listeningPatterns.id, id));
+  async getListeningPattern(id: string, ctx?: TenantContext): Promise<ListeningPattern | undefined> {
+    const filter = this.getTenantFilter(listeningPatterns, ctx);
+    const conditions = filter ? and(eq(listeningPatterns.id, id), filter) : eq(listeningPatterns.id, id);
+    const [pattern] = await db.select().from(listeningPatterns).where(conditions);
     return pattern || undefined;
   }
   
-  async createListeningPattern(pattern: InsertListeningPattern): Promise<ListeningPattern> {
-    const [created] = await db.insert(listeningPatterns).values(pattern).returning();
+  async createListeningPattern(pattern: InsertListeningPattern, ctx?: TenantContext): Promise<ListeningPattern> {
+    const userId = getEffectiveUserId(ctx);
+    const [created] = await db.insert(listeningPatterns).values({ ...pattern, userId }).returning();
     return created;
   }
   
-  async updateListeningPattern(id: string, pattern: Partial<InsertListeningPattern>): Promise<ListeningPattern | undefined> {
+  async updateListeningPattern(id: string, pattern: Partial<InsertListeningPattern>, ctx?: TenantContext): Promise<ListeningPattern | undefined> {
+    const filter = this.getTenantFilter(listeningPatterns, ctx);
+    const conditions = filter ? and(eq(listeningPatterns.id, id), filter) : eq(listeningPatterns.id, id);
     const [updated] = await db.update(listeningPatterns)
       .set({ ...pattern, updatedAt: new Date() })
-      .where(eq(listeningPatterns.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
   // Dashboard Widgets
-  async getAllDashboardWidgets(): Promise<DashboardWidget[]> {
+  async getAllDashboardWidgets(ctx?: TenantContext): Promise<DashboardWidget[]> {
+    const filter = this.getTenantFilter(dashboardWidgets, ctx);
+    const conditions = filter ? and(eq(dashboardWidgets.isVisible, true), filter) : eq(dashboardWidgets.isVisible, true);
     return await db.select().from(dashboardWidgets)
-      .where(eq(dashboardWidgets.isVisible, true))
+      .where(conditions)
       .orderBy(dashboardWidgets.position);
   }
   
-  async getDashboardWidget(id: string): Promise<DashboardWidget | undefined> {
-    const [widget] = await db.select().from(dashboardWidgets).where(eq(dashboardWidgets.id, id));
+  async getDashboardWidget(id: string, ctx?: TenantContext): Promise<DashboardWidget | undefined> {
+    const filter = this.getTenantFilter(dashboardWidgets, ctx);
+    const conditions = filter ? and(eq(dashboardWidgets.id, id), filter) : eq(dashboardWidgets.id, id);
+    const [widget] = await db.select().from(dashboardWidgets).where(conditions);
     return widget || undefined;
   }
   
-  async createDashboardWidget(widget: InsertDashboardWidget): Promise<DashboardWidget> {
-    const [created] = await db.insert(dashboardWidgets).values(widget).returning();
+  async createDashboardWidget(widget: InsertDashboardWidget, ctx?: TenantContext): Promise<DashboardWidget> {
+    const userId = getEffectiveUserId(ctx);
+    const [created] = await db.insert(dashboardWidgets).values({ ...widget, userId }).returning();
     return created;
   }
   
-  async updateDashboardWidget(id: string, widget: Partial<InsertDashboardWidget>): Promise<DashboardWidget | undefined> {
+  async updateDashboardWidget(id: string, widget: Partial<InsertDashboardWidget>, ctx?: TenantContext): Promise<DashboardWidget | undefined> {
+    const filter = this.getTenantFilter(dashboardWidgets, ctx);
+    const conditions = filter ? and(eq(dashboardWidgets.id, id), filter) : eq(dashboardWidgets.id, id);
     const [updated] = await db.update(dashboardWidgets)
       .set({ ...widget, updatedAt: new Date() })
-      .where(eq(dashboardWidgets.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async deleteDashboardWidget(id: string): Promise<void> {
-    await db.delete(dashboardWidgets).where(eq(dashboardWidgets.id, id));
+  async deleteDashboardWidget(id: string, ctx?: TenantContext): Promise<void> {
+    const filter = this.getTenantFilter(dashboardWidgets, ctx);
+    const conditions = filter ? and(eq(dashboardWidgets.id, id), filter) : eq(dashboardWidgets.id, id);
+    await db.delete(dashboardWidgets).where(conditions);
   }
   
-  async updateDashboardWidgetPositions(widgets: { id: string; position: number }[]): Promise<void> {
+  async updateDashboardWidgetPositions(widgets: { id: string; position: number }[], ctx?: TenantContext): Promise<void> {
+    const filter = this.getTenantFilter(dashboardWidgets, ctx);
     for (const { id, position } of widgets) {
+      const conditions = filter ? and(eq(dashboardWidgets.id, id), filter) : eq(dashboardWidgets.id, id);
       await db.update(dashboardWidgets)
         .set({ position, updatedAt: new Date() })
-        .where(eq(dashboardWidgets.id, id));
+        .where(conditions);
     }
   }
   
   // Life Event Alerts
-  async getAllLifeEventAlerts(): Promise<LifeEventAlert[]> {
+  async getAllLifeEventAlerts(ctx?: TenantContext): Promise<LifeEventAlert[]> {
+    const filter = this.getTenantFilter(lifeEventAlerts, ctx);
+    if (filter) {
+      return await db.select().from(lifeEventAlerts).where(filter).orderBy(desc(lifeEventAlerts.detectedAt));
+    }
     return await db.select().from(lifeEventAlerts).orderBy(desc(lifeEventAlerts.detectedAt));
   }
   
-  async getLifeEventAlert(id: string): Promise<LifeEventAlert | undefined> {
-    const [alert] = await db.select().from(lifeEventAlerts).where(eq(lifeEventAlerts.id, id));
+  async getLifeEventAlert(id: string, ctx?: TenantContext): Promise<LifeEventAlert | undefined> {
+    const filter = this.getTenantFilter(lifeEventAlerts, ctx);
+    const conditions = filter ? and(eq(lifeEventAlerts.id, id), filter) : eq(lifeEventAlerts.id, id);
+    const [alert] = await db.select().from(lifeEventAlerts).where(conditions);
     return alert || undefined;
   }
   
-  async getLifeEventAlertsByPerson(personId: string): Promise<LifeEventAlert[]> {
+  async getLifeEventAlertsByPerson(personId: string, ctx?: TenantContext): Promise<LifeEventAlert[]> {
+    const filter = this.getTenantFilter(lifeEventAlerts, ctx);
+    const conditions = filter ? and(eq(lifeEventAlerts.personId, personId), filter) : eq(lifeEventAlerts.personId, personId);
     return await db.select().from(lifeEventAlerts)
-      .where(eq(lifeEventAlerts.personId, personId))
+      .where(conditions)
       .orderBy(desc(lifeEventAlerts.detectedAt));
   }
   
-  async createLifeEventAlert(alert: InsertLifeEventAlert): Promise<LifeEventAlert> {
-    const [created] = await db.insert(lifeEventAlerts).values(alert).returning();
+  async createLifeEventAlert(alert: InsertLifeEventAlert, ctx?: TenantContext): Promise<LifeEventAlert> {
+    const userId = getEffectiveUserId(ctx);
+    const [created] = await db.insert(lifeEventAlerts).values({ ...alert, userId }).returning();
     return created;
   }
   
-  async updateLifeEventAlert(id: string, alert: Partial<InsertLifeEventAlert>): Promise<LifeEventAlert | undefined> {
+  async updateLifeEventAlert(id: string, alert: Partial<InsertLifeEventAlert>, ctx?: TenantContext): Promise<LifeEventAlert | undefined> {
+    const filter = this.getTenantFilter(lifeEventAlerts, ctx);
+    const conditions = filter ? and(eq(lifeEventAlerts.id, id), filter) : eq(lifeEventAlerts.id, id);
     const [updated] = await db.update(lifeEventAlerts)
       .set({ ...alert, updatedAt: new Date() })
-      .where(eq(lifeEventAlerts.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async deleteLifeEventAlert(id: string): Promise<void> {
-    await db.delete(lifeEventAlerts).where(eq(lifeEventAlerts.id, id));
+  async deleteLifeEventAlert(id: string, ctx?: TenantContext): Promise<void> {
+    const filter = this.getTenantFilter(lifeEventAlerts, ctx);
+    const conditions = filter ? and(eq(lifeEventAlerts.id, id), filter) : eq(lifeEventAlerts.id, id);
+    await db.delete(lifeEventAlerts).where(conditions);
   }
   
-  async getPersonFullContext(personId: string): Promise<PersonFullContext | undefined> {
-    const person = await this.getPerson(personId);
+  async getPersonFullContext(personId: string, ctx?: TenantContext): Promise<PersonFullContext | undefined> {
+    const person = await this.getPerson(personId, ctx);
     if (!person) return undefined;
     
+    // Get tenant-filtered data for related records
+    const dealsFilter = this.getTenantFilter(deals, ctx);
+    const interactionsFilter = this.getTenantFilter(interactions, ctx);
+    const notesFilter = this.getTenantFilter(notes, ctx);
+    const alertsFilter = this.getTenantFilter(lifeEventAlerts, ctx);
+    const draftsFilter = this.getTenantFilter(generatedDrafts, ctx);
+    
     const [personDeals, personInteractions, personNotes, personAlerts, personDrafts] = await Promise.all([
-      db.select().from(deals).where(eq(deals.personId, personId)).orderBy(desc(deals.createdAt)),
-      db.select().from(interactions).where(and(eq(interactions.personId, personId), isNull(interactions.deletedAt))).orderBy(desc(interactions.occurredAt)),
-      db.select().from(notes).where(eq(notes.personId, personId)).orderBy(desc(notes.createdAt)),
-      db.select().from(lifeEventAlerts).where(eq(lifeEventAlerts.personId, personId)).orderBy(desc(lifeEventAlerts.detectedAt)),
-      db.select().from(generatedDrafts).where(eq(generatedDrafts.personId, personId)).orderBy(desc(generatedDrafts.createdAt)),
+      db.select().from(deals).where(dealsFilter ? and(eq(deals.personId, personId), dealsFilter) : eq(deals.personId, personId)).orderBy(desc(deals.createdAt)),
+      db.select().from(interactions).where(interactionsFilter ? and(eq(interactions.personId, personId), isNull(interactions.deletedAt), interactionsFilter) : and(eq(interactions.personId, personId), isNull(interactions.deletedAt))).orderBy(desc(interactions.occurredAt)),
+      db.select().from(notes).where(notesFilter ? and(eq(notes.personId, personId), notesFilter) : eq(notes.personId, personId)).orderBy(desc(notes.createdAt)),
+      db.select().from(lifeEventAlerts).where(alertsFilter ? and(eq(lifeEventAlerts.personId, personId), alertsFilter) : eq(lifeEventAlerts.personId, personId)).orderBy(desc(lifeEventAlerts.detectedAt)),
+      db.select().from(generatedDrafts).where(draftsFilter ? and(eq(generatedDrafts.personId, personId), draftsFilter) : eq(generatedDrafts.personId, personId)).orderBy(desc(generatedDrafts.createdAt)),
     ]);
     
     const lastTouchpoint = person.lastContact;
@@ -2301,66 +2475,87 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Leads - Top of funnel
-  async getAllLeads(): Promise<Lead[]> {
+  async getAllLeads(ctx?: TenantContext): Promise<Lead[]> {
+    const filter = this.getTenantFilter(leads, ctx);
+    if (filter) {
+      return await db.select().from(leads).where(filter).orderBy(desc(leads.createdAt));
+    }
     return await db.select().from(leads).orderBy(desc(leads.createdAt));
   }
   
-  async getLead(id: string): Promise<Lead | undefined> {
-    const [lead] = await db.select().from(leads).where(eq(leads.id, id));
+  async getLead(id: string, ctx?: TenantContext): Promise<Lead | undefined> {
+    const filter = this.getTenantFilter(leads, ctx);
+    const conditions = filter ? and(eq(leads.id, id), filter) : eq(leads.id, id);
+    const [lead] = await db.select().from(leads).where(conditions);
     return lead || undefined;
   }
   
-  async getLeadsByStatus(status: string): Promise<Lead[]> {
+  async getLeadsByStatus(status: string, ctx?: TenantContext): Promise<Lead[]> {
+    const filter = this.getTenantFilter(leads, ctx);
+    const conditions = filter ? and(eq(leads.status, status), filter) : eq(leads.status, status);
     return await db.select().from(leads)
-      .where(eq(leads.status, status))
+      .where(conditions)
       .orderBy(desc(leads.createdAt));
   }
   
-  async getLeadsBySource(source: string): Promise<Lead[]> {
+  async getLeadsBySource(source: string, ctx?: TenantContext): Promise<Lead[]> {
+    const filter = this.getTenantFilter(leads, ctx);
+    const conditions = filter ? and(eq(leads.source, source), filter) : eq(leads.source, source);
     return await db.select().from(leads)
-      .where(eq(leads.source, source))
+      .where(conditions)
       .orderBy(desc(leads.createdAt));
   }
   
-  async getNewLeads(): Promise<Lead[]> {
+  async getNewLeads(ctx?: TenantContext): Promise<Lead[]> {
+    const filter = this.getTenantFilter(leads, ctx);
+    const conditions = filter ? and(eq(leads.status, 'new'), filter) : eq(leads.status, 'new');
     return await db.select().from(leads)
-      .where(eq(leads.status, 'new'))
+      .where(conditions)
       .orderBy(desc(leads.createdAt));
   }
   
-  async findDuplicateLead(email?: string, phone?: string): Promise<Lead | undefined> {
+  async findDuplicateLead(email?: string, phone?: string, ctx?: TenantContext): Promise<Lead | undefined> {
     if (!email && !phone) return undefined;
     
-    const conditions = [];
-    if (email) conditions.push(eq(leads.email, email));
-    if (phone) conditions.push(eq(leads.phone, phone));
+    const filter = this.getTenantFilter(leads, ctx);
+    const matchConditions = [];
+    if (email) matchConditions.push(eq(leads.email, email));
+    if (phone) matchConditions.push(eq(leads.phone, phone));
+    
+    const baseCondition = or(...matchConditions);
+    const conditions = filter ? and(baseCondition, filter) : baseCondition;
     
     const [match] = await db.select().from(leads)
-      .where(or(...conditions))
+      .where(conditions)
       .limit(1);
     
     return match || undefined;
   }
   
-  async createLead(lead: InsertLead): Promise<Lead> {
-    const [created] = await db.insert(leads).values(lead).returning();
+  async createLead(lead: InsertLead, ctx?: TenantContext): Promise<Lead> {
+    const userId = getEffectiveUserId(ctx);
+    const [created] = await db.insert(leads).values({ ...lead, userId }).returning();
     return created;
   }
   
-  async updateLead(id: string, lead: Partial<InsertLead>): Promise<Lead | undefined> {
+  async updateLead(id: string, lead: Partial<InsertLead>, ctx?: TenantContext): Promise<Lead | undefined> {
+    const filter = this.getTenantFilter(leads, ctx);
+    const conditions = filter ? and(eq(leads.id, id), filter) : eq(leads.id, id);
     const [updated] = await db.update(leads)
       .set({ ...lead, updatedAt: new Date() })
-      .where(eq(leads.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async deleteLead(id: string): Promise<void> {
-    await db.delete(leads).where(eq(leads.id, id));
+  async deleteLead(id: string, ctx?: TenantContext): Promise<void> {
+    const filter = this.getTenantFilter(leads, ctx);
+    const conditions = filter ? and(eq(leads.id, id), filter) : eq(leads.id, id);
+    await db.delete(leads).where(conditions);
   }
   
-  async convertLeadToPerson(leadId: string): Promise<{ lead: Lead; person: Person } | undefined> {
-    const lead = await this.getLead(leadId);
+  async convertLeadToPerson(leadId: string, ctx?: TenantContext): Promise<{ lead: Lead; person: Person } | undefined> {
+    const lead = await this.getLead(leadId, ctx);
     if (!lead) return undefined;
     
     const person = await this.createPerson({
@@ -2369,13 +2564,13 @@ export class DatabaseStorage implements IStorage {
       phone: lead.phone || undefined,
       notes: lead.notes || undefined,
       segment: 'D',
-    });
+    }, ctx);
     
     const updatedLead = await this.updateLead(leadId, {
       status: 'converted',
       personId: person.id,
       convertedAt: new Date(),
-    });
+    }, ctx);
     
     return updatedLead ? { lead: updatedLead, person } : undefined;
   }
@@ -2545,266 +2740,352 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Observer Suggestions - AI Chief of Staff proactive suggestions
-  async getAllObserverSuggestions(limit: number = 50): Promise<ObserverSuggestion[]> {
+  async getAllObserverSuggestions(limit: number = 50, ctx?: TenantContext): Promise<ObserverSuggestion[]> {
+    const filter = this.getTenantFilter(observerSuggestions, ctx);
+    if (filter) {
+      return await db.select().from(observerSuggestions)
+        .where(filter)
+        .orderBy(desc(observerSuggestions.createdAt))
+        .limit(limit);
+    }
     return await db.select().from(observerSuggestions)
       .orderBy(desc(observerSuggestions.createdAt))
       .limit(limit);
   }
   
-  async getPendingObserverSuggestions(): Promise<ObserverSuggestion[]> {
+  async getPendingObserverSuggestions(ctx?: TenantContext): Promise<ObserverSuggestion[]> {
     const now = new Date();
+    const filter = this.getTenantFilter(observerSuggestions, ctx);
+    const baseConditions = and(
+      eq(observerSuggestions.status, 'pending'),
+      or(
+        isNull(observerSuggestions.expiresAt),
+        gte(observerSuggestions.expiresAt, now)
+      ),
+      or(
+        isNull(observerSuggestions.snoozeUntil),
+        lt(observerSuggestions.snoozeUntil, now)
+      )
+    );
+    const conditions = filter ? and(baseConditions, filter) : baseConditions;
     return await db.select().from(observerSuggestions)
-      .where(and(
-        eq(observerSuggestions.status, 'pending'),
-        or(
-          isNull(observerSuggestions.expiresAt),
-          gte(observerSuggestions.expiresAt, now)
-        ),
-        or(
-          isNull(observerSuggestions.snoozeUntil),
-          lt(observerSuggestions.snoozeUntil, now)
-        )
-      ))
+      .where(conditions)
       .orderBy(desc(observerSuggestions.confidence), desc(observerSuggestions.createdAt));
   }
   
-  async getObserverSuggestion(id: string): Promise<ObserverSuggestion | undefined> {
-    const [suggestion] = await db.select().from(observerSuggestions)
-      .where(eq(observerSuggestions.id, id));
+  async getObserverSuggestion(id: string, ctx?: TenantContext): Promise<ObserverSuggestion | undefined> {
+    const filter = this.getTenantFilter(observerSuggestions, ctx);
+    const conditions = filter ? and(eq(observerSuggestions.id, id), filter) : eq(observerSuggestions.id, id);
+    const [suggestion] = await db.select().from(observerSuggestions).where(conditions);
     return suggestion || undefined;
   }
   
-  async createObserverSuggestion(suggestion: InsertObserverSuggestion): Promise<ObserverSuggestion> {
-    const [created] = await db.insert(observerSuggestions).values(suggestion).returning();
+  async createObserverSuggestion(suggestion: InsertObserverSuggestion, ctx?: TenantContext): Promise<ObserverSuggestion> {
+    const userId = getEffectiveUserId(ctx);
+    const [created] = await db.insert(observerSuggestions).values({ ...suggestion, userId }).returning();
     return created;
   }
   
-  async updateObserverSuggestion(id: string, suggestion: Partial<InsertObserverSuggestion>): Promise<ObserverSuggestion | undefined> {
+  async updateObserverSuggestion(id: string, suggestion: Partial<InsertObserverSuggestion>, ctx?: TenantContext): Promise<ObserverSuggestion | undefined> {
+    const filter = this.getTenantFilter(observerSuggestions, ctx);
+    const conditions = filter ? and(eq(observerSuggestions.id, id), filter) : eq(observerSuggestions.id, id);
     const [updated] = await db.update(observerSuggestions)
       .set(suggestion)
-      .where(eq(observerSuggestions.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async acceptObserverSuggestion(id: string): Promise<ObserverSuggestion | undefined> {
+  async acceptObserverSuggestion(id: string, ctx?: TenantContext): Promise<ObserverSuggestion | undefined> {
+    const filter = this.getTenantFilter(observerSuggestions, ctx);
+    const conditions = filter ? and(eq(observerSuggestions.id, id), filter) : eq(observerSuggestions.id, id);
     const [updated] = await db.update(observerSuggestions)
       .set({ status: 'accepted', acceptedAt: new Date() })
-      .where(eq(observerSuggestions.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async snoozeObserverSuggestion(id: string, until: Date): Promise<ObserverSuggestion | undefined> {
+  async snoozeObserverSuggestion(id: string, until: Date, ctx?: TenantContext): Promise<ObserverSuggestion | undefined> {
+    const filter = this.getTenantFilter(observerSuggestions, ctx);
+    const conditions = filter ? and(eq(observerSuggestions.id, id), filter) : eq(observerSuggestions.id, id);
     const [updated] = await db.update(observerSuggestions)
       .set({ status: 'snoozed', snoozeUntil: until })
-      .where(eq(observerSuggestions.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async dismissObserverSuggestion(id: string, feedbackNote?: string): Promise<ObserverSuggestion | undefined> {
+  async dismissObserverSuggestion(id: string, feedbackNote?: string, ctx?: TenantContext): Promise<ObserverSuggestion | undefined> {
+    const filter = this.getTenantFilter(observerSuggestions, ctx);
+    const conditions = filter ? and(eq(observerSuggestions.id, id), filter) : eq(observerSuggestions.id, id);
     const [updated] = await db.update(observerSuggestions)
       .set({ status: 'dismissed', dismissedAt: new Date(), feedbackNote: feedbackNote || null })
-      .where(eq(observerSuggestions.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async expireOldSuggestions(): Promise<number> {
+  async expireOldSuggestions(ctx?: TenantContext): Promise<number> {
     const now = new Date();
+    const filter = this.getTenantFilter(observerSuggestions, ctx);
+    const baseConditions = and(
+      eq(observerSuggestions.status, 'pending'),
+      isNotNull(observerSuggestions.expiresAt),
+      lt(observerSuggestions.expiresAt, now)
+    );
+    const conditions = filter ? and(baseConditions, filter) : baseConditions;
     const result = await db.update(observerSuggestions)
       .set({ status: 'expired' })
-      .where(and(
-        eq(observerSuggestions.status, 'pending'),
-        isNotNull(observerSuggestions.expiresAt),
-        lt(observerSuggestions.expiresAt, now)
-      ))
+      .where(conditions)
       .returning();
     return result.length;
   }
   
   // Observer Patterns - Learned behavior patterns
-  async getAllObserverPatterns(): Promise<ObserverPattern[]> {
+  async getAllObserverPatterns(ctx?: TenantContext): Promise<ObserverPattern[]> {
+    const filter = this.getTenantFilter(observerPatterns, ctx);
+    if (filter) {
+      return await db.select().from(observerPatterns)
+        .where(filter)
+        .orderBy(desc(observerPatterns.occurrenceCount));
+    }
     return await db.select().from(observerPatterns)
       .orderBy(desc(observerPatterns.occurrenceCount));
   }
   
-  async getEnabledObserverPatterns(): Promise<ObserverPattern[]> {
+  async getEnabledObserverPatterns(ctx?: TenantContext): Promise<ObserverPattern[]> {
+    const filter = this.getTenantFilter(observerPatterns, ctx);
+    const conditions = filter ? and(eq(observerPatterns.isEnabled, true), filter) : eq(observerPatterns.isEnabled, true);
     return await db.select().from(observerPatterns)
-      .where(eq(observerPatterns.isEnabled, true))
+      .where(conditions)
       .orderBy(desc(observerPatterns.occurrenceCount));
   }
   
-  async getObserverPattern(id: string): Promise<ObserverPattern | undefined> {
-    const [pattern] = await db.select().from(observerPatterns)
-      .where(eq(observerPatterns.id, id));
+  async getObserverPattern(id: string, ctx?: TenantContext): Promise<ObserverPattern | undefined> {
+    const filter = this.getTenantFilter(observerPatterns, ctx);
+    const conditions = filter ? and(eq(observerPatterns.id, id), filter) : eq(observerPatterns.id, id);
+    const [pattern] = await db.select().from(observerPatterns).where(conditions);
     return pattern || undefined;
   }
   
-  async createObserverPattern(pattern: InsertObserverPattern): Promise<ObserverPattern> {
-    const [created] = await db.insert(observerPatterns).values(pattern).returning();
+  async createObserverPattern(pattern: InsertObserverPattern, ctx?: TenantContext): Promise<ObserverPattern> {
+    const userId = getEffectiveUserId(ctx);
+    const [created] = await db.insert(observerPatterns).values({ ...pattern, userId }).returning();
     return created;
   }
   
-  async updateObserverPattern(id: string, pattern: Partial<InsertObserverPattern>): Promise<ObserverPattern | undefined> {
+  async updateObserverPattern(id: string, pattern: Partial<InsertObserverPattern>, ctx?: TenantContext): Promise<ObserverPattern | undefined> {
+    const filter = this.getTenantFilter(observerPatterns, ctx);
+    const conditions = filter ? and(eq(observerPatterns.id, id), filter) : eq(observerPatterns.id, id);
     const [updated] = await db.update(observerPatterns)
       .set({ ...pattern, updatedAt: new Date() })
-      .where(eq(observerPatterns.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async incrementPatternOccurrence(id: string): Promise<ObserverPattern | undefined> {
+  async incrementPatternOccurrence(id: string, ctx?: TenantContext): Promise<ObserverPattern | undefined> {
+    const filter = this.getTenantFilter(observerPatterns, ctx);
+    const conditions = filter ? and(eq(observerPatterns.id, id), filter) : eq(observerPatterns.id, id);
     const [updated] = await db.update(observerPatterns)
       .set({ 
         occurrenceCount: sql`${observerPatterns.occurrenceCount} + 1`,
         lastTriggeredAt: new Date(),
         updatedAt: new Date()
       })
-      .where(eq(observerPatterns.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async updatePatternFeedback(id: string, delta: number): Promise<ObserverPattern | undefined> {
+  async updatePatternFeedback(id: string, delta: number, ctx?: TenantContext): Promise<ObserverPattern | undefined> {
+    const filter = this.getTenantFilter(observerPatterns, ctx);
+    const conditions = filter ? and(eq(observerPatterns.id, id), filter) : eq(observerPatterns.id, id);
     const [updated] = await db.update(observerPatterns)
       .set({ 
         userFeedbackScore: sql`${observerPatterns.userFeedbackScore} + ${delta}`,
         updatedAt: new Date()
       })
-      .where(eq(observerPatterns.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
   // AI Actions - Verify → Automate audit trail
-  async getAllAiActions(limit: number = 100): Promise<AiAction[]> {
+  async getAllAiActions(limit: number = 100, ctx?: TenantContext): Promise<AiAction[]> {
+    const filter = this.getTenantFilter(aiActions, ctx);
+    if (filter) {
+      return await db.select().from(aiActions)
+        .where(filter)
+        .orderBy(desc(aiActions.createdAt))
+        .limit(limit);
+    }
     return await db.select().from(aiActions)
       .orderBy(desc(aiActions.createdAt))
       .limit(limit);
   }
   
-  async getAiAction(id: string): Promise<AiAction | undefined> {
-    const [action] = await db.select().from(aiActions)
-      .where(eq(aiActions.id, id));
+  async getAiAction(id: string, ctx?: TenantContext): Promise<AiAction | undefined> {
+    const filter = this.getTenantFilter(aiActions, ctx);
+    const conditions = filter ? and(eq(aiActions.id, id), filter) : eq(aiActions.id, id);
+    const [action] = await db.select().from(aiActions).where(conditions);
     return action || undefined;
   }
   
-  async getAiActionsByType(actionType: string, limit: number = 50): Promise<AiAction[]> {
+  async getAiActionsByType(actionType: string, limit: number = 50, ctx?: TenantContext): Promise<AiAction[]> {
+    const filter = this.getTenantFilter(aiActions, ctx);
+    const conditions = filter ? and(eq(aiActions.actionType, actionType), filter) : eq(aiActions.actionType, actionType);
     return await db.select().from(aiActions)
-      .where(eq(aiActions.actionType, actionType))
+      .where(conditions)
       .orderBy(desc(aiActions.createdAt))
       .limit(limit);
   }
   
-  async createAiAction(action: InsertAiAction): Promise<AiAction> {
-    const [created] = await db.insert(aiActions).values(action).returning();
+  async createAiAction(action: InsertAiAction, ctx?: TenantContext): Promise<AiAction> {
+    const userId = getEffectiveUserId(ctx);
+    const [created] = await db.insert(aiActions).values({ ...action, userId }).returning();
     return created;
   }
   
-  async updateAiAction(id: string, action: Partial<InsertAiAction>): Promise<AiAction | undefined> {
+  async updateAiAction(id: string, action: Partial<InsertAiAction>, ctx?: TenantContext): Promise<AiAction | undefined> {
+    const filter = this.getTenantFilter(aiActions, ctx);
+    const conditions = filter ? and(eq(aiActions.id, id), filter) : eq(aiActions.id, id);
     const [updated] = await db.update(aiActions)
       .set(action)
-      .where(eq(aiActions.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
   // Saved Content - Insight Inbox
-  async getAllSavedContent(limit: number = 100): Promise<SavedContent[]> {
+  async getAllSavedContent(limit: number = 100, ctx?: TenantContext): Promise<SavedContent[]> {
+    const filter = this.getTenantFilter(savedContent, ctx);
+    if (filter) {
+      return await db.select().from(savedContent)
+        .where(filter)
+        .orderBy(desc(savedContent.createdAt))
+        .limit(limit);
+    }
     return await db.select().from(savedContent)
       .orderBy(desc(savedContent.createdAt))
       .limit(limit);
   }
   
-  async getUnreadSavedContent(): Promise<SavedContent[]> {
+  async getUnreadSavedContent(ctx?: TenantContext): Promise<SavedContent[]> {
+    const filter = this.getTenantFilter(savedContent, ctx);
+    const conditions = filter ? and(eq(savedContent.status, 'unread'), filter) : eq(savedContent.status, 'unread');
     return await db.select().from(savedContent)
-      .where(eq(savedContent.status, 'unread'))
+      .where(conditions)
       .orderBy(desc(savedContent.createdAt));
   }
   
-  async getSavedContent(id: string): Promise<SavedContent | undefined> {
-    const [content] = await db.select().from(savedContent)
-      .where(eq(savedContent.id, id));
+  async getSavedContent(id: string, ctx?: TenantContext): Promise<SavedContent | undefined> {
+    const filter = this.getTenantFilter(savedContent, ctx);
+    const conditions = filter ? and(eq(savedContent.id, id), filter) : eq(savedContent.id, id);
+    const [content] = await db.select().from(savedContent).where(conditions);
     return content || undefined;
   }
   
-  async getSavedContentByUrl(url: string): Promise<SavedContent | undefined> {
-    const [content] = await db.select().from(savedContent)
-      .where(eq(savedContent.url, url));
+  async getSavedContentByUrl(url: string, ctx?: TenantContext): Promise<SavedContent | undefined> {
+    const filter = this.getTenantFilter(savedContent, ctx);
+    const conditions = filter ? and(eq(savedContent.url, url), filter) : eq(savedContent.url, url);
+    const [content] = await db.select().from(savedContent).where(conditions);
     return content || undefined;
   }
   
-  async createSavedContent(content: InsertSavedContent): Promise<SavedContent> {
-    const [created] = await db.insert(savedContent).values(content).returning();
+  async createSavedContent(content: InsertSavedContent, ctx?: TenantContext): Promise<SavedContent> {
+    const userId = getEffectiveUserId(ctx);
+    const [created] = await db.insert(savedContent).values({ ...content, userId }).returning();
     return created;
   }
   
-  async updateSavedContent(id: string, content: Partial<InsertSavedContent>): Promise<SavedContent | undefined> {
+  async updateSavedContent(id: string, content: Partial<InsertSavedContent>, ctx?: TenantContext): Promise<SavedContent | undefined> {
+    const filter = this.getTenantFilter(savedContent, ctx);
+    const conditions = filter ? and(eq(savedContent.id, id), filter) : eq(savedContent.id, id);
     const [updated] = await db.update(savedContent)
       .set({ ...content, updatedAt: new Date() })
-      .where(eq(savedContent.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async markContentRead(id: string): Promise<SavedContent | undefined> {
+  async markContentRead(id: string, ctx?: TenantContext): Promise<SavedContent | undefined> {
+    const filter = this.getTenantFilter(savedContent, ctx);
+    const conditions = filter ? and(eq(savedContent.id, id), filter) : eq(savedContent.id, id);
     const [updated] = await db.update(savedContent)
       .set({ status: 'read', readAt: new Date(), updatedAt: new Date() })
-      .where(eq(savedContent.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async archiveContent(id: string): Promise<SavedContent | undefined> {
+  async archiveContent(id: string, ctx?: TenantContext): Promise<SavedContent | undefined> {
+    const filter = this.getTenantFilter(savedContent, ctx);
+    const conditions = filter ? and(eq(savedContent.id, id), filter) : eq(savedContent.id, id);
     const [updated] = await db.update(savedContent)
       .set({ status: 'archived', updatedAt: new Date() })
-      .where(eq(savedContent.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async deleteSavedContent(id: string): Promise<void> {
-    await db.delete(savedContent).where(eq(savedContent.id, id));
+  async deleteSavedContent(id: string, ctx?: TenantContext): Promise<void> {
+    const filter = this.getTenantFilter(savedContent, ctx);
+    const conditions = filter ? and(eq(savedContent.id, id), filter) : eq(savedContent.id, id);
+    await db.delete(savedContent).where(conditions);
   }
   
   // Daily Digests
-  async getAllDailyDigests(limit: number = 30): Promise<DailyDigest[]> {
+  async getAllDailyDigests(limit: number = 30, ctx?: TenantContext): Promise<DailyDigest[]> {
+    const filter = this.getTenantFilter(dailyDigests, ctx);
+    if (filter) {
+      return await db.select().from(dailyDigests)
+        .where(filter)
+        .orderBy(desc(dailyDigests.digestDate))
+        .limit(limit);
+    }
     return await db.select().from(dailyDigests)
       .orderBy(desc(dailyDigests.digestDate))
       .limit(limit);
   }
   
-  async getDailyDigest(id: string): Promise<DailyDigest | undefined> {
-    const [digest] = await db.select().from(dailyDigests)
-      .where(eq(dailyDigests.id, id));
+  async getDailyDigest(id: string, ctx?: TenantContext): Promise<DailyDigest | undefined> {
+    const filter = this.getTenantFilter(dailyDigests, ctx);
+    const conditions = filter ? and(eq(dailyDigests.id, id), filter) : eq(dailyDigests.id, id);
+    const [digest] = await db.select().from(dailyDigests).where(conditions);
     return digest || undefined;
   }
   
-  async getTodaysDigest(): Promise<DailyDigest | undefined> {
+  async getTodaysDigest(ctx?: TenantContext): Promise<DailyDigest | undefined> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     
-    const [digest] = await db.select().from(dailyDigests)
-      .where(and(
-        gte(dailyDigests.digestDate, today),
-        lt(dailyDigests.digestDate, tomorrow)
-      ));
+    const filter = this.getTenantFilter(dailyDigests, ctx);
+    const baseConditions = and(
+      gte(dailyDigests.digestDate, today),
+      lt(dailyDigests.digestDate, tomorrow)
+    );
+    const conditions = filter ? and(baseConditions, filter) : baseConditions;
+    
+    const [digest] = await db.select().from(dailyDigests).where(conditions);
     return digest || undefined;
   }
   
-  async createDailyDigest(digest: InsertDailyDigest): Promise<DailyDigest> {
-    const [created] = await db.insert(dailyDigests).values(digest).returning();
+  async createDailyDigest(digest: InsertDailyDigest, ctx?: TenantContext): Promise<DailyDigest> {
+    const userId = getEffectiveUserId(ctx);
+    const [created] = await db.insert(dailyDigests).values({ ...digest, userId }).returning();
     return created;
   }
   
-  async updateDailyDigest(id: string, digest: Partial<InsertDailyDigest>): Promise<DailyDigest | undefined> {
+  async updateDailyDigest(id: string, digest: Partial<InsertDailyDigest>, ctx?: TenantContext): Promise<DailyDigest | undefined> {
+    const filter = this.getTenantFilter(dailyDigests, ctx);
+    const conditions = filter ? and(eq(dailyDigests.id, id), filter) : eq(dailyDigests.id, id);
     const [updated] = await db.update(dailyDigests)
       .set(digest)
-      .where(eq(dailyDigests.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
@@ -2845,55 +3126,74 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Dormant Opportunities
-  async getAllDormantOpportunities(limit: number = 100): Promise<DormantOpportunity[]> {
+  async getAllDormantOpportunities(limit: number = 100, ctx?: TenantContext): Promise<DormantOpportunity[]> {
+    const filter = this.getTenantFilter(dormantOpportunities, ctx);
+    if (filter) {
+      return await db.select().from(dormantOpportunities)
+        .where(filter)
+        .orderBy(desc(dormantOpportunities.dormancyScore))
+        .limit(limit);
+    }
     return await db.select().from(dormantOpportunities)
       .orderBy(desc(dormantOpportunities.dormancyScore))
       .limit(limit);
   }
   
-  async getPendingDormantOpportunities(): Promise<DormantOpportunity[]> {
+  async getPendingDormantOpportunities(ctx?: TenantContext): Promise<DormantOpportunity[]> {
+    const filter = this.getTenantFilter(dormantOpportunities, ctx);
+    const conditions = filter ? and(eq(dormantOpportunities.status, 'pending'), filter) : eq(dormantOpportunities.status, 'pending');
     return await db.select().from(dormantOpportunities)
-      .where(eq(dormantOpportunities.status, 'pending'))
+      .where(conditions)
       .orderBy(desc(dormantOpportunities.dormancyScore));
   }
   
-  async getDormantOpportunity(id: string): Promise<DormantOpportunity | undefined> {
-    const [opportunity] = await db.select().from(dormantOpportunities)
-      .where(eq(dormantOpportunities.id, id));
+  async getDormantOpportunity(id: string, ctx?: TenantContext): Promise<DormantOpportunity | undefined> {
+    const filter = this.getTenantFilter(dormantOpportunities, ctx);
+    const conditions = filter ? and(eq(dormantOpportunities.id, id), filter) : eq(dormantOpportunities.id, id);
+    const [opportunity] = await db.select().from(dormantOpportunities).where(conditions);
     return opportunity || undefined;
   }
   
-  async getDormantOpportunityByPersonId(personId: string): Promise<DormantOpportunity | undefined> {
-    const [opportunity] = await db.select().from(dormantOpportunities)
-      .where(and(
-        eq(dormantOpportunities.personId, personId),
-        eq(dormantOpportunities.status, 'pending')
-      ));
+  async getDormantOpportunityByPersonId(personId: string, ctx?: TenantContext): Promise<DormantOpportunity | undefined> {
+    const filter = this.getTenantFilter(dormantOpportunities, ctx);
+    const baseConditions = and(
+      eq(dormantOpportunities.personId, personId),
+      eq(dormantOpportunities.status, 'pending')
+    );
+    const conditions = filter ? and(baseConditions, filter) : baseConditions;
+    const [opportunity] = await db.select().from(dormantOpportunities).where(conditions);
     return opportunity || undefined;
   }
   
-  async createDormantOpportunity(opportunity: InsertDormantOpportunity): Promise<DormantOpportunity> {
-    const [created] = await db.insert(dormantOpportunities).values(opportunity).returning();
+  async createDormantOpportunity(opportunity: InsertDormantOpportunity, ctx?: TenantContext): Promise<DormantOpportunity> {
+    const userId = getEffectiveUserId(ctx);
+    const [created] = await db.insert(dormantOpportunities).values({ ...opportunity, userId }).returning();
     return created;
   }
   
-  async updateDormantOpportunity(id: string, opportunity: Partial<InsertDormantOpportunity>): Promise<DormantOpportunity | undefined> {
+  async updateDormantOpportunity(id: string, opportunity: Partial<InsertDormantOpportunity>, ctx?: TenantContext): Promise<DormantOpportunity | undefined> {
+    const filter = this.getTenantFilter(dormantOpportunities, ctx);
+    const conditions = filter ? and(eq(dormantOpportunities.id, id), filter) : eq(dormantOpportunities.id, id);
     const [updated] = await db.update(dormantOpportunities)
       .set({ ...opportunity, updatedAt: new Date() })
-      .where(eq(dormantOpportunities.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async approveDormantOpportunity(id: string): Promise<DormantOpportunity | undefined> {
+  async approveDormantOpportunity(id: string, ctx?: TenantContext): Promise<DormantOpportunity | undefined> {
+    const filter = this.getTenantFilter(dormantOpportunities, ctx);
+    const conditions = filter ? and(eq(dormantOpportunities.id, id), filter) : eq(dormantOpportunities.id, id);
     const [updated] = await db.update(dormantOpportunities)
       .set({ status: 'approved', reviewedAt: new Date(), updatedAt: new Date() })
-      .where(eq(dormantOpportunities.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async dismissDormantOpportunity(id: string, reason?: string): Promise<DormantOpportunity | undefined> {
+  async dismissDormantOpportunity(id: string, reason?: string, ctx?: TenantContext): Promise<DormantOpportunity | undefined> {
+    const filter = this.getTenantFilter(dormantOpportunities, ctx);
+    const conditions = filter ? and(eq(dormantOpportunities.id, id), filter) : eq(dormantOpportunities.id, id);
     const [updated] = await db.update(dormantOpportunities)
       .set({ 
         status: 'dismissed', 
@@ -2901,84 +3201,115 @@ export class DatabaseStorage implements IStorage {
         reviewedAt: new Date(), 
         updatedAt: new Date() 
       })
-      .where(eq(dormantOpportunities.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async deleteDormantOpportunity(id: string): Promise<void> {
-    await db.delete(dormantOpportunities).where(eq(dormantOpportunities.id, id));
+  async deleteDormantOpportunity(id: string, ctx?: TenantContext): Promise<void> {
+    const filter = this.getTenantFilter(dormantOpportunities, ctx);
+    const conditions = filter ? and(eq(dormantOpportunities.id, id), filter) : eq(dormantOpportunities.id, id);
+    await db.delete(dormantOpportunities).where(conditions);
   }
   
   // Social Media Connections
-  async getAllSocialConnections(): Promise<SocialConnection[]> {
+  async getAllSocialConnections(ctx?: TenantContext): Promise<SocialConnection[]> {
+    const filter = this.getTenantFilter(socialConnections, ctx);
+    if (filter) {
+      return await db.select().from(socialConnections).where(filter).orderBy(desc(socialConnections.createdAt));
+    }
     return await db.select().from(socialConnections).orderBy(desc(socialConnections.createdAt));
   }
   
-  async getSocialConnection(id: string): Promise<SocialConnection | undefined> {
-    const [connection] = await db.select().from(socialConnections).where(eq(socialConnections.id, id));
+  async getSocialConnection(id: string, ctx?: TenantContext): Promise<SocialConnection | undefined> {
+    const filter = this.getTenantFilter(socialConnections, ctx);
+    const conditions = filter ? and(eq(socialConnections.id, id), filter) : eq(socialConnections.id, id);
+    const [connection] = await db.select().from(socialConnections).where(conditions);
     return connection || undefined;
   }
   
-  async getActiveSocialConnection(platform: string): Promise<SocialConnection | undefined> {
-    const [connection] = await db.select().from(socialConnections)
-      .where(and(
-        eq(socialConnections.platform, platform),
-        eq(socialConnections.isActive, true)
-      ));
+  async getActiveSocialConnection(platform: string, ctx?: TenantContext): Promise<SocialConnection | undefined> {
+    const filter = this.getTenantFilter(socialConnections, ctx);
+    const baseConditions = and(
+      eq(socialConnections.platform, platform),
+      eq(socialConnections.isActive, true)
+    );
+    const conditions = filter ? and(baseConditions, filter) : baseConditions;
+    const [connection] = await db.select().from(socialConnections).where(conditions);
     return connection || undefined;
   }
   
-  async createSocialConnection(connection: InsertSocialConnection): Promise<SocialConnection> {
-    const [created] = await db.insert(socialConnections).values(connection).returning();
+  async createSocialConnection(connection: InsertSocialConnection, ctx?: TenantContext): Promise<SocialConnection> {
+    const userId = getEffectiveUserId(ctx);
+    const [created] = await db.insert(socialConnections).values({ ...connection, userId }).returning();
     return created;
   }
   
-  async updateSocialConnection(id: string, connection: Partial<InsertSocialConnection>): Promise<SocialConnection | undefined> {
+  async updateSocialConnection(id: string, connection: Partial<InsertSocialConnection>, ctx?: TenantContext): Promise<SocialConnection | undefined> {
+    const filter = this.getTenantFilter(socialConnections, ctx);
+    const conditions = filter ? and(eq(socialConnections.id, id), filter) : eq(socialConnections.id, id);
     const [updated] = await db.update(socialConnections)
       .set({ ...connection, updatedAt: new Date() })
-      .where(eq(socialConnections.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async deleteSocialConnection(id: string): Promise<void> {
-    await db.delete(socialConnections).where(eq(socialConnections.id, id));
+  async deleteSocialConnection(id: string, ctx?: TenantContext): Promise<void> {
+    const filter = this.getTenantFilter(socialConnections, ctx);
+    const conditions = filter ? and(eq(socialConnections.id, id), filter) : eq(socialConnections.id, id);
+    await db.delete(socialConnections).where(conditions);
   }
   
   // Social Posts
-  async getAllSocialPosts(limit: number = 100): Promise<SocialPost[]> {
+  async getAllSocialPosts(limit: number = 100, ctx?: TenantContext): Promise<SocialPost[]> {
+    const filter = this.getTenantFilter(socialPosts, ctx);
+    if (filter) {
+      return await db.select().from(socialPosts)
+        .where(filter)
+        .orderBy(desc(socialPosts.createdAt))
+        .limit(limit);
+    }
     return await db.select().from(socialPosts)
       .orderBy(desc(socialPosts.createdAt))
       .limit(limit);
   }
   
-  async getSocialPost(id: string): Promise<SocialPost | undefined> {
-    const [post] = await db.select().from(socialPosts).where(eq(socialPosts.id, id));
+  async getSocialPost(id: string, ctx?: TenantContext): Promise<SocialPost | undefined> {
+    const filter = this.getTenantFilter(socialPosts, ctx);
+    const conditions = filter ? and(eq(socialPosts.id, id), filter) : eq(socialPosts.id, id);
+    const [post] = await db.select().from(socialPosts).where(conditions);
     return post || undefined;
   }
   
-  async getScheduledSocialPosts(): Promise<SocialPost[]> {
+  async getScheduledSocialPosts(ctx?: TenantContext): Promise<SocialPost[]> {
+    const filter = this.getTenantFilter(socialPosts, ctx);
+    const conditions = filter ? and(eq(socialPosts.status, 'scheduled'), filter) : eq(socialPosts.status, 'scheduled');
     return await db.select().from(socialPosts)
-      .where(eq(socialPosts.status, 'scheduled'))
+      .where(conditions)
       .orderBy(socialPosts.scheduledFor);
   }
   
-  async createSocialPost(post: InsertSocialPost): Promise<SocialPost> {
-    const [created] = await db.insert(socialPosts).values(post).returning();
+  async createSocialPost(post: InsertSocialPost, ctx?: TenantContext): Promise<SocialPost> {
+    const userId = getEffectiveUserId(ctx);
+    const [created] = await db.insert(socialPosts).values({ ...post, userId }).returning();
     return created;
   }
   
-  async updateSocialPost(id: string, post: Partial<InsertSocialPost>): Promise<SocialPost | undefined> {
+  async updateSocialPost(id: string, post: Partial<InsertSocialPost>, ctx?: TenantContext): Promise<SocialPost | undefined> {
+    const filter = this.getTenantFilter(socialPosts, ctx);
+    const conditions = filter ? and(eq(socialPosts.id, id), filter) : eq(socialPosts.id, id);
     const [updated] = await db.update(socialPosts)
       .set({ ...post, updatedAt: new Date() })
-      .where(eq(socialPosts.id, id))
+      .where(conditions)
       .returning();
     return updated || undefined;
   }
   
-  async deleteSocialPost(id: string): Promise<void> {
-    await db.delete(socialPosts).where(eq(socialPosts.id, id));
+  async deleteSocialPost(id: string, ctx?: TenantContext): Promise<void> {
+    const filter = this.getTenantFilter(socialPosts, ctx);
+    const conditions = filter ? and(eq(socialPosts.id, id), filter) : eq(socialPosts.id, id);
+    await db.delete(socialPosts).where(conditions);
   }
   
   // Context Graph - Decision Traces & World Model
