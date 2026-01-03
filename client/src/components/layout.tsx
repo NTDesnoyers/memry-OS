@@ -209,6 +209,17 @@ function NavContent({ location, setOpen, userName, userInitials, brokerage, head
                       </Link>
                     );
                   })}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    className="cursor-pointer gap-2 text-destructive focus:text-destructive"
+                    onClick={() => {
+                      window.location.href = "/api/logout";
+                    }}
+                    data-testid="button-logout-collapsed"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Log Out
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
@@ -251,6 +262,17 @@ function NavContent({ location, setOpen, userName, userInitials, brokerage, head
                       </Link>
                     );
                   })}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    className="cursor-pointer gap-2 text-destructive focus:text-destructive"
+                    onClick={() => {
+                      window.location.href = "/api/logout";
+                    }}
+                    data-testid="button-logout"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Log Out
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
