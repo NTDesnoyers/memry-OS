@@ -59,8 +59,22 @@ async function checkOverdueContacts(): Promise<void> {
 
 async function checkUpcomingAnniversaries(): Promise<void> {
   try {
-    const allPeople = await storage.getAllPeople();
+    // Get all users and check for each one (multi-tenant)
+    const users = await storage.getAllUsers();
     const today = new Date();
+    
+    for (const user of users) {
+      const ctx = { userId: user.id };
+      await checkAnniversariesForUser(ctx, today);
+    }
+  } catch (error) {
+    logger.error('Error checking anniversaries:', error);
+  }
+}
+
+async function checkAnniversariesForUser(ctx: { userId: string }, today: Date): Promise<void> {
+  try {
+    const allPeople = await storage.getAllPeople(ctx);
     const currentYear = today.getFullYear();
     
     for (const person of allPeople) {
@@ -106,7 +120,7 @@ async function checkUpcomingAnniversaries(): Promise<void> {
           }
           
           // Generate segment-based draft
-          await generateAnniversaryDraft(person, anniversary.type, anniversary.label, format(anniversary.date, 'MMMM d'), daysUntil);
+          await generateAnniversaryDraft(person, anniversary.type, anniversary.label, format(anniversary.date, 'MMMM d'), daysUntil, ctx);
           
           // Also emit event for other listeners
           await eventBus.emitAnniversaryApproaching(
@@ -150,7 +164,8 @@ async function generateAnniversaryDraft(
   type: string, 
   label: string, 
   dateStr: string, 
-  daysUntil: number
+  daysUntil: number,
+  ctx: { userId: string }
 ): Promise<void> {
   const segment = person.segment || 'D';
   const firstName = person.name?.split(' ')[0] || 'Friend';
@@ -204,16 +219,17 @@ async function generateAnniversaryDraft(
         dateStr,
         giftRecommendation: segment === 'A' ? 'gift_card' : segment === 'B' ? 'small_gift' : 'note_only'
       }
-    });
+    }, ctx);
     
-    // Create task reminder
+    // Create task reminder - clamp to at least today (avoid past-due tasks)
+    const daysOffset = Math.max(0, daysUntil - 7);
     await storage.createTask({
       title: taskTitle,
       personId: person.id,
-      dueDate: new Date(Date.now() + (daysUntil - 7) * 24 * 60 * 60 * 1000), // 7 days before
+      dueDate: new Date(Date.now() + daysOffset * 24 * 60 * 60 * 1000),
       priority: segment === 'A' ? 'high' : 'medium',
       status: 'pending'
-    });
+    }, ctx);
     
     logger.info(`Created ${type} draft for ${person.name} (${segment} segment)`);
   } catch (error) {

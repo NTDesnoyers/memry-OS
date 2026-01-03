@@ -79,6 +79,7 @@ export interface IStorage {
   // Users
   /** Get user by ID. Returns undefined if not found. */
   getUser(id: string): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
   /** Get user by username. Returns undefined if not found. */
   getUserByUsername(username: string): Promise<User | undefined>;
   /** Create new user. Returns created user with generated ID. */
@@ -579,6 +580,10 @@ export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
