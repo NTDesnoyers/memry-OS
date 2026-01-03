@@ -64,14 +64,33 @@ async function checkUpcomingAnniversaries(): Promise<void> {
     const currentYear = today.getFullYear();
     
     for (const person of allPeople) {
-      const anniversaryDates: { type: string; date: Date }[] = [];
+      const anniversaryDates: { type: string; date: Date; label: string }[] = [];
       
-      if (person.fordFamily) {
+      // Check dedicated date fields (MM-DD format)
+      if (person.birthday) {
+        const parsed = parseMmDdDate(person.birthday, currentYear);
+        if (parsed) anniversaryDates.push({ type: 'birthday', date: parsed, label: 'Birthday' });
+      }
+      if (person.anniversary) {
+        const parsed = parseMmDdDate(person.anniversary, currentYear);
+        if (parsed) anniversaryDates.push({ type: 'wedding_anniversary', date: parsed, label: 'Wedding Anniversary' });
+      }
+      if (person.spouseBirthday && person.spouseName) {
+        const parsed = parseMmDdDate(person.spouseBirthday, currentYear);
+        if (parsed) anniversaryDates.push({ type: 'spouse_birthday', date: parsed, label: `${person.spouseName}'s Birthday` });
+      }
+      if (person.homeAnniversary) {
+        const parsed = parseMmDdDate(person.homeAnniversary, currentYear);
+        if (parsed) anniversaryDates.push({ type: 'home_anniversary', date: parsed, label: 'Home Purchase Anniversary' });
+      }
+      
+      // Fallback: check FORD notes for birthday patterns
+      if (anniversaryDates.length === 0 && person.fordFamily) {
         const birthdayMatch = person.fordFamily.match(/birthday[:\s]+(\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?)/i);
         if (birthdayMatch) {
           const parsed = parseFlexibleDate(birthdayMatch[1], currentYear);
           if (parsed) {
-            anniversaryDates.push({ type: 'birthday', date: parsed });
+            anniversaryDates.push({ type: 'birthday', date: parsed, label: 'Birthday' });
           }
         }
       }
@@ -86,6 +105,10 @@ async function checkUpcomingAnniversaries(): Promise<void> {
             continue;
           }
           
+          // Generate segment-based draft
+          await generateAnniversaryDraft(person, anniversary.type, anniversary.label, format(anniversary.date, 'MMMM d'), daysUntil);
+          
+          // Also emit event for other listeners
           await eventBus.emitAnniversaryApproaching(
             person.id,
             anniversary.type,
@@ -94,12 +117,107 @@ async function checkUpcomingAnniversaries(): Promise<void> {
           );
           
           emittedToday.add(eventKey);
-          logger.info(`Emitted anniversary.approaching for ${person.name} (${anniversary.type} in ${daysUntil} days)`);
+          logger.info(`Created draft and emitted anniversary.approaching for ${person.name} (${anniversary.label} in ${daysUntil} days)`);
         }
       }
     }
   } catch (error) {
     logger.error('Error checking anniversaries:', error);
+  }
+}
+
+function parseMmDdDate(mmdd: string, year: number): Date | null {
+  try {
+    const parts = mmdd.split('-');
+    if (parts.length === 2) {
+      const month = parseInt(parts[0], 10);
+      const day = parseInt(parts[1], 10);
+      const date = new Date(year, month - 1, day);
+      if (isValid(date)) {
+        // If date already passed this year, use next year
+        if (date < new Date()) {
+          date.setFullYear(year + 1);
+        }
+        return date;
+      }
+    }
+  } catch {}
+  return null;
+}
+
+async function generateAnniversaryDraft(
+  person: any, 
+  type: string, 
+  label: string, 
+  dateStr: string, 
+  daysUntil: number
+): Promise<void> {
+  const segment = person.segment || 'D';
+  const firstName = person.name?.split(' ')[0] || 'Friend';
+  
+  // Determine gift/touch level based on segment
+  let giftNote = '';
+  let taskTitle = '';
+  
+  switch (segment) {
+    case 'A':
+      giftNote = '\n\nGift idea: Include a $25 gift card to their favorite coffee shop or restaurant.';
+      taskTitle = `${label} for ${person.name} - send note + gift card + call`;
+      break;
+    case 'B':
+      giftNote = '\n\nGift idea: Consider a small thoughtful gift or flowers.';
+      taskTitle = `${label} for ${person.name} - send note + small gift`;
+      break;
+    case 'C':
+      giftNote = '';
+      taskTitle = `${label} for ${person.name} - send note + call`;
+      break;
+    default:
+      giftNote = '';
+      taskTitle = `${label} for ${person.name} - send handwritten note`;
+  }
+  
+  // Generate handwritten note content (everyone gets a note)
+  let noteContent = '';
+  if (type === 'birthday') {
+    noteContent = `Dear ${firstName},\n\nWishing you the happiest of birthdays! I hope your special day is filled with joy, laughter, and all the things that make you smile.\n\nThinking of you today and always.${giftNote}\n\nWarm regards`;
+  } else if (type === 'wedding_anniversary') {
+    noteContent = `Dear ${firstName},\n\nHappy Anniversary! Wishing you and your spouse another wonderful year of love and happiness together.\n\nCelebrating with you from afar!${giftNote}\n\nWarm regards`;
+  } else if (type === 'spouse_birthday') {
+    noteContent = `Dear ${firstName},\n\nPlease pass along my warmest birthday wishes to ${person.spouseName}! I hope they have a wonderful celebration.${giftNote}\n\nBest wishes`;
+  } else if (type === 'home_anniversary') {
+    noteContent = `Dear ${firstName},\n\nHappy Home Anniversary! Can you believe it's been another year since you moved in? I hope your home continues to bring you joy and wonderful memories.${giftNote}\n\nWarm regards`;
+  }
+  
+  try {
+    // Create handwritten note draft
+    await storage.createGeneratedDraft({
+      personId: person.id,
+      type: 'handwritten_note',
+      title: `${label} Note for ${person.name}`,
+      content: noteContent,
+      status: 'pending',
+      metadata: { 
+        triggerType: type, 
+        daysUntil, 
+        segment,
+        dateStr,
+        giftRecommendation: segment === 'A' ? 'gift_card' : segment === 'B' ? 'small_gift' : 'note_only'
+      }
+    });
+    
+    // Create task reminder
+    await storage.createTask({
+      title: taskTitle,
+      personId: person.id,
+      dueDate: new Date(Date.now() + (daysUntil - 7) * 24 * 60 * 60 * 1000), // 7 days before
+      priority: segment === 'A' ? 'high' : 'medium',
+      status: 'pending'
+    });
+    
+    logger.info(`Created ${type} draft for ${person.name} (${segment} segment)`);
+  } catch (error) {
+    logger.error(`Failed to create draft for ${person.name}:`, error);
   }
 }
 

@@ -7760,6 +7760,17 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
     }
   });
 
+  // Run relationship check (birthdays, anniversaries, overdue contacts)
+  app.post("/api/maintenance/check-relationships", async (req, res) => {
+    try {
+      const { runRelationshipCheck } = await import("./relationship-checker");
+      const result = await runRelationshipCheck();
+      res.json({ success: true, ...result });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ============================================================
   // Admin: Multi-tenancy Migration
   // ============================================================
