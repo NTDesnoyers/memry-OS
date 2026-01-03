@@ -558,12 +558,13 @@ export async function registerRoutes(
   app.post("/api/voice-memories", async (req, res) => {
     try {
       const { transcript, personId, occurredAt } = req.body;
+      const ctx = getTenantContext(req);
       
       if (!transcript || transcript.trim().length < 10) {
         return res.status(400).json({ message: "Transcript is too short" });
       }
       
-      // Create the interaction
+      // Create the interaction with tenant context
       const interaction = await storage.createInteraction({
         type: "voice_note",
         personId: personId || null,
@@ -572,11 +573,11 @@ export async function registerRoutes(
         transcript: transcript,
         occurredAt: occurredAt ? new Date(occurredAt) : new Date(),
         source: "voice_memory",
-      });
+      }, ctx);
       
       // Update person's lastContact if linked
       if (personId) {
-        await storage.updatePerson(personId, { lastContact: new Date(occurredAt || Date.now()) });
+        await storage.updatePerson(personId, { lastContact: new Date(occurredAt || Date.now()) }, ctx);
       }
       
       // Process the interaction asynchronously (FORD extraction, draft generation)
@@ -607,7 +608,8 @@ export async function registerRoutes(
       const openai = getOpenAI();
       
       // Get all people for fuzzy matching
-      const allPeople = await storage.getAllPeople();
+      const ctx = getTenantContext(req);
+      const allPeople = await storage.getAllPeople(ctx);
       const peopleNames = allPeople.map((p: any) => ({ id: p.id, name: p.name }));
       
       // Use AI to parse the transcript
@@ -678,15 +680,15 @@ IMPORTANT: Infer the interaction type from context clues. If they say "left a vo
           followUpNeeded: parsed.followUpNeeded || false,
           suggestedFollowUp: parsed.suggestedFollowUp || null,
         },
-      });
+      }, ctx);
       
       // Update person's lastContact if matched
       if (validatedPersonId) {
-        await storage.updatePerson(validatedPersonId, { lastContact: new Date() });
+        await storage.updatePerson(validatedPersonId, { lastContact: new Date() }, ctx);
         
         // Also update FORD notes on the person record if we have any
         if (parsed.fordNotes) {
-          const person = await storage.getPerson(validatedPersonId);
+          const person = await storage.getPerson(validatedPersonId, ctx);
           if (person) {
             const updates: any = {};
             if (parsed.fordNotes.family && !person.fordFamily) {
@@ -702,7 +704,7 @@ IMPORTANT: Infer the interaction type from context clues. If they say "left a vo
               updates.fordDreams = parsed.fordNotes.dreams;
             }
             if (Object.keys(updates).length > 0) {
-              await storage.updatePerson(validatedPersonId, updates);
+              await storage.updatePerson(validatedPersonId, updates, ctx);
             }
           }
         }
@@ -717,7 +719,7 @@ IMPORTANT: Infer the interaction type from context clues. If they say "left a vo
           dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
           priority: "medium",
           status: "pending",
-        });
+        }, ctx);
       }
 
       res.json({
@@ -884,6 +886,7 @@ IMPORTANT: Infer the interaction type from context clues. If they say "left a vo
   app.post("/api/notes/with-images", async (req, res) => {
     try {
       const { personId, content, type, tags, imageUrls } = req.body;
+      const ctx = getTenantContext(req);
       const note = await storage.createNote({
         personId: personId || null,
         dealId: null,
@@ -891,7 +894,7 @@ IMPORTANT: Infer the interaction type from context clues. If they say "left a vo
         type: type || "handwritten",
         tags: tags || [],
         imageUrls: imageUrls || [],
-      });
+      }, ctx);
       res.status(201).json(note);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1299,11 +1302,11 @@ Respond with valid JSON only, no other text.`;
     }
   ];
 
-  async function executeAiTool(toolName: string, args: any): Promise<string> {
+  async function executeAiTool(toolName: string, args: any, ctx?: TenantContext): Promise<string> {
     try {
       switch (toolName) {
         case "search_people": {
-          const people = await storage.getAllPeople();
+          const people = await storage.getAllPeople(ctx);
           const query = args.query.toLowerCase().trim();
           const queryWords = query.split(/\s+/).filter((w: string) => w.length > 0);
           
@@ -1341,9 +1344,9 @@ Respond with valid JSON only, no other text.`;
         }
         
         case "get_person_details": {
-          const person = await storage.getPerson(args.personId);
+          const person = await storage.getPerson(args.personId, ctx);
           if (!person) return `Person not found with ID: ${args.personId}`;
-          const deals = await storage.getAllDeals();
+          const deals = await storage.getAllDeals(ctx);
           const personDeals = deals.filter(d => d.personId === args.personId);
           return JSON.stringify({
             ...person,
@@ -1371,7 +1374,7 @@ Respond with valid JSON only, no other text.`;
           if (Object.keys(cleanUpdates).length === 0) {
             return `Error: no valid fields to update`;
           }
-          const updated = await storage.updatePerson(args.personId, cleanUpdates);
+          const updated = await storage.updatePerson(args.personId, cleanUpdates, ctx);
           if (!updated) return `Failed to update person ${args.personId}`;
           return `Successfully updated ${updated.name}: ${Object.keys(cleanUpdates).join(", ")}`;
         }
@@ -1383,7 +1386,7 @@ Respond with valid JSON only, no other text.`;
             phone: args.phone || null,
             segment: args.segment || "D",
             notes: args.notes || null
-          });
+          }, ctx);
           return `Created new contact: ${newPerson.name} (ID: ${newPerson.id})`;
         }
         
@@ -1393,17 +1396,17 @@ Respond with valid JSON only, no other text.`;
             type: args.type,
             summary: args.summary,
             occurredAt: new Date()
-          });
+          }, ctx);
           // Also update last contact date
-          await storage.updatePerson(args.personId, { lastContact: new Date() });
+          await storage.updatePerson(args.personId, { lastContact: new Date() }, ctx);
           // Apply FORD updates if provided
           if (args.fordUpdates) {
-            const person = await storage.getPerson(args.personId);
+            const person = await storage.getPerson(args.personId, ctx);
             if (person) {
               const existingNotes = person.notes || "";
               await storage.updatePerson(args.personId, { 
                 notes: existingNotes + "\n\n[FORD Update]: " + args.fordUpdates 
-              });
+              }, ctx);
             }
           }
           return `Logged ${args.type} interaction for person. Last contact date updated.`;
@@ -1416,21 +1419,21 @@ Respond with valid JSON only, no other text.`;
             dueDate: args.dueDate ? new Date(args.dueDate) : null,
             priority: args.priority || "medium",
             status: "pending"
-          });
+          }, ctx);
           return `Created task: "${task.title}" ${args.dueDate ? `due ${args.dueDate}` : ""}`;
         }
         
         case "update_deal_stage": {
-          const deals = await storage.getAllDeals();
+          const deals = await storage.getAllDeals(ctx);
           const deal = deals.find(d => d.personId === args.personId && 
             ["warm", "hot", "hot_active", "hot_confused", "in_contract"].includes(d.stage?.toLowerCase() || ""));
           if (!deal) return `No active deal found for this person`;
-          await storage.updateDeal(deal.id, { stage: args.stage });
+          await storage.updateDeal(deal.id, { stage: args.stage }, ctx);
           return `Updated deal stage to ${args.stage}`;
         }
         
         case "update_deal": {
-          const allDeals = await storage.getAllDeals();
+          const allDeals = await storage.getAllDeals(ctx);
           let deal = allDeals.find(d => d.personId === args.personId && 
             ["warm", "hot", "hot_active", "hot_confused", "in_contract"].includes(d.stage?.toLowerCase() || ""));
           
@@ -1445,7 +1448,7 @@ Respond with valid JSON only, no other text.`;
               value: args.estimatedPrice || null,
               commissionPercent: args.commissionPercent || null,
               painPleasureRating: args.painPleasure || null
-            });
+            }, ctx);
             return `Created new deal with estimated price $${args.estimatedPrice?.toLocaleString() || 0}, ${args.commissionPercent || 0}% commission`;
           }
           
@@ -1457,7 +1460,7 @@ Respond with valid JSON only, no other text.`;
           if (args.side !== undefined) updates.side = args.side;
           if (args.painPleasure !== undefined) updates.painPleasure = args.painPleasure;
           
-          await storage.updateDeal(deal.id, updates);
+          await storage.updateDeal(deal.id, updates, ctx);
           const updateInfo = [];
           if (args.estimatedPrice !== undefined) updateInfo.push(`price: $${args.estimatedPrice.toLocaleString()}`);
           if (args.commissionPercent !== undefined) updateInfo.push(`commission: ${args.commissionPercent}%`);
@@ -1466,8 +1469,8 @@ Respond with valid JSON only, no other text.`;
         }
         
         case "get_hot_warm_lists": {
-          const deals = await storage.getAllDeals();
-          const people = await storage.getAllPeople();
+          const deals = await storage.getAllDeals(ctx);
+          const people = await storage.getAllPeople(ctx);
           const hot = deals.filter(d => d.stage?.toLowerCase() === "hot" || d.stage?.toLowerCase() === "hot_active");
           const warm = deals.filter(d => d.stage?.toLowerCase() === "warm");
           const hotPeople = hot.map(d => {
@@ -1482,7 +1485,7 @@ Respond with valid JSON only, no other text.`;
         }
         
         case "get_todays_tasks": {
-          const tasks = await storage.getAllTasks();
+          const tasks = await storage.getAllTasks(ctx);
           const today = new Date();
           today.setHours(0, 0, 0, 0);
           const dueTasks = tasks.filter(t => {
@@ -1502,7 +1505,7 @@ Respond with valid JSON only, no other text.`;
           // Get person details to auto-generate household name if not provided
           const peopleForHousehold: { id: string; name: string }[] = [];
           for (const personId of args.personIds) {
-            const person = await storage.getPerson(personId);
+            const person = await storage.getPerson(personId, ctx);
             if (person) {
               peopleForHousehold.push({ id: person.id, name: person.name || personId });
             }
@@ -1525,7 +1528,7 @@ Respond with valid JSON only, no other text.`;
           const household = await storage.createHousehold({ 
             name: householdName,
             address: null
-          });
+          }, ctx);
           
           const linkedNames: string[] = [];
           for (const personId of args.personIds) {
@@ -1720,10 +1723,11 @@ When analyzing images:
         apiMessages.push(responseMessage);
         
         // Execute each tool call
+        const ctx = getTenantContext(req);
         for (const toolCall of responseMessage.tool_calls) {
           const tc = toolCall as any;
           const args = JSON.parse(tc.function.arguments);
-          const result = await executeAiTool(tc.function.name, args);
+          const result = await executeAiTool(tc.function.name, args, ctx);
           actionsExecuted.push({ tool: tc.function.name, result });
           
           apiMessages.push({
@@ -1764,7 +1768,7 @@ When analyzing images:
   // Get all AI conversations
   app.get("/api/ai-conversations", async (req, res) => {
     try {
-      const conversations = await storage.getAllAiConversations();
+      const conversations = await storage.getAllAiConversations(getTenantContext(req));
       res.json(conversations);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1774,7 +1778,7 @@ When analyzing images:
   // Get single AI conversation
   app.get("/api/ai-conversations/:id", async (req, res) => {
     try {
-      const conversation = await storage.getAiConversation(req.params.id);
+      const conversation = await storage.getAiConversation(req.params.id, getTenantContext(req));
       if (!conversation) {
         return res.status(404).json({ message: "Conversation not found" });
       }
@@ -1791,7 +1795,7 @@ When analyzing images:
       const conversation = await storage.createAiConversation({ 
         title: title || "New Conversation", 
         messages: messages || [] 
-      });
+      }, getTenantContext(req));
       res.status(201).json(conversation);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1801,7 +1805,7 @@ When analyzing images:
   // Update AI conversation
   app.patch("/api/ai-conversations/:id", async (req, res) => {
     try {
-      const conversation = await storage.updateAiConversation(req.params.id, req.body);
+      const conversation = await storage.updateAiConversation(req.params.id, req.body, getTenantContext(req));
       if (!conversation) {
         return res.status(404).json({ message: "Conversation not found" });
       }
@@ -1814,7 +1818,7 @@ When analyzing images:
   // Delete AI conversation
   app.delete("/api/ai-conversations/:id", async (req, res) => {
     try {
-      await storage.deleteAiConversation(req.params.id);
+      await storage.deleteAiConversation(req.params.id, getTenantContext(req));
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1826,7 +1830,7 @@ When analyzing images:
   // Get all households
   app.get("/api/households", async (req, res) => {
     try {
-      const allHouseholds = await storage.getAllHouseholds();
+      const allHouseholds = await storage.getAllHouseholds(getTenantContext(req));
       res.json(allHouseholds);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1836,11 +1840,11 @@ When analyzing images:
   // Get household by ID with members
   app.get("/api/households/:id", async (req, res) => {
     try {
-      const household = await storage.getHousehold(req.params.id);
+      const household = await storage.getHousehold(req.params.id, getTenantContext(req));
       if (!household) {
         return res.status(404).json({ message: "Household not found" });
       }
-      const members = await storage.getHouseholdMembers(req.params.id);
+      const members = await storage.getHouseholdMembers(req.params.id, getTenantContext(req));
       res.json({ ...household, members });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1851,20 +1855,21 @@ When analyzing images:
   app.post("/api/households", async (req, res) => {
     try {
       const { name, address, primaryPersonId, memberIds } = req.body;
+      const ctx = getTenantContext(req);
       const household = await storage.createHousehold({ 
         name, 
         address, 
         primaryPersonId 
-      });
+      }, ctx);
       
       // Add members to household
       if (memberIds && Array.isArray(memberIds)) {
         for (const personId of memberIds) {
-          await storage.addPersonToHousehold(personId, household.id);
+          await storage.addPersonToHousehold(personId, household.id, ctx);
         }
       }
       
-      const members = await storage.getHouseholdMembers(household.id);
+      const members = await storage.getHouseholdMembers(household.id, ctx);
       res.status(201).json({ ...household, members });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1875,7 +1880,8 @@ When analyzing images:
   app.patch("/api/households/:id", async (req, res) => {
     try {
       const { memberIds, ...updates } = req.body;
-      const household = await storage.updateHousehold(req.params.id, updates);
+      const ctx = getTenantContext(req);
+      const household = await storage.updateHousehold(req.params.id, updates, ctx);
       if (!household) {
         return res.status(404).json({ message: "Household not found" });
       }
@@ -1883,17 +1889,17 @@ When analyzing images:
       // Update members if provided
       if (memberIds && Array.isArray(memberIds)) {
         // Remove all current members
-        const currentMembers = await storage.getHouseholdMembers(req.params.id);
+        const currentMembers = await storage.getHouseholdMembers(req.params.id, ctx);
         for (const member of currentMembers) {
-          await storage.removePersonFromHousehold(member.id);
+          await storage.removePersonFromHousehold(member.id, ctx);
         }
         // Add new members
         for (const personId of memberIds) {
-          await storage.addPersonToHousehold(personId, req.params.id);
+          await storage.addPersonToHousehold(personId, req.params.id, ctx);
         }
       }
       
-      const members = await storage.getHouseholdMembers(req.params.id);
+      const members = await storage.getHouseholdMembers(req.params.id, ctx);
       res.json({ ...household, members });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -1903,7 +1909,7 @@ When analyzing images:
   // Delete household
   app.delete("/api/households/:id", async (req, res) => {
     try {
-      await storage.deleteHousehold(req.params.id);
+      await storage.deleteHousehold(req.params.id, getTenantContext(req));
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1914,7 +1920,7 @@ When analyzing images:
   app.post("/api/households/:id/members", async (req, res) => {
     try {
       const { personId } = req.body;
-      const updated = await storage.addPersonToHousehold(personId, req.params.id);
+      const updated = await storage.addPersonToHousehold(personId, req.params.id, getTenantContext(req));
       if (!updated) {
         return res.status(404).json({ message: "Person not found" });
       }
@@ -1927,7 +1933,7 @@ When analyzing images:
   // Remove person from household
   app.delete("/api/households/:householdId/members/:personId", async (req, res) => {
     try {
-      const updated = await storage.removePersonFromHousehold(req.params.personId);
+      const updated = await storage.removePersonFromHousehold(req.params.personId, getTenantContext(req));
       if (!updated) {
         return res.status(404).json({ message: "Person not found" });
       }
@@ -1952,7 +1958,7 @@ When analyzing images:
   // Get contacts due for follow-up (must be before :id route)
   app.get("/api/people/due-for-contact", async (req, res) => {
     try {
-      const dueContacts = await storage.getContactsDueForFollowUp();
+      const dueContacts = await storage.getContactsDueForFollowUp(getTenantContext(req));
       res.json(dueContacts);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -1975,7 +1981,7 @@ When analyzing images:
   // Get person with full context (unified data layer)
   app.get("/api/people/:id/full", async (req, res) => {
     try {
-      const context = await storage.getPersonFullContext(req.params.id);
+      const context = await storage.getPersonFullContext(req.params.id, getTenantContext(req));
       if (!context) {
         return res.status(404).json({ message: "Person not found" });
       }
@@ -2239,7 +2245,8 @@ When analyzing images:
   // Generate follow-up tasks for overdue contacts
   app.post("/api/tasks/generate-followup", async (req, res) => {
     try {
-      const dueContacts = await storage.getContactsDueForFollowUp();
+      const ctx = getTenantContext(req);
+      const dueContacts = await storage.getContactsDueForFollowUp(ctx);
       const createdTasks = [];
       
       for (const due of dueContacts) {
@@ -2258,7 +2265,7 @@ When analyzing images:
           personId: due.person.id,
           dueDate: new Date(),
           priority: due.dueReason === 'hot' ? 'high' : due.dueReason === 'warm' ? 'medium' : 'low',
-        });
+        }, ctx);
         createdTasks.push(task);
       }
       
@@ -2276,7 +2283,7 @@ When analyzing images:
   // Get all 8x8 campaigns
   app.get("/api/8x8-campaigns", async (req, res) => {
     try {
-      const campaigns = await storage.getAll8x8Campaigns();
+      const campaigns = await storage.getAll8x8Campaigns(getTenantContext(req));
       res.json(campaigns);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2286,7 +2293,7 @@ When analyzing images:
   // Get 8x8 campaign by ID
   app.get("/api/8x8-campaigns/:id", async (req, res) => {
     try {
-      const campaign = await storage.get8x8Campaign(req.params.id);
+      const campaign = await storage.get8x8Campaign(req.params.id, getTenantContext(req));
       if (!campaign) {
         return res.status(404).json({ message: "Campaign not found" });
       }
@@ -2299,7 +2306,7 @@ When analyzing images:
   // Create 8x8 campaign
   app.post("/api/8x8-campaigns", async (req, res) => {
     try {
-      const campaign = await storage.create8x8Campaign(req.body);
+      const campaign = await storage.create8x8Campaign(req.body, getTenantContext(req));
       res.status(201).json(campaign);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -2309,7 +2316,7 @@ When analyzing images:
   // Update 8x8 campaign
   app.patch("/api/8x8-campaigns/:id", async (req, res) => {
     try {
-      const campaign = await storage.update8x8Campaign(req.params.id, req.body);
+      const campaign = await storage.update8x8Campaign(req.params.id, req.body, getTenantContext(req));
       if (!campaign) {
         return res.status(404).json({ message: "Campaign not found" });
       }
@@ -2322,7 +2329,8 @@ When analyzing images:
   // Record a touch in an 8x8 campaign
   app.post("/api/8x8-campaigns/:id/touch", async (req, res) => {
     try {
-      const campaign = await storage.get8x8Campaign(req.params.id);
+      const ctx = getTenantContext(req);
+      const campaign = await storage.get8x8Campaign(req.params.id, ctx);
       if (!campaign) {
         return res.status(404).json({ message: "Campaign not found" });
       }
@@ -2344,11 +2352,11 @@ When analyzing images:
         currentStep: Math.min(touches.length + 1, 8),
         status: isComplete ? 'completed' : 'active',
         completedAt: isComplete ? new Date() : undefined,
-      });
+      }, ctx);
       
       // If completed, flag person for review
       if (isComplete && campaign.personId) {
-        await storage.flagContactForReview(campaign.personId, 'needs_review');
+        await storage.flagContactForReview(campaign.personId, 'needs_review', ctx);
       }
       
       res.json(updated);
@@ -2360,13 +2368,14 @@ When analyzing images:
   // Complete 8x8 campaign with outcome
   app.post("/api/8x8-campaigns/:id/complete", async (req, res) => {
     try {
+      const ctx = getTenantContext(req);
       const { outcome, outcomeNotes } = req.body;
       const campaign = await storage.update8x8Campaign(req.params.id, {
         status: 'completed',
         outcome,
         outcomeNotes,
         completedAt: new Date(),
-      });
+      }, ctx);
       
       if (!campaign) {
         return res.status(404).json({ message: "Campaign not found" });
@@ -2375,14 +2384,14 @@ When analyzing images:
       // Update person based on outcome
       if (campaign.personId) {
         if (outcome === 'deleted') {
-          await storage.deletePerson(campaign.personId);
+          await storage.deletePerson(campaign.personId, ctx);
         } else if (outcome?.startsWith('promoted_to_')) {
           const newSegment = outcome.replace('promoted_to_', '').toUpperCase();
           await storage.updatePerson(campaign.personId, { 
             segment: newSegment,
             segmentEnteredAt: new Date(),
             reviewStatus: null,
-          });
+          }, ctx);
         }
       }
       
@@ -2395,7 +2404,7 @@ When analyzing images:
   // Delete 8x8 campaign
   app.delete("/api/8x8-campaigns/:id", async (req, res) => {
     try {
-      await storage.delete8x8Campaign(req.params.id);
+      await storage.delete8x8Campaign(req.params.id, getTenantContext(req));
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2407,7 +2416,7 @@ When analyzing images:
   // Get D contacts needing review (stale, low engagement, or campaign completed)
   app.get("/api/d-contacts/review", async (req, res) => {
     try {
-      const contacts = await storage.getDContactsNeedingReview();
+      const contacts = await storage.getDContactsNeedingReview(getTenantContext(req));
       res.json(contacts);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2417,7 +2426,7 @@ When analyzing images:
   // Get stale D contacts (6+ months in segment)
   app.get("/api/d-contacts/stale", async (req, res) => {
     try {
-      const contacts = await storage.getStaleDContacts();
+      const contacts = await storage.getStaleDContacts(getTenantContext(req));
       res.json(contacts);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2427,7 +2436,7 @@ When analyzing images:
   // Get low engagement D contacts
   app.get("/api/d-contacts/low-engagement", async (req, res) => {
     try {
-      const contacts = await storage.getLowEngagementDContacts();
+      const contacts = await storage.getLowEngagementDContacts(getTenantContext(req));
       res.json(contacts);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2437,7 +2446,8 @@ When analyzing images:
   // Generate quarterly D review task
   app.post("/api/d-contacts/generate-review-task", async (req, res) => {
     try {
-      const reviewContacts = await storage.getDContactsNeedingReview();
+      const ctx = getTenantContext(req);
+      const reviewContacts = await storage.getDContactsNeedingReview(ctx);
       
       if (reviewContacts.length === 0) {
         return res.json({ message: "No D contacts need review", task: null });
@@ -2452,7 +2462,7 @@ When analyzing images:
         description: `Review D contacts to develop or delete:\n- ${staleCt} stale (6+ months)\n- ${lowEngagementCt} low engagement (3+ attempts, no response)\n- ${campaignCompletedCt} completed 8x8 campaigns`,
         dueDate: new Date(),
         priority: 'medium',
-      });
+      }, ctx);
       
       res.json({ 
         message: `Created D contact review task for ${reviewContacts.length} contacts`,
@@ -2467,22 +2477,23 @@ When analyzing images:
   // Batch update D contacts (promote, keep, or delete)
   app.post("/api/d-contacts/batch-action", async (req, res) => {
     try {
+      const ctx = getTenantContext(req);
       const { personIds, action, newSegment } = req.body;
       const results = [];
       
       for (const personId of personIds) {
         if (action === 'delete') {
-          await storage.deletePerson(personId);
+          await storage.deletePerson(personId, ctx);
           results.push({ personId, action: 'deleted' });
         } else if (action === 'promote' && newSegment) {
           const updated = await storage.updatePerson(personId, {
             segment: newSegment,
             segmentEnteredAt: new Date(),
             reviewStatus: null,
-          });
+          }, ctx);
           results.push({ personId, action: 'promoted', newSegment });
         } else if (action === 'keep') {
-          await storage.flagContactForReview(personId, 'keep');
+          await storage.flagContactForReview(personId, 'keep', ctx);
           results.push({ personId, action: 'kept' });
         }
       }
@@ -2619,7 +2630,7 @@ When analyzing images:
   // Get all weekly reviews
   app.get("/api/weekly-reviews", async (req, res) => {
     try {
-      const reviews = await storage.getAllWeeklyReviews();
+      const reviews = await storage.getAllWeeklyReviews(getTenantContext(req));
       res.json(reviews);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2629,7 +2640,7 @@ When analyzing images:
   // Get weekly review by ID
   app.get("/api/weekly-reviews/:id", async (req, res) => {
     try {
-      const review = await storage.getWeeklyReview(req.params.id);
+      const review = await storage.getWeeklyReview(req.params.id, getTenantContext(req));
       if (!review) {
         return res.status(404).json({ message: "Weekly review not found" });
       }
@@ -2643,7 +2654,7 @@ When analyzing images:
   app.post("/api/weekly-reviews", async (req, res) => {
     try {
       const data = validate(insertWeeklyReviewSchema, req.body);
-      const review = await storage.createWeeklyReview(data);
+      const review = await storage.createWeeklyReview(data, getTenantContext(req));
       res.status(201).json(review);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -2653,7 +2664,7 @@ When analyzing images:
   // Update weekly review
   app.patch("/api/weekly-reviews/:id", async (req, res) => {
     try {
-      const review = await storage.updateWeeklyReview(req.params.id, req.body);
+      const review = await storage.updateWeeklyReview(req.params.id, req.body, getTenantContext(req));
       if (!review) {
         return res.status(404).json({ message: "Weekly review not found" });
       }
@@ -2666,7 +2677,7 @@ When analyzing images:
   // Delete weekly review
   app.delete("/api/weekly-reviews/:id", async (req, res) => {
     try {
-      await storage.deleteWeeklyReview(req.params.id);
+      await storage.deleteWeeklyReview(req.params.id, getTenantContext(req));
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2737,7 +2748,7 @@ When analyzing images:
   // Get all listings
   app.get("/api/listings", async (req, res) => {
     try {
-      const listings = await storage.getAllListings();
+      const listings = await storage.getAllListings(getTenantContext(req));
       res.json(listings);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2747,7 +2758,7 @@ When analyzing images:
   // Get active listings only
   app.get("/api/listings/active", async (req, res) => {
     try {
-      const listings = await storage.getActiveListings();
+      const listings = await storage.getActiveListings(getTenantContext(req));
       res.json(listings);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2757,7 +2768,7 @@ When analyzing images:
   // Get listing by ID
   app.get("/api/listings/:id", async (req, res) => {
     try {
-      const listing = await storage.getListing(req.params.id);
+      const listing = await storage.getListing(req.params.id, getTenantContext(req));
       if (!listing) {
         return res.status(404).json({ message: "Listing not found" });
       }
@@ -2771,7 +2782,7 @@ When analyzing images:
   app.post("/api/listings", async (req, res) => {
     try {
       const data = validate(insertListingSchema, req.body);
-      const listing = await storage.createListing(data);
+      const listing = await storage.createListing(data, getTenantContext(req));
       res.status(201).json(listing);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -2781,7 +2792,7 @@ When analyzing images:
   // Update listing
   app.patch("/api/listings/:id", async (req, res) => {
     try {
-      const listing = await storage.updateListing(req.params.id, req.body);
+      const listing = await storage.updateListing(req.params.id, req.body, getTenantContext(req));
       if (!listing) {
         return res.status(404).json({ message: "Listing not found" });
       }
@@ -2794,7 +2805,7 @@ When analyzing images:
   // Delete listing
   app.delete("/api/listings/:id", async (req, res) => {
     try {
-      await storage.deleteListing(req.params.id);
+      await storage.deleteListing(req.params.id, getTenantContext(req));
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2806,7 +2817,7 @@ When analyzing images:
   // Get all email campaigns
   app.get("/api/email-campaigns", async (req, res) => {
     try {
-      const campaigns = await storage.getAllEmailCampaigns();
+      const campaigns = await storage.getAllEmailCampaigns(getTenantContext(req));
       res.json(campaigns);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2816,7 +2827,7 @@ When analyzing images:
   // Get email campaign by ID
   app.get("/api/email-campaigns/:id", async (req, res) => {
     try {
-      const campaign = await storage.getEmailCampaign(req.params.id);
+      const campaign = await storage.getEmailCampaign(req.params.id, getTenantContext(req));
       if (!campaign) {
         return res.status(404).json({ message: "Email campaign not found" });
       }
@@ -2830,7 +2841,7 @@ When analyzing images:
   app.post("/api/email-campaigns", async (req, res) => {
     try {
       const data = validate(insertEmailCampaignSchema, req.body);
-      const campaign = await storage.createEmailCampaign(data);
+      const campaign = await storage.createEmailCampaign(data, getTenantContext(req));
       res.status(201).json(campaign);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -2840,7 +2851,7 @@ When analyzing images:
   // Update email campaign
   app.patch("/api/email-campaigns/:id", async (req, res) => {
     try {
-      const campaign = await storage.updateEmailCampaign(req.params.id, req.body);
+      const campaign = await storage.updateEmailCampaign(req.params.id, req.body, getTenantContext(req));
       if (!campaign) {
         return res.status(404).json({ message: "Email campaign not found" });
       }
@@ -2853,7 +2864,7 @@ When analyzing images:
   // Delete email campaign
   app.delete("/api/email-campaigns/:id", async (req, res) => {
     try {
-      await storage.deleteEmailCampaign(req.params.id);
+      await storage.deleteEmailCampaign(req.params.id, getTenantContext(req));
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2865,7 +2876,7 @@ When analyzing images:
   // Get all buyers
   app.get("/api/buyers", async (req, res) => {
     try {
-      const buyers = await storage.getBuyers();
+      const buyers = await storage.getBuyers(getTenantContext(req));
       res.json(buyers);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2875,7 +2886,7 @@ When analyzing images:
   // Get realtors for newsletter
   app.get("/api/realtors/newsletter", async (req, res) => {
     try {
-      const realtors = await storage.getRealtorsForNewsletter();
+      const realtors = await storage.getRealtorsForNewsletter(getTenantContext(req));
       res.json(realtors);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2887,7 +2898,7 @@ When analyzing images:
   // Get all pricing reviews
   app.get("/api/pricing-reviews", async (req, res) => {
     try {
-      const reviews = await storage.getAllPricingReviews();
+      const reviews = await storage.getAllPricingReviews(getTenantContext(req));
       res.json(reviews);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2897,7 +2908,7 @@ When analyzing images:
   // Get pricing review by ID
   app.get("/api/pricing-reviews/:id", async (req, res) => {
     try {
-      const review = await storage.getPricingReview(req.params.id);
+      const review = await storage.getPricingReview(req.params.id, getTenantContext(req));
       if (!review) {
         return res.status(404).json({ message: "Pricing review not found" });
       }
@@ -2911,7 +2922,7 @@ When analyzing images:
   app.post("/api/pricing-reviews", async (req, res) => {
     try {
       const data = validate(insertPricingReviewSchema, req.body);
-      const review = await storage.createPricingReview(data);
+      const review = await storage.createPricingReview(data, getTenantContext(req));
       res.status(201).json(review);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -2921,7 +2932,7 @@ When analyzing images:
   // Update pricing review
   app.patch("/api/pricing-reviews/:id", async (req, res) => {
     try {
-      const review = await storage.updatePricingReview(req.params.id, req.body);
+      const review = await storage.updatePricingReview(req.params.id, req.body, getTenantContext(req));
       if (!review) {
         return res.status(404).json({ message: "Pricing review not found" });
       }
@@ -2934,7 +2945,7 @@ When analyzing images:
   // Delete pricing review
   app.delete("/api/pricing-reviews/:id", async (req, res) => {
     try {
-      await storage.deletePricingReview(req.params.id);
+      await storage.deletePricingReview(req.params.id, getTenantContext(req));
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2946,10 +2957,11 @@ When analyzing images:
   // Get business settings for a year
   app.get("/api/business-settings/:year", async (req, res) => {
     try {
+      const ctx = getTenantContext(req);
       const year = parseInt(req.params.year);
-      let settings = await storage.getBusinessSettings(year);
+      let settings = await storage.getBusinessSettings(year, ctx);
       if (!settings) {
-        settings = await storage.upsertBusinessSettings({ year });
+        settings = await storage.upsertBusinessSettings({ year }, ctx);
       }
       res.json(settings);
     } catch (error: any) {
@@ -2961,7 +2973,7 @@ When analyzing images:
   app.put("/api/business-settings", async (req, res) => {
     try {
       const data = validate(insertBusinessSettingsSchema, req.body);
-      const settings = await storage.upsertBusinessSettings(data);
+      const settings = await storage.upsertBusinessSettings(data, getTenantContext(req));
       res.json(settings);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -2973,7 +2985,7 @@ When analyzing images:
   // Get all PIE entries
   app.get("/api/pie-entries", async (req, res) => {
     try {
-      const entries = await storage.getAllPieEntries();
+      const entries = await storage.getAllPieEntries(getTenantContext(req));
       res.json(entries);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -2985,7 +2997,7 @@ When analyzing images:
     try {
       const startDate = new Date(req.query.start as string);
       const endDate = new Date(req.query.end as string);
-      const entries = await storage.getPieEntriesByDateRange(startDate, endDate);
+      const entries = await storage.getPieEntriesByDateRange(startDate, endDate, getTenantContext(req));
       res.json(entries);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -3001,7 +3013,7 @@ When analyzing images:
         date: req.body.date ? new Date(req.body.date) : undefined,
       };
       const data = validate(insertPieEntrySchema, body);
-      const entry = await storage.createPieEntry(data);
+      const entry = await storage.createPieEntry(data, getTenantContext(req));
       res.status(201).json(entry);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -3011,7 +3023,7 @@ When analyzing images:
   // Update PIE entry
   app.patch("/api/pie-entries/:id", async (req, res) => {
     try {
-      const entry = await storage.updatePieEntry(req.params.id, req.body);
+      const entry = await storage.updatePieEntry(req.params.id, req.body, getTenantContext(req));
       if (!entry) {
         return res.status(404).json({ message: "PIE entry not found" });
       }
@@ -3024,7 +3036,7 @@ When analyzing images:
   // Delete PIE entry
   app.delete("/api/pie-entries/:id", async (req, res) => {
     try {
-      await storage.deletePieEntry(req.params.id);
+      await storage.deletePieEntry(req.params.id, getTenantContext(req));
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -3126,7 +3138,7 @@ Return ONLY valid JSON, no explanations.`
   // Get agent profile
   app.get("/api/profile", async (req, res) => {
     try {
-      const profile = await storage.getAgentProfile();
+      const profile = await storage.getAgentProfile(getTenantContext(req));
       res.json(profile || null);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -3136,7 +3148,7 @@ Return ONLY valid JSON, no explanations.`
   // Alias for agent profile (used by Brand Center)
   app.get("/api/agent-profile", async (req, res) => {
     try {
-      const profile = await storage.getAgentProfile();
+      const profile = await storage.getAgentProfile(getTenantContext(req));
       res.json(profile || null);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -3147,7 +3159,7 @@ Return ONLY valid JSON, no explanations.`
   app.put("/api/profile", async (req, res) => {
     try {
       const data = validate(insertAgentProfileSchema, req.body);
-      const profile = await storage.upsertAgentProfile(data);
+      const profile = await storage.upsertAgentProfile(data, getTenantContext(req));
       res.json(profile);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -3260,12 +3272,13 @@ Return ONLY valid JSON, no explanations.`
   // Get all real estate reviews
   app.get("/api/real-estate-reviews", async (req, res) => {
     try {
+      const ctx = getTenantContext(req);
       const status = req.query.status as string | undefined;
       let reviews;
       if (status) {
-        reviews = await storage.getRealEstateReviewsByStatus(status);
+        reviews = await storage.getRealEstateReviewsByStatus(status, ctx);
       } else {
-        reviews = await storage.getAllRealEstateReviews();
+        reviews = await storage.getAllRealEstateReviews(ctx);
       }
       res.json(reviews);
     } catch (error: any) {
@@ -3276,7 +3289,7 @@ Return ONLY valid JSON, no explanations.`
   // Get single real estate review
   app.get("/api/real-estate-reviews/:id", async (req, res) => {
     try {
-      const review = await storage.getRealEstateReview(req.params.id);
+      const review = await storage.getRealEstateReview(req.params.id, getTenantContext(req));
       if (!review) {
         return res.status(404).json({ message: "Review not found" });
       }
@@ -3289,8 +3302,9 @@ Return ONLY valid JSON, no explanations.`
   // Create real estate review with auto-generated tasks
   app.post("/api/real-estate-reviews", async (req, res) => {
     try {
+      const ctx = getTenantContext(req);
       const validated = validate(insertRealEstateReviewSchema, req.body);
-      const review = await storage.createRealEstateReview(validated);
+      const review = await storage.createRealEstateReview(validated, ctx);
       
       // Auto-generate task bundle for the review
       const taskBundle = [
@@ -3319,7 +3333,7 @@ Return ONLY valid JSON, no explanations.`
           priority: task.priority,
           status: "pending",
           completed: false,
-        });
+        }, ctx);
       }
       
       res.status(201).json(review);
@@ -3331,7 +3345,7 @@ Return ONLY valid JSON, no explanations.`
   // Update real estate review
   app.patch("/api/real-estate-reviews/:id", async (req, res) => {
     try {
-      const review = await storage.updateRealEstateReview(req.params.id, req.body);
+      const review = await storage.updateRealEstateReview(req.params.id, req.body, getTenantContext(req));
       if (!review) {
         return res.status(404).json({ message: "Review not found" });
       }
@@ -3344,7 +3358,7 @@ Return ONLY valid JSON, no explanations.`
   // Delete real estate review
   app.delete("/api/real-estate-reviews/:id", async (req, res) => {
     try {
-      await storage.deleteRealEstateReview(req.params.id);
+      await storage.deleteRealEstateReview(req.params.id, getTenantContext(req));
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -3354,7 +3368,7 @@ Return ONLY valid JSON, no explanations.`
   // Get tasks for a specific review
   app.get("/api/real-estate-reviews/:id/tasks", async (req, res) => {
     try {
-      const tasks = await storage.getTasksByReviewId(req.params.id);
+      const tasks = await storage.getTasksByReviewId(req.params.id, getTenantContext(req));
       res.json(tasks);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -3532,7 +3546,7 @@ Return ONLY valid JSON, no explanations.`
   // Get all interactions with their participants (event-centric view)
   app.get("/api/interactions-with-participants", async (req, res) => {
     try {
-      const interactionsWithParticipants = await storage.getAllInteractionsWithParticipants();
+      const interactionsWithParticipants = await storage.getAllInteractionsWithParticipants(getTenantContext(req));
       res.json(interactionsWithParticipants);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -3542,7 +3556,7 @@ Return ONLY valid JSON, no explanations.`
   // Get participants for a specific interaction
   app.get("/api/interactions/:id/participants", async (req, res) => {
     try {
-      const participants = await storage.getInteractionParticipants(req.params.id);
+      const participants = await storage.getInteractionParticipants(req.params.id, getTenantContext(req));
       res.json(participants);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -3562,7 +3576,7 @@ Return ONLY valid JSON, no explanations.`
         role,
         isPrimary,
         fordAttributed
-      });
+      }, getTenantContext(req));
       res.status(201).json(participant);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -3572,7 +3586,7 @@ Return ONLY valid JSON, no explanations.`
   // Remove participant from interaction
   app.delete("/api/interactions/:interactionId/participants/:personId", async (req, res) => {
     try {
-      await storage.removeInteractionParticipant(req.params.interactionId, req.params.personId);
+      await storage.removeInteractionParticipant(req.params.interactionId, req.params.personId, getTenantContext(req));
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -3582,7 +3596,7 @@ Return ONLY valid JSON, no explanations.`
   // Update participant role
   app.patch("/api/interaction-participants/:id", async (req, res) => {
     try {
-      const updated = await storage.updateInteractionParticipant(req.params.id, req.body);
+      const updated = await storage.updateInteractionParticipant(req.params.id, req.body, getTenantContext(req));
       if (!updated) {
         return res.status(404).json({ message: "Participant not found" });
       }
@@ -3595,7 +3609,7 @@ Return ONLY valid JSON, no explanations.`
   // Get all interactions for a person via participant join (event-centric)
   app.get("/api/people/:personId/participated-interactions", async (req, res) => {
     try {
-      const interactions = await storage.getInteractionsByParticipant(req.params.personId);
+      const interactions = await storage.getInteractionsByParticipant(req.params.personId, getTenantContext(req));
       res.json(interactions);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -3657,10 +3671,11 @@ Return ONLY valid JSON, no explanations.`
       let skipped = 0;
       const errors: string[] = [];
 
+      const ctx = getTenantContext(req);
       for (const meeting of meetings) {
         try {
           // Check if already imported (by external ID)
-          const existingInteractions = await storage.getAllInteractions();
+          const existingInteractions = await storage.getAllInteractions(ctx);
           const alreadyExists = existingInteractions.some(
             i => i.externalId === meeting.id || i.externalId === meeting.call_id
           );
@@ -3689,7 +3704,7 @@ Return ONLY valid JSON, no explanations.`
           // Try to auto-match participant to a person in database by email
           // If not found, auto-create as extended contact
           let matchedPersonId: string | null = null;
-          const allPeople = await storage.getAllPeople();
+          const allPeople = await storage.getAllPeople(ctx);
           const autoCreatedContacts: string[] = [];
           
           if (meeting.calendar_invitees && meeting.calendar_invitees.length > 0) {
@@ -3713,7 +3728,7 @@ Return ONLY valid JSON, no explanations.`
                     inSphere: false,
                     autoCapturedFrom: 'fathom',
                     firstSeenAt: new Date(occurredAt),
-                  });
+                  }, ctx);
                   autoCreatedContacts.push(name);
                   // Add to allPeople so we don't create duplicates in same batch
                   allPeople.push(existingPerson);
@@ -3729,7 +3744,7 @@ Return ONLY valid JSON, no explanations.`
             }
           }
 
-          // Create interaction
+          // Create interaction with tenant context
           const newInteraction = await storage.createInteraction({
             type: "meeting",
             source: "fathom",
@@ -3742,7 +3757,7 @@ Return ONLY valid JSON, no explanations.`
             occurredAt: new Date(occurredAt),
             participants,
             personId: matchedPersonId, // Auto-matched by email or null
-          });
+          }, ctx);
 
           // Auto-process with AI if transcript available
           if (transcript && newInteraction.id) {
@@ -3776,8 +3791,9 @@ Return ONLY valid JSON, no explanations.`
   // Auto-match existing unlinked conversations by participant name or email
   app.post("/api/interactions/auto-match", async (req, res) => {
     try {
-      const allInteractions = await storage.getAllInteractions();
-      const allPeople = await storage.getAllPeople();
+      const ctx = getTenantContext(req);
+      const allInteractions = await storage.getAllInteractions(ctx);
+      const allPeople = await storage.getAllPeople(ctx);
       
       let matched = 0;
       let alreadyLinked = 0;
@@ -3821,7 +3837,7 @@ Return ONLY valid JSON, no explanations.`
         }
         
         if (matchedPersonId) {
-          await storage.updateInteraction(interaction.id, { personId: matchedPersonId });
+          await storage.updateInteraction(interaction.id, { personId: matchedPersonId }, ctx);
           matched++;
         } else {
           noMatch++;
@@ -4151,8 +4167,9 @@ Return ONLY valid JSON, no explanations.`
   // Coaching analysis for an interaction
   app.post("/api/interactions/:id/coaching-analysis", async (req, res) => {
     try {
+      const ctx = getTenantContext(req);
       const { analyzeConversationForCoaching } = await import("./conversation-processor");
-      const interaction = await storage.getInteraction(req.params.id);
+      const interaction = await storage.getInteraction(req.params.id, ctx);
       
       if (!interaction) {
         return res.status(404).json({ message: "Interaction not found" });
@@ -4163,14 +4180,14 @@ Return ONLY valid JSON, no explanations.`
       }
       
       const person = interaction.personId 
-        ? (await storage.getPerson(interaction.personId)) ?? null
+        ? (await storage.getPerson(interaction.personId, ctx)) ?? null
         : null;
       
       const analysis = await analyzeConversationForCoaching(interaction, person);
       
       await storage.updateInteraction(req.params.id, {
         coachingAnalysis: analysis,
-      });
+      }, ctx);
       
       res.json({ success: true, analysis });
     } catch (error: any) {
@@ -4182,8 +4199,9 @@ Return ONLY valid JSON, no explanations.`
   // Process all unprocessed interactions
   app.post("/api/interactions/process-all", async (req, res) => {
     try {
+      const ctx = getTenantContext(req);
       const { processInteraction } = await import("./conversation-processor");
-      const allInteractions = await storage.getAllInteractions();
+      const allInteractions = await storage.getAllInteractions(ctx);
       
       let processed = 0;
       let skipped = 0;
@@ -4227,8 +4245,9 @@ Return ONLY valid JSON, no explanations.`
   // Batch coaching analysis for all conversations with transcripts
   app.post("/api/interactions/analyze-all-coaching", async (req, res) => {
     try {
+      const ctx = getTenantContext(req);
       const { analyzeConversationForCoaching } = await import("./conversation-processor");
-      const allInteractions = await storage.getAllInteractions();
+      const allInteractions = await storage.getAllInteractions(ctx);
       
       let analyzed = 0;
       let skipped = 0;
@@ -4246,11 +4265,11 @@ Return ONLY valid JSON, no explanations.`
       for (const interaction of toAnalyze) {
         try {
           const person = interaction.personId 
-            ? (await storage.getPerson(interaction.personId)) ?? null
+            ? (await storage.getPerson(interaction.personId, ctx)) ?? null
             : null;
           
           const analysis = await analyzeConversationForCoaching(interaction, person);
-          await storage.updateInteraction(interaction.id, { coachingAnalysis: analysis });
+          await storage.updateInteraction(interaction.id, { coachingAnalysis: analysis }, ctx);
           analyzed++;
           console.log(`[Batch Coaching] Analyzed: ${interaction.title || 'Untitled'} - Score: ${analysis.overallScore}`);
         } catch (error: any) {
@@ -4433,30 +4452,6 @@ Return ONLY valid JSON, no explanations.`
     try {
       await storage.deleteVoiceProfile(req.params.id);
       res.status(204).send();
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
-
-  // Process all unprocessed interactions (batch processing)
-  app.post("/api/interactions/process-all", async (req, res) => {
-    try {
-      const allInteractions = await storage.getAllInteractions();
-      
-      // Filter to only unprocessed (no aiExtractedData or status pending)
-      const unprocessed = allInteractions.filter(i => {
-        const data = i.aiExtractedData as any;
-        return !data || !data.processingStatus || data.processingStatus === "pending";
-      });
-
-      res.json({
-        message: `Starting to process ${unprocessed.length} unprocessed interactions`,
-        totalUnprocessed: unprocessed.length,
-        status: "started"
-      });
-
-      // Process in background (don't await)
-      processAllInBackground(unprocessed.map(i => i.id));
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }
@@ -5314,7 +5309,8 @@ Respond in JSON format:
       });
     }
     
-    const interactions = await storage.getAllInteractions();
+    const ctx = getTenantContext(req);
+    const interactions = await storage.getAllInteractions(ctx);
     const interactionsWithTranscripts = interactions.filter(
       i => (i.transcript && i.transcript.length >= 200) || (i.summary && i.summary.length >= 200)
     );
