@@ -57,11 +57,15 @@ const logger = createLogger('Routes');
 
 /**
  * Extract TenantContext from authenticated request.
- * Returns context with userId from Replit Auth claims, or undefined for founder mode.
+ * Returns context with userId from Replit Auth claims, or undefined if not authenticated.
  */
 function getTenantContext(req: Request): TenantContext | undefined {
   const user = req.user as any;
   const userId = user?.claims?.sub;
+  // Debug logging for multi-tenancy
+  if (process.env.NODE_ENV === 'development') {
+    logger.debug(`TenantContext: userId=${userId}, email=${user?.claims?.email || 'none'}, path=${req.path}`);
+  }
   return userId ? { userId } : undefined;
 }
 
