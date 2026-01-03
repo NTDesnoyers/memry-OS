@@ -11,19 +11,13 @@ export type TenantContext = {
   userId?: string;
 };
 
-/** 
- * Founder's user ID - existing data with null userId belongs to founder.
- * Set this to the founder's Replit auth ID after first login.
- */
-export const FOUNDER_USER_ID = process.env.FOUNDER_USER_ID || null;
-
 /**
- * Get effective userId for queries: use context userId, or fall back to founder.
- * Returns undefined if no userId and no founder ID is set (founder mode, all data visible).
+ * Get effective userId for queries: use context userId only.
+ * Returns undefined if no context provided (background jobs/admin operations).
+ * STRICT MODE: No fallback to founder ID - each user sees only their data.
  */
 export function getEffectiveUserId(ctx?: TenantContext): string | undefined {
-  if (ctx?.userId) return ctx.userId;
-  return FOUNDER_USER_ID || undefined;
+  return ctx?.userId;
 }
 
 import { 
@@ -568,12 +562,14 @@ export class DatabaseStorage implements IStorage {
   /**
    * Build tenant filter condition for queries.
    * STRICT MODE: Users only see their own data. No cross-tenant access.
+   * When no userId provided, returns an impossible condition (matches nothing).
    */
   private getTenantFilter(table: { userId: any }, ctx?: TenantContext) {
     const userId = getEffectiveUserId(ctx);
     if (!userId) {
-      // No context provided - return undefined to see all data (admin/background jobs only)
-      return undefined;
+      // No context provided - return impossible condition to prevent data leakage
+      // This ensures unauthenticated requests see NO data
+      return eq(table.userId, '__NO_ACCESS__');
     }
     // Strict tenant isolation: only see data owned by this user
     return eq(table.userId, userId);
