@@ -74,7 +74,7 @@ let processingStatus = {
   lastError: null as string | null,
 };
 
-async function processAllInBackground(interactionIds: string[]) {
+async function processAllInBackground(interactionIds: string[], ctx?: TenantContext) {
   if (processingStatus.isProcessing) {
     console.log("Already processing, skipping new request");
     return;
@@ -92,7 +92,7 @@ async function processAllInBackground(interactionIds: string[]) {
 
   for (const id of interactionIds) {
     try {
-      const result = await processInteraction(id);
+      const result = await processInteraction(id, ctx);
       if (result.success) {
         processingStatus.processed++;
         console.log(`Processed ${processingStatus.processed}/${processingStatus.totalToProcess}: ${result.draftsCreated || 0} drafts, voice: ${result.voicePatternsExtracted ? 'yes' : 'no'}`);
@@ -582,7 +582,7 @@ export async function registerRoutes(
       
       // Process the interaction asynchronously (FORD extraction, draft generation)
       const { processInteraction } = await import("./conversation-processor");
-      const processResult = await processInteraction(interaction.id);
+      const processResult = await processInteraction(interaction.id, ctx);
       
       res.json({
         success: true,
@@ -3763,7 +3763,7 @@ Return ONLY valid JSON, no explanations.`
           if (transcript && newInteraction.id) {
             try {
               const { processInteraction } = await import("./conversation-processor");
-              await processInteraction(newInteraction.id);
+              await processInteraction(newInteraction.id, ctx);
             } catch (aiErr) {
               console.log("AI processing skipped for meeting:", meetingId, aiErr);
             }
@@ -4150,8 +4150,9 @@ Return ONLY valid JSON, no explanations.`
   // Process an interaction with AI to extract insights
   app.post("/api/interactions/:id/process", async (req, res) => {
     try {
+      const ctx = getTenantContext(req);
       const { processInteraction } = await import("./conversation-processor");
-      const result = await processInteraction(req.params.id);
+      const result = await processInteraction(req.params.id, ctx);
       
       if (!result.success) {
         return res.status(400).json({ message: result.error });
@@ -4221,7 +4222,7 @@ Return ONLY valid JSON, no explanations.`
           continue;
         }
         
-        const result = await processInteraction(interaction.id);
+        const result = await processInteraction(interaction.id, ctx);
         if (result.success) {
           processed++;
         } else {
@@ -4433,13 +4434,14 @@ Return ONLY valid JSON, no explanations.`
   // Voice Profile endpoints
   app.get("/api/voice-profile", async (req, res) => {
     try {
+      const ctx = getTenantContext(req);
       const { category } = req.query;
       
       let profiles;
       if (category) {
-        profiles = await storage.getVoiceProfilesByCategory(category as string);
+        profiles = await storage.getVoiceProfilesByCategory(category as string, ctx);
       } else {
-        profiles = await storage.getAllVoiceProfiles();
+        profiles = await storage.getAllVoiceProfiles(ctx);
       }
       
       res.json(profiles);
@@ -4450,7 +4452,8 @@ Return ONLY valid JSON, no explanations.`
 
   app.delete("/api/voice-profile/:id", async (req, res) => {
     try {
-      await storage.deleteVoiceProfile(req.params.id);
+      const ctx = getTenantContext(req);
+      await storage.deleteVoiceProfile(req.params.id, ctx);
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -5332,7 +5335,7 @@ Respond in JSON format:
       for (const interaction of interactionsWithTranscripts) {
         try {
           const transcript = interaction.transcript || interaction.summary || "";
-          const result = await extractContentTopics(transcript, interaction.id);
+          const result = await extractContentTopics(transcript, interaction.id, ctx);
           topicMiningStatus.topicsFound += result.topicsFound;
           topicMiningStatus.newTopics += result.newTopics;
         } catch (error) {
@@ -5346,7 +5349,8 @@ Respond in JSON format:
   
   app.get("/api/content-topics/:id", async (req, res) => {
     try {
-      const topic = await storage.getContentTopic(req.params.id);
+      const ctx = getTenantContext(req);
+      const topic = await storage.getContentTopic(req.params.id, ctx);
       if (!topic) {
         return res.status(404).json({ message: "Topic not found" });
       }
@@ -5358,11 +5362,12 @@ Respond in JSON format:
   
   app.post("/api/content-topics", async (req, res) => {
     try {
+      const ctx = getTenantContext(req);
       const parsed = insertContentTopicSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ message: fromZodError(parsed.error).message });
       }
-      const topic = await storage.createContentTopic(parsed.data);
+      const topic = await storage.createContentTopic(parsed.data, ctx);
       res.status(201).json(topic);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -5371,7 +5376,8 @@ Respond in JSON format:
   
   app.patch("/api/content-topics/:id", async (req, res) => {
     try {
-      const updated = await storage.updateContentTopic(req.params.id, req.body);
+      const ctx = getTenantContext(req);
+      const updated = await storage.updateContentTopic(req.params.id, req.body, ctx);
       if (!updated) {
         return res.status(404).json({ message: "Topic not found" });
       }
@@ -5383,8 +5389,9 @@ Respond in JSON format:
   
   app.post("/api/content-topics/:id/increment", async (req, res) => {
     try {
+      const ctx = getTenantContext(req);
       const { quote, interactionId } = req.body;
-      const updated = await storage.incrementTopicMention(req.params.id, quote, interactionId);
+      const updated = await storage.incrementTopicMention(req.params.id, quote, interactionId, ctx);
       if (!updated) {
         return res.status(404).json({ message: "Topic not found" });
       }
@@ -5396,7 +5403,8 @@ Respond in JSON format:
   
   app.delete("/api/content-topics/:id", async (req, res) => {
     try {
-      await storage.deleteContentTopic(req.params.id);
+      const ctx = getTenantContext(req);
+      await storage.deleteContentTopic(req.params.id, ctx);
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -5406,14 +5414,15 @@ Respond in JSON format:
   // Content Ideas
   app.get("/api/content-ideas", async (req, res) => {
     try {
+      const ctx = getTenantContext(req);
       const { topicId, status } = req.query;
       let ideas;
       if (topicId) {
-        ideas = await storage.getContentIdeasByTopic(topicId as string);
+        ideas = await storage.getContentIdeasByTopic(topicId as string, ctx);
       } else if (status) {
-        ideas = await storage.getContentIdeasByStatus(status as string);
+        ideas = await storage.getContentIdeasByStatus(status as string, ctx);
       } else {
-        ideas = await storage.getAllContentIdeas();
+        ideas = await storage.getAllContentIdeas(ctx);
       }
       res.json(ideas);
     } catch (error: any) {
@@ -5423,7 +5432,8 @@ Respond in JSON format:
   
   app.get("/api/content-ideas/:id", async (req, res) => {
     try {
-      const idea = await storage.getContentIdea(req.params.id);
+      const ctx = getTenantContext(req);
+      const idea = await storage.getContentIdea(req.params.id, ctx);
       if (!idea) {
         return res.status(404).json({ message: "Content idea not found" });
       }
@@ -5435,11 +5445,12 @@ Respond in JSON format:
   
   app.post("/api/content-ideas", async (req, res) => {
     try {
+      const ctx = getTenantContext(req);
       const parsed = insertContentIdeaSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ message: fromZodError(parsed.error).message });
       }
-      const idea = await storage.createContentIdea(parsed.data);
+      const idea = await storage.createContentIdea(parsed.data, ctx);
       res.status(201).json(idea);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -5448,7 +5459,8 @@ Respond in JSON format:
   
   app.patch("/api/content-ideas/:id", async (req, res) => {
     try {
-      const updated = await storage.updateContentIdea(req.params.id, req.body);
+      const ctx = getTenantContext(req);
+      const updated = await storage.updateContentIdea(req.params.id, req.body, ctx);
       if (!updated) {
         return res.status(404).json({ message: "Content idea not found" });
       }
@@ -5460,7 +5472,8 @@ Respond in JSON format:
   
   app.delete("/api/content-ideas/:id", async (req, res) => {
     try {
-      await storage.deleteContentIdea(req.params.id);
+      const ctx = getTenantContext(req);
+      await storage.deleteContentIdea(req.params.id, ctx);
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -5470,13 +5483,14 @@ Respond in JSON format:
   // AI Generate Content Ideas from Topic
   app.post("/api/content-topics/:id/generate-ideas", async (req, res) => {
     try {
-      const topic = await storage.getContentTopic(req.params.id);
+      const ctx = getTenantContext(req);
+      const topic = await storage.getContentTopic(req.params.id, ctx);
       if (!topic) {
         return res.status(404).json({ message: "Topic not found" });
       }
       
       // Get voice profile for authentic content
-      const voicePatterns = await storage.getAllVoiceProfiles();
+      const voicePatterns = await storage.getAllVoiceProfiles(ctx);
       const voiceContext = voicePatterns.length > 0 
         ? `Voice style notes: ${voicePatterns.slice(0, 5).map(p => p.value).join('; ')}`
         : '';
@@ -5535,7 +5549,7 @@ Respond in JSON:
           contentType: idea.type,
           aiGenerated: true,
           priority: topic.mentionCount || 1,
-        });
+        }, ctx);
         createdIdeas.push(created);
       }
       
@@ -5546,7 +5560,7 @@ Respond in JSON:
           videoTopics: parsed.ideas?.filter((i: any) => i.type.includes('video')).map((i: any) => i.title),
           faqQuestions: parsed.ideas?.filter((i: any) => i.type === 'faq').map((i: any) => i.title),
         }
-      });
+      }, ctx);
       
       res.json({ ideas: createdIdeas });
     } catch (error: any) {
@@ -5557,16 +5571,17 @@ Respond in JSON:
   // AI Generate Draft Content
   app.post("/api/content-ideas/:id/generate-draft", async (req, res) => {
     try {
-      const idea = await storage.getContentIdea(req.params.id);
+      const ctx = getTenantContext(req);
+      const idea = await storage.getContentIdea(req.params.id, ctx);
       if (!idea) {
         return res.status(404).json({ message: "Content idea not found" });
       }
       
       // Get topic for context
-      const topic = idea.topicId ? await storage.getContentTopic(idea.topicId) : null;
+      const topic = idea.topicId ? await storage.getContentTopic(idea.topicId, ctx) : null;
       
       // Get voice profile
-      const voicePatterns = await storage.getAllVoiceProfiles();
+      const voicePatterns = await storage.getAllVoiceProfiles(ctx);
       const voiceContext = voicePatterns.length > 0 
         ? voicePatterns.slice(0, 10).map(p => `${p.category}: "${p.value}"`).join('\n')
         : '';
@@ -5613,7 +5628,7 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
       const updated = await storage.updateContentIdea(idea.id, {
         draft,
         status: 'drafted',
-      });
+      }, ctx);
       
       res.json(updated);
     } catch (error: any) {
@@ -5689,7 +5704,8 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
   // Schedule content idea to calendar
   app.post("/api/content-ideas/:id/schedule", async (req, res) => {
     try {
-      const idea = await storage.getContentIdea(req.params.id);
+      const ctx = getTenantContext(req);
+      const idea = await storage.getContentIdea(req.params.id, ctx);
       if (!idea) {
         return res.status(404).json({ message: "Content idea not found" });
       }

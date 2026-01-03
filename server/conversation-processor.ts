@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { storage } from "./storage";
+import { storage, type TenantContext } from "./storage";
 import type { Interaction, Person, AIExtractedData, InsertGeneratedDraft, VoiceProfile, ContentTopic } from "@shared/schema";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -264,8 +264,8 @@ Return JSON with per-person FORD data.`
 }
 
 // Match extracted person names to database people using fuzzy matching
-export async function matchPersonByName(name: string): Promise<Person | null> {
-  const allPeople = await storage.getAllPeople();
+export async function matchPersonByName(name: string, ctx?: TenantContext): Promise<Person | null> {
+  const allPeople = await storage.getAllPeople(ctx);
   const nameLower = name.toLowerCase().trim();
   
   // Exact match
@@ -331,7 +331,8 @@ Write a brief 2-4 sentence summary.`
 // Extract Nathan's voice patterns from a transcript
 export async function extractVoicePatterns(
   transcript: string,
-  source?: string
+  source?: string,
+  ctx?: TenantContext
 ): Promise<void> {
   if (!transcript || transcript.length < 200) {
     return;
@@ -377,7 +378,7 @@ Extract patterns from Nathan's speech only.`
       if (Array.isArray(values)) {
         for (const value of values) {
           if (typeof value === 'string' && value.length > 0) {
-            await storage.upsertVoicePattern(category, value, 'conversation', source);
+            await storage.upsertVoicePattern(category, value, 'conversation', source, ctx);
           }
         }
       }
@@ -424,7 +425,8 @@ Include any genuine pain point where content could help educate, comfort, or gui
 
 export async function extractContentTopics(
   transcript: string,
-  interactionId: string
+  interactionId: string,
+  ctx?: TenantContext
 ): Promise<{ topicsFound: number; newTopics: number }> {
   if (!transcript || transcript.length < 200) {
     return { topicsFound: 0, newTopics: 0 };
@@ -457,7 +459,7 @@ ${transcript.slice(0, 12000)}
     let newTopicsCount = 0;
     
     // Get existing topics to check for matches
-    const existingTopics = await storage.getAllContentTopics();
+    const existingTopics = await storage.getAllContentTopics(ctx);
     
     for (const topic of topics) {
       if (!topic.title) continue;
@@ -475,7 +477,8 @@ ${transcript.slice(0, 12000)}
         await storage.incrementTopicMention(
           existingMatch.id,
           topic.sampleQuote,
-          interactionId
+          interactionId,
+          ctx
         );
       } else {
         // Create new topic
@@ -487,7 +490,7 @@ ${transcript.slice(0, 12000)}
           relatedInteractionIds: [interactionId],
           mentionCount: 1,
           status: 'active',
-        });
+        }, ctx);
         newTopicsCount++;
       }
     }
@@ -665,7 +668,7 @@ Generate follow-up content for this interaction.`
   }
 }
 
-export async function processInteraction(interactionId: string): Promise<{
+export async function processInteraction(interactionId: string, ctx?: TenantContext): Promise<{
   success: boolean;
   extractedData?: AIExtractedData;
   draftsCreated?: number;
@@ -674,13 +677,13 @@ export async function processInteraction(interactionId: string): Promise<{
   error?: string;
 }> {
   try {
-    const interaction = await storage.getInteraction(interactionId);
+    const interaction = await storage.getInteraction(interactionId, ctx);
     if (!interaction) {
       return { success: false, error: "Interaction not found" };
     }
 
     const person = interaction.personId 
-      ? (await storage.getPerson(interaction.personId)) ?? null
+      ? (await storage.getPerson(interaction.personId, ctx)) ?? null
       : null;
 
     // Extract relationship intelligence
@@ -693,11 +696,11 @@ export async function processInteraction(interactionId: string): Promise<{
     let generatedSummary: string | undefined;
     
     if (transcript && transcript.length >= 200) {
-      await extractVoicePatterns(transcript, interaction.title || interactionId);
+      await extractVoicePatterns(transcript, interaction.title || interactionId, ctx);
       voicePatternsExtracted = true;
       
       // Extract content topics for Content Intelligence Center
-      const topicResult = await extractContentTopics(transcript, interactionId);
+      const topicResult = await extractContentTopics(transcript, interactionId, ctx);
       contentTopicsFound = topicResult.topicsFound;
       
       // Generate summary if one doesn't exist
@@ -709,7 +712,7 @@ export async function processInteraction(interactionId: string): Promise<{
     await storage.updateInteraction(interactionId, {
       aiExtractedData: extractedData,
       ...(generatedSummary && { summary: generatedSummary }),
-    });
+    }, ctx);
 
     if (person && extractedData.processingStatus === "completed") {
       const personUpdates: Partial<Person> = {};
@@ -790,12 +793,12 @@ export async function processInteraction(interactionId: string): Promise<{
       }
 
       if (Object.keys(personUpdates).length > 0) {
-        await storage.updatePerson(person.id, personUpdates);
+        await storage.updatePerson(person.id, personUpdates, ctx);
       }
 
       const drafts = await generateFollowUpDrafts(interaction, person, extractedData);
       for (const draft of drafts) {
-        await storage.createGeneratedDraft(draft);
+        await storage.createGeneratedDraft(draft, ctx);
       }
 
       return {

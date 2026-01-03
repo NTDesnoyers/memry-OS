@@ -265,7 +265,7 @@ export interface IStorage {
   /** Get draft by ID. */
   getGeneratedDraft(id: string): Promise<GeneratedDraft | undefined>;
   /** Create draft (typically from AI processing). */
-  createGeneratedDraft(draft: InsertGeneratedDraft): Promise<GeneratedDraft>;
+  createGeneratedDraft(draft: InsertGeneratedDraft, ctx?: TenantContext): Promise<GeneratedDraft>;
   /** Update draft (edit content, change status). */
   updateGeneratedDraft(id: string, draft: Partial<InsertGeneratedDraft>): Promise<GeneratedDraft | undefined>;
   /** Delete draft by ID. */
@@ -282,12 +282,12 @@ export interface IStorage {
   removePersonFromHousehold(personId: string): Promise<Person | undefined>;
   
   // Voice Profile
-  getAllVoiceProfiles(): Promise<VoiceProfile[]>;
-  getVoiceProfilesByCategory(category: string): Promise<VoiceProfile[]>;
-  createVoiceProfile(profile: InsertVoiceProfile): Promise<VoiceProfile>;
-  updateVoiceProfile(id: string, profile: Partial<InsertVoiceProfile>): Promise<VoiceProfile | undefined>;
-  deleteVoiceProfile(id: string): Promise<void>;
-  upsertVoicePattern(category: string, value: string, context?: string, source?: string): Promise<VoiceProfile>;
+  getAllVoiceProfiles(ctx?: TenantContext): Promise<VoiceProfile[]>;
+  getVoiceProfilesByCategory(category: string, ctx?: TenantContext): Promise<VoiceProfile[]>;
+  createVoiceProfile(profile: InsertVoiceProfile, ctx?: TenantContext): Promise<VoiceProfile>;
+  updateVoiceProfile(id: string, profile: Partial<InsertVoiceProfile>, ctx?: TenantContext): Promise<VoiceProfile | undefined>;
+  deleteVoiceProfile(id: string, ctx?: TenantContext): Promise<void>;
+  upsertVoicePattern(category: string, value: string, context?: string, source?: string, ctx?: TenantContext): Promise<VoiceProfile>;
   
   // Sync Logs
   getAllSyncLogs(): Promise<SyncLog[]>;
@@ -332,22 +332,22 @@ export interface IStorage {
   deleteHandwrittenNoteUpload(id: string): Promise<void>;
   
   // Content Topics - Recurring themes from conversations
-  getAllContentTopics(): Promise<ContentTopic[]>;
-  getActiveContentTopics(): Promise<ContentTopic[]>;
-  getContentTopic(id: string): Promise<ContentTopic | undefined>;
-  createContentTopic(topic: InsertContentTopic): Promise<ContentTopic>;
-  updateContentTopic(id: string, topic: Partial<InsertContentTopic>): Promise<ContentTopic | undefined>;
-  deleteContentTopic(id: string): Promise<void>;
-  incrementTopicMention(id: string, quote?: string, interactionId?: string): Promise<ContentTopic | undefined>;
+  getAllContentTopics(ctx?: TenantContext): Promise<ContentTopic[]>;
+  getActiveContentTopics(ctx?: TenantContext): Promise<ContentTopic[]>;
+  getContentTopic(id: string, ctx?: TenantContext): Promise<ContentTopic | undefined>;
+  createContentTopic(topic: InsertContentTopic, ctx?: TenantContext): Promise<ContentTopic>;
+  updateContentTopic(id: string, topic: Partial<InsertContentTopic>, ctx?: TenantContext): Promise<ContentTopic | undefined>;
+  deleteContentTopic(id: string, ctx?: TenantContext): Promise<void>;
+  incrementTopicMention(id: string, quote?: string, interactionId?: string, ctx?: TenantContext): Promise<ContentTopic | undefined>;
   
   // Content Ideas - Specific content pieces to create
-  getAllContentIdeas(): Promise<ContentIdea[]>;
-  getContentIdeasByTopic(topicId: string): Promise<ContentIdea[]>;
-  getContentIdeasByStatus(status: string): Promise<ContentIdea[]>;
-  getContentIdea(id: string): Promise<ContentIdea | undefined>;
-  createContentIdea(idea: InsertContentIdea): Promise<ContentIdea>;
-  updateContentIdea(id: string, idea: Partial<InsertContentIdea>): Promise<ContentIdea | undefined>;
-  deleteContentIdea(id: string): Promise<void>;
+  getAllContentIdeas(ctx?: TenantContext): Promise<ContentIdea[]>;
+  getContentIdeasByTopic(topicId: string, ctx?: TenantContext): Promise<ContentIdea[]>;
+  getContentIdeasByStatus(status: string, ctx?: TenantContext): Promise<ContentIdea[]>;
+  getContentIdea(id: string, ctx?: TenantContext): Promise<ContentIdea | undefined>;
+  createContentIdea(idea: InsertContentIdea, ctx?: TenantContext): Promise<ContentIdea>;
+  updateContentIdea(id: string, idea: Partial<InsertContentIdea>, ctx?: TenantContext): Promise<ContentIdea | undefined>;
+  deleteContentIdea(id: string, ctx?: TenantContext): Promise<void>;
   
   // Content Calendar - Scheduled publishing
   getAllContentCalendarItems(): Promise<ContentCalendarItem[]>;
@@ -1454,10 +1454,11 @@ export class DatabaseStorage implements IStorage {
     return draft || undefined;
   }
   
-  async createGeneratedDraft(insertDraft: InsertGeneratedDraft): Promise<GeneratedDraft> {
+  async createGeneratedDraft(insertDraft: InsertGeneratedDraft, ctx?: TenantContext): Promise<GeneratedDraft> {
+    const userId = getEffectiveUserId(ctx);
     const [draft] = await db
       .insert(generatedDrafts)
-      .values({ ...insertDraft, updatedAt: new Date() })
+      .values({ ...insertDraft, userId, updatedAt: new Date() })
       .returning();
     return draft;
   }
@@ -1476,41 +1477,49 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Voice Profile
-  async getAllVoiceProfiles(): Promise<VoiceProfile[]> {
-    return await db.select().from(voiceProfile).orderBy(desc(voiceProfile.frequency));
-  }
-  
-  async getVoiceProfilesByCategory(category: string): Promise<VoiceProfile[]> {
+  async getAllVoiceProfiles(ctx?: TenantContext): Promise<VoiceProfile[]> {
+    const userId = getEffectiveUserId(ctx);
     return await db.select().from(voiceProfile)
-      .where(eq(voiceProfile.category, category))
+      .where(eq(voiceProfile.userId, userId))
       .orderBy(desc(voiceProfile.frequency));
   }
   
-  async createVoiceProfile(insertProfile: InsertVoiceProfile): Promise<VoiceProfile> {
+  async getVoiceProfilesByCategory(category: string, ctx?: TenantContext): Promise<VoiceProfile[]> {
+    const userId = getEffectiveUserId(ctx);
+    return await db.select().from(voiceProfile)
+      .where(and(eq(voiceProfile.category, category), eq(voiceProfile.userId, userId)))
+      .orderBy(desc(voiceProfile.frequency));
+  }
+  
+  async createVoiceProfile(insertProfile: InsertVoiceProfile, ctx?: TenantContext): Promise<VoiceProfile> {
+    const userId = getEffectiveUserId(ctx);
     const [profile] = await db
       .insert(voiceProfile)
-      .values({ ...insertProfile, updatedAt: new Date() })
+      .values({ ...insertProfile, userId, updatedAt: new Date() })
       .returning();
     return profile;
   }
   
-  async updateVoiceProfile(id: string, profile: Partial<InsertVoiceProfile>): Promise<VoiceProfile | undefined> {
+  async updateVoiceProfile(id: string, profile: Partial<InsertVoiceProfile>, ctx?: TenantContext): Promise<VoiceProfile | undefined> {
+    const userId = getEffectiveUserId(ctx);
     const [updated] = await db
       .update(voiceProfile)
       .set({ ...profile, updatedAt: new Date() })
-      .where(eq(voiceProfile.id, id))
+      .where(and(eq(voiceProfile.id, id), eq(voiceProfile.userId, userId)))
       .returning();
     return updated || undefined;
   }
   
-  async deleteVoiceProfile(id: string): Promise<void> {
-    await db.delete(voiceProfile).where(eq(voiceProfile.id, id));
+  async deleteVoiceProfile(id: string, ctx?: TenantContext): Promise<void> {
+    const userId = getEffectiveUserId(ctx);
+    await db.delete(voiceProfile).where(and(eq(voiceProfile.id, id), eq(voiceProfile.userId, userId)));
   }
   
-  async upsertVoicePattern(category: string, value: string, context?: string, source?: string): Promise<VoiceProfile> {
-    // Check if this pattern already exists
+  async upsertVoicePattern(category: string, value: string, context?: string, source?: string, ctx?: TenantContext): Promise<VoiceProfile> {
+    const userId = getEffectiveUserId(ctx);
+    // Check if this pattern already exists for this user
     const [existing] = await db.select().from(voiceProfile)
-      .where(and(eq(voiceProfile.category, category), eq(voiceProfile.value, value)));
+      .where(and(eq(voiceProfile.category, category), eq(voiceProfile.value, value), eq(voiceProfile.userId, userId)));
     
     if (existing) {
       // Increment frequency
@@ -1528,7 +1537,7 @@ export class DatabaseStorage implements IStorage {
     // Create new pattern
     const [created] = await db
       .insert(voiceProfile)
-      .values({ category, value, context, source, frequency: 1, updatedAt: new Date() })
+      .values({ category, value, context, source, userId, frequency: 1, updatedAt: new Date() })
       .returning();
     return created;
   }
@@ -1851,27 +1860,40 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Content Topics
-  async getAllContentTopics(): Promise<ContentTopic[]> {
+  async getAllContentTopics(ctx?: TenantContext): Promise<ContentTopic[]> {
+    const userId = getEffectiveUserId(ctx);
+    if (userId) {
+      return await db.select().from(contentTopics)
+        .where(eq(contentTopics.userId, userId))
+        .orderBy(desc(contentTopics.mentionCount));
+    }
     return await db.select().from(contentTopics).orderBy(desc(contentTopics.mentionCount));
   }
   
-  async getActiveContentTopics(): Promise<ContentTopic[]> {
+  async getActiveContentTopics(ctx?: TenantContext): Promise<ContentTopic[]> {
+    const userId = getEffectiveUserId(ctx);
+    if (userId) {
+      return await db.select().from(contentTopics)
+        .where(and(eq(contentTopics.userId, userId), eq(contentTopics.status, 'active')))
+        .orderBy(desc(contentTopics.mentionCount));
+    }
     return await db.select().from(contentTopics)
       .where(eq(contentTopics.status, 'active'))
       .orderBy(desc(contentTopics.mentionCount));
   }
   
-  async getContentTopic(id: string): Promise<ContentTopic | undefined> {
+  async getContentTopic(id: string, ctx?: TenantContext): Promise<ContentTopic | undefined> {
     const [topic] = await db.select().from(contentTopics).where(eq(contentTopics.id, id));
     return topic || undefined;
   }
   
-  async createContentTopic(topic: InsertContentTopic): Promise<ContentTopic> {
-    const [created] = await db.insert(contentTopics).values(topic).returning();
+  async createContentTopic(topic: InsertContentTopic, ctx?: TenantContext): Promise<ContentTopic> {
+    const userId = getEffectiveUserId(ctx);
+    const [created] = await db.insert(contentTopics).values({ ...topic, userId }).returning();
     return created;
   }
   
-  async updateContentTopic(id: string, topic: Partial<InsertContentTopic>): Promise<ContentTopic | undefined> {
+  async updateContentTopic(id: string, topic: Partial<InsertContentTopic>, ctx?: TenantContext): Promise<ContentTopic | undefined> {
     const [updated] = await db.update(contentTopics)
       .set({ ...topic, updatedAt: new Date() })
       .where(eq(contentTopics.id, id))
@@ -1879,12 +1901,12 @@ export class DatabaseStorage implements IStorage {
     return updated || undefined;
   }
   
-  async deleteContentTopic(id: string): Promise<void> {
+  async deleteContentTopic(id: string, ctx?: TenantContext): Promise<void> {
     await db.delete(contentTopics).where(eq(contentTopics.id, id));
   }
   
-  async incrementTopicMention(id: string, quote?: string, interactionId?: string): Promise<ContentTopic | undefined> {
-    const existing = await this.getContentTopic(id);
+  async incrementTopicMention(id: string, quote?: string, interactionId?: string, ctx?: TenantContext): Promise<ContentTopic | undefined> {
+    const existing = await this.getContentTopic(id, ctx);
     if (!existing) return undefined;
     
     const updates: Partial<ContentTopic> = {
@@ -1914,42 +1936,52 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Content Ideas
-  async getAllContentIdeas(): Promise<ContentIdea[]> {
-    return await db.select().from(contentIdeas).orderBy(desc(contentIdeas.priority), desc(contentIdeas.createdAt));
+  async getAllContentIdeas(ctx?: TenantContext): Promise<ContentIdea[]> {
+    const userId = getEffectiveUserId(ctx);
+    return await db.select().from(contentIdeas)
+      .where(eq(contentIdeas.userId, userId))
+      .orderBy(desc(contentIdeas.priority), desc(contentIdeas.createdAt));
   }
   
-  async getContentIdeasByTopic(topicId: string): Promise<ContentIdea[]> {
+  async getContentIdeasByTopic(topicId: string, ctx?: TenantContext): Promise<ContentIdea[]> {
+    const userId = getEffectiveUserId(ctx);
     return await db.select().from(contentIdeas)
-      .where(eq(contentIdeas.topicId, topicId))
+      .where(and(eq(contentIdeas.topicId, topicId), eq(contentIdeas.userId, userId)))
       .orderBy(desc(contentIdeas.priority));
   }
   
-  async getContentIdeasByStatus(status: string): Promise<ContentIdea[]> {
+  async getContentIdeasByStatus(status: string, ctx?: TenantContext): Promise<ContentIdea[]> {
+    const userId = getEffectiveUserId(ctx);
     return await db.select().from(contentIdeas)
-      .where(eq(contentIdeas.status, status))
+      .where(and(eq(contentIdeas.status, status), eq(contentIdeas.userId, userId)))
       .orderBy(desc(contentIdeas.priority));
   }
   
-  async getContentIdea(id: string): Promise<ContentIdea | undefined> {
-    const [idea] = await db.select().from(contentIdeas).where(eq(contentIdeas.id, id));
+  async getContentIdea(id: string, ctx?: TenantContext): Promise<ContentIdea | undefined> {
+    const userId = getEffectiveUserId(ctx);
+    const [idea] = await db.select().from(contentIdeas)
+      .where(and(eq(contentIdeas.id, id), eq(contentIdeas.userId, userId)));
     return idea || undefined;
   }
   
-  async createContentIdea(idea: InsertContentIdea): Promise<ContentIdea> {
-    const [created] = await db.insert(contentIdeas).values(idea).returning();
+  async createContentIdea(idea: InsertContentIdea, ctx?: TenantContext): Promise<ContentIdea> {
+    const userId = getEffectiveUserId(ctx);
+    const [created] = await db.insert(contentIdeas).values({ ...idea, userId }).returning();
     return created;
   }
   
-  async updateContentIdea(id: string, idea: Partial<InsertContentIdea>): Promise<ContentIdea | undefined> {
+  async updateContentIdea(id: string, idea: Partial<InsertContentIdea>, ctx?: TenantContext): Promise<ContentIdea | undefined> {
+    const userId = getEffectiveUserId(ctx);
     const [updated] = await db.update(contentIdeas)
       .set({ ...idea, updatedAt: new Date() })
-      .where(eq(contentIdeas.id, id))
+      .where(and(eq(contentIdeas.id, id), eq(contentIdeas.userId, userId)))
       .returning();
     return updated || undefined;
   }
   
-  async deleteContentIdea(id: string): Promise<void> {
-    await db.delete(contentIdeas).where(eq(contentIdeas.id, id));
+  async deleteContentIdea(id: string, ctx?: TenantContext): Promise<void> {
+    const userId = getEffectiveUserId(ctx);
+    await db.delete(contentIdeas).where(and(eq(contentIdeas.id, id), eq(contentIdeas.userId, userId)));
   }
   
   // Content Calendar
