@@ -567,16 +567,16 @@ export type DContactReviewResult = {
 export class DatabaseStorage implements IStorage {
   /**
    * Build tenant filter condition for queries.
-   * Returns condition that matches: userId = ctx.userId OR (userId IS NULL AND ctx is founder mode)
+   * STRICT MODE: Users only see their own data. No cross-tenant access.
    */
   private getTenantFilter(table: { userId: any }, ctx?: TenantContext) {
     const userId = getEffectiveUserId(ctx);
     if (!userId) {
-      // Founder mode: no userId set, see all data (including null userId)
+      // No context provided - return undefined to see all data (admin/background jobs only)
       return undefined;
     }
-    // Multi-tenant: match userId OR null (legacy founder data)
-    return or(eq(table.userId, userId), isNull(table.userId));
+    // Strict tenant isolation: only see data owned by this user
+    return eq(table.userId, userId);
   }
 
   // Users

@@ -791,6 +791,7 @@ export const interactionParticipantsRelations = relations(interactionParticipant
 // AI Assistant Conversations - stores full message history as JSONB
 export const aiConversations = pgTable("ai_conversations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   title: text("title").notNull(),
   messages: jsonb("messages").notNull().default([]),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -799,6 +800,7 @@ export const aiConversations = pgTable("ai_conversations", {
 
 export const insertAiConversationSchema = createInsertSchema(aiConversations).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -870,6 +872,7 @@ export type VoiceProfile = typeof voiceProfile.$inferSelect;
 /** Listening Analysis - NVC + Question-Based Selling analysis of conversations. */
 export const listeningAnalysis = pgTable("listening_analysis", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   interactionId: varchar("interaction_id").references(() => interactions.id),
   // Observation vs Interpretation (NVC lens)
   observationCount: integer("observation_count").default(0),
@@ -903,6 +906,7 @@ export const listeningAnalysis = pgTable("listening_analysis", {
 
 export const insertListeningAnalysisSchema = createInsertSchema(listeningAnalysis).omit({
   id: true,
+  userId: true,
   createdAt: true,
 });
 
@@ -920,6 +924,7 @@ export const listeningAnalysisRelations = relations(listeningAnalysis, ({ one })
 /** Coaching Insights - Pattern-based coaching suggestions derived from listening analysis. */
 export const coachingInsights = pgTable("coaching_insights", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   type: text("type").notNull(), // micro_shift, question_swap, pattern_observation
   category: text("category"), // emotional_pacing, curiosity, need_clarification, etc.
   insight: text("insight").notNull(), // The coaching suggestion
@@ -937,6 +942,7 @@ export const coachingInsights = pgTable("coaching_insights", {
 
 export const insertCoachingInsightSchema = createInsertSchema(coachingInsights).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -947,6 +953,7 @@ export type CoachingInsight = typeof coachingInsights.$inferSelect;
 /** Listening Patterns - Aggregate patterns across all conversations for trend analysis. */
 export const listeningPatterns = pgTable("listening_patterns", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   patternType: text("pattern_type").notNull(), // observation_vs_interpretation, feeling_acknowledgment, etc.
   description: text("description").notNull(),
   frequency: integer("frequency").default(1),
@@ -959,6 +966,7 @@ export const listeningPatterns = pgTable("listening_patterns", {
 
 export const insertListeningPatternSchema = createInsertSchema(listeningPatterns).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -992,6 +1000,7 @@ export type SyncLog = typeof syncLogs.$inferSelect;
 /** Handwritten Note Uploads - Scanned notes for voice profile learning. */
 export const handwrittenNoteUploads = pgTable("handwritten_note_uploads", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   imageUrl: text("image_url").notNull(),
   ocrText: text("ocr_text"),
   recipientName: text("recipient_name"), // First name extracted by OCR
@@ -1004,6 +1013,7 @@ export const handwrittenNoteUploads = pgTable("handwritten_note_uploads", {
 
 export const insertHandwrittenNoteUploadSchema = createInsertSchema(handwrittenNoteUploads).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -1158,6 +1168,7 @@ export const contentCalendarRelations = relations(contentCalendar, ({ one }) => 
 /** Dashboard Widgets - User's customizable dashboard widget layout. */
 export const dashboardWidgets = pgTable("dashboard_widgets", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   widgetType: text("widget_type").notNull(), // gci_ytd, closed_units, ford_tracker, ai_status, todoist, etc.
   title: text("title").notNull(),
   position: integer("position").notNull().default(0), // Order in the grid
@@ -1171,6 +1182,7 @@ export const dashboardWidgets = pgTable("dashboard_widgets", {
 
 export const insertDashboardWidgetSchema = createInsertSchema(dashboardWidgets).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -1534,6 +1546,7 @@ export type ObserverSuggestion = typeof observerSuggestions.$inferSelect;
 /** Observer Patterns - Learned patterns from user behavior */
 export const observerPatterns = pgTable("observer_patterns", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   patternType: text("pattern_type").notNull(), // 'action_sequence', 'timing', 'preference'
   description: text("description").notNull(),
   triggerConditions: jsonb("trigger_conditions").$type<Record<string, unknown>>().notNull(),
@@ -1548,6 +1561,7 @@ export const observerPatterns = pgTable("observer_patterns", {
 
 export const insertObserverPatternSchema = createInsertSchema(observerPatterns).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -1839,6 +1853,7 @@ export const userConnectorsRelations = relations(userConnectors, ({ one }) => ({
 /** AI Actions - Audit trail for AI proposals and verifier results (Verify → Automate pattern) */
 export const aiActions = pgTable("ai_actions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   actionType: text("action_type").notNull(), // create_task, log_interaction, generate_summary, etc.
   proposedBy: text("proposed_by").notNull().default("ai"), // ai, user, system
   input: jsonb("input"), // The input that was proposed
@@ -1859,6 +1874,7 @@ export const aiActions = pgTable("ai_actions", {
 
 export const insertAiActionSchema = createInsertSchema(aiActions).omit({
   id: true,
+  userId: true,
   createdAt: true,
 });
 
@@ -2008,6 +2024,7 @@ export type BetaFeedback = typeof betaFeedback.$inferSelect;
 /** Social Media Connections - OAuth tokens for Meta/Instagram, Twitter, LinkedIn, etc. */
 export const socialConnections = pgTable("social_connections", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   platform: text("platform").notNull(), // meta, twitter, linkedin
   accessToken: text("access_token").notNull(),
   accessTokenExpiresAt: timestamp("access_token_expires_at"),
@@ -2025,6 +2042,7 @@ export const socialConnections = pgTable("social_connections", {
 
 export const insertSocialConnectionSchema = createInsertSchema(socialConnections).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -2035,6 +2053,7 @@ export type SocialConnection = typeof socialConnections.$inferSelect;
 /** Scheduled Social Posts - Posts queued for publishing */
 export const socialPosts = pgTable("social_posts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
   connectionId: varchar("connection_id").references(() => socialConnections.id),
   platform: text("platform").notNull(), // instagram, facebook
   postType: text("post_type").notNull().default("feed"), // feed, story, reel
@@ -2053,6 +2072,7 @@ export const socialPosts = pgTable("social_posts", {
 
 export const insertSocialPostSchema = createInsertSchema(socialPosts).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
