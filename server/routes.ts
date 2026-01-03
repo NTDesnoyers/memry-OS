@@ -1614,7 +1614,17 @@ Respond with valid JSON only, no other text.`;
 
       const openaiClient = getOpenAI();
       
+      const currentDate = new Date().toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+      
       const systemPrompt = `You are the Flow AI Assistant - an AGENTIC AI with full control to search, view, and modify data in Flow OS (a real estate business operating system).
+
+TODAY'S DATE: ${currentDate}
+When creating tasks or setting due dates, always use dates relative to TODAY (${currentDate}). Never use dates from the past.
 
 YOU CAN TAKE ACTION. When the user asks you to do something, USE YOUR TOOLS to actually do it:
 - Search for people by name/email/segment
