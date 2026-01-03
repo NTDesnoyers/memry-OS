@@ -96,6 +96,13 @@ export const people = pgTable("people", {
   inSphere: boolean("in_sphere").default(true),
   autoCapturedFrom: text("auto_captured_from"), // 'fathom', 'granola', 'gmail', null for manual
   firstSeenAt: timestamp("first_seen_at"),
+  // Key dates for relationship nurturing and draft generation
+  birthday: text("birthday"), // Format: MM-DD (no year, for annual reminders)
+  anniversary: text("anniversary"), // Wedding anniversary MM-DD
+  spouseBirthday: text("spouse_birthday"), // Spouse's birthday MM-DD
+  spouseName: text("spouse_name"),
+  childrenInfo: text("children_info"), // JSON or text describing children names/ages
+  homeAnniversary: text("home_anniversary"), // Date they bought home (for home anniversary cards)
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [

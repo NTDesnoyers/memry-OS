@@ -1395,6 +1395,9 @@ Respond with valid JSON only, no other text.`;
         }
         
         case "log_interaction": {
+          const person = await storage.getPerson(args.personId, ctx);
+          if (!person) return `Person not found with ID: ${args.personId}`;
+          
           const interaction = await storage.createInteraction({
             personId: args.personId,
             type: args.type,
@@ -1405,15 +1408,32 @@ Respond with valid JSON only, no other text.`;
           await storage.updatePerson(args.personId, { lastContact: new Date() }, ctx);
           // Apply FORD updates if provided
           if (args.fordUpdates) {
-            const person = await storage.getPerson(args.personId, ctx);
-            if (person) {
-              const existingNotes = person.notes || "";
-              await storage.updatePerson(args.personId, { 
-                notes: existingNotes + "\n\n[FORD Update]: " + args.fordUpdates 
-              }, ctx);
-            }
+            const existingNotes = person.notes || "";
+            await storage.updatePerson(args.personId, { 
+              notes: existingNotes + "\n\n[FORD Update]: " + args.fordUpdates 
+            }, ctx);
           }
-          return `Logged ${args.type} interaction for person. Last contact date updated.`;
+          
+          // Generate follow-up draft from the interaction
+          try {
+            const firstName = person.name?.split(' ')[0] || 'there';
+            const draftContent = `Hi ${firstName},\n\nIt was great connecting with you! Following up on our ${args.type}.\n\n${args.summary ? `Key points from our conversation:\n${args.summary}\n\n` : ''}Looking forward to staying in touch.\n\nBest regards`;
+            
+            await storage.createGeneratedDraft({
+              personId: args.personId,
+              interactionId: interaction.id,
+              type: 'email',
+              title: `Follow-up with ${person.name} after ${args.type}`,
+              content: draftContent,
+              status: 'pending',
+              metadata: { source: 'ai_assistant', interactionType: args.type }
+            }, ctx);
+          } catch (draftError) {
+            // Draft creation is optional, don't fail the interaction logging
+            console.log('Draft creation skipped:', draftError);
+          }
+          
+          return `Logged ${args.type} interaction for ${person.name}. Last contact date updated. Follow-up draft created.`;
         }
         
         case "create_task": {
