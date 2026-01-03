@@ -72,7 +72,7 @@ import {
   users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, interactionParticipants, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions, leads, observerSuggestions, observerPatterns, aiActions, savedContent, dailyDigests, userCoreProfile, dormantOpportunities, socialConnections, socialPosts, contextNodes, contextEdges, decisionTraces
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt } from "drizzle-orm";
+import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt, inArray } from "drizzle-orm";
 
 /** Storage interface - abstracts database operations for all entities. */
 export interface IStorage {
@@ -240,7 +240,7 @@ export interface IStorage {
   /** Update participant role. */
   updateInteractionParticipant(id: string, data: Partial<InsertInteractionParticipant>): Promise<InteractionParticipant | undefined>;
   /** Get interactions with their participants loaded. */
-  getAllInteractionsWithParticipants(): Promise<(Interaction & { participantsList: (InteractionParticipant & { person?: Person })[] })[]>;
+  getAllInteractionsWithParticipants(ctx?: TenantContext): Promise<(Interaction & { participantsList: (InteractionParticipant & { person?: Person })[] })[]>;
   
   // AI Conversations
   getAllAiConversations(ctx?: TenantContext): Promise<AiConversation[]>;
@@ -1315,18 +1315,33 @@ export class DatabaseStorage implements IStorage {
     return updated || undefined;
   }
   
-  async getAllInteractionsWithParticipants(): Promise<(Interaction & { participantsList: (InteractionParticipant & { person?: Person })[] })[]> {
+  async getAllInteractionsWithParticipants(ctx?: TenantContext): Promise<(Interaction & { participantsList: (InteractionParticipant & { person?: Person })[] })[]> {
+    const filter = this.getTenantFilter(interactions, ctx);
+    const baseCondition = isNull(interactions.deletedAt);
+    const conditions = filter ? and(baseCondition, filter) : baseCondition;
+    
     const allInteractions = await db
       .select()
       .from(interactions)
-      .where(isNull(interactions.deletedAt))
+      .where(conditions)
       .orderBy(desc(interactions.occurredAt));
+    
+    // Get participants only for the interactions we have access to
+    const interactionIds = allInteractions.map(i => i.id);
+    if (interactionIds.length === 0) {
+      return [];
+    }
     
     const allParticipants = await db
       .select()
-      .from(interactionParticipants);
+      .from(interactionParticipants)
+      .where(inArray(interactionParticipants.interactionId, interactionIds));
     
-    const allPeople = await db.select().from(people);
+    // Get people with tenant filtering
+    const peopleFilter = this.getTenantFilter(people, ctx);
+    const allPeople = peopleFilter 
+      ? await db.select().from(people).where(peopleFilter)
+      : await db.select().from(people);
     const peopleMap = new Map(allPeople.map(p => [p.id, p]));
     
     const participantsByInteraction = new Map<string, (InteractionParticipant & { person?: Person })[]>();
