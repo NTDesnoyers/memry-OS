@@ -45,6 +45,7 @@ import Intake from "@/pages/intake";
 import RevivalOpportunities from "@/pages/revival-opportunities";
 import BetaWelcome from "@/pages/beta-welcome";
 import Landing from "@/pages/landing";
+import IssuesReview from "@/pages/issues-review";
 
 function Router() {
   return (
@@ -83,6 +84,7 @@ function Router() {
         <Route path="/intake" component={Intake} />
         <Route path="/revival" component={RevivalOpportunities} />
         <Route path="/welcome" component={BetaWelcome} />
+        <Route path="/issues" component={IssuesReview} />
         <Route component={NotFound} />
       </Switch>
     </ProtectedRoute>

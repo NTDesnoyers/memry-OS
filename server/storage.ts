@@ -69,7 +69,8 @@ import {
   type ContextNode, type InsertContextNode,
   type ContextEdge, type InsertContextEdge,
   type DecisionTrace, type InsertDecisionTrace,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, interactionParticipants, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions, leads, observerSuggestions, observerPatterns, aiActions, savedContent, dailyDigests, userCoreProfile, dormantOpportunities, socialConnections, socialPosts, contextNodes, contextEdges, decisionTraces
+  type IssueReport, type InsertIssueReport,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, interactionParticipants, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions, leads, observerSuggestions, observerPatterns, aiActions, savedContent, dailyDigests, userCoreProfile, dormantOpportunities, socialConnections, socialPosts, contextNodes, contextEdges, decisionTraces, issueReports
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt, inArray } from "drizzle-orm";
@@ -523,6 +524,13 @@ export interface IStorage {
   getDecisionTrace(id: string): Promise<DecisionTrace | undefined>;
   getDecisionTracesForEntity(entityType: string, entityId: string, limit?: number): Promise<DecisionTrace[]>;
   getRecentDecisionTraces(limit?: number): Promise<DecisionTrace[]>;
+  
+  // Issue Reports - In-app feedback and bug tracking
+  getAllIssueReports(status?: string): Promise<IssueReport[]>;
+  getIssueReport(id: string): Promise<IssueReport | undefined>;
+  createIssueReport(report: InsertIssueReport): Promise<IssueReport>;
+  updateIssueReport(id: string, report: Partial<InsertIssueReport>): Promise<IssueReport | undefined>;
+  deleteIssueReport(id: string): Promise<void>;
 }
 
 /** Full context for a person - unified data layer response */
@@ -3389,6 +3397,40 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(decisionTraces)
       .orderBy(desc(decisionTraces.createdAt))
       .limit(limit);
+  }
+  
+  // Issue Reports - In-app feedback and bug tracking
+  async getAllIssueReports(status?: string): Promise<IssueReport[]> {
+    if (status) {
+      return await db.select().from(issueReports)
+        .where(eq(issueReports.status, status))
+        .orderBy(desc(issueReports.createdAt));
+    }
+    return await db.select().from(issueReports)
+      .orderBy(desc(issueReports.createdAt));
+  }
+  
+  async getIssueReport(id: string): Promise<IssueReport | undefined> {
+    const [report] = await db.select().from(issueReports)
+      .where(eq(issueReports.id, id));
+    return report || undefined;
+  }
+  
+  async createIssueReport(report: InsertIssueReport): Promise<IssueReport> {
+    const [created] = await db.insert(issueReports).values(report).returning();
+    return created;
+  }
+  
+  async updateIssueReport(id: string, report: Partial<InsertIssueReport>): Promise<IssueReport | undefined> {
+    const [updated] = await db.update(issueReports)
+      .set({ ...report, updatedAt: new Date() })
+      .where(eq(issueReports.id, id))
+      .returning();
+    return updated || undefined;
+  }
+  
+  async deleteIssueReport(id: string): Promise<void> {
+    await db.delete(issueReports).where(eq(issueReports.id, id));
   }
 }
 

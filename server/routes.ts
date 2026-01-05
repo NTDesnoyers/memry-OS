@@ -23,6 +23,7 @@ import {
   insertContentIdeaSchema,
   insertContentCalendarSchema,
   insertDashboardWidgetSchema,
+  insertIssueReportSchema,
   granolaWebhookSchema,
   plaudWebhookSchema,
   captureWebhookSchema,
@@ -7835,6 +7836,99 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
         founderId: userId,
         migrated: results
       });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ============================================================
+  // Issue Reports - In-app feedback and bug tracking
+  // ============================================================
+  
+  app.get("/api/issues", async (req: any, res) => {
+    try {
+      // Only allow founder to list all issues
+      const userEmail = req.user?.claims?.email;
+      if (userEmail !== 'nathan@desnoyersproperties.com') {
+        return res.status(403).json({ message: "Only the founder can view all issues" });
+      }
+      
+      const status = req.query.status as string | undefined;
+      const issues = await storage.getAllIssueReports(status);
+      res.json(issues);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.get("/api/issues/:id", async (req: any, res) => {
+    try {
+      // Only allow founder to view issue details
+      const userEmail = req.user?.claims?.email;
+      if (userEmail !== 'nathan@desnoyersproperties.com') {
+        return res.status(403).json({ message: "Only the founder can view issue details" });
+      }
+      
+      const issue = await storage.getIssueReport(req.params.id);
+      if (!issue) {
+        return res.status(404).json({ message: "Issue not found" });
+      }
+      res.json(issue);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.post("/api/issues", async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const userEmail = req.user?.claims?.email;
+      
+      const parsed = insertIssueReportSchema.safeParse({
+        ...req.body,
+        userId,
+        userEmail,
+      });
+      
+      if (!parsed.success) {
+        return res.status(400).json({ message: fromZodError(parsed.error).message });
+      }
+      
+      const issue = await storage.createIssueReport(parsed.data);
+      res.status(201).json(issue);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.patch("/api/issues/:id", async (req: any, res) => {
+    try {
+      // Only allow founder to update issues
+      const userEmail = req.user?.claims?.email;
+      if (userEmail !== 'nathan@desnoyersproperties.com') {
+        return res.status(403).json({ message: "Only the founder can update issues" });
+      }
+      
+      const issue = await storage.updateIssueReport(req.params.id, req.body);
+      if (!issue) {
+        return res.status(404).json({ message: "Issue not found" });
+      }
+      res.json(issue);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.delete("/api/issues/:id", async (req: any, res) => {
+    try {
+      // Only allow founder to delete issues
+      const userEmail = req.user?.claims?.email;
+      if (userEmail !== 'nathan@desnoyersproperties.com') {
+        return res.status(403).json({ message: "Only the founder can delete issues" });
+      }
+      
+      await storage.deleteIssueReport(req.params.id);
+      res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

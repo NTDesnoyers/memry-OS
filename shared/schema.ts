@@ -2240,5 +2240,45 @@ export const decisionTracesRelations = relations(decisionTraces, ({ one }) => ({
   }),
 }));
 
+// =============================================================================
+// ISSUE REPORTS - In-app feedback and bug tracking
+// =============================================================================
+
+/** Issue Reports - User-submitted bug reports and feedback */
+export const issueReports = pgTable("issue_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
+  userEmail: text("user_email"),
+  type: text("type").notNull().default("bug"), // bug, suggestion, question
+  description: text("description").notNull(),
+  screenshotUrl: text("screenshot_url"),
+  context: jsonb("context").$type<{
+    route: string;
+    timestamp: string;
+    featureMode: string;
+    userAgent?: string;
+    recentActions?: string[];
+    aiConversation?: Array<{ role: string; content: string }>;
+  }>(),
+  status: text("status").notNull().default("open"), // open, triaged, in_progress, resolved
+  resolution: text("resolution"),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("issue_reports_status_idx").on(table.status),
+  index("issue_reports_user_idx").on(table.userId),
+  index("issue_reports_created_idx").on(table.createdAt),
+]);
+
+export const insertIssueReportSchema = createInsertSchema(issueReports).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertIssueReport = z.infer<typeof insertIssueReportSchema>;
+export type IssueReport = typeof issueReports.$inferSelect;
+
 /** Replit Auth - Sessions and Auth Users */
 export * from "./models/auth";

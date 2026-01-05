@@ -18,6 +18,7 @@ import {
   MessageSquare,
   ChevronUp,
   LogOut,
+  RefreshCw,
   FileEdit,
   Handshake,
   Mic,
@@ -32,7 +33,8 @@ import {
   GraduationCap,
   Eye,
   Activity,
-  Inbox
+  Inbox,
+  Flag
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -42,6 +44,7 @@ import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { VoiceLogger } from "@/components/voice-logger";
+import { FlagIssueButton } from "@/components/flag-issue-button";
 import { useQuery } from "@tanstack/react-query";
 import { isFounderMode, toggleMode, BETA_NAV_HREFS, BETA_PROFILE_MENU_HREFS, isFounderToggleEnabled } from "@/lib/feature-mode";
 import { Badge } from "@/components/ui/badge";
@@ -73,6 +76,7 @@ const allProfileMenuItems = [
   { name: "Integrations", href: "/integrations", icon: Plug },
   { name: "Automation", href: "/automation", icon: Workflow },
   { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Issue Tracker", href: "/issues", icon: Flag, founderOnly: true },
 ];
 
 function getFilteredNavItems(founderMode: boolean) {
@@ -87,7 +91,9 @@ function getFilteredProfileMenuItems(founderMode: boolean) {
   if (founderMode) {
     return allProfileMenuItems;
   }
-  return allProfileMenuItems.filter(item => BETA_PROFILE_MENU_HREFS.has(item.href));
+  return allProfileMenuItems.filter(item => 
+    BETA_PROFILE_MENU_HREFS.has(item.href) && !(item as any).founderOnly
+  );
 }
 
 interface NavContentProps {
@@ -221,6 +227,17 @@ function NavContent({ location, setOpen, userName, userInitials, brokerage, head
                 })}
                 {profileMenuItems.length > 0 && <DropdownMenuSeparator />}
                 <DropdownMenuItem 
+                  className="cursor-pointer gap-2"
+                  onClick={() => {
+                    // Clear session and redirect to login to switch accounts
+                    window.location.href = "/api/logout?switch=true";
+                  }}
+                  data-testid="button-switch-account-collapsed"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Switch Account
+                </DropdownMenuItem>
+                <DropdownMenuItem 
                   className="cursor-pointer gap-2 text-destructive focus:text-destructive"
                   onClick={() => {
                     window.location.href = "/api/logout";
@@ -279,6 +296,17 @@ function NavContent({ location, setOpen, userName, userInitials, brokerage, head
                   );
                 })}
                 {profileMenuItems.length > 0 && <DropdownMenuSeparator />}
+                <DropdownMenuItem 
+                  className="cursor-pointer gap-2"
+                  onClick={() => {
+                    // Clear session and redirect to login to switch accounts
+                    window.location.href = "/api/logout?switch=true";
+                  }}
+                  data-testid="button-switch-account"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Switch Account
+                </DropdownMenuItem>
                 <DropdownMenuItem 
                   className="cursor-pointer gap-2 text-destructive focus:text-destructive"
                   onClick={() => {
@@ -422,6 +450,7 @@ export default function LayoutComponent({ children }: { children: React.ReactNod
       </main>
       
       <VoiceLogger />
+      <FlagIssueButton />
     </div>
   );
 }
