@@ -7,9 +7,22 @@
 
 export type FeatureMode = 'founder' | 'beta';
 
+// Check if founder mode toggle is enabled (for production beta deployments, disable this)
+// Set VITE_ENABLE_FOUNDER_TOGGLE=false to hide the mode toggle for beta testers
+export function isFounderToggleEnabled(): boolean {
+  const envValue = import.meta.env.VITE_ENABLE_FOUNDER_TOGGLE;
+  // Default to true (enabled) if not set, false if explicitly set to 'false'
+  return envValue !== 'false';
+}
+
 // Environment-based mode detection
 // Founder mode is enabled via localStorage flag or environment variable
 export function getCurrentMode(): FeatureMode {
+  // If founder toggle is disabled, always return beta mode
+  if (!isFounderToggleEnabled()) {
+    return 'beta';
+  }
+  
   // Check localStorage for founder mode flag (set via console for founder)
   if (typeof window !== 'undefined') {
     const founderFlag = localStorage.getItem('flow_founder_mode');

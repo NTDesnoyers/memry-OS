@@ -43,8 +43,9 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { VoiceLogger } from "@/components/voice-logger";
 import { useQuery } from "@tanstack/react-query";
-import { isFounderMode, toggleMode, BETA_NAV_HREFS, BETA_PROFILE_MENU_HREFS } from "@/lib/feature-mode";
+import { isFounderMode, toggleMode, BETA_NAV_HREFS, BETA_PROFILE_MENU_HREFS, isFounderToggleEnabled } from "@/lib/feature-mode";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/hooks/use-auth";
 
 const allNavItems = [
   { name: "Today", href: "/", icon: LayoutDashboard },
@@ -103,9 +104,11 @@ interface NavContentProps {
   navItems: typeof allNavItems;
   profileMenuItems: typeof allProfileMenuItems;
   founderMode: boolean;
+  showModeToggle: boolean;
+  authUsername?: string;
 }
 
-function NavContent({ location, setOpen, userName, userInitials, brokerage, headshotUrl, collapsed, onToggleCollapse, pinned, onTogglePin, navItems, profileMenuItems, founderMode }: NavContentProps) {
+function NavContent({ location, setOpen, userName, userInitials, brokerage, headshotUrl, collapsed, onToggleCollapse, pinned, onTogglePin, navItems, profileMenuItems, founderMode, showModeToggle, authUsername }: NavContentProps) {
   return (
     <div className={cn("flex flex-col h-full bg-sidebar border-r border-sidebar-border text-sidebar-foreground transition-all duration-200", collapsed && "w-16")}>
       <div className={cn("p-6 border-b border-sidebar-border", collapsed && "p-3 flex justify-center")}>
@@ -181,48 +184,54 @@ function NavContent({ location, setOpen, userName, userInitials, brokerage, head
             >
               <PanelLeft className="h-5 w-5" />
             </Button>
-            {profileMenuItems.length > 0 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    className="w-full h-10"
-                    data-testid="button-settings-menu-collapsed"
-                    title="Settings"
-                  >
-                    <Settings className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" side="right" className="w-56 ml-1">
-                  {profileMenuItems.map((item) => {
-                    const isActive = location === item.href;
-                    return (
-                      <Link key={item.href} href={item.href}>
-                        <DropdownMenuItem 
-                          className={cn("cursor-pointer gap-2", isActive && "bg-accent")}
-                          onClick={() => setOpen(false)}
-                        >
-                          <item.icon className="h-4 w-4" />
-                          {item.name}
-                        </DropdownMenuItem>
-                      </Link>
-                    );
-                  })}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    className="cursor-pointer gap-2 text-destructive focus:text-destructive"
-                    onClick={() => {
-                      window.location.href = "/api/logout";
-                    }}
-                    data-testid="button-logout-collapsed"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Log Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  className="w-full h-10"
+                  data-testid="button-settings-menu-collapsed"
+                  title={profileMenuItems.length > 0 ? "Settings" : "Account"}
+                >
+                  {profileMenuItems.length > 0 ? <Settings className="h-5 w-5" /> : <LogOut className="h-5 w-5" />}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" side="right" className="w-56 ml-1">
+                {authUsername && (
+                  <>
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      Signed in as <span className="font-medium text-foreground">{authUsername}</span>
+                    </div>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                {profileMenuItems.map((item) => {
+                  const isActive = location === item.href;
+                  return (
+                    <Link key={item.href} href={item.href}>
+                      <DropdownMenuItem 
+                        className={cn("cursor-pointer gap-2", isActive && "bg-accent")}
+                        onClick={() => setOpen(false)}
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {item.name}
+                      </DropdownMenuItem>
+                    </Link>
+                  );
+                })}
+                {profileMenuItems.length > 0 && <DropdownMenuSeparator />}
+                <DropdownMenuItem 
+                  className="cursor-pointer gap-2 text-destructive focus:text-destructive"
+                  onClick={() => {
+                    window.location.href = "/api/logout";
+                  }}
+                  data-testid="button-logout-collapsed"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Log Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <div className="flex justify-center py-1">
               <Avatar className="h-8 w-8">
                 {headshotUrl && <AvatarImage src={headshotUrl} alt={userName} />}
@@ -234,48 +243,54 @@ function NavContent({ location, setOpen, userName, userInitials, brokerage, head
           </>
         ) : (
           <>
-            {profileMenuItems.length > 0 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-start gap-3 h-10 px-3 text-muted-foreground hover:text-foreground"
-                    data-testid="button-settings-menu"
-                  >
-                    <Settings className="h-5 w-5" />
-                    <span className="font-medium">Settings</span>
-                    <ChevronUp className="h-4 w-4 ml-auto" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" side="top" className="w-56 mb-1">
-                  {profileMenuItems.map((item) => {
-                    const isActive = location === item.href;
-                    return (
-                      <Link key={item.href} href={item.href}>
-                        <DropdownMenuItem 
-                          className={cn("cursor-pointer gap-2", isActive && "bg-accent")}
-                          onClick={() => setOpen(false)}
-                        >
-                          <item.icon className="h-4 w-4" />
-                          {item.name}
-                        </DropdownMenuItem>
-                      </Link>
-                    );
-                  })}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    className="cursor-pointer gap-2 text-destructive focus:text-destructive"
-                    onClick={() => {
-                      window.location.href = "/api/logout";
-                    }}
-                    data-testid="button-logout"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Log Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start gap-3 h-10 px-3 text-muted-foreground hover:text-foreground"
+                  data-testid="button-settings-menu"
+                >
+                  {profileMenuItems.length > 0 ? <Settings className="h-5 w-5" /> : <LogOut className="h-5 w-5" />}
+                  <span className="font-medium">{profileMenuItems.length > 0 ? "Settings" : "Account"}</span>
+                  <ChevronUp className="h-4 w-4 ml-auto" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" side="top" className="w-56 mb-1">
+                {authUsername && (
+                  <>
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      Signed in as <span className="font-medium text-foreground">{authUsername}</span>
+                    </div>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                {profileMenuItems.map((item) => {
+                  const isActive = location === item.href;
+                  return (
+                    <Link key={item.href} href={item.href}>
+                      <DropdownMenuItem 
+                        className={cn("cursor-pointer gap-2", isActive && "bg-accent")}
+                        onClick={() => setOpen(false)}
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {item.name}
+                      </DropdownMenuItem>
+                    </Link>
+                  );
+                })}
+                {profileMenuItems.length > 0 && <DropdownMenuSeparator />}
+                <DropdownMenuItem 
+                  className="cursor-pointer gap-2 text-destructive focus:text-destructive"
+                  onClick={() => {
+                    window.location.href = "/api/logout";
+                  }}
+                  data-testid="button-logout"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Log Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <div className="flex items-center gap-3 px-2 py-1">
               <Avatar className="h-8 w-8">
@@ -285,22 +300,24 @@ function NavContent({ location, setOpen, userName, userInitials, brokerage, head
                 </AvatarFallback>
               </Avatar>
               <div className="text-sm flex-1 min-w-0">
-                <p className="font-medium truncate text-sm">{userName}</p>
+                <p className="font-medium truncate text-sm" data-testid="text-current-user">{authUsername || userName}</p>
                 <p className="text-xs text-muted-foreground truncate">{brokerage}</p>
               </div>
             </div>
             
-            <Badge 
-              variant={founderMode ? "default" : "secondary"}
-              className="cursor-pointer hover:opacity-80 transition-opacity w-full justify-center py-1"
-              onClick={() => {
-                toggleMode();
-                window.location.reload();
-              }}
-              data-testid="mode-toggle-badge"
-            >
-              {founderMode ? "Founder Mode" : "Beta Mode"} (click to switch)
-            </Badge>
+            {showModeToggle && (
+              <Badge 
+                variant={founderMode ? "default" : "secondary"}
+                className="cursor-pointer hover:opacity-80 transition-opacity w-full justify-center py-1"
+                onClick={() => {
+                  toggleMode();
+                  window.location.reload();
+                }}
+                data-testid="mode-toggle-badge"
+              >
+                {founderMode ? "Founder Mode" : "Beta Mode"} (click to switch)
+              </Badge>
+            )}
           </>
         )}
       </div>
@@ -346,11 +363,17 @@ export default function LayoutComponent({ children }: { children: React.ReactNod
     queryKey: ["/api/profile"],
     staleTime: 5 * 60 * 1000,
   });
+  
+  const { user: authUser } = useAuth();
+  const showModeToggle = isFounderToggleEnabled();
 
   const userName = profile?.name || "Your Name";
   const userInitials = userName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
   const brokerage = profile?.brokerage || "Your Brokerage";
   const headshotUrl = profile?.headshotUrl;
+  const authUsername = authUser?.firstName 
+    ? `${authUser.firstName}${authUser.lastName ? ' ' + authUser.lastName : ''}`
+    : (authUser?.email ?? undefined);
 
   const navProps = { 
     location, 
@@ -365,7 +388,9 @@ export default function LayoutComponent({ children }: { children: React.ReactNod
     onTogglePin: togglePin,
     navItems,
     profileMenuItems,
-    founderMode
+    founderMode,
+    showModeToggle,
+    authUsername
   };
 
   const sidebarWidth = collapsed ? 'w-16' : 'w-64';
