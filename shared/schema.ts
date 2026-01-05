@@ -96,6 +96,10 @@ export const people = pgTable("people", {
   inSphere: boolean("in_sphere").default(true),
   autoCapturedFrom: text("auto_captured_from"), // 'fathom', 'granola', 'gmail', null for manual
   firstSeenAt: timestamp("first_seen_at"),
+  // Hot/Warm pipeline status (without requiring a full deal record)
+  // 'hot' = active buyer/seller within 90 days, 'warm' = ~12 months to transaction
+  pipelineStatus: text("pipeline_status"), // null, 'warm', 'hot'
+  pipelineStatusUpdatedAt: timestamp("pipeline_status_updated_at"),
   // Key dates for relationship nurturing and draft generation
   birthday: text("birthday"), // Format: MM-DD (no year, for annual reminders)
   anniversary: text("anniversary"), // Wedding anniversary MM-DD
