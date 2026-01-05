@@ -34,24 +34,38 @@ export function FlagIssueButton({ recentActions = [], aiConversation = [] }: Fla
   const captureScreenshot = async () => {
     setIsCapturing(true);
     try {
-      const canvas = await html2canvas(document.body, {
+      // Close the dialog momentarily to capture clean screenshot
+      const mainContent = document.querySelector('main') || document.getElementById('root') || document.body;
+      
+      const canvas = await html2canvas(mainContent as HTMLElement, {
         useCORS: true,
         allowTaint: true,
         logging: false,
-        scale: 1,
+        scale: 0.75, // Reduce scale for better performance
+        backgroundColor: '#1a1a1a', // Match dark theme
+        removeContainer: true,
+        foreignObjectRendering: false, // Avoid CORS issues
         ignoreElements: (element) => {
-          return element.classList.contains("flag-issue-button") ||
-                 element.getAttribute("role") === "dialog";
+          // Ignore dialog, toasts, and floating buttons
+          const isDialog = element.getAttribute("role") === "dialog" || 
+                          element.classList.contains("flag-issue-button") ||
+                          element.hasAttribute("data-radix-portal") ||
+                          element.classList.contains("toaster");
+          return isDialog;
+        },
+        onclone: (doc) => {
+          // Remove any problematic elements from the cloned document
+          const dialogs = doc.querySelectorAll('[role="dialog"], [data-radix-portal]');
+          dialogs.forEach(el => el.remove());
         }
       });
-      const dataUrl = canvas.toDataURL("image/png");
+      const dataUrl = canvas.toDataURL("image/png", 0.8);
       setScreenshot(dataUrl);
     } catch (error) {
       console.error("Failed to capture screenshot:", error);
       toast({
-        title: "Screenshot failed",
-        description: "Could not capture the screen. You can still submit the issue without a screenshot.",
-        variant: "destructive",
+        title: "Screenshot skipped",
+        description: "Automatic capture didn't work - you can still submit your feedback.",
       });
     } finally {
       setIsCapturing(false);
