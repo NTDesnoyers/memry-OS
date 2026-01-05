@@ -1170,14 +1170,14 @@ Respond with valid JSON only, no other text.`;
       type: "function",
       function: {
         name: "update_person",
-        description: "Update a person's information (segment, FORD notes, contact info, buyer needs, etc.)",
+        description: "Update a person's information (segment, FORD notes, contact info, buyer needs, pipeline status, etc.)",
         parameters: {
           type: "object",
           properties: {
             personId: { type: "string", description: "The ID of the person to update" },
             updates: { 
               type: "object", 
-              description: "Fields to update: name, email, phone, segment (A/B/C/D), fordFamily, fordOccupation, fordRecreation, fordDreams, notes, isBuyer, buyerAreas, buyerPriceMin, buyerPriceMax, etc."
+              description: "Fields to update: name, email, phone, segment (A/B/C/D), fordFamily, fordOccupation, fordRecreation, fordDreams, notes, isBuyer, buyerAreas, buyerPriceMin, buyerPriceMax, pipelineStatus (hot/warm/null for active deals), etc."
             }
           },
           required: ["personId", "updates"]
@@ -1430,12 +1430,17 @@ Respond with valid JSON only, no other text.`;
               cleanUpdates[key] = value;
             }
           }
+          // Auto-set pipelineStatusUpdatedAt when pipelineStatus changes
+          if (cleanUpdates.pipelineStatus !== undefined) {
+            cleanUpdates.pipelineStatusUpdatedAt = new Date();
+          }
           if (Object.keys(cleanUpdates).length === 0) {
             return `Error: no valid fields to update`;
           }
           const updated = await storage.updatePerson(args.personId, cleanUpdates, ctx);
           if (!updated) return `Failed to update person ${args.personId}`;
-          return `Successfully updated ${updated.name}: ${Object.keys(cleanUpdates).join(", ")}`;
+          const pipelineNote = cleanUpdates.pipelineStatus ? ` (marked as ${cleanUpdates.pipelineStatus.toUpperCase()})` : '';
+          return `Successfully updated ${updated.name}: ${Object.keys(cleanUpdates).filter(k => k !== 'pipelineStatusUpdatedAt').join(", ")}${pipelineNote}`;
         }
         
         case "create_person": {
@@ -1550,17 +1555,38 @@ Respond with valid JSON only, no other text.`;
         case "get_hot_warm_lists": {
           const deals = await storage.getAllDeals(ctx);
           const people = await storage.getAllPeople(ctx);
-          const hot = deals.filter(d => d.stage?.toLowerCase() === "hot" || d.stage?.toLowerCase() === "hot_active");
-          const warm = deals.filter(d => d.stage?.toLowerCase() === "warm");
-          const hotPeople = hot.map(d => {
+          
+          // Get hot/warm from deals
+          const hotDeals = deals.filter(d => d.stage?.toLowerCase() === "hot" || d.stage?.toLowerCase() === "hot_active");
+          const warmDeals = deals.filter(d => d.stage?.toLowerCase() === "warm");
+          
+          // Get hot/warm from people's pipelineStatus (new field)
+          const hotFromPipeline = people.filter(p => p.pipelineStatus === 'hot');
+          const warmFromPipeline = people.filter(p => p.pipelineStatus === 'warm');
+          
+          // Combine: people with deals + people with pipelineStatus
+          const hotPeopleFromDeals = hotDeals.map(d => {
             const person = people.find(p => p.id === d.personId);
-            return { name: person?.name, side: d.side, lastContact: person?.lastContact };
+            return { id: person?.id, name: person?.name, side: d.side, lastContact: person?.lastContact, source: 'deal' };
           });
-          const warmPeople = warm.map(d => {
+          const warmPeopleFromDeals = warmDeals.map(d => {
             const person = people.find(p => p.id === d.personId);
-            return { name: person?.name, side: d.side, lastContact: person?.lastContact };
+            return { id: person?.id, name: person?.name, side: d.side, lastContact: person?.lastContact, source: 'deal' };
           });
-          return JSON.stringify({ hot: hotPeople, warm: warmPeople });
+          
+          // Add people with pipelineStatus (that aren't already counted from deals)
+          const dealPersonIds = new Set([...hotDeals, ...warmDeals].map(d => d.personId));
+          const hotFromStatus = hotFromPipeline
+            .filter(p => !dealPersonIds.has(p.id))
+            .map(p => ({ id: p.id, name: p.name, side: p.isBuyer ? 'buyer' : 'seller', lastContact: p.lastContact, source: 'pipeline' }));
+          const warmFromStatus = warmFromPipeline
+            .filter(p => !dealPersonIds.has(p.id))
+            .map(p => ({ id: p.id, name: p.name, side: p.isBuyer ? 'buyer' : 'seller', lastContact: p.lastContact, source: 'pipeline' }));
+          
+          return JSON.stringify({ 
+            hot: [...hotPeopleFromDeals, ...hotFromStatus], 
+            warm: [...warmPeopleFromDeals, ...warmFromStatus] 
+          });
         }
         
         case "get_todays_tasks": {
@@ -1701,14 +1727,16 @@ Respond with valid JSON only, no other text.`;
 TODAY'S DATE: ${currentDate}
 When creating tasks or setting due dates, always use dates relative to TODAY (${currentDate}). Never use dates from the past.
 
+FORMATTING: Use plain text only. Do NOT use markdown formatting like asterisks (*bold*), underscores, or bullet points. Write naturally like you're texting a colleague.
+
 YOU CAN TAKE ACTION. When the user asks you to do something, USE YOUR TOOLS to actually do it:
 - Search for people by name/email/segment
 - View complete person details including FORD notes and deals
-- Update person information (segment, FORD notes, buyer needs, contact info)
+- Update person information (segment, FORD notes, buyer needs, contact info, pipelineStatus)
 - Create new contacts
 - Log interactions/conversations
 - Create tasks and follow-ups
-- Update deal stages (warm → hot → in_contract → closed)
+- Mark people as Hot or Warm (pipelineStatus field)
 - Get Hot/Warm lists and today's tasks
 - Link people together as a household (they count as one for FORD conversations)
 - POST TO INSTAGRAM AND FACEBOOK: You can post content directly to social media if connected
@@ -1722,7 +1750,14 @@ When the user describes talking to someone (call, meeting, text, email, in-perso
    - fordRecreation: hobbies, interests, sports, pets, vacation plans
    - fordOccupation: job, career changes, work updates
    - fordDreams: goals, aspirations, life plans
-4. Confirm what you logged
+4. If it's a buyer/seller consultation, ALSO mark them as Hot: pipelineStatus = 'hot'
+5. Confirm what you logged
+
+HOT/WARM PIPELINE:
+- Hot = active buyer/seller within 90 days to transaction (consultations, active showings)
+- Warm = ~12 months to transaction (thinking about it, not urgent)
+- Use update_person with pipelineStatus: 'hot' or 'warm' to mark them
+- Consultations, buyer meetings, listing appointments = automatically mark as Hot
 
 WORKFLOW:
 1. When user mentions a person, FIRST search for them to get their ID
@@ -1735,9 +1770,8 @@ Current context: User is on ${context?.pageDescription || context?.currentPage |
 Relationship selling principles:
 - Segments: A=monthly contact, B=every 2 months, C=quarterly, D=new (8x8 campaign)
 - FORD: Family, Occupation, Recreation, Dreams - watch for life changes
-- Hot=90 days to transaction, Warm=~12 months
 
-Be concise. Take action. Confirm results.
+Be concise. Take action. Confirm results. Write in plain text without markdown.
 
 When analyzing images:
 - Describe what you see clearly and concisely
