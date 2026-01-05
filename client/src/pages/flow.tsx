@@ -1007,6 +1007,16 @@ export default function Flow() {
 
   const handleUpdate = () => {
     if (!selectedInteraction || !selectedType || !selectedPerson) return;
+    
+    // Convert datetime-local string to ISO format for the server
+    let occurredAtISO: string;
+    try {
+      const dateValue = formData.occurredAt ? new Date(formData.occurredAt) : new Date();
+      occurredAtISO = isNaN(dateValue.getTime()) ? new Date().toISOString() : dateValue.toISOString();
+    } catch {
+      occurredAtISO = new Date().toISOString();
+    }
+    
     updateInteraction.mutate({
       id: selectedInteraction.id,
       updates: {
@@ -1014,7 +1024,7 @@ export default function Flow() {
         personId: selectedPerson.id,
         summary: formData.summary,
         externalLink: formData.externalLink || undefined,
-        occurredAt: formData.occurredAt,
+        occurredAt: occurredAtISO,
       },
     });
   };
@@ -1037,12 +1047,22 @@ export default function Flow() {
       toast({ title: "Missing info", description: "Please select a type and person", variant: "destructive" });
       return;
     }
+    
+    // Convert datetime-local string to ISO format for the server
+    let occurredAtISO: string;
+    try {
+      const dateValue = formData.occurredAt ? new Date(formData.occurredAt) : new Date();
+      occurredAtISO = isNaN(dateValue.getTime()) ? new Date().toISOString() : dateValue.toISOString();
+    } catch {
+      occurredAtISO = new Date().toISOString();
+    }
+    
     createInteraction.mutate({
       type: selectedType,
       personId: selectedPerson.id,
       summary: formData.summary,
       externalLink: formData.externalLink || undefined,
-      occurredAt: formData.occurredAt,
+      occurredAt: occurredAtISO,
     });
   };
 
