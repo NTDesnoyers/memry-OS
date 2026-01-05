@@ -388,10 +388,12 @@ ${contentSummaries}`
 let openai: OpenAI | null = null;
 function getOpenAI(): OpenAI {
   if (!openai) {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error("OPENAI_API_KEY is required for AI features");
-    }
-    openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    // Uses Replit AI Integrations - no API key management needed
+    // Charges are billed to your Replit credits
+    openai = new OpenAI({ 
+      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY || process.env.OPENAI_API_KEY,
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+    });
   }
   return openai;
 }
