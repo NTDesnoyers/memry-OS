@@ -52,6 +52,7 @@ interface InteractionWithParticipants extends Interaction {
 import { isFounderMode } from "@/lib/feature-mode";
 import { apiRequest } from "@/lib/queryClient";
 import { getInitials } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
 import { VoiceRecorder } from "@/components/voice-recorder";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -66,6 +67,7 @@ const interactionTypes = [
 export default function ConversationLog() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedType, setSelectedType] = useState<string>("");
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
@@ -508,7 +510,7 @@ export default function ConversationLog() {
               </p>
             </div>
             <div className="flex gap-2">
-{isFounderMode() && (
+{isFounderMode(user?.email) && (
               <Button 
                 variant="outline"
                 className="gap-1 md:gap-2 text-sm" 

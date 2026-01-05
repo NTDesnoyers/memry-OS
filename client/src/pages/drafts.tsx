@@ -31,6 +31,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { getInitials } from "@/lib/utils";
 import { Link } from "wouter";
 import { isFounderMode } from "@/lib/feature-mode";
+import { useAuth } from "@/hooks/use-auth";
 
 type GeneratedDraft = {
   id: string;
@@ -197,6 +198,7 @@ type GmailStatus = { connected: boolean; email?: string };
 export default function Drafts() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("all");
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedDraft, setSelectedDraft] = useState<GeneratedDraft | null>(null);
@@ -450,7 +452,7 @@ export default function Drafts() {
                           onDelete={() => deleteDraft.mutate(draft.id)}
                           onCopy={() => handleCopy(draft.content)}
                           onSendEmail={() => handleSendEmail(draft)}
-                          gmailConnected={isFounderMode() && gmailStatus?.connected}
+                          gmailConnected={isFounderMode(user?.email) && gmailStatus?.connected}
                         />
                       ))}
                     </div>
@@ -474,7 +476,7 @@ export default function Drafts() {
                           onDelete={() => deleteDraft.mutate(draft.id)}
                           onCopy={() => handleCopy(draft.content)}
                           onSendEmail={() => handleSendEmail(draft)}
-                          gmailConnected={isFounderMode() && gmailStatus?.connected}
+                          gmailConnected={isFounderMode(user?.email) && gmailStatus?.connected}
                         />
                       ))}
                     </div>

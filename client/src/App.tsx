@@ -90,8 +90,8 @@ function Router() {
 }
 
 function AuthenticatedApp() {
-  const founderMode = isFounderMode();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const founderMode = isFounderMode(user?.email);
   
   if (isLoading) {
     return (

@@ -8,15 +8,17 @@ import LayoutComponent from "@/components/layout";
 import { DashboardWidgetGrid } from "@/components/dashboard-widgets";
 import { BetaNeedsAttention } from "@/components/beta-needs-attention";
 import { isFounderMode } from "@/lib/feature-mode";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const [founderMode, setFounderMode] = useState(false);
   const [modeLoaded, setModeLoaded] = useState(false);
 
   useEffect(() => {
-    setFounderMode(isFounderMode());
+    setFounderMode(isFounderMode(user?.email));
     setModeLoaded(true);
-  }, []);
+  }, [user?.email]);
 
   if (!modeLoaded) {
     return (

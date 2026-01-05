@@ -7,23 +7,35 @@
 
 export type FeatureMode = 'founder' | 'beta';
 
-// Check if founder mode toggle is enabled (for production beta deployments, disable this)
-// Set VITE_ENABLE_FOUNDER_TOGGLE=false to hide the mode toggle for beta testers
-export function isFounderToggleEnabled(): boolean {
-  const envValue = import.meta.env.VITE_ENABLE_FOUNDER_TOGGLE;
-  // Default to true (enabled) if not set, false if explicitly set to 'false'
-  return envValue !== 'false';
+// Founder email - only this user can access founder mode
+const FOUNDER_EMAIL = 'nathan@desnoyersproperties.com';
+
+// Check if the current user is the founder based on their email
+export function isFounderEmail(email: string | null | undefined): boolean {
+  return email?.toLowerCase() === FOUNDER_EMAIL.toLowerCase();
+}
+
+// Check if founder mode toggle is enabled
+// Only the founder (nathan@desnoyersproperties.com) can see the toggle
+export function isFounderToggleEnabled(userEmail?: string | null): boolean {
+  // If no email provided, check env variable as fallback (for development)
+  if (!userEmail) {
+    const envValue = import.meta.env.VITE_ENABLE_FOUNDER_TOGGLE;
+    return envValue !== 'false';
+  }
+  // Only founder can see the toggle
+  return isFounderEmail(userEmail);
 }
 
 // Environment-based mode detection
-// Founder mode is enabled via localStorage flag or environment variable
-export function getCurrentMode(): FeatureMode {
-  // If founder toggle is disabled, always return beta mode
-  if (!isFounderToggleEnabled()) {
+// Founder mode is enabled via localStorage flag, but only for authorized users
+export function getCurrentMode(userEmail?: string | null): FeatureMode {
+  // If user is not the founder, always return beta mode
+  if (userEmail && !isFounderEmail(userEmail)) {
     return 'beta';
   }
   
-  // Check localStorage for founder mode flag (set via console for founder)
+  // Check localStorage for founder mode flag (only works for founder)
   if (typeof window !== 'undefined') {
     const founderFlag = localStorage.getItem('flow_founder_mode');
     if (founderFlag === 'true') {
@@ -35,12 +47,12 @@ export function getCurrentMode(): FeatureMode {
   return 'beta';
 }
 
-export function isFounderMode(): boolean {
-  return getCurrentMode() === 'founder';
+export function isFounderMode(userEmail?: string | null): boolean {
+  return getCurrentMode(userEmail) === 'founder';
 }
 
-export function isBetaMode(): boolean {
-  return getCurrentMode() === 'beta';
+export function isBetaMode(userEmail?: string | null): boolean {
+  return getCurrentMode(userEmail) === 'beta';
 }
 
 export function toggleMode(): FeatureMode {

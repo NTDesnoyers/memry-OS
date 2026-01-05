@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { isFounderMode, BETA_NAV_HREFS, BETA_QUICK_ACTION_IDS, BETA_SKILL_IDS } from "@/lib/feature-mode";
+import { useAuth } from "@/hooks/use-auth";
 
 interface Person {
   id: string;
@@ -118,8 +119,9 @@ export function CommandPalette() {
   const { toast } = useToast();
   const [skillModalOpen, setSkillModalOpen] = useState(false);
   const [activeSkill, setActiveSkill] = useState<string | null>(null);
+  const { user } = useAuth();
   
-  const founderMode = isFounderMode();
+  const founderMode = isFounderMode(user?.email);
   
   const navigationCommands = useMemo(() => {
     if (founderMode) return allNavigationCommands;

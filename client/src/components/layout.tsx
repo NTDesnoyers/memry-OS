@@ -343,7 +343,9 @@ export default function LayoutComponent({ children }: { children: React.ReactNod
     return saved !== 'false'; // Default to pinned
   });
 
-  const founderMode = isFounderMode();
+  const { user: authUser } = useAuth();
+  const userEmail = authUser?.email;
+  const founderMode = isFounderMode(userEmail);
   const navItems = useMemo(() => getFilteredNavItems(founderMode), [founderMode]);
   const profileMenuItems = useMemo(() => getFilteredProfileMenuItems(founderMode), [founderMode]);
 
@@ -364,8 +366,7 @@ export default function LayoutComponent({ children }: { children: React.ReactNod
     staleTime: 5 * 60 * 1000,
   });
   
-  const { user: authUser } = useAuth();
-  const showModeToggle = isFounderToggleEnabled();
+  const showModeToggle = isFounderToggleEnabled(userEmail);
 
   const userName = profile?.name || "Your Name";
   const userInitials = userName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
