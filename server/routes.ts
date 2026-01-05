@@ -51,10 +51,62 @@ import { eventBus } from "./event-bus";
 import { createLogger } from "./logger";
 import { contextGraph } from "./context-graph";
 import { verifySavedContent, verifySummary, verifyTags, type VerifierContext } from "./verifiers";
-import type { SavedContent } from "@shared/schema";
+import type { SavedContent, InsertAiUsageLog } from "@shared/schema";
 import * as metaInstagram from "./meta-instagram";
 
 const logger = createLogger('Routes');
+
+// Token cost estimates (in micro-cents: 1/10000 of a cent)
+// GPT-5: ~$15/1M input, ~$60/1M output (estimate)
+// GPT-4o: ~$2.5/1M input, ~$10/1M output
+// GPT-4o-mini: ~$0.15/1M input, ~$0.6/1M output
+const MODEL_COSTS: Record<string, { input: number; output: number }> = {
+  "gpt-5": { input: 1500, output: 6000 },
+  "gpt-4o": { input: 250, output: 1000 },
+  "gpt-4o-mini": { input: 15, output: 60 },
+  "gpt-4-turbo": { input: 1000, output: 3000 },
+  "claude-3-5-sonnet": { input: 300, output: 1500 },
+};
+
+async function trackAiUsage(
+  ctx: TenantContext | undefined,
+  userEmail: string | undefined,
+  feature: string,
+  model: string,
+  promptTokens: number,
+  completionTokens: number,
+  durationMs?: number,
+  success: boolean = true,
+  errorMessage?: string,
+  metadata?: Record<string, unknown>
+) {
+  try {
+    const costs = MODEL_COSTS[model] || MODEL_COSTS["gpt-4o"];
+    const estimatedCost = Math.round(
+      (promptTokens * costs.input + completionTokens * costs.output) / 1000
+    );
+    
+    const usage: InsertAiUsageLog = {
+      userId: ctx?.userId || null,
+      userEmail: userEmail || null,
+      feature,
+      model,
+      promptTokens,
+      completionTokens,
+      totalTokens: promptTokens + completionTokens,
+      estimatedCost,
+      durationMs: durationMs || null,
+      success,
+      errorMessage: errorMessage || null,
+      metadata: metadata || null,
+    };
+    
+    await storage.logAiUsage(usage);
+    logger.debug(`AI usage logged: ${feature} ${model} ${promptTokens + completionTokens} tokens, cost: ${estimatedCost} micro-cents`);
+  } catch (error: any) {
+    logger.error(`Failed to log AI usage: ${error.message}`);
+  }
+}
 
 /**
  * Extract TenantContext from authenticated request.
@@ -1737,6 +1789,14 @@ When analyzing images:
       // Select the best model for this task
       const modelChoice = selectModel(hasImages, true, messages.length);
       
+      // Track AI usage for billing
+      const startTime = Date.now();
+      const ctx = getTenantContext(req);
+      const userEmail = (req.user as any)?.claims?.email;
+      let totalPromptTokens = 0;
+      let totalCompletionTokens = 0;
+      const toolsUsed: string[] = [];
+      
       let completion = await openaiClient.chat.completions.create({
         model: modelChoice.model,
         messages: apiMessages,
@@ -1745,6 +1805,10 @@ When analyzing images:
         max_tokens: 1500,
         temperature: 0.3,
       });
+      
+      // Track tokens from first call
+      totalPromptTokens += completion.usage?.prompt_tokens || 0;
+      totalCompletionTokens += completion.usage?.completion_tokens || 0;
 
       const actionsExecuted: { tool: string; result: string }[] = [];
       
@@ -1760,12 +1824,12 @@ When analyzing images:
         apiMessages.push(responseMessage);
         
         // Execute each tool call
-        const ctx = getTenantContext(req);
         for (const toolCall of responseMessage.tool_calls) {
           const tc = toolCall as any;
           const args = JSON.parse(tc.function.arguments);
           const result = await executeAiTool(tc.function.name, args, ctx);
           actionsExecuted.push({ tool: tc.function.name, result });
+          toolsUsed.push(tc.function.name);
           
           apiMessages.push({
             role: "tool",
@@ -1784,10 +1848,29 @@ When analyzing images:
           temperature: 0.3,
         });
         
+        // Track tokens from loop calls
+        totalPromptTokens += completion.usage?.prompt_tokens || 0;
+        totalCompletionTokens += completion.usage?.completion_tokens || 0;
+        
         responseMessage = completion.choices[0]?.message;
       }
 
       const response = responseMessage?.content || "I completed the requested actions.";
+      const durationMs = Date.now() - startTime;
+      
+      // Log AI usage (fire and forget)
+      trackAiUsage(
+        ctx,
+        userEmail,
+        "assistant",
+        modelChoice.model,
+        totalPromptTokens,
+        totalCompletionTokens,
+        durationMs,
+        true,
+        undefined,
+        { toolsUsed: [...new Set(toolsUsed)], iterations }
+      );
       
       res.json({ 
         response,
@@ -7931,6 +8014,62 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
       
       await storage.deleteIssueReport(req.params.id);
       res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ==================== AI USAGE TRACKING ROUTES ====================
+  
+  // Get AI usage summary (founder only)
+  app.get("/api/ai-usage/summary", async (req: any, res) => {
+    try {
+      const userEmail = req.user?.claims?.email;
+      if (userEmail !== 'nathan@desnoyersproperties.com') {
+        return res.status(403).json({ message: "Only the founder can view AI usage" });
+      }
+      
+      const { startDate, endDate } = req.query;
+      const start = startDate ? new Date(startDate as string) : undefined;
+      const end = endDate ? new Date(endDate as string) : undefined;
+      
+      const summary = await storage.getAiUsageSummary(start, end);
+      res.json(summary);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get all AI usage logs (founder only)
+  app.get("/api/ai-usage", async (req: any, res) => {
+    try {
+      const userEmail = req.user?.claims?.email;
+      if (userEmail !== 'nathan@desnoyersproperties.com') {
+        return res.status(403).json({ message: "Only the founder can view AI usage" });
+      }
+      
+      const limit = parseInt(req.query.limit as string) || 100;
+      const logs = await storage.getAllAiUsage(limit);
+      res.json(logs);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get AI usage for specific user (founder only)
+  app.get("/api/ai-usage/user/:userId", async (req: any, res) => {
+    try {
+      const userEmail = req.user?.claims?.email;
+      if (userEmail !== 'nathan@desnoyersproperties.com') {
+        return res.status(403).json({ message: "Only the founder can view AI usage" });
+      }
+      
+      const { startDate, endDate } = req.query;
+      const start = startDate ? new Date(startDate as string) : undefined;
+      const end = endDate ? new Date(endDate as string) : undefined;
+      
+      const logs = await storage.getAiUsageByUser(req.params.userId, start, end);
+      res.json(logs);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

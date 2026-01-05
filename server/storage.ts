@@ -70,7 +70,8 @@ import {
   type ContextEdge, type InsertContextEdge,
   type DecisionTrace, type InsertDecisionTrace,
   type IssueReport, type InsertIssueReport,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, interactionParticipants, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions, leads, observerSuggestions, observerPatterns, aiActions, savedContent, dailyDigests, userCoreProfile, dormantOpportunities, socialConnections, socialPosts, contextNodes, contextEdges, decisionTraces, issueReports
+  type AiUsageLog, type InsertAiUsageLog,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, interactionParticipants, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions, leads, observerSuggestions, observerPatterns, aiActions, savedContent, dailyDigests, userCoreProfile, dormantOpportunities, socialConnections, socialPosts, contextNodes, contextEdges, decisionTraces, issueReports, aiUsageLogs
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt, inArray } from "drizzle-orm";
@@ -3431,6 +3432,51 @@ export class DatabaseStorage implements IStorage {
   
   async deleteIssueReport(id: string): Promise<void> {
     await db.delete(issueReports).where(eq(issueReports.id, id));
+  }
+  
+  // AI Usage Tracking
+  async logAiUsage(usage: InsertAiUsageLog): Promise<AiUsageLog> {
+    const [created] = await db.insert(aiUsageLogs).values(usage).returning();
+    return created;
+  }
+  
+  async getAiUsageByUser(userId: string, startDate?: Date, endDate?: Date): Promise<AiUsageLog[]> {
+    const conditions = startDate && endDate 
+      ? and(eq(aiUsageLogs.userId, userId), gte(aiUsageLogs.createdAt, startDate), lte(aiUsageLogs.createdAt, endDate))
+      : eq(aiUsageLogs.userId, userId);
+    return db.select().from(aiUsageLogs).where(conditions).orderBy(desc(aiUsageLogs.createdAt));
+  }
+  
+  async getAiUsageSummary(startDate?: Date, endDate?: Date): Promise<{
+    userId: string | null;
+    userEmail: string | null;
+    totalTokens: number;
+    totalCost: number;
+    callCount: number;
+  }[]> {
+    const conditions = startDate && endDate 
+      ? and(gte(aiUsageLogs.createdAt, startDate), lte(aiUsageLogs.createdAt, endDate))
+      : undefined;
+    
+    const result = await db.select({
+      userId: aiUsageLogs.userId,
+      userEmail: aiUsageLogs.userEmail,
+      totalTokens: sql<number>`SUM(${aiUsageLogs.totalTokens})::int`,
+      totalCost: sql<number>`SUM(${aiUsageLogs.estimatedCost})::int`,
+      callCount: sql<number>`COUNT(*)::int`,
+    })
+    .from(aiUsageLogs)
+    .where(conditions)
+    .groupBy(aiUsageLogs.userId, aiUsageLogs.userEmail)
+    .orderBy(desc(sql`SUM(${aiUsageLogs.totalTokens})`));
+    
+    return result;
+  }
+  
+  async getAllAiUsage(limit: number = 100): Promise<AiUsageLog[]> {
+    return db.select().from(aiUsageLogs)
+      .orderBy(desc(aiUsageLogs.createdAt))
+      .limit(limit);
   }
 }
 

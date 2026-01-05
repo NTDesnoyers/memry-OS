@@ -2280,5 +2280,40 @@ export const insertIssueReportSchema = createInsertSchema(issueReports).omit({
 export type InsertIssueReport = z.infer<typeof insertIssueReportSchema>;
 export type IssueReport = typeof issueReports.$inferSelect;
 
+/** AI Usage Tracking - Track AI consumption per user for billing/analytics */
+export const aiUsageLogs = pgTable("ai_usage_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
+  userEmail: text("user_email"),
+  feature: text("feature").notNull(), // 'assistant', 'draft_generation', 'voice_processing', 'conversation_analysis'
+  model: text("model").notNull(), // 'gpt-5', 'gpt-4o', etc.
+  promptTokens: integer("prompt_tokens").notNull().default(0),
+  completionTokens: integer("completion_tokens").notNull().default(0),
+  totalTokens: integer("total_tokens").notNull().default(0),
+  estimatedCost: integer("estimated_cost").notNull().default(0), // in micro-cents (1/10000 of a cent)
+  durationMs: integer("duration_ms"),
+  success: boolean("success").notNull().default(true),
+  errorMessage: text("error_message"),
+  metadata: jsonb("metadata").$type<{
+    personId?: string;
+    interactionId?: string;
+    toolsUsed?: string[];
+    [key: string]: unknown;
+  }>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("ai_usage_user_idx").on(table.userId),
+  index("ai_usage_feature_idx").on(table.feature),
+  index("ai_usage_created_idx").on(table.createdAt),
+]);
+
+export const insertAiUsageLogSchema = createInsertSchema(aiUsageLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertAiUsageLog = z.infer<typeof insertAiUsageLogSchema>;
+export type AiUsageLog = typeof aiUsageLogs.$inferSelect;
+
 /** Replit Auth - Sessions and Auth Users */
 export * from "./models/auth";
