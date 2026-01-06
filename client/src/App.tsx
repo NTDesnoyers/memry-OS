@@ -19,6 +19,7 @@ import PersonNew from "@/pages/person-new";
 import Relationships from "@/pages/relationships";
 import Reviews from "@/pages/reviews";
 import ReviewDetail from "@/pages/review-detail";
+import WeeklyReviewPage from "@/pages/weekly-review";
 import BusinessTracker from "@/pages/business-tracker";
 import Integrations from "@/pages/integrations";
 import AutomationHub from "@/pages/automation";
@@ -62,6 +63,7 @@ function Router() {
         <Route path="/people/:id" component={PersonProfile} />
         <Route path="/relationships" component={Relationships} />
         <Route path="/flow" component={Flow} />
+        <Route path="/weekly-review" component={WeeklyReviewPage} />
         <Route path="/reviews" component={Reviews} />
         <Route path="/reviews/:id" component={ReviewDetail} />
         <Route path="/visual-pricing" component={VisualPricing} />

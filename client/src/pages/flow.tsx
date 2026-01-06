@@ -1345,14 +1345,10 @@ export default function Flow() {
           </Dialog>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="live" className="gap-2" data-testid="tab-live-flow">
                 <Phone className="h-4 w-4" />
                 Flow
-              </TabsTrigger>
-              <TabsTrigger value="auto" className="gap-2" data-testid="tab-auto-flow">
-                <Mail className="h-4 w-4" />
-                Auto-Flow
               </TabsTrigger>
               <TabsTrigger value="drafts" className="gap-2" data-testid="tab-drafts">
                 <Sparkles className="h-4 w-4" />
@@ -1383,29 +1379,6 @@ export default function Flow() {
               )}
             </TabsContent>
 
-            <TabsContent value="auto">
-              <div className="mb-4">
-                <Button onClick={() => openAddDialog("auto")} data-testid="button-add-auto-flow">
-                  <Plus className="h-4 w-4 mr-2" /> Log Auto-Flow
-                </Button>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Postcards, handwritten notes, emails, social media touches
-                </p>
-              </div>
-              
-              {isLoading ? (
-                <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div>
-              ) : (
-                <InteractionList 
-                  interactions={interactions} 
-                  people={people}
-                  filterTypes={autoFlowTypeValues}
-                  onEdit={handleEdit}
-                  onDelete={(id) => deleteInteraction.mutate(id)}
-                />
-              )}
-            </TabsContent>
-
             <TabsContent value="drafts">
               <DraftsTab />
             </TabsContent>
@@ -1425,10 +1398,10 @@ export default function Flow() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Edit2 className="h-5 w-5" />
-              {showEditDialog ? "Edit Conversation" : `Log ${addFlowType === "live" ? "Live" : "Auto"} Flow`}
+              {showEditDialog ? "Edit Conversation" : "Log Flow"}
             </DialogTitle>
             <DialogDescription>
-              {showEditDialog ? "Update conversation details or assign a contact." : `Record a ${addFlowType === "live" ? "call, meeting, or conversation" : "postcard, note, email, or social touch"}`}
+              {showEditDialog ? "Update conversation details or assign a contact." : "Record a call, meeting, or conversation"}
             </DialogDescription>
           </DialogHeader>
           

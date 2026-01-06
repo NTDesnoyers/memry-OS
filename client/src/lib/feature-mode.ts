@@ -77,8 +77,7 @@ export function setMode(mode: FeatureMode): void {
 // These are the ONLY routes accessible to beta users
 export const BETA_ALLOWED_ROUTES: string[] = [
   '/',                    // Flow - conversation capture (home)
-  '/dashboard',           // Today view with overdue contacts
-  '/reviews',             // Weekly Review
+  '/weekly-review',       // Weekly Review (FORD digest + people grid)
   '/people',              // Contacts list
   '/people/new',          // Add new contact
   '/people/:id',          // Person profile (read interaction history, FORD notes)
@@ -106,8 +105,7 @@ export function isRouteAllowedInBetaMode(pathname: string): boolean {
 // Navigation items for beta mode
 export const BETA_NAV_ITEMS = [
   { name: "Flow", href: "/", icon: "Repeat" },
-  { name: "Today", href: "/dashboard", icon: "LayoutDashboard" },
-  { name: "Weekly Review", href: "/reviews", icon: "FileText" },
+  { name: "Weekly Review", href: "/weekly-review", icon: "FileText" },
   { name: "Contacts", href: "/people", icon: "Users" },
   { name: "Drafts", href: "/drafts", icon: "FileEdit" },
 ];
@@ -115,8 +113,7 @@ export const BETA_NAV_ITEMS = [
 // Navigation items allowed in beta mode (by href)
 export const BETA_NAV_HREFS = new Set([
   '/',
-  '/dashboard',
-  '/reviews',
+  '/weekly-review',
   '/people',
   '/drafts',
 ]);

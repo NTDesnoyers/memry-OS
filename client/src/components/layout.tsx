@@ -53,7 +53,7 @@ import { useAuth } from "@/hooks/use-auth";
 const allNavItems = [
   { name: "Flow", href: "/", icon: Repeat },
   { name: "Today", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Weekly Review", href: "/reviews", icon: FileText },
+  { name: "Weekly Review", href: "/weekly-review", icon: FileText },
   { name: "Contacts", href: "/people", icon: Users },
   { name: "Drafts", href: "/drafts", icon: FileEdit },
   { name: "Life Events", href: "/life-events", icon: Eye },
