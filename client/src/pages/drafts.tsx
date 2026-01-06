@@ -22,8 +22,25 @@ import {
   Sparkles,
   Clock,
   User,
-  ExternalLink
+  ExternalLink,
+  Upload,
+  Search
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { format, formatDistanceToNow } from "date-fns";
 import type { Person } from "@shared/schema";
@@ -203,6 +220,13 @@ export default function Drafts() {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedDraft, setSelectedDraft] = useState<GeneratedDraft | null>(null);
   const [editContent, setEditContent] = useState("");
+  
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [uploadTitle, setUploadTitle] = useState("");
+  const [uploadTranscript, setUploadTranscript] = useState("");
+  const [uploadPersonId, setUploadPersonId] = useState<string | null>(null);
+  const [personSearchOpen, setPersonSearchOpen] = useState(false);
+  const [personSearchQuery, setPersonSearchQuery] = useState("");
 
   const { data: drafts = [], isLoading } = useQuery<GeneratedDraft[]>({
     queryKey: ["/api/generated-drafts"],
@@ -256,20 +280,55 @@ export default function Drafts() {
 
   const processAllMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", "/api/interactions/process-all");
+      const response = await apiRequest("POST", "/api/interactions/process-all");
+      return response.json();
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/generated-drafts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/interactions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/people"] });
+      const processed = data?.processed || 0;
+      const skipped = data?.skipped || 0;
       toast({ 
         title: "Processing Complete", 
-        description: `Processed ${data.processed} conversations, created new drafts.` 
+        description: processed > 0 
+          ? `Processed ${processed} conversations, created new drafts.`
+          : `No new conversations to process (${skipped} already done).`
       });
     },
     onError: (error: any) => {
       toast({ 
         title: "Processing Failed", 
+        description: error.message,
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const uploadTranscriptMutation = useMutation({
+    mutationFn: async (data: { title: string; transcript: string; personId: string | null }) => {
+      const response = await apiRequest("POST", "/api/interactions/upload-transcript", data);
+      return response.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/generated-drafts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/interactions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/people"] });
+      setShowUploadDialog(false);
+      setUploadTitle("");
+      setUploadTranscript("");
+      setUploadPersonId(null);
+      const draftsCreated = data?.draftsCreated || 0;
+      toast({ 
+        title: "Transcript Processed", 
+        description: draftsCreated > 0 
+          ? `Created ${draftsCreated} follow-up drafts.`
+          : "Transcript saved. Link to a contact to generate drafts."
+      });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Upload Failed", 
         description: error.message,
         variant: "destructive" 
       });
@@ -350,19 +409,30 @@ export default function Drafts() {
               Review and send follow-up content from your conversations
             </p>
           </div>
-          <Button 
-            onClick={() => processAllMutation.mutate()}
-            disabled={processAllMutation.isPending}
-            data-testid="process-all-btn"
-            className="w-full sm:w-auto"
-          >
-            {processAllMutation.isPending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4 mr-2" />
-            )}
-            Process Conversations
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <Button 
+              variant="outline"
+              onClick={() => setShowUploadDialog(true)}
+              data-testid="upload-transcript-btn"
+              className="w-full sm:w-auto"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Upload Transcript
+            </Button>
+            <Button 
+              onClick={() => processAllMutation.mutate()}
+              disabled={processAllMutation.isPending}
+              data-testid="process-all-btn"
+              className="w-full sm:w-auto"
+            >
+              {processAllMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4 mr-2" />
+              )}
+              Process Conversations
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4 mb-6">
@@ -514,6 +584,130 @@ export default function Drafts() {
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : null}
                 Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Upload Conversation Transcript</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="transcript-title">Meeting/Conversation Title</Label>
+                <Input
+                  id="transcript-title"
+                  placeholder="e.g., Coffee with John Smith"
+                  value={uploadTitle}
+                  onChange={(e) => setUploadTitle(e.target.value)}
+                  data-testid="upload-title-input"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Link to Contact (optional)</Label>
+                <Popover open={personSearchOpen} onOpenChange={setPersonSearchOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className="w-full justify-between"
+                      data-testid="person-select-btn"
+                    >
+                      {uploadPersonId 
+                        ? people.find(p => p.id === uploadPersonId)?.name || "Select contact..."
+                        : "Select contact to generate drafts..."}
+                      <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <Command>
+                      <CommandInput 
+                        placeholder="Search contacts..." 
+                        value={personSearchQuery}
+                        onValueChange={setPersonSearchQuery}
+                      />
+                      <CommandList>
+                        <CommandEmpty>No contact found.</CommandEmpty>
+                        <CommandGroup>
+                          {people
+                            .filter(p => 
+                              p.name.toLowerCase().includes(personSearchQuery.toLowerCase())
+                            )
+                            .slice(0, 10)
+                            .map(person => (
+                              <CommandItem
+                                key={person.id}
+                                value={person.name}
+                                onSelect={() => {
+                                  setUploadPersonId(person.id);
+                                  setPersonSearchOpen(false);
+                                }}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-6 w-6">
+                                    <AvatarFallback className="text-xs">
+                                      {getInitials(person.name)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span>{person.name}</span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {uploadPersonId && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setUploadPersonId(null)}
+                    className="text-xs text-gray-500"
+                  >
+                    Clear selection
+                  </Button>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="transcript-content">Transcript</Label>
+                <p className="text-sm text-gray-500">
+                  Paste your meeting transcript from Granola, Otter, or any transcription service
+                </p>
+                <Textarea
+                  id="transcript-content"
+                  placeholder="Paste your meeting transcript here..."
+                  value={uploadTranscript}
+                  onChange={(e) => setUploadTranscript(e.target.value)}
+                  rows={12}
+                  className="font-mono text-sm"
+                  data-testid="upload-transcript-input"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowUploadDialog(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => uploadTranscriptMutation.mutate({
+                  title: uploadTitle,
+                  transcript: uploadTranscript,
+                  personId: uploadPersonId
+                })}
+                disabled={uploadTranscriptMutation.isPending || !uploadTranscript.trim()}
+                data-testid="submit-upload-btn"
+              >
+                {uploadTranscriptMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4 mr-2" />
+                )}
+                Upload & Process
               </Button>
             </DialogFooter>
           </DialogContent>

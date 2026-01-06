@@ -4396,6 +4396,47 @@ Return ONLY valid JSON, no explanations.`
       res.status(500).json({ message: error.message });
     }
   });
+
+  // Upload a transcript manually and process it
+  app.post("/api/interactions/upload-transcript", async (req, res) => {
+    try {
+      const ctx = getTenantContext(req);
+      const { title, transcript, personId } = req.body;
+      
+      if (!transcript || typeof transcript !== 'string' || transcript.trim().length < 50) {
+        return res.status(400).json({ message: "Transcript must be at least 50 characters" });
+      }
+      
+      const interaction = await storage.createInteraction({
+        type: "meeting",
+        source: "manual",
+        title: title || "Manual Upload",
+        transcript: transcript.trim(),
+        personId: personId || null,
+        occurredAt: new Date(),
+      }, ctx);
+      
+      let draftsCreated = 0;
+      
+      if (personId) {
+        const { processInteraction } = await import("./conversation-processor");
+        const result = await processInteraction(interaction.id, ctx);
+        draftsCreated = result.draftsCreated || 0;
+      }
+      
+      res.json({
+        success: true,
+        interactionId: interaction.id,
+        draftsCreated,
+        message: personId 
+          ? `Transcript processed. ${draftsCreated} drafts created.`
+          : "Transcript saved. Link to a contact to generate drafts.",
+      });
+    } catch (error: any) {
+      console.error("Error uploading transcript:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
   
   // Batch coaching analysis for all conversations with transcripts
   app.post("/api/interactions/analyze-all-coaching", async (req, res) => {
