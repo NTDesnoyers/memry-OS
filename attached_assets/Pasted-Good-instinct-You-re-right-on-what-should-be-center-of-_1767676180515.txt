@@ -1,0 +1,174 @@
+Good instinct. You’re right on what should be center-of-gravity.
+But we need to be precise so you don’t accidentally turn this into a notes app instead of a behavior-changing system.
+
+I’m going to agree with you, then tighten it so it doesn’t break the Lean test.
+
+⸻
+
+First: You’re Right About the Core Action
+
+For the beta, the atomic behavior you are testing is:
+
+“Did the agent have a real conversation, and did Flow capture it?”
+
+That is the smallest unit of value.
+
+Not follow-ups.
+Not dashboards.
+Not analytics.
+
+So yes:
+
+✅ Flow (Conversations) should be the default landing page
+
+Because:
+	•	That’s the new behavior you’re asking them to adopt
+	•	It’s where differentiation lives
+	•	It’s what creates future leverage (AI memory, follow-ups, insights)
+
+If they don’t log conversations, everything else is fake value.
+
+⸻
+
+But Here’s the Trap (Pay Attention)
+
+If Flow = Home without structure, you get:
+	•	Long unstructured dumps
+	•	Inconsistent usage
+	•	Cognitive fatigue
+	•	“I’ll log it later”
+	•	Beta users who like the idea but don’t build habit
+
+That’s Day One CRM failure mode.
+
+So we need Flow as Home, but Flow as a guided action, not a blank page.
+
+⸻
+
+Correct Mental Model (This Matters)
+
+Think of Flow OS in beta as:
+
+A conversation capture machine with memory.
+
+NOT:
+	•	A task manager
+	•	A CRM
+	•	A dashboard
+
+The primary CTA of the product should be:
+
+“Log the conversation you just had.”
+
+Everything else exists to support or reward that action.
+
+⸻
+
+Recommended Navigation (Beta)
+
+Here’s the clean structure I’d ship:
+
+🧭 Navigation (Beta)
+	1.	Flow ← DEFAULT / HOME
+(Conversation capture)
+	2.	Today
+(Who to follow up with today — execution)
+	3.	Weekly Review
+(Reflection + prioritization)
+	4.	Contacts
+(Reference, not daily use)
+	5.	Drafts
+(AI output waiting for approval)
+
+⚠️ Revival disappears as a top-level item.
+
+⸻
+
+What Flow (Home) Should Feel Like
+
+Flow should feel like:
+
+“I just hung up. I open Flow. I dump what happened. I’m done.”
+
+Flow Page Requirements (Non-Negotiable)
+	1.	Single Primary CTA
+	•	“Log a Conversation”
+	2.	Guided Capture (FORD-first)
+	•	Family
+	•	Occupation
+	•	Recreation
+	•	Dreams
+	•	(Optional freeform)
+	3.	Person Resolution
+	•	“Who was this with?”
+	•	Smart suggestions
+	•	Fast selection
+	4.	Time Awareness
+	•	Auto-timestamped
+	•	“Counts toward this week’s goal”
+	5.	Instant Reward
+	•	“Here’s the follow-up draft”
+	•	Or “Here’s what Flow remembered last time”
+
+If Flow doesn’t feel fast + relieving, users won’t log.
+
+⸻
+
+Lean Startup Framing (This is Key)
+
+Your Beta MVP Hypothesis becomes:
+
+“If agents can capture conversations in under 60 seconds, they will do it consistently.”
+
+That’s testable.
+That’s falsifiable.
+That’s correct for Lean.
+
+Your Success Metric (Beta)
+	•	% of conversations logged within 15 minutes of ending
+	•	Average time to log
+	•	% of logs that result in a sent follow-up
+
+Not:
+	•	Number of contacts
+	•	Number of notes
+	•	Time spent in app
+
+⸻
+
+How Weekly Review Fits (Without Competing)
+
+Weekly Review is downstream.
+
+Flow feeds it.
+
+Weekly Review exists to answer:
+
+“Did you capture enough signal this week to stay in control?”
+
+If Flow is Home and Weekly Review is a ritual, they reinforce each other.
+
+⸻
+
+Final Call (Clarity)
+
+You’re right:
+	•	Flow should be the main page
+	•	Conversation capture is the beta’s wedge
+	•	This is FORD & Record, not CRM v2
+
+But:
+	•	Flow must be guided, not open-ended
+	•	Weekly Review is still required for habit + retention
+	•	Today becomes execution, not thinking
+
+⸻
+
+Next Decision (Pick One)
+
+I can:
+	1.	Design the Flow capture UX step-by-step (copy + structure)
+	2.	Define the exact beta success metrics + kill criteria
+	3.	Refine Today so it feels like “do these 3 things and you’re done”
+
+Say the number.
