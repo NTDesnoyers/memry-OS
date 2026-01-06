@@ -51,9 +51,11 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 
 const allNavItems = [
-  { name: "Today", href: "/", icon: LayoutDashboard },
-  { name: "Flow", href: "/flow", icon: Repeat },
+  { name: "Flow", href: "/", icon: Repeat },
+  { name: "Today", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Weekly Review", href: "/reviews", icon: FileText },
   { name: "Contacts", href: "/people", icon: Users },
+  { name: "Drafts", href: "/drafts", icon: FileEdit },
   { name: "Life Events", href: "/life-events", icon: Eye },
   { name: "Event Log", href: "/event-log", icon: Activity },
   { name: "Lead Inbox", href: "/leads", icon: Inbox },
@@ -61,12 +63,10 @@ const allNavItems = [
   { name: "Coaching", href: "/coaching", icon: GraduationCap },
   { name: "Business Tracker", href: "/business-tracker", icon: PieChart },
   { name: "Visual Pricing", href: "/visual-pricing", icon: TrendingUp },
-  { name: "Reviews", href: "/reviews", icon: FileText },
   { name: "Content", href: "/content", icon: Lightbulb },
   { name: "Haves & Wants", href: "/haves-wants", icon: Mail },
   { name: "Referrals", href: "/referrals", icon: Handshake },
   { name: "Calendar", href: "/calendar", icon: Calendar },
-  { name: "Drafts", href: "/drafts", icon: FileEdit },
   { name: "Flow", href: "/conversations", icon: MessageSquare }, // Beta-only: simple conversation log
 ];
 

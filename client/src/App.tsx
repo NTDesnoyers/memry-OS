@@ -51,7 +51,8 @@ function Router() {
   return (
     <ProtectedRoute>
       <Switch>
-        <Route path="/" component={Dashboard} />
+        <Route path="/" component={Flow} />
+        <Route path="/dashboard" component={Dashboard} />
         <Route path="/business-tracker" component={BusinessTracker} />
         <Route path="/phone" component={PhoneDialer} />
         <Route path="/meetings" component={Meetings} />

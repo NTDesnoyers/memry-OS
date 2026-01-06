@@ -909,6 +909,10 @@ export default function Flow() {
     type: "call",
     occurredAt: new Date().toISOString().slice(0, 16),
     summary: "",
+    fordFamily: "",
+    fordOccupation: "",
+    fordRecreation: "",
+    fordDreams: "",
   });
 
   const { data: people = [] } = useQuery<Person[]>({
@@ -1066,15 +1070,33 @@ export default function Flow() {
     });
   };
 
-  const handleLogSubmit = () => {
-    if (!logFormData.personId || !logFormData.summary) {
-      toast({ title: "Missing fields", variant: "destructive" });
+  const handleLogSubmitWithFord = () => {
+    if (!logFormData.personId) {
+      toast({ title: "Please select a contact", variant: "destructive" });
       return;
     }
+    
+    const hasFordData = logFormData.fordFamily || logFormData.fordOccupation || 
+                         logFormData.fordRecreation || logFormData.fordDreams;
+    const hasSummary = logFormData.summary.trim().length > 0;
+    
+    if (!hasFordData && !hasSummary) {
+      toast({ title: "Add notes or FORD details", description: "Tell us what you learned from this conversation", variant: "destructive" });
+      return;
+    }
+    
+    const fordSections: string[] = [];
+    if (logFormData.fordFamily) fordSections.push(`Family: ${logFormData.fordFamily}`);
+    if (logFormData.fordOccupation) fordSections.push(`Occupation: ${logFormData.fordOccupation}`);
+    if (logFormData.fordRecreation) fordSections.push(`Recreation: ${logFormData.fordRecreation}`);
+    if (logFormData.fordDreams) fordSections.push(`Dreams: ${logFormData.fordDreams}`);
+    
+    const fullSummary = [logFormData.summary, ...fordSections].filter(Boolean).join('\n\n');
+    
     createInteraction.mutate({
       type: logFormData.type,
       personId: logFormData.personId,
-      summary: logFormData.summary,
+      summary: fullSummary,
       occurredAt: logFormData.occurredAt,
     });
     setShowLogDialog(false);
@@ -1083,6 +1105,10 @@ export default function Flow() {
       type: "call",
       occurredAt: new Date().toISOString().slice(0, 16),
       summary: "",
+      fordFamily: "",
+      fordOccupation: "",
+      fordRecreation: "",
+      fordDreams: "",
     });
   };
 
@@ -1099,25 +1125,32 @@ export default function Flow() {
       <FordTrackerCompact />
       <div className="min-h-screen bg-secondary/30">
         <div className="container mx-auto px-4 py-8 max-w-5xl">
-          <header className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="text-3xl font-serif font-bold text-primary">Flow</h1>
-              <p className="text-muted-foreground">Frequency of Interactions with your network</p>
+          <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-background rounded-3xl p-8 mb-8 border border-primary/10">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div>
+                <h1 className="text-3xl font-serif font-bold text-primary mb-2">Flow</h1>
+                <p className="text-muted-foreground text-lg">Just finished a conversation? Capture it now.</p>
+                <p className="text-muted-foreground text-sm mt-1">Log what you learned and let AI draft your follow-up.</p>
+              </div>
+              <Button 
+                size="lg"
+                className="gap-3 rounded-2xl h-14 px-8 shadow-xl shadow-primary/30 font-bold text-lg bg-primary hover:bg-primary/90" 
+                onClick={() => setShowLogDialog(true)}
+                data-testid="button-log-interaction"
+              >
+                <Plus className="h-6 w-6" />
+                Log a Conversation
+              </Button>
             </div>
-            <Button 
-              className="gap-2 rounded-xl h-11 px-6 shadow-lg shadow-primary/20 font-bold" 
-              onClick={() => setShowLogDialog(true)}
-              data-testid="button-log-interaction"
-            >
-              <Plus className="h-5 w-5" />
-              Log Interaction
-            </Button>
+          </div>
+          
+          <header className="flex justify-between items-center mb-6">
+            <p className="text-sm text-muted-foreground">Your conversation history</p>
           </header>
 
-          <Dialog open={showLogDialog || showEditDialog} onOpenChange={(open) => {
+          <Dialog open={showLogDialog} onOpenChange={(open) => {
             if (!open) {
               setShowLogDialog(false);
-              setShowEditDialog(false);
             }
           }}>
             <DialogContent className="max-w-2xl p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
@@ -1126,7 +1159,7 @@ export default function Flow() {
                   <div className="flex items-center justify-between">
                     <div>
                       <DialogTitle className="text-2xl font-bold tracking-tight">
-                        {showEditDialog ? "Edit Interaction" : "Log Interaction"}
+                        Log Interaction
                       </DialogTitle>
                       <DialogDescription className="text-primary-foreground/80 font-medium">
                         Record the details of your conversation
@@ -1211,14 +1244,79 @@ export default function Flow() {
                 </div>
 
                 <div className="space-y-3">
-                  <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Conversation Summary</Label>
+                  <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Quick Notes (optional)</Label>
                   <div className="relative">
                     <MentionTextarea
                       value={logFormData.summary}
                       onChange={(v) => setLogFormData(prev => ({ ...prev, summary: v }))}
-                      placeholder="What did you talk about? Use @ to mention other people..."
-                      className="min-h-[160px] rounded-2xl border-muted-foreground/20 p-4 font-medium text-lg leading-relaxed focus:ring-primary/20"
+                      placeholder="Any quick notes about the conversation..."
+                      className="min-h-[80px] rounded-2xl border-muted-foreground/20 p-4 font-medium leading-relaxed focus:ring-primary/20"
                     />
+                  </div>
+                </div>
+
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">FORD Notes</Label>
+                    <span className="text-xs text-muted-foreground">(What did you learn about them?)</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-pink-700 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-pink-500"></span>
+                        Family
+                      </Label>
+                      <Input
+                        value={logFormData.fordFamily}
+                        onChange={(e) => setLogFormData(prev => ({ ...prev, fordFamily: e.target.value }))}
+                        placeholder="Spouse, kids, parents, pets..."
+                        className="rounded-xl border-pink-200 focus:border-pink-400"
+                        data-testid="input-ford-family"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-blue-700 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                        Occupation
+                      </Label>
+                      <Input
+                        value={logFormData.fordOccupation}
+                        onChange={(e) => setLogFormData(prev => ({ ...prev, fordOccupation: e.target.value }))}
+                        placeholder="Job, company, work updates..."
+                        className="rounded-xl border-blue-200 focus:border-blue-400"
+                        data-testid="input-ford-occupation"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-green-700 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                        Recreation
+                      </Label>
+                      <Input
+                        value={logFormData.fordRecreation}
+                        onChange={(e) => setLogFormData(prev => ({ ...prev, fordRecreation: e.target.value }))}
+                        placeholder="Hobbies, sports, travel..."
+                        className="rounded-xl border-green-200 focus:border-green-400"
+                        data-testid="input-ford-recreation"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-purple-700 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                        Dreams
+                      </Label>
+                      <Input
+                        value={logFormData.fordDreams}
+                        onChange={(e) => setLogFormData(prev => ({ ...prev, fordDreams: e.target.value }))}
+                        placeholder="Goals, aspirations, bucket list..."
+                        className="rounded-xl border-purple-200 focus:border-purple-400"
+                        data-testid="input-ford-dreams"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1226,23 +1324,20 @@ export default function Flow() {
               <DialogFooter className="p-8 bg-muted/30 border-t flex flex-col sm:flex-row gap-3">
                 <Button 
                   variant="outline" 
-                  onClick={() => {
-                    setShowLogDialog(false);
-                    setShowEditDialog(false);
-                  }}
+                  onClick={() => setShowLogDialog(false)}
                   className="rounded-xl h-12 px-8 font-bold order-2 sm:order-1"
                 >
                   Cancel
                 </Button>
                 <div className="flex gap-3 order-1 sm:order-2 flex-1 sm:flex-none">
                   <Button 
-                    onClick={handleLogSubmit}
-                    disabled={createInteraction.isPending || updateInteraction.isPending}
+                    onClick={handleLogSubmitWithFord}
+                    disabled={createInteraction.isPending}
                     className="rounded-xl h-12 px-8 font-bold flex-1 sm:flex-none shadow-lg shadow-primary/20"
                     data-testid="button-save-interaction"
                   >
-                    {(createInteraction.isPending || updateInteraction.isPending) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    {showEditDialog ? "Save Changes" : "Save Interaction"}
+                    {createInteraction.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Save & Generate Follow-up
                   </Button>
                 </div>
               </DialogFooter>

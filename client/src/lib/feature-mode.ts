@@ -76,13 +76,13 @@ export function setMode(mode: FeatureMode): void {
 // Routes allowed in beta mode
 // These are the ONLY routes accessible to beta users
 export const BETA_ALLOWED_ROUTES: string[] = [
-  '/',                    // Home/Today view with overdue contacts
+  '/',                    // Flow - conversation capture (home)
+  '/dashboard',           // Today view with overdue contacts
+  '/reviews',             // Weekly Review
   '/people',              // Contacts list
   '/people/new',          // Add new contact
   '/people/:id',          // Person profile (read interaction history, FORD notes)
   '/drafts',              // Generated follow-ups and revival drafts
-  '/revival',             // Dormant contacts + approve draft
-  '/conversations',       // Add Memory - conversation/interaction log
   '/welcome',             // Beta welcome page
 ];
 
@@ -105,20 +105,20 @@ export function isRouteAllowedInBetaMode(pathname: string): boolean {
 
 // Navigation items for beta mode
 export const BETA_NAV_ITEMS = [
-  { name: "Today", href: "/", icon: "LayoutDashboard" },
+  { name: "Flow", href: "/", icon: "Repeat" },
+  { name: "Today", href: "/dashboard", icon: "LayoutDashboard" },
+  { name: "Weekly Review", href: "/reviews", icon: "FileText" },
   { name: "Contacts", href: "/people", icon: "Users" },
   { name: "Drafts", href: "/drafts", icon: "FileEdit" },
-  { name: "Revival", href: "/revival", icon: "Sparkles" },
-  { name: "Add Memory", href: "/conversations", icon: "MessageSquare" },
 ];
 
 // Navigation items allowed in beta mode (by href)
 export const BETA_NAV_HREFS = new Set([
   '/',
+  '/dashboard',
+  '/reviews',
   '/people',
   '/drafts',
-  '/revival',
-  '/conversations',
 ]);
 
 // Profile menu items allowed in beta mode
