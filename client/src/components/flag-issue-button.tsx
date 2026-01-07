@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Flag, X, Camera, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -149,13 +150,16 @@ export function FlagIssueButton({ recentActions = [], aiConversation = [] }: Fla
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  return (
+  return createPortal(
     <>
       <Button
-        onClick={handleOpen}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleOpen();
+        }}
         size="sm"
         variant="outline"
-        className="flag-issue-button fixed bottom-4 right-4 z-[100] gap-2 shadow-lg bg-background hover:bg-muted border-orange-300 text-orange-600 hover:text-orange-700"
+        className="flag-issue-button fixed bottom-4 right-4 z-[9999] gap-2 shadow-lg bg-background hover:bg-muted border-orange-300 text-orange-600 hover:text-orange-700"
         data-testid="button-flag-issue"
       >
         <Flag className="h-4 w-4" />
@@ -270,6 +274,7 @@ export function FlagIssueButton({ recentActions = [], aiConversation = [] }: Fla
           </div>
         </DialogContent>
       </Dialog>
-    </>
+    </>,
+    document.body
   );
 }
