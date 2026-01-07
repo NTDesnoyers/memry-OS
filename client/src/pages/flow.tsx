@@ -1394,8 +1394,8 @@ export default function Flow() {
           setSelectedInteraction(null);
         }
       }}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Edit2 className="h-5 w-5" />
               {showEditDialog ? "Edit Conversation" : "Log Flow"}
@@ -1405,7 +1405,7 @@ export default function Flow() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-6 py-4">
+          <div className="space-y-6 py-4 overflow-y-auto flex-1">
             <div>
               <Label className="mb-3 block text-sm font-semibold text-foreground">Type</Label>
               <div className="grid grid-cols-4 gap-2">
@@ -1549,7 +1549,7 @@ export default function Flow() {
             </div>
           </div>
 
-          <DialogFooter className="flex-col gap-3 pt-6 border-t sm:flex-row sm:justify-between items-center">
+          <DialogFooter className="flex-col gap-3 pt-6 border-t sm:flex-row sm:justify-between items-center flex-shrink-0 bg-background">
             {showEditDialog ? (
               <Button 
                 variant="ghost" 
