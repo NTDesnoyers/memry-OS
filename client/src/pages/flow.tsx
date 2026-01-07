@@ -1159,8 +1159,8 @@ export default function Flow() {
               setShowLogDialog(false);
             }
           }}>
-            <DialogContent className="max-w-2xl p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
-              <div className="bg-primary p-8 text-primary-foreground">
+            <DialogContent className="max-w-2xl max-h-[90vh] p-0 overflow-hidden rounded-3xl border-none shadow-2xl flex flex-col">
+              <div className="bg-primary p-8 text-primary-foreground flex-shrink-0">
                 <DialogHeader>
                   <div className="flex items-center justify-between">
                     <div>
@@ -1182,7 +1182,7 @@ export default function Flow() {
                 </DialogHeader>
               </div>
 
-              <div className="p-8 space-y-8">
+              <div className="p-8 space-y-8 overflow-y-auto flex-1">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-3">
                     <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Select Contact</Label>
@@ -1327,7 +1327,7 @@ export default function Flow() {
                 </div>
               </div>
 
-              <DialogFooter className="p-8 bg-muted/30 border-t flex flex-col sm:flex-row gap-3">
+              <DialogFooter className="p-8 bg-muted/30 border-t flex flex-col sm:flex-row gap-3 flex-shrink-0">
                 <Button 
                   variant="outline" 
                   onClick={() => setShowLogDialog(false)}

@@ -735,8 +735,8 @@ export default function ConversationLog() {
       </div>
 
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
+        <DialogContent className="max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <MessageSquare className="h-5 w-5" />
               Log Conversation
@@ -746,7 +746,7 @@ export default function ConversationLog() {
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs value={inputMode} onValueChange={(v) => setInputMode(v as "text" | "voice")} className="w-full">
+          <Tabs value={inputMode} onValueChange={(v) => setInputMode(v as "text" | "voice")} className="w-full flex-1 overflow-hidden flex flex-col">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="text" className="gap-2" data-testid="tab-text-entry">
                 <FileText className="h-4 w-4" /> Text Entry
@@ -756,7 +756,7 @@ export default function ConversationLog() {
               </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="voice" className="mt-4 space-y-4">
+            <TabsContent value="voice" className="mt-4 space-y-4 overflow-y-auto flex-1">
               <div>
                 <Label className="mb-2 block">Who was this with? (optional)</Label>
                 <div className="relative">
@@ -855,7 +855,7 @@ export default function ConversationLog() {
               </p>
             </TabsContent>
             
-            <TabsContent value="text" className="mt-4 space-y-4">
+            <TabsContent value="text" className="mt-4 space-y-4 overflow-y-auto flex-1">
           <div>
             <Label className="mb-2 block">Type</Label>
             <div className="grid grid-cols-4 gap-2">
@@ -1019,33 +1019,36 @@ export default function ConversationLog() {
               />
             </div>
             
-            <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setShowAddDialog(false);
-              resetForm();
-            }}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleSubmit}
-              disabled={createInteraction.isPending || !selectedType || !selectedPerson}
-              data-testid="button-submit-conversation"
-            >
-              {createInteraction.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Check className="h-4 w-4 mr-2" />
-                  Save Conversation
-                </>
-              )}
-            </Button>
-          </DialogFooter>
             </TabsContent>
           </Tabs>
+          
+          {inputMode === "text" && (
+            <DialogFooter className="flex-shrink-0 border-t pt-4 mt-4">
+              <Button variant="outline" onClick={() => {
+                setShowAddDialog(false);
+                resetForm();
+              }}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSubmit}
+                disabled={createInteraction.isPending || !selectedType || !selectedPerson}
+                data-testid="button-submit-conversation"
+              >
+                {createInteraction.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Check className="h-4 w-4 mr-2" />
+                    Save Conversation
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
 

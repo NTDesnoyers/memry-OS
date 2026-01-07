@@ -114,8 +114,6 @@ export function FlagIssueButton({ recentActions = [], aiConversation = [] }: Fla
   };
 
   const handleSubmit = () => {
-    console.log("Submit clicked, description:", description);
-    
     if (!description.trim()) {
       toast({
         title: "Description required",
@@ -125,7 +123,6 @@ export function FlagIssueButton({ recentActions = [], aiConversation = [] }: Fla
       return;
     }
 
-    console.log("Submitting issue...");
     submitIssue.mutate({
       type: issueType,
       description: description.trim(),
@@ -158,7 +155,7 @@ export function FlagIssueButton({ recentActions = [], aiConversation = [] }: Fla
         onClick={handleOpen}
         size="sm"
         variant="outline"
-        className="flag-issue-button fixed bottom-4 right-4 z-50 gap-2 shadow-lg bg-background hover:bg-muted border-orange-300 text-orange-600 hover:text-orange-700"
+        className="flag-issue-button fixed bottom-4 right-4 z-[100] gap-2 shadow-lg bg-background hover:bg-muted border-orange-300 text-orange-600 hover:text-orange-700"
         data-testid="button-flag-issue"
       >
         <Flag className="h-4 w-4" />
