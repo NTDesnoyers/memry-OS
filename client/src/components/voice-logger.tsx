@@ -308,6 +308,15 @@ export function VoiceLogger() {
   };
 
   const clearConversation = () => {
+    // Save conversation before clearing
+    if (messages.length > 0) {
+      if (currentConversationId) {
+        updateConversation.mutate({ id: currentConversationId, messages });
+      } else {
+        const title = messages[0].content.slice(0, 50) + (messages[0].content.length > 50 ? "..." : "");
+        createConversation.mutate({ title, messages });
+      }
+    }
     setMessages([]);
     setCurrentConversationId(null);
   };
