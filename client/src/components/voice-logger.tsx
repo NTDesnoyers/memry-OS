@@ -290,10 +290,21 @@ export function VoiceLogger() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    // On desktop: Cmd/Ctrl+Enter to send, Enter for new line
+    // This is more mobile-friendly since mobile keyboards don't have easy Shift access
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       sendMessage(inputText);
     }
+  };
+
+  // Auto-resize textarea based on content
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInputText(e.target.value);
+    // Reset height to auto to properly calculate scrollHeight
+    e.target.style.height = 'auto';
+    // Set height based on content, with max limit
+    e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
   };
 
   const clearConversation = () => {
@@ -704,11 +715,11 @@ export function VoiceLogger() {
               <Textarea
                 ref={inputRef}
                 value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
+                onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
                 onPaste={handlePaste}
                 placeholder="Ask me anything... (paste images with Ctrl+V)"
-                className="min-h-[44px] max-h-32 resize-none"
+                className="min-h-[44px] max-h-[200px] resize-none overflow-y-auto"
                 rows={1}
                 disabled={isProcessing || isRecording}
               />
