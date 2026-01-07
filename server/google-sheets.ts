@@ -60,3 +60,57 @@ export async function isGoogleSheetsConnected(): Promise<boolean> {
     return false;
   }
 }
+
+// Append a row to a Google Sheet
+export async function appendToSheet(spreadsheetId: string, sheetName: string, values: string[][]): Promise<void> {
+  const sheets = await getUncachableGoogleSheetClient();
+  
+  await sheets.spreadsheets.values.append({
+    spreadsheetId,
+    range: `${sheetName}!A:Z`,
+    valueInputOption: 'USER_ENTERED',
+    insertDataOption: 'INSERT_ROWS',
+    requestBody: {
+      values,
+    },
+  });
+}
+
+// Log an issue to the Flow OS Issues Google Sheet
+export async function logIssueToSheet(issue: {
+  id: string;
+  type: string;
+  description: string;
+  userEmail?: string;
+  route?: string;
+  featureMode?: string;
+  createdAt: string;
+}): Promise<void> {
+  const spreadsheetId = process.env.ISSUES_SPREADSHEET_ID;
+  
+  if (!spreadsheetId) {
+    console.log('ISSUES_SPREADSHEET_ID not set - skipping Google Sheets logging');
+    return;
+  }
+  
+  try {
+    await appendToSheet(spreadsheetId, 'Issues', [
+      [
+        issue.createdAt,
+        issue.type,
+        issue.description,
+        issue.route || '',
+        issue.userEmail || 'Anonymous',
+        issue.featureMode || '',
+        'New', // Status
+        '', // Priority
+        '', // Notes
+        issue.id,
+      ],
+    ]);
+    console.log(`Issue ${issue.id} logged to Google Sheets`);
+  } catch (error) {
+    console.error('Failed to log issue to Google Sheets:', error);
+    // Don't throw - we don't want to fail the API call if Sheets fails
+  }
+}

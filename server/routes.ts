@@ -46,6 +46,7 @@ import path from "path";
 import fs from "fs";
 import OpenAI from "openai";
 import * as googleCalendar from "./google-calendar";
+import { logIssueToSheet } from "./google-sheets";
 import { processInteraction, extractContentTopics } from "./conversation-processor";
 import { eventBus } from "./event-bus";
 import { createLogger } from "./logger";
@@ -8055,6 +8056,18 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
       }
       
       const issue = await storage.createIssueReport(parsed.data);
+      
+      // Also log to Google Sheets for easy tracking
+      logIssueToSheet({
+        id: issue.id,
+        type: issue.type,
+        description: issue.description,
+        userEmail: issue.userEmail || undefined,
+        route: issue.context?.route,
+        featureMode: issue.context?.featureMode,
+        createdAt: issue.createdAt?.toISOString() || new Date().toISOString(),
+      });
+      
       res.status(201).json(issue);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
