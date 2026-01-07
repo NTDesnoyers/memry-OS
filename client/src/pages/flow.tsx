@@ -944,14 +944,20 @@ export default function Flow() {
 
   const updateInteraction = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
-      return apiRequest("PATCH", `/api/interactions/${id}`, updates);
+      const res = await apiRequest("PATCH", `/api/interactions/${id}`, updates);
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/interactions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/interactions-with-participants"] });
       setShowEditDialog(false);
       setSelectedInteraction(null);
-      toast({ title: "Updated" });
+      resetForm();
+      toast({ title: "Updated", description: "Conversation saved successfully." });
+    },
+    onError: (error: any) => {
+      console.error("Update failed:", error);
+      toast({ title: "Error", description: error.message || "Failed to save changes", variant: "destructive" });
     },
   });
 

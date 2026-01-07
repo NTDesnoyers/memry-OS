@@ -291,7 +291,16 @@ export default function PersonProfile() {
               </Button>
             </Link>
             <div className="flex-1">
-              <h1 className="text-3xl font-serif font-bold text-primary">{person.name}</h1>
+              {isEditing ? (
+                <Input
+                  value={formData.name || ""}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="text-3xl font-serif font-bold text-primary h-auto py-1 px-2 border-primary/30"
+                  data-testid="input-header-name"
+                />
+              ) : (
+                <h1 className="text-3xl font-serif font-bold text-primary">{person.name}</h1>
+              )}
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 {activeDeal && (
                   <div className="flex items-center gap-1">
