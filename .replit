@@ -50,3 +50,6 @@ integrations = ["javascript_database:1.0.0", "javascript_openai:1.0.0", "javascr
 
 [userenv.development]
 FOUNDER_USER_ID = "48941425"
+
+[userenv.shared]
+ISSUES_SPREADSHEET_ID = "10qTtbbUSlKhRSsr1PpE8obdcI_rJf8DwRdc_4-XIwzc"
