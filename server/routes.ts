@@ -3611,10 +3611,24 @@ Return ONLY valid JSON, no explanations.`
   // Update interaction
   app.patch("/api/interactions/:id", async (req, res) => {
     try {
-      const interaction = await storage.updateInteraction(req.params.id, req.body, getTenantContext(req));
+      const ctx = getTenantContext(req);
+      const interaction = await storage.updateInteraction(req.params.id, req.body, ctx);
       if (!interaction) {
         return res.status(404).json({ message: "Interaction not found" });
       }
+      
+      // If transcript or summary was added/updated, trigger AI processing for drafts
+      if (req.body.transcript || req.body.summary) {
+        try {
+          const { processInteraction } = await import("./conversation-processor");
+          await processInteraction(interaction.id, ctx);
+          logger.info(`Triggered AI processing for updated interaction ${interaction.id}`);
+        } catch (processingError: any) {
+          logger.error(`Failed to process interaction ${interaction.id}:`, processingError);
+          // Don't fail the request, just log the error
+        }
+      }
+      
       res.json(interaction);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
