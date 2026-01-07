@@ -1363,15 +1363,6 @@ export default function Flow() {
             </TabsList>
 
             <TabsContent value="live">
-              <div className="mb-4">
-                <Button onClick={() => openAddDialog("live")} data-testid="button-add-live-flow">
-                  <Plus className="h-4 w-4 mr-2" /> Log Flow
-                </Button>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Calls, meetings, face-to-face conversations
-                </p>
-              </div>
-              
               {isLoading ? (
                 <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div>
               ) : (
