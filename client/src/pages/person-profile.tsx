@@ -926,6 +926,16 @@ export default function PersonProfile() {
                                   )}
                                 </div>
                                 {interaction.summary && <p className="text-sm text-muted-foreground mt-1">{interaction.summary}</p>}
+                                {interaction.transcript && (
+                                  <details className="mt-2">
+                                    <summary className="cursor-pointer text-xs text-primary hover:underline">
+                                      View transcript ({interaction.transcript.split('\n').length} lines)
+                                    </summary>
+                                    <pre className="mt-2 p-3 bg-white border rounded-lg text-xs font-mono whitespace-pre-wrap max-h-[200px] overflow-y-auto">
+                                      {interaction.transcript}
+                                    </pre>
+                                  </details>
+                                )}
                                 <p className="text-xs text-muted-foreground mt-1">{formatDateTime(interaction.occurredAt)}</p>
                               </div>
                             </div>

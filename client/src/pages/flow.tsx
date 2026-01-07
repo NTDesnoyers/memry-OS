@@ -314,6 +314,26 @@ function InteractionDetailSheet({
         </div>
       )}
       
+      {interaction.transcript && (
+        <details className="group">
+          <summary className="cursor-pointer list-none">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors p-3 bg-muted/30 rounded-xl">
+              <FileText className="h-4 w-4" />
+              <span>View Full Transcript</span>
+              <span className="ml-auto text-xs bg-muted px-2 py-0.5 rounded-full">
+                {interaction.transcript.split('\n').length} lines
+              </span>
+            </div>
+          </summary>
+          <div className="mt-3 bg-white border shadow-sm p-6 rounded-2xl max-h-[400px] overflow-y-auto">
+            <h4 className="text-xs font-bold text-muted-foreground mb-3 uppercase tracking-widest">Full Transcript</h4>
+            <pre className="text-sm leading-relaxed whitespace-pre-wrap text-foreground font-mono">
+              {interaction.transcript}
+            </pre>
+          </div>
+        </details>
+      )}
+      
       {person && (
         <Link href={`/people/${person.id}`}>
           <div className="flex items-center gap-4 p-4 bg-primary/5 hover:bg-primary/10 border border-primary/10 rounded-2xl transition-all cursor-pointer group" data-testid="link-person-profile">
