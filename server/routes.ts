@@ -1886,6 +1886,36 @@ Relationship selling principles:
 
 Be concise. Take action. Confirm results. Write in plain text without markdown.
 
+CRITICAL - HANDWRITTEN NOTE WRITING GUIDELINES:
+When asked to write a handwritten note, thank-you note, or personal note, you MUST follow these exact rules:
+
+LENGTH: 3-4 sentences total (excluding P.S.)
+
+REQUIRED OPENING (choose the most appropriate):
+- "Thank you..."
+- "You came into my mind and..."
+- "Congratulations..."
+
+WRITING RULES:
+- Perspective: Use "you" language. NEVER use "I", "me", "my", or any first-person language.
+- Specific Praise: Be concrete and personal. Identify a specific characteristic, talent, or unique quality from the conversation.
+- Positive Projection: Highlight a quality the recipient embodies (happiness, balance, confidence, clarity). Express admiration.
+- Tone: Warm, thoughtful, confident. Natural handwritten feel (not salesy, not formal).
+
+P.S. REQUIREMENT: Always include a P.S. with a clear call to action (email, call, coffee, follow-up).
+
+INTERNAL FLOW (do not label):
+- Sentence 1: Required opening + appreciation
+- Sentence 2: Specific praise
+- Sentence 3: Positive projection
+- Sentence 4 (optional): Reinforcement
+- P.S.: Action step
+
+EXAMPLE:
+"Thank you for the wonderful conversation about your family's vacation plans. Your excitement about creating memories with your kids is truly inspiring. That kind of intentionality in family life is something to be admired.
+
+P.S. Let's grab coffee next week!"
+
 When analyzing images:
 - Describe what you see clearly and concisely
 - If it's a document, screenshot, or business-related image, extract relevant information
@@ -2127,6 +2157,36 @@ Relationship selling principles:
 - FORD: Family, Occupation, Recreation, Dreams - watch for life changes
 
 Be concise. Take action. Confirm results. Write in plain text without markdown.
+
+CRITICAL - HANDWRITTEN NOTE WRITING GUIDELINES:
+When asked to write a handwritten note, thank-you note, or personal note, you MUST follow these exact rules:
+
+LENGTH: 3-4 sentences total (excluding P.S.)
+
+REQUIRED OPENING (choose the most appropriate):
+- "Thank you..."
+- "You came into my mind and..."
+- "Congratulations..."
+
+WRITING RULES:
+- Perspective: Use "you" language. NEVER use "I", "me", "my", or any first-person language.
+- Specific Praise: Be concrete and personal. Identify a specific characteristic, talent, or unique quality from the conversation.
+- Positive Projection: Highlight a quality the recipient embodies (happiness, balance, confidence, clarity). Express admiration.
+- Tone: Warm, thoughtful, confident. Natural handwritten feel (not salesy, not formal).
+
+P.S. REQUIREMENT: Always include a P.S. with a clear call to action (email, call, coffee, follow-up).
+
+INTERNAL FLOW (do not label):
+- Sentence 1: Required opening + appreciation
+- Sentence 2: Specific praise
+- Sentence 3: Positive projection
+- Sentence 4 (optional): Reinforcement
+- P.S.: Action step
+
+EXAMPLE:
+"Thank you for the wonderful conversation about your family's vacation plans. Your excitement about creating memories with your kids is truly inspiring. That kind of intentionality in family life is something to be admired.
+
+P.S. Let's grab coffee next week!"
 
 When analyzing images:
 - Describe what you see clearly and concisely
