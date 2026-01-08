@@ -1207,13 +1207,14 @@ Respond with valid JSON only, no other text.`;
       type: "function",
       function: {
         name: "log_interaction",
-        description: "Log a conversation, call, meeting, or other interaction with a person",
+        description: "Log a conversation, call, meeting, or other interaction with a person. IMPORTANT: Always include the full transcript when available - this enables AI draft generation.",
         parameters: {
           type: "object",
           properties: {
             personId: { type: "string", description: "The ID of the person interacted with" },
             type: { type: "string", enum: ["call", "meeting", "email", "text", "in_person", "social"], description: "Type of interaction" },
-            summary: { type: "string", description: "Summary of what was discussed" },
+            summary: { type: "string", description: "Brief summary of what was discussed (2-3 sentences)" },
+            transcript: { type: "string", description: "IMPORTANT: Include the full conversation transcript when provided by the user - this enables AI-powered follow-up draft generation" },
             fordUpdates: { type: "string", description: "Any FORD updates learned during this interaction" }
           },
           required: ["personId", "type", "summary"]
@@ -1463,6 +1464,7 @@ Respond with valid JSON only, no other text.`;
             personId: args.personId,
             type: args.type,
             summary: args.summary,
+            transcript: args.transcript || null,
             occurredAt: new Date()
           }, ctx);
           // Also update last contact date
@@ -1758,13 +1760,16 @@ CRITICAL - WHEN USER DESCRIBES A CONVERSATION:
 When the user describes talking to someone (call, meeting, text, email, in-person), you MUST:
 1. Search for the person (or create them if not found)
 2. Use log_interaction to CREATE AN INTERACTION RECORD - this is required so it shows up in Flow/timeline
+   - ALWAYS include the 'transcript' parameter with the FULL conversation text when the user provides it
+   - This enables AI-powered follow-up drafts (emails, handwritten notes, tasks) to be auto-generated
+   - Even for long transcripts, include the complete text - the AI uses it to generate personalized content
 3. Use update_person to update FORD fields with any new personal info learned:
    - fordFamily: family members, kids, pets, spouse details
    - fordRecreation: hobbies, interests, sports, pets, vacation plans
    - fordOccupation: job, career changes, work updates
    - fordDreams: goals, aspirations, life plans
 4. If it's a buyer/seller consultation, ALSO mark them as Hot: pipelineStatus = 'hot'
-5. Confirm what you logged
+5. Confirm what you logged and mention if AI drafts were generated
 
 CRITICAL - MULTI-PERSON MEETUP/EVENT DEBRIEFS:
 When the user submits a transcript or summary from a networking event, meetup, or conference where they met MULTIPLE people:
@@ -1772,12 +1777,13 @@ When the user submits a transcript or summary from a networking event, meetup, o
 2. For EACH person mentioned:
    a. Search for them (or create if not found)
    b. Use log_interaction to log a SEPARATE interaction for that specific person
-   c. Include ONLY the conversation details relevant to that person in the summary
-   d. Update their FORD notes with any personal info learned
-3. This ensures each contact has their own interaction record and receives personalized AI follow-up drafts
-4. After processing all people, confirm how many interactions were logged
+   c. Include the transcript excerpts relevant to that person in the 'transcript' field
+   d. Include a summary in the 'summary' field
+   e. Update their FORD notes with any personal info learned
+3. Including the transcript enables AI-powered follow-up drafts (emails, notes, tasks) for each person
+4. After processing all people, confirm how many interactions were logged and how many drafts were generated
 
-Example: If user says "I met Matt, Shannon, and Casey at the investor meetup" - you should log 3 separate interactions, one for each person.
+Example: If user says "I met Matt, Shannon, and Casey at the investor meetup" - you should log 3 separate interactions, each with their own transcript excerpts.
 
 HOT/WARM PIPELINE:
 - Hot = active buyer/seller within 90 days to transaction (consultations, active showings)
