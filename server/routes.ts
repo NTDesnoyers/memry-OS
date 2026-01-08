@@ -643,12 +643,40 @@ export async function registerRoutes(
       // Process the interaction asynchronously (FORD extraction, draft generation)
       const { processInteraction } = await import("./conversation-processor");
       const processResult = await processInteraction(interaction.id, ctx);
+      let draftsCreated = processResult.draftsCreated || 0;
+      
+      logger.info(`Voice memory: AI processing for interaction ${interaction.id}: ${draftsCreated} drafts`);
+      
+      // Always create a fallback draft if person exists but no AI drafts were generated
+      if (personId && draftsCreated === 0) {
+        try {
+          const person = await storage.getPerson(personId, ctx);
+          if (person) {
+            const firstName = person.name?.split(' ')[0] || 'there';
+            const draftContent = `Hi ${firstName},\n\nGreat connecting! ${transcript.slice(0, 200)}\n\nLooking forward to staying in touch.\n\nBest regards`;
+            
+            await storage.createGeneratedDraft({
+              personId,
+              interactionId: interaction.id,
+              type: 'email',
+              title: `Follow-up with ${person.name}`,
+              content: draftContent,
+              status: 'pending',
+              metadata: { source: 'voice_memory_fallback' }
+            }, ctx);
+            draftsCreated = 1;
+            logger.info(`Voice memory: Created fallback draft for ${person.name}`);
+          }
+        } catch (draftError) {
+          logger.warn('Voice memory: Draft creation skipped:', draftError);
+        }
+      }
       
       res.json({
         success: true,
         interactionId: interaction.id,
         processed: processResult.success,
-        draftsCreated: processResult.draftsCreated || 0,
+        draftsCreated,
       });
     } catch (error: any) {
       console.error("Voice memory creation error:", error);
@@ -782,6 +810,44 @@ IMPORTANT: Infer the interaction type from context clues. If they say "left a vo
         }, ctx);
       }
 
+      // Process interaction and generate drafts if we have a person
+      let draftsCreated = 0;
+      if (validatedPersonId && transcript.length >= 50) {
+        try {
+          const { processInteraction } = await import("./conversation-processor");
+          const result = await processInteraction(interaction.id, ctx);
+          draftsCreated = result.draftsCreated || 0;
+          logger.info(`Quick log: AI processing completed for ${parsed.personName}: ${draftsCreated} drafts`);
+        } catch (err) {
+          logger.warn('Quick log: AI processing failed:', err);
+        }
+      }
+      
+      // Always create a fallback draft if person exists but no AI drafts were generated
+      if (validatedPersonId && draftsCreated === 0) {
+        try {
+          const person = await storage.getPerson(validatedPersonId, ctx);
+          if (person) {
+            const firstName = person.name?.split(' ')[0] || 'there';
+            const draftContent = `Hi ${firstName},\n\nGreat talking with you! ${parsed.summary || ''}\n\nLooking forward to staying in touch.\n\nBest regards`;
+            
+            await storage.createGeneratedDraft({
+              personId: validatedPersonId,
+              interactionId: interaction.id,
+              type: 'email',
+              title: `Follow-up with ${person.name}`,
+              content: draftContent,
+              status: 'pending',
+              metadata: { source: 'quick_voice_fallback', interactionType: detectedType }
+            }, ctx);
+            draftsCreated = 1;
+            logger.info(`Quick log: Created fallback draft for ${person.name}`);
+          }
+        } catch (draftError) {
+          logger.warn('Quick log: Draft creation skipped:', draftError);
+        }
+      }
+
       res.json({
         success: true,
         interactionId: interaction.id,
@@ -792,6 +858,7 @@ IMPORTANT: Infer the interaction type from context clues. If they say "left a vo
         isNewContact: !validatedPersonId && parsed.personName,
         fordNotes: parsed.fordNotes,
         followUpCreated: parsed.followUpNeeded && parsed.suggestedFollowUp,
+        draftsCreated,
       });
     } catch (error: any) {
       console.error("Quick voice log error:", error);
