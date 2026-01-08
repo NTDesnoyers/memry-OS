@@ -159,7 +159,7 @@ export function FlagIssueButton({ recentActions = [], aiConversation = [] }: Fla
         }}
         size="sm"
         variant="outline"
-        className="flag-issue-button fixed bottom-4 right-4 z-[9999] gap-2 shadow-lg bg-background hover:bg-muted border-orange-300 text-orange-600 hover:text-orange-700"
+        className="flag-issue-button fixed bottom-24 right-4 z-[9999] gap-2 shadow-lg bg-background hover:bg-muted border-orange-300 text-orange-600 hover:text-orange-700"
         data-testid="button-flag-issue"
       >
         <Flag className="h-4 w-4" />

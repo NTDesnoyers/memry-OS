@@ -397,7 +397,7 @@ export function VoiceLogger() {
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className={cn(
-          "h-[600px] flex p-0 gap-0 transition-all duration-300",
+          "h-[85vh] sm:h-[600px] max-h-[85vh] flex flex-col p-0 gap-0 transition-all duration-300",
           showHistory ? "sm:max-w-3xl" : "sm:max-w-lg"
         )}>
           {/* History Sidebar */}
