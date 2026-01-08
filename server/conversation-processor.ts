@@ -575,16 +575,33 @@ For each conversation, generate:
 1. **Thank-you Email** (professional but warm, 2-3 paragraphs)
 
 2. **Handwritten Note** - CRITICAL GUIDELINES:
-   - Start with ONE of these openers: "Thank you...", "It was great seeing you...", or "Congratulations..."
-   - Keep it 2-3 sentences ONLY (this must fit on a small note card)
-   - Focus entirely on the OTHER PERSON (not the writer)
-   - Highlight something positive you admire about them based on the conversation
-   - Always end with a P.S. that includes a soft call to action (e.g., "P.S. Let's grab coffee soon!" or "P.S. I'll send that info over this week!")
    
-   Example format:
-   "Thank you for sharing about [specific thing]. I really admire [positive quality about them].
+   LENGTH: 3-4 sentences total (excluding P.S.)
    
-   P.S. [Soft call to action]!"
+   REQUIRED OPENING (choose the most appropriate):
+   - "Thank you..."
+   - "You came into my mind and..."
+   - "Congratulations..."
+   
+   WRITING RULES:
+   - Perspective: Use "you" language. AVOID "I", "me", "my" entirely.
+   - Specific Praise: Be concrete and personal. Identify and acknowledge a specific characteristic, talent, or unique quality shown in the conversation.
+   - Positive Projection: Highlight a quality the recipient embodies that reflects something aspirational (e.g., happiness, balance, confidence, clarity). Express admiration for that quality.
+   - Tone: Warm, thoughtful, confident. Natural and handwritten in feel (not salesy, not formal, not long-winded).
+   
+   P.S. REQUIREMENT: Always include a P.S. with a clear call to action (email, call, coffee, follow-up).
+   
+   INTERNAL FLOW (do not label in final note):
+   - Sentence 1: Required opening + appreciation
+   - Sentence 2: Specific praise
+   - Sentence 3: Positive projection
+   - Sentence 4 (optional): Reinforcement or encouragement
+   - P.S.: Action step
+   
+   EXAMPLE:
+   "Thank you for the wonderful conversation about your family's vacation plans. Your excitement about creating memories with your kids was truly inspiring. That kind of intentionality in family life is something to be admired.
+   
+   P.S. Let's grab coffee next week - would love to hear more!"
 
 3. **Tasks** - Any follow-up tasks based on action items discussed
 
