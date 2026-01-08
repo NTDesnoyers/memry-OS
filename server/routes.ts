@@ -4623,14 +4623,15 @@ Return ONLY valid JSON, no explanations.`
   app.get("/api/generated-drafts", async (req, res) => {
     try {
       const { status, personId } = req.query;
+      const ctx = getTenantContext(req);
       
       let drafts;
       if (personId) {
-        drafts = await storage.getGeneratedDraftsByPerson(personId as string);
+        drafts = await storage.getGeneratedDraftsByPerson(personId as string, ctx);
       } else if (status) {
-        drafts = await storage.getGeneratedDraftsByStatus(status as string);
+        drafts = await storage.getGeneratedDraftsByStatus(status as string, ctx);
       } else {
-        drafts = await storage.getAllGeneratedDrafts();
+        drafts = await storage.getAllGeneratedDrafts(ctx);
       }
       
       res.json(drafts);
@@ -4642,7 +4643,8 @@ Return ONLY valid JSON, no explanations.`
   // Get drafts for a specific person
   app.get("/api/people/:id/drafts", async (req, res) => {
     try {
-      const drafts = await storage.getGeneratedDraftsByPerson(req.params.id);
+      const ctx = getTenantContext(req);
+      const drafts = await storage.getGeneratedDraftsByPerson(req.params.id, ctx);
       res.json(drafts);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -4652,7 +4654,8 @@ Return ONLY valid JSON, no explanations.`
   // Update draft status
   app.patch("/api/generated-drafts/:id", async (req, res) => {
     try {
-      const draft = await storage.updateGeneratedDraft(req.params.id, req.body);
+      const ctx = getTenantContext(req);
+      const draft = await storage.updateGeneratedDraft(req.params.id, req.body, ctx);
       if (!draft) {
         return res.status(404).json({ message: "Draft not found" });
       }
@@ -4665,7 +4668,8 @@ Return ONLY valid JSON, no explanations.`
   // Delete draft
   app.delete("/api/generated-drafts/:id", async (req, res) => {
     try {
-      await storage.deleteGeneratedDraft(req.params.id);
+      const ctx = getTenantContext(req);
+      await storage.deleteGeneratedDraft(req.params.id, ctx);
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ message: error.message });
