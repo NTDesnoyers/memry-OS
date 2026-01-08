@@ -55,22 +55,71 @@ export function isBetaMode(userEmail?: string | null): boolean {
   return getCurrentMode(userEmail) === 'beta';
 }
 
-export function toggleMode(): FeatureMode {
+export async function toggleMode(): Promise<FeatureMode> {
   const newMode = isFounderMode() ? 'beta' : 'founder';
+  
+  // Update localStorage for immediate UI response
   if (newMode === 'founder') {
     localStorage.setItem('flow_founder_mode', 'true');
   } else {
     localStorage.removeItem('flow_founder_mode');
   }
+  
+  // Sync with server so backend knows the mode
+  try {
+    await fetch('/api/feature-mode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: newMode }),
+      credentials: 'include'
+    });
+  } catch (error) {
+    console.warn('Failed to sync feature mode with server:', error);
+  }
+  
   return newMode;
 }
 
-export function setMode(mode: FeatureMode): void {
+export async function setMode(mode: FeatureMode): Promise<void> {
   if (mode === 'founder') {
     localStorage.setItem('flow_founder_mode', 'true');
   } else {
     localStorage.removeItem('flow_founder_mode');
   }
+  
+  // Sync with server
+  try {
+    await fetch('/api/feature-mode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode }),
+      credentials: 'include'
+    });
+  } catch (error) {
+    console.warn('Failed to sync feature mode with server:', error);
+  }
+}
+
+// Sync mode from server on app load (for founder to restore their preference)
+export async function syncModeFromServer(): Promise<FeatureMode | null> {
+  try {
+    const response = await fetch('/api/feature-mode', {
+      credentials: 'include'
+    });
+    if (response.ok) {
+      const data = await response.json();
+      // Update localStorage to match server
+      if (data.mode === 'founder') {
+        localStorage.setItem('flow_founder_mode', 'true');
+      } else {
+        localStorage.removeItem('flow_founder_mode');
+      }
+      return data.mode;
+    }
+  } catch (error) {
+    console.warn('Failed to fetch feature mode from server:', error);
+  }
+  return null;
 }
 
 // Routes allowed in beta mode

@@ -551,7 +551,8 @@ export async function getVoiceContext(): Promise<string> {
 export async function generateFollowUpDrafts(
   interaction: Interaction,
   person: Person,
-  extractedData: AIExtractedData
+  extractedData: AIExtractedData,
+  ctx?: TenantContext
 ): Promise<InsertGeneratedDraft[]> {
   const drafts: InsertGeneratedDraft[] = [];
   
@@ -579,10 +580,16 @@ Date: ${new Date(interaction.occurredAt).toLocaleDateString()}
 Key Topics: ${extractedData.keyTopics?.join(", ") || "General conversation"}
 Action Items Discussed: ${extractedData.actionItems?.join(", ") || "None specific"}
 
+IMPORTANT CONTEXT FOR HANDWRITTEN NOTE DECISION:
+- Interaction type is "${interaction.type}" 
+- ${interaction.type === 'voicemail' ? 'This was a VOICEMAIL - do NOT generate handwritten note unless explicitly requested in the transcript' : ''}
+- ${interaction.type === 'meeting' || interaction.type === 'in_person' ? 'This was an IN-PERSON meeting - a handwritten note IS appropriate' : ''}
+- ${interaction.type === 'call' || interaction.type === 'phone' ? 'This was a phone call - only generate handwritten note if life events mentioned or explicitly requested' : ''}
+
 Conversation Summary/Transcript:
 ${transcript.slice(0, 8000)}
 
-Generate follow-up content for this interaction.`
+Generate follow-up content for this interaction. Remember to scan for third-party mentions who need separate actions.`
         }
       ],
       response_format: { type: "json_object" },
@@ -606,7 +613,37 @@ Generate follow-up content for this interaction.`
       });
     }
 
-    if (generated.handwrittenNote) {
+    // Server-side validation: Only create handwritten note if trigger rules are met
+    // STRICT: Voicemails NEVER get notes unless explicitly_request reason is returned
+    // STRICT: Must have a valid reason - don't generate notes with null/missing reason
+    const isVoicemail = interaction.type === 'voicemail' || 
+      (interaction.summary?.toLowerCase().includes('left a voicemail') ?? false) ||
+      (interaction.summary?.toLowerCase().includes('left voicemail') ?? false) ||
+      (interaction.transcript?.toLowerCase().includes('left a voicemail') ?? false);
+    
+    const hasNote = generated.handwrittenNote && 
+      generated.handwrittenNote !== null && 
+      typeof generated.handwrittenNote === 'string' &&
+      generated.handwrittenNote.trim().length > 0;
+    
+    const hasValidReason = generated.handwrittenNoteReason === 'in_person_meeting' ||
+      generated.handwrittenNoteReason === 'life_event' ||
+      generated.handwrittenNoteReason === 'explicit_request';
+    
+    // For voicemails: ONLY allow if reason is explicit_request
+    // For other types: allow if there's a valid reason OR interaction is in-person type
+    const isInPersonType = interaction.type === 'meeting' || 
+      interaction.type === 'in_person' || 
+      interaction.type === 'coffee' ||
+      interaction.type === 'lunch' ||
+      interaction.type === 'dinner';
+    
+    const shouldCreateNote = hasNote && (
+      (isVoicemail && generated.handwrittenNoteReason === 'explicit_request') ||
+      (!isVoicemail && (hasValidReason || isInPersonType))
+    );
+    
+    if (shouldCreateNote) {
       drafts.push({
         personId: person.id,
         interactionId: interaction.id,
@@ -614,7 +651,9 @@ Generate follow-up content for this interaction.`
         title: `Note for ${person.name}`,
         content: generated.handwrittenNote,
         status: "pending",
-        metadata: {},
+        metadata: { 
+          reason: generated.handwrittenNoteReason || (isInPersonType ? "in_person_meeting" : "unspecified")
+        },
       });
     }
 
@@ -629,6 +668,100 @@ Generate follow-up content for this interaction.`
           status: "pending",
           metadata: { priority: task.priority || "medium" },
         });
+      }
+    }
+
+    // Process third-party actions - people mentioned in conversation who need follow-up
+    // Try to find the actual person record so drafts are properly linked
+    // If not found, create a new contact for them
+    if (generated.thirdPartyActions && Array.isArray(generated.thirdPartyActions)) {
+      for (const action of generated.thirdPartyActions) {
+        if (!action.personName || !action.actionType) continue;
+        
+        // Try to find this person in the database by name (with proper tenant context)
+        let thirdPartyPerson: Person | null = null;
+        let wasCreated = false;
+        try {
+          const allPeople = await storage.getAllPeople(ctx);
+          const nameLower = action.personName.toLowerCase().trim();
+          
+          // First try exact match
+          thirdPartyPerson = allPeople.find(p => 
+            p.name.toLowerCase().trim() === nameLower
+          ) || null;
+          
+          // If no exact match, try partial match on first name or last name
+          if (!thirdPartyPerson) {
+            const nameParts = nameLower.split(/\s+/);
+            thirdPartyPerson = allPeople.find(p => {
+              const personParts = p.name.toLowerCase().trim().split(/\s+/);
+              // Match if first name matches or last name matches
+              return nameParts.some((part: string) => personParts.includes(part) && part.length > 2);
+            }) || null;
+          }
+          
+          if (thirdPartyPerson) {
+            console.log(`[ThirdParty] Found match for "${action.personName}": ${thirdPartyPerson.name} (${thirdPartyPerson.id})`);
+          } else {
+            // Create a new contact for this third party
+            console.log(`[ThirdParty] Creating new contact for "${action.personName}"`);
+            thirdPartyPerson = await storage.createPerson({
+              name: action.personName,
+              segment: 'D', // New contact default
+              notes: `Auto-created from conversation mention. Source: ${person.name} on ${new Date().toLocaleDateString()}`
+            }, ctx);
+            wasCreated = true;
+            console.log(`[ThirdParty] Created contact for "${action.personName}": ${thirdPartyPerson.id}`);
+          }
+        } catch (e) {
+          console.warn(`Could not search/create third-party person ${action.personName}:`, e);
+        }
+        
+        // Use the third party's ID - they should always exist now (found or created)
+        const targetPersonId = thirdPartyPerson?.id || person.id;
+        const targetPersonName = thirdPartyPerson?.name || action.personName;
+        const isLinkedToActualPerson = !!thirdPartyPerson;
+        
+        if (action.actionType === "handwritten_note") {
+          drafts.push({
+            personId: targetPersonId,
+            interactionId: interaction.id,
+            type: "handwritten_note",
+            title: isLinkedToActualPerson 
+              ? `Note for ${targetPersonName}` 
+              : `[ACTION NEEDED] Note for ${action.personName}`,
+            content: action.content || `Write a note to ${action.personName}`,
+            status: "pending",
+            metadata: { 
+              thirdParty: true,
+              thirdPartyName: action.personName,
+              thirdPartyResolved: isLinkedToActualPerson,
+              reason: action.reason || "mentioned_in_conversation",
+              sourceInteractionPerson: person.name,
+              needsManualLinking: !isLinkedToActualPerson
+            },
+          });
+        } else if (action.actionType === "task" || action.actionType === "call" || action.actionType === "email") {
+          drafts.push({
+            personId: targetPersonId,
+            interactionId: interaction.id,
+            type: "task",
+            title: isLinkedToActualPerson
+              ? (action.content || `${action.actionType}: ${targetPersonName}`)
+              : `[ACTION NEEDED] ${action.actionType}: ${action.personName}`,
+            content: action.content || `Follow up with ${action.personName}: ${action.reason}`,
+            status: "pending",
+            metadata: { 
+              priority: "medium",
+              thirdParty: true,
+              thirdPartyName: action.personName,
+              thirdPartyResolved: isLinkedToActualPerson,
+              actionType: action.actionType,
+              sourceInteractionPerson: person.name,
+              needsManualLinking: !isLinkedToActualPerson
+            },
+          });
+        }
       }
     }
 
@@ -767,7 +900,7 @@ export async function processInteraction(interactionId: string, ctx?: TenantCont
         await storage.updatePerson(person.id, personUpdates, ctx);
       }
 
-      const drafts = await generateFollowUpDrafts(interaction, person, extractedData);
+      const drafts = await generateFollowUpDrafts(interaction, person, extractedData, ctx);
       for (const draft of drafts) {
         await storage.createGeneratedDraft(draft, ctx);
       }

@@ -55,6 +55,7 @@ import { verifySavedContent, verifySummary, verifyTags, type VerifierContext } f
 import type { SavedContent, InsertAiUsageLog } from "@shared/schema";
 import * as metaInstagram from "./meta-instagram";
 import { buildAssistantSystemPrompt } from "./prompts";
+import { getFeatureMode, setFeatureMode, isFounderEmail, type FeatureMode } from "./feature-mode";
 
 const logger = createLogger('Routes');
 
@@ -536,6 +537,42 @@ export async function registerRoutes(
   // Serve uploaded files statically
   const express = await import("express");
   app.use("/uploads", express.default.static(uploadDir));
+
+  // ==================== FEATURE MODE ROUTES ====================
+  
+  // Get current feature mode
+  app.get("/api/feature-mode", (req, res) => {
+    const userEmail = (req.user as any)?.claims?.email;
+    const mode = getFeatureMode(req);
+    const canToggle = isFounderEmail(userEmail);
+    
+    res.json({
+      mode,
+      canToggle,
+      isFounder: canToggle
+    });
+  });
+  
+  // Set feature mode (founder only)
+  app.post("/api/feature-mode", (req, res) => {
+    const userEmail = (req.user as any)?.claims?.email;
+    
+    if (!isFounderEmail(userEmail)) {
+      return res.status(403).json({ message: "Only founder can toggle feature mode" });
+    }
+    
+    const { mode } = req.body;
+    if (mode !== 'founder' && mode !== 'beta') {
+      return res.status(400).json({ message: "Mode must be 'founder' or 'beta'" });
+    }
+    
+    setFeatureMode(req, mode as FeatureMode);
+    
+    res.json({
+      mode: getFeatureMode(req),
+      message: `Feature mode set to ${mode}`
+    });
+  });
 
   // ==================== FILE UPLOAD ROUTES ====================
   

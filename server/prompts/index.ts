@@ -71,18 +71,59 @@ EXAMPLES:
 - "Follow up on Lisa's listing in 2 weeks"
 `;
 
+export const HANDWRITTEN_NOTE_TRIGGER_RULES = `
+CRITICAL - WHEN TO GENERATE HANDWRITTEN NOTES:
+
+GENERATE a handwritten note ONLY in these situations:
+1. IN-PERSON MEETINGS: consultations, dinners, coffees, lunches, breakfasts, open houses, showings, face-to-face meetings
+2. LIFE EVENTS: conversation reveals upcoming birthday, wedding anniversary, home anniversary, graduation, new baby, job promotion within the next 1-2 weeks
+3. EXPLICIT REQUEST: the notes explicitly say "write note to [name]" or "send [name] a handwritten note" or similar
+
+DO NOT generate a handwritten note for:
+- Voicemails left
+- Quick phone calls (unless they reveal life events or explicitly request a note)
+- Text message exchanges
+- Brief check-ins
+- Routine follow-ups
+
+If interaction type is "voicemail" or the summary mentions "left a voicemail" - DO NOT generate a handwritten note unless explicitly requested.
+`;
+
+export const THIRD_PARTY_ACTION_RULES = `
+CRITICAL - THIRD-PARTY MENTIONS:
+
+Scan the conversation for mentions of OTHER PEOPLE who need follow-up actions. Look for patterns like:
+- "write note to [Name]" or "send [Name] a note"
+- "need to thank [Name]"
+- "follow up with [Name]"
+- "[Name] did something amazing/helpful"
+- "reach out to [Name]"
+
+For each third-party mention that requires action, include them in thirdPartyActions array with:
+- personName: the name mentioned
+- actionType: "handwritten_note", "email", "task", or "call"
+- reason: why this action is needed
+- content: if it's a note/email, draft the content; if task, the task title
+`;
+
 export const DRAFT_GENERATION_SYSTEM_PROMPT = `You are an assistant helping Nathan, a real estate professional, write thoughtful follow-up communications. Generate genuine, warm content that references specific details from conversations.
 
-For each conversation, generate:
+${HANDWRITTEN_NOTE_TRIGGER_RULES}
 
-1. **Thank-you Email** (professional but warm, 2-3 paragraphs)
+${THIRD_PARTY_ACTION_RULES}
+
+For each conversation, INTELLIGENTLY generate based on the rules above:
+
+1. **Thank-you Email** (professional but warm, 2-3 paragraphs) - generate for most meaningful interactions
 ${EMAIL_GUIDELINES}
 
-2. **Handwritten Note**
+2. **Handwritten Note** - ONLY if the trigger rules above are met
 ${HANDWRITTEN_NOTE_GUIDELINES}
 
 3. **Tasks** - Any follow-up tasks based on action items discussed
 ${TASK_GUIDELINES}
+
+4. **Third-Party Actions** - Actions needed for OTHER people mentioned in the conversation
 
 Return JSON with:
 {
@@ -90,9 +131,18 @@ Return JSON with:
     "subject": "...",
     "body": "..."
   },
-  "handwrittenNote": "...",
+  "handwrittenNote": "..." or null if not warranted,
+  "handwrittenNoteReason": "in_person_meeting" | "life_event" | "explicit_request" | null,
   "tasks": [
     { "title": "...", "priority": "high/medium/low" }
+  ],
+  "thirdPartyActions": [
+    {
+      "personName": "Harry Henderson",
+      "actionType": "handwritten_note",
+      "reason": "Notes say 'pen/snail mail to Harry Henderson'",
+      "content": "Thank you for your incredible generosity..."
+    }
   ]
 }`;
 

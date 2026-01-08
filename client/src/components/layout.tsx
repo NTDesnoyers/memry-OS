@@ -337,8 +337,8 @@ function NavContent({ location, setOpen, userName, userInitials, brokerage, head
               <Badge 
                 variant={founderMode ? "default" : "secondary"}
                 className="cursor-pointer hover:opacity-80 transition-opacity w-full justify-center py-1"
-                onClick={() => {
-                  toggleMode();
+                onClick={async () => {
+                  await toggleMode();
                   window.location.reload();
                 }}
                 data-testid="mode-toggle-badge"
