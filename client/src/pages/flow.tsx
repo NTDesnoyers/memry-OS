@@ -1,7 +1,6 @@
 import Layout from "@/components/layout";
 import { FordTrackerCompact } from "@/components/ford-tracker";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Phone, Mail, Sparkles, Video, MessageCircle, Send, Users } from "lucide-react";
+import { Phone, Mail, Video, MessageCircle, Send, Users } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 
@@ -115,19 +114,6 @@ function AIInsightsSection({ data }: { data: unknown }) {
     </div>
   );
 }
-
-type GeneratedDraft = {
-  id: string;
-  personId: string | null;
-  interactionId: string | null;
-  type: "email" | "handwritten_note" | "task";
-  content: string;
-  subject?: string | null;
-  status: string;
-  metadata: any;
-  createdAt: string;
-  updatedAt: string;
-};
 
 type CoachingAnalysis = {
   overallScore: number;
@@ -252,34 +238,15 @@ function InlineCoachingWidget({ interaction }: { interaction: Interaction }) {
 function InteractionDetailSheet({ 
   interaction, 
   person, 
-  drafts,
   onClose 
 }: { 
   interaction: Interaction;
   person?: Person;
-  drafts: GeneratedDraft[];
   onClose: () => void;
 }) {
-  const { toast } = useToast();
   const config = allInteractionTypes.find(t => t.value === interaction.type) || liveFlowTypes[0];
   const Icon = config.icon;
   const aiData = interaction.aiExtractedData as AIExtractedDataType | null;
-  
-  const relatedDrafts = drafts.filter(d => d.interactionId === interaction.id);
-  
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({ title: "Copied to clipboard" });
-  };
-
-  const getTypeConfig = (type: string) => {
-    const configs: Record<string, { icon: any; label: string; color: string }> = {
-      email: { icon: Mail, label: "Email", color: "bg-blue-50 text-blue-700 border-blue-200" },
-      handwritten_note: { icon: FileText, label: "Note", color: "bg-amber-50 text-amber-700 border-amber-200" },
-      task: { icon: CheckSquare, label: "Task", color: "bg-green-50 text-green-700 border-green-200" },
-    };
-    return configs[type] || configs.email;
-  };
   
   return (
     <div className="space-y-6" data-testid="interaction-detail-sheet">
@@ -381,38 +348,6 @@ function InteractionDetailSheet({
                 <span className="font-medium text-green-900">{item}</span>
               </div>
             ))}
-          </div>
-        </div>
-      )}
-      
-      {relatedDrafts.length > 0 && (
-        <div className="pt-2">
-          <h4 className="text-xs font-bold text-muted-foreground mb-3 uppercase tracking-widest flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-purple-600" />
-            AI Follow-up Drafts
-          </h4>
-          <div className="space-y-3">
-            {relatedDrafts.map((draft) => {
-              const draftConfig = getTypeConfig(draft.type);
-              const DraftIcon = draftConfig.icon;
-              return (
-                <div key={draft.id} className="p-5 bg-white border border-purple-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow" data-testid={`draft-${draft.id}`}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={`p-2 rounded-xl ${draftConfig.color.split(' ')[0]}`}>
-                      <DraftIcon className={`h-4 w-4 ${draftConfig.color.split(' ')[1]}`} />
-                    </div>
-                    <Badge variant="outline" className={`${draftConfig.color} rounded-full px-3`}>{draftConfig.label}</Badge>
-                    <Badge variant={draft.status === "pending" ? "default" : "secondary"} className="rounded-full px-3">
-                      {draft.status}
-                    </Badge>
-                  </div>
-                  <p className="text-sm leading-relaxed text-foreground font-medium mb-4">{draft.content}</p>
-                  <Button size="sm" variant="outline" className="w-full rounded-xl gap-2 font-bold" onClick={() => copyToClipboard(draft.content)}>
-                    <Copy className="h-3.5 w-3.5" /> Copy to Clipboard
-                  </Button>
-                </div>
-              );
-            })}
           </div>
         </div>
       )}
@@ -595,10 +530,6 @@ function InteractionList({
     setShowEditDialog(true);
   };
   
-  const { data: drafts = [] } = useQuery<GeneratedDraft[]>({
-    queryKey: ["/api/generated-drafts"],
-  });
-  
   const getPersonById = (id: string | null) => people.find(p => p.id === id);
   
   const getDateFilterCutoff = () => {
@@ -756,7 +687,6 @@ function InteractionList({
               <InteractionDetailSheet
                 interaction={selectedInteractionForDetail}
                 person={getPersonById(selectedInteractionForDetail.personId)}
-                drafts={drafts}
                 onClose={() => setSelectedInteractionForDetail(null)}
               />
             )}
@@ -767,149 +697,9 @@ function InteractionList({
   );
 }
 
-function DraftsTab() {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  
-  const { data: drafts = [], isLoading } = useQuery<GeneratedDraft[]>({
-    queryKey: ["/api/generated-drafts"],
-  });
-  
-  const { data: people = [] } = useQuery<Person[]>({
-    queryKey: ["/api/people"],
-  });
-
-  const updateDraft = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      return apiRequest("PATCH", `/api/generated-drafts/${id}`, { status });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/generated-drafts"] });
-      toast({ title: "Draft updated" });
-    },
-  });
-
-  const deleteDraft = useMutation({
-    mutationFn: async (id: string) => {
-      return apiRequest("DELETE", `/api/generated-drafts/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/generated-drafts"] });
-      toast({ title: "Draft deleted" });
-    },
-  });
-
-  const getPersonById = (id: string | null) => people.find(p => p.id === id);
-
-  const pendingDrafts = drafts.filter(d => d.status === "pending");
-  const sentDrafts = drafts.filter(d => d.status === "sent" || d.status === "used");
-
-  const getTypeConfig = (type: string) => {
-    const configs: Record<string, { icon: any; label: string; color: string }> = {
-      email: { icon: Mail, label: "Email", color: "bg-blue-50 text-blue-700 border-blue-200" },
-      handwritten_note: { icon: FileText, label: "Handwritten Note", color: "bg-amber-50 text-amber-700 border-amber-200" },
-      task: { icon: CheckSquare, label: "Task", color: "bg-green-50 text-green-700 border-green-200" },
-    };
-    return configs[type] || configs.email;
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({ title: "Copied to clipboard" });
-  };
-
-  if (isLoading) {
-    return <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div>;
-  }
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="font-medium mb-3 flex items-center gap-2">
-          <Clock className="h-4 w-4" />
-          Pending Drafts ({pendingDrafts.length})
-        </h3>
-        
-        {pendingDrafts.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No pending drafts. Process conversations to generate drafts.</p>
-        ) : (
-          <div className="space-y-3">
-            {pendingDrafts.map((draft) => {
-              const person = getPersonById(draft.personId);
-              const config = getTypeConfig(draft.type);
-              const Icon = config.icon;
-              
-              return (
-                <Card key={draft.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <div className={`p-2 rounded-lg ${config.color.split(' ')[0]}`}>
-                        <Icon className={`h-5 w-5 ${config.color.split(' ')[1]}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge variant="outline" className={config.color}>{config.label}</Badge>
-                          {person && (
-                            <span className="text-sm font-medium">{person.name}</span>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-600 whitespace-pre-wrap line-clamp-4">{draft.content}</p>
-                        
-                        <div className="flex gap-2 mt-3">
-                          <Button size="sm" variant="outline" onClick={() => copyToClipboard(draft.content)}>
-                            <Copy className="h-3 w-3 mr-1" /> Copy
-                          </Button>
-                          <Button size="sm" onClick={() => updateDraft.mutate({ id: draft.id, status: "sent" })}>
-                            <Check className="h-3 w-3 mr-1" /> Mark Sent
-                          </Button>
-                          <Button size="sm" variant="ghost" className="text-red-500" onClick={() => deleteDraft.mutate(draft.id)}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {sentDrafts.length > 0 && (
-        <div>
-          <h3 className="font-medium mb-3 flex items-center gap-2 text-muted-foreground">
-            <Check className="h-4 w-4" />
-            Sent / Used ({sentDrafts.length})
-          </h3>
-          <div className="space-y-2 opacity-60">
-            {sentDrafts.slice(0, 5).map((draft) => {
-              const person = getPersonById(draft.personId);
-              const config = getTypeConfig(draft.type);
-              
-              return (
-                <Card key={draft.id} className="bg-muted/30">
-                  <CardContent className="p-3 flex items-center gap-3">
-                    <Badge variant="outline" className={config.color}>{config.label}</Badge>
-                    {person && <span className="text-sm">{person.name}</span>}
-                    <span className="text-xs text-muted-foreground ml-auto">
-                      {formatDistanceToNow(new Date(draft.updatedAt), { addSuffix: true })}
-                    </span>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function Flow() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("live");
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [addFlowType, setAddFlowType] = useState<"live" | "auto">("live");
   
@@ -1370,36 +1160,17 @@ export default function Flow() {
             </DialogContent>
           </Dialog>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="live" className="gap-2" data-testid="tab-live-flow">
-                <Phone className="h-4 w-4" />
-                Flow
-              </TabsTrigger>
-              <TabsTrigger value="drafts" className="gap-2" data-testid="tab-drafts">
-                <Sparkles className="h-4 w-4" />
-                AI Drafts
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="live">
-              {isLoading ? (
-                <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div>
-              ) : (
-                <InteractionList 
-                  interactions={interactions} 
-                  people={people}
-                  filterTypes={liveFlowTypeValues}
-                  onEdit={handleEdit}
-                  onDelete={(id) => deleteInteraction.mutate(id)}
-                />
-              )}
-            </TabsContent>
-
-            <TabsContent value="drafts">
-              <DraftsTab />
-            </TabsContent>
-          </Tabs>
+          {isLoading ? (
+            <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div>
+          ) : (
+            <InteractionList 
+              interactions={interactions} 
+              people={people}
+              filterTypes={liveFlowTypeValues}
+              onEdit={handleEdit}
+              onDelete={(id) => deleteInteraction.mutate(id)}
+            />
+          )}
         </div>
       </div>
 

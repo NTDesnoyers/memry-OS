@@ -499,29 +499,29 @@ export function VoiceLogger() {
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className={cn(
-          "h-[85vh] sm:h-[600px] max-h-[85vh] flex flex-col p-0 gap-0 transition-all duration-300",
+          "h-[85vh] sm:h-[600px] max-h-[85vh] flex flex-row p-0 gap-0 transition-all duration-300 overflow-hidden",
           showHistory ? "sm:max-w-3xl" : "sm:max-w-lg"
         )}>
           {/* History Sidebar */}
           {showHistory && (
-            <div className="w-64 border-r flex flex-col bg-muted/30">
-              <div className="p-3 border-b flex items-center justify-between">
-                <h3 className="font-medium text-sm flex items-center gap-2">
-                  <History className="h-4 w-4" />
+            <div className="w-56 border-r flex flex-col bg-muted/30 flex-shrink-0 h-full overflow-hidden">
+              <div className="p-2 border-b flex items-center justify-between flex-shrink-0">
+                <h3 className="font-medium text-xs flex items-center gap-1.5">
+                  <History className="h-3.5 w-3.5" />
                   Chat History
                 </h3>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowHistory(false)}>
-                  <ChevronLeft className="h-4 w-4" />
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowHistory(false)}>
+                  <ChevronLeft className="h-3.5 w-3.5" />
                 </Button>
               </div>
-              <ScrollArea className="flex-1">
-                <div className="p-2 space-y-1">
+              <ScrollArea className="flex-1 overflow-hidden">
+                <div className="p-1.5 space-y-0.5">
                   <button
                     onClick={startNewConversation}
-                    className="w-full p-2 text-sm text-left rounded-lg flex items-center gap-2 hover:bg-secondary transition-colors text-violet-600"
+                    className="w-full px-2 py-1.5 text-xs text-left rounded flex items-center gap-1.5 hover:bg-secondary transition-colors text-violet-600 font-medium"
                     data-testid="button-new-conversation"
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-3.5 w-3.5" />
                     New Conversation
                   </button>
                   
@@ -530,31 +530,31 @@ export function VoiceLogger() {
                       key={conv.id}
                       onClick={() => loadConversation(conv)}
                       className={cn(
-                        "w-full p-2 text-sm text-left rounded-lg cursor-pointer group flex items-start gap-2 transition-colors",
+                        "w-full px-2 py-1.5 text-xs text-left rounded cursor-pointer group flex items-center gap-1.5 transition-colors",
                         currentConversationId === conv.id ? "bg-secondary" : "hover:bg-secondary/50"
                       )}
                       data-testid={`conversation-item-${conv.id}`}
                     >
-                      <MessageSquare className="h-4 w-4 mt-0.5 flex-shrink-0 text-muted-foreground" />
-                      <div className="flex-1 min-w-0">
-                        <p className="truncate font-medium">{conv.title}</p>
-                        <p className="text-xs text-muted-foreground">
+                      <MessageSquare className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <p className="truncate text-xs leading-tight">{conv.title}</p>
+                        <p className="text-[10px] text-muted-foreground leading-tight">
                           {format(new Date(conv.updatedAt), "MMM d, h:mm a")}
                         </p>
                       </div>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                        className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                         onClick={(e) => handleDeleteConversation(conv.id, e)}
                       >
-                        <Trash2 className="h-3 w-3 text-destructive" />
+                        <Trash2 className="h-2.5 w-2.5 text-destructive" />
                       </Button>
                     </div>
                   ))}
                   
                   {conversations.length === 0 && (
-                    <p className="text-xs text-muted-foreground text-center py-4">
+                    <p className="text-[10px] text-muted-foreground text-center py-3">
                       No saved conversations yet
                     </p>
                   )}
