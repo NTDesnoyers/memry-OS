@@ -1460,6 +1460,11 @@ Respond with valid JSON only, no other text.`;
           const person = await storage.getPerson(args.personId, ctx);
           if (!person) return `Person not found with ID: ${args.personId}`;
           
+          // Log what we received for debugging
+          const transcriptLength = args.transcript?.length || 0;
+          const summaryLength = args.summary?.length || 0;
+          logger.info(`log_interaction called: person=${person.name}, type=${args.type}, transcriptLen=${transcriptLength}, summaryLen=${summaryLength}`);
+          
           const interaction = await storage.createInteraction({
             personId: args.personId,
             type: args.type,
@@ -1478,16 +1483,24 @@ Respond with valid JSON only, no other text.`;
           }
           
           // Use processInteraction for AI-powered draft generation
+          // Requires at least 50 chars of transcript/summary for AI drafts
           let draftsCreated = 0;
-          try {
-            const result = await processInteraction(interaction.id, ctx);
-            draftsCreated = result.draftsCreated || 0;
-            if (result.success) {
+          const contentLength = transcriptLength || summaryLength;
+          
+          if (contentLength >= 50) {
+            try {
+              const result = await processInteraction(interaction.id, ctx);
+              draftsCreated = result.draftsCreated || 0;
               logger.info(`AI processing completed for interaction ${interaction.id}: ${draftsCreated} drafts created`);
+            } catch (processError) {
+              logger.warn('AI processing failed:', processError);
             }
-          } catch (processError) {
-            // Fallback to simple draft if AI processing fails
-            logger.warn('AI processing failed, creating simple draft:', processError);
+          } else {
+            logger.info(`Skipping AI processing - content too short (${contentLength} chars, need 50+)`);
+          }
+          
+          // Always create a fallback draft if AI didn't generate any
+          if (draftsCreated === 0) {
             try {
               const firstName = person.name?.split(' ')[0] || 'there';
               const draftContent = `Hi ${firstName},\n\nIt was great connecting with you! Following up on our ${args.type}.\n\n${args.summary ? `Key points from our conversation:\n${args.summary}\n\n` : ''}Looking forward to staying in touch.\n\nBest regards`;
@@ -1502,12 +1515,13 @@ Respond with valid JSON only, no other text.`;
                 metadata: { source: 'ai_assistant_fallback', interactionType: args.type }
               }, ctx);
               draftsCreated = 1;
+              logger.info(`Created fallback draft for ${person.name}`);
             } catch (draftError) {
               logger.warn('Draft creation skipped:', draftError);
             }
           }
           
-          const draftMsg = draftsCreated > 0 ? ` ${draftsCreated} AI follow-up draft(s) generated.` : '';
+          const draftMsg = draftsCreated > 0 ? ` ${draftsCreated} follow-up draft(s) generated.` : '';
           return `Logged ${args.type} interaction for ${person.name}. Last contact date updated.${draftMsg}`;
         }
         
