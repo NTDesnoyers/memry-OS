@@ -1475,26 +1475,38 @@ Respond with valid JSON only, no other text.`;
             }, ctx);
           }
           
-          // Generate follow-up draft from the interaction
+          // Use processInteraction for AI-powered draft generation
+          let draftsCreated = 0;
           try {
-            const firstName = person.name?.split(' ')[0] || 'there';
-            const draftContent = `Hi ${firstName},\n\nIt was great connecting with you! Following up on our ${args.type}.\n\n${args.summary ? `Key points from our conversation:\n${args.summary}\n\n` : ''}Looking forward to staying in touch.\n\nBest regards`;
-            
-            await storage.createGeneratedDraft({
-              personId: args.personId,
-              interactionId: interaction.id,
-              type: 'email',
-              title: `Follow-up with ${person.name} after ${args.type}`,
-              content: draftContent,
-              status: 'pending',
-              metadata: { source: 'ai_assistant', interactionType: args.type }
-            }, ctx);
-          } catch (draftError) {
-            // Draft creation is optional, don't fail the interaction logging
-            console.log('Draft creation skipped:', draftError);
+            const result = await processInteraction(interaction.id, ctx);
+            draftsCreated = result.draftsCreated || 0;
+            if (result.success) {
+              logger.info(`AI processing completed for interaction ${interaction.id}: ${draftsCreated} drafts created`);
+            }
+          } catch (processError) {
+            // Fallback to simple draft if AI processing fails
+            logger.warn('AI processing failed, creating simple draft:', processError);
+            try {
+              const firstName = person.name?.split(' ')[0] || 'there';
+              const draftContent = `Hi ${firstName},\n\nIt was great connecting with you! Following up on our ${args.type}.\n\n${args.summary ? `Key points from our conversation:\n${args.summary}\n\n` : ''}Looking forward to staying in touch.\n\nBest regards`;
+              
+              await storage.createGeneratedDraft({
+                personId: args.personId,
+                interactionId: interaction.id,
+                type: 'email',
+                title: `Follow-up with ${person.name} after ${args.type}`,
+                content: draftContent,
+                status: 'pending',
+                metadata: { source: 'ai_assistant_fallback', interactionType: args.type }
+              }, ctx);
+              draftsCreated = 1;
+            } catch (draftError) {
+              logger.warn('Draft creation skipped:', draftError);
+            }
           }
           
-          return `Logged ${args.type} interaction for ${person.name}. Last contact date updated. Follow-up draft created.`;
+          const draftMsg = draftsCreated > 0 ? ` ${draftsCreated} AI follow-up draft(s) generated.` : '';
+          return `Logged ${args.type} interaction for ${person.name}. Last contact date updated.${draftMsg}`;
         }
         
         case "create_task": {
@@ -1753,6 +1765,19 @@ When the user describes talking to someone (call, meeting, text, email, in-perso
    - fordDreams: goals, aspirations, life plans
 4. If it's a buyer/seller consultation, ALSO mark them as Hot: pipelineStatus = 'hot'
 5. Confirm what you logged
+
+CRITICAL - MULTI-PERSON MEETUP/EVENT DEBRIEFS:
+When the user submits a transcript or summary from a networking event, meetup, or conference where they met MULTIPLE people:
+1. PARSE EACH PERSON mentioned in the transcript separately
+2. For EACH person mentioned:
+   a. Search for them (or create if not found)
+   b. Use log_interaction to log a SEPARATE interaction for that specific person
+   c. Include ONLY the conversation details relevant to that person in the summary
+   d. Update their FORD notes with any personal info learned
+3. This ensures each contact has their own interaction record and receives personalized AI follow-up drafts
+4. After processing all people, confirm how many interactions were logged
+
+Example: If user says "I met Matt, Shannon, and Casey at the investor meetup" - you should log 3 separate interactions, one for each person.
 
 HOT/WARM PIPELINE:
 - Hot = active buyer/seller within 90 days to transaction (consultations, active showings)
