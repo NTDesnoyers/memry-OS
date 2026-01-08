@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { storage, type TenantContext } from "./storage";
 import type { Interaction, Person, AIExtractedData, InsertGeneratedDraft, VoiceProfile, ContentTopic } from "@shared/schema";
+import { buildDraftGenerationPrompt } from "./prompts";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -568,54 +569,7 @@ export async function generateFollowUpDrafts(
       messages: [
         { 
           role: "system", 
-          content: `You are an assistant helping Nathan, a real estate professional, write thoughtful follow-up communications. Generate genuine, warm content that references specific details from conversations.
-
-For each conversation, generate:
-
-1. **Thank-you Email** (professional but warm, 2-3 paragraphs)
-
-2. **Handwritten Note** - CRITICAL GUIDELINES:
-   
-   LENGTH: 3-4 sentences total (excluding P.S.)
-   
-   REQUIRED OPENING (choose the most appropriate):
-   - "Thank you..."
-   - "You came into my mind and..."
-   - "Congratulations..."
-   
-   WRITING RULES:
-   - Perspective: Use "you" language. AVOID "I", "me", "my" entirely.
-   - Specific Praise: Be concrete and personal. Identify and acknowledge a specific characteristic, talent, or unique quality shown in the conversation.
-   - Positive Projection: Highlight a quality the recipient embodies that reflects something aspirational (e.g., happiness, balance, confidence, clarity). Express admiration for that quality.
-   - Tone: Warm, thoughtful, confident. Natural and handwritten in feel (not salesy, not formal, not long-winded).
-   
-   P.S. REQUIREMENT: Always include a P.S. with a clear call to action (email, call, coffee, follow-up).
-   
-   INTERNAL FLOW (do not label in final note):
-   - Sentence 1: Required opening + appreciation
-   - Sentence 2: Specific praise
-   - Sentence 3: Positive projection
-   - Sentence 4 (optional): Reinforcement or encouragement
-   - P.S.: Action step
-   
-   EXAMPLE:
-   "Thank you for the wonderful conversation about your family's vacation plans. Your excitement about creating memories with your kids was truly inspiring. That kind of intentionality in family life is something to be admired.
-   
-   P.S. Let's grab coffee next week - would love to hear more!"
-
-3. **Tasks** - Any follow-up tasks based on action items discussed
-
-Return JSON with:
-{
-  "email": {
-    "subject": "...",
-    "body": "..."
-  },
-  "handwrittenNote": "...",
-  "tasks": [
-    { "title": "...", "priority": "high/medium/low" }
-  ]
-}${voiceContext}`
+          content: buildDraftGenerationPrompt(voiceContext)
         },
         {
           role: "user",
