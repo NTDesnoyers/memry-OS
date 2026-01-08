@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Mic, Square, Loader2, Send, MessageSquare, Sparkles, X, Bot, User, CheckCircle2, Zap, Paperclip, Plus, History, Trash2, ChevronLeft, ChevronRight, Phone } from "lucide-react";
+import { Mic, Square, Loader2, Send, MessageSquare, Sparkles, X, Bot, User, CheckCircle2, Zap, Paperclip, Plus, History, Trash2, ChevronLeft, ChevronRight, Phone, ChevronDown, ChevronUp } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -46,6 +46,14 @@ interface Message {
   actions?: Action[];
   images?: AttachedImage[];
   model?: ModelInfo;
+  isStreaming?: boolean;
+}
+
+interface StreamingState {
+  content: string;
+  actions: Action[];
+  status: string;
+  currentTool: string | null;
 }
 
 export function VoiceLogger() {
@@ -60,6 +68,8 @@ export function VoiceLogger() {
   const [showHistory, setShowHistory] = useState(false);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [isVoiceMode, setIsVoiceMode] = useState(false);
+  const [streamingState, setStreamingState] = useState<StreamingState | null>(null);
+  const [expandedActions, setExpandedActions] = useState<Set<number>>(new Set());
   
   const recognitionRef = useRef<any>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -248,9 +258,12 @@ export function VoiceLogger() {
     setInputText("");
     setAttachedImages([]);
     setIsProcessing(true);
+    
+    // Initialize streaming state
+    setStreamingState({ content: '', actions: [], status: 'Thinking...', currentTool: null });
 
     try {
-      const response = await fetch("/api/ai-assistant", {
+      const response = await fetch("/api/ai-assistant/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -269,14 +282,102 @@ export function VoiceLogger() {
         throw new Error("AI request failed");
       }
 
-      const data = await response.json();
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      
+      if (!reader) {
+        throw new Error("No response body");
+      }
+      
+      let accumulatedContent = '';
+      let accumulatedActions: Action[] = [];
+      let finalModel: ModelInfo | undefined;
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              
+              switch (data.type) {
+                case 'status':
+                  setStreamingState(prev => ({ 
+                    content: prev?.content || '', 
+                    actions: prev?.actions || [], 
+                    status: data.message, 
+                    currentTool: prev?.currentTool || null 
+                  }));
+                  break;
+                  
+                case 'tool_start':
+                  setStreamingState(prev => ({ 
+                    content: prev?.content || '',
+                    actions: prev?.actions || [],
+                    status: `Running ${formatToolName(data.tool)}...`,
+                    currentTool: data.tool 
+                  }));
+                  break;
+                  
+                case 'tool_complete':
+                  accumulatedActions.push({ tool: data.tool, result: data.result });
+                  setStreamingState(prev => ({ 
+                    content: prev?.content || '',
+                    actions: [...accumulatedActions],
+                    currentTool: null,
+                    status: 'Thinking...'
+                  }));
+                  break;
+                  
+                case 'token':
+                  accumulatedContent += data.content;
+                  setStreamingState(prev => ({ 
+                    content: accumulatedContent,
+                    actions: prev?.actions || [],
+                    status: '',
+                    currentTool: null
+                  }));
+                  // Auto-scroll as content streams
+                  requestAnimationFrame(() => {
+                    if (scrollRef.current) {
+                      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+                    }
+                  });
+                  break;
+                  
+                case 'complete':
+                  if (data.actions) {
+                    accumulatedActions = data.actions;
+                  }
+                  if (data.model) {
+                    finalModel = data.model;
+                  }
+                  break;
+                  
+                case 'error':
+                  throw new Error(data.message);
+              }
+            } catch (parseError) {
+              // Skip invalid JSON lines
+            }
+          }
+        }
+      }
+      
+      // Finalize the message
       const assistantMessage: Message = { 
         role: "assistant", 
-        content: data.response,
-        actions: data.actions,
-        model: data.model
+        content: accumulatedContent || "I completed the requested actions.",
+        actions: accumulatedActions.length > 0 ? accumulatedActions : undefined,
+        model: finalModel
       };
       setMessages(prev => [...prev, assistantMessage]);
+      
     } catch (error) {
       console.error("AI error:", error);
       const errorMessage: Message = { 
@@ -286,6 +387,7 @@ export function VoiceLogger() {
       setMessages(prev => [...prev, errorMessage]);
     }
     
+    setStreamingState(null);
     setIsProcessing(false);
   };
 
@@ -593,16 +695,38 @@ export function VoiceLogger() {
                   >
                     {message.actions && message.actions.length > 0 && (
                       <div className="mb-2 pb-2 border-b border-border/50">
-                        <div className="flex items-center gap-1.5 text-xs text-violet-600 font-medium mb-1">
+                        <button
+                          onClick={() => {
+                            setExpandedActions(prev => {
+                              const next = new Set(prev);
+                              if (next.has(index)) {
+                                next.delete(index);
+                              } else {
+                                next.add(index);
+                              }
+                              return next;
+                            });
+                          }}
+                          className="flex items-center gap-1.5 text-xs text-violet-600 font-medium hover:text-violet-700 transition-colors w-full"
+                        >
                           <Zap className="h-3 w-3" />
-                          Actions taken
-                        </div>
-                        {message.actions.map((action, i) => (
-                          <div key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground">
-                            <CheckCircle2 className="h-3 w-3 mt-0.5 text-green-500 flex-shrink-0" />
-                            <span>{formatToolName(action.tool)}</span>
+                          <span>{message.actions.length} action{message.actions.length > 1 ? 's' : ''} taken</span>
+                          {expandedActions.has(index) ? (
+                            <ChevronUp className="h-3 w-3 ml-auto" />
+                          ) : (
+                            <ChevronDown className="h-3 w-3 ml-auto" />
+                          )}
+                        </button>
+                        {expandedActions.has(index) && (
+                          <div className="mt-1.5 space-y-0.5">
+                            {message.actions.map((action, i) => (
+                              <div key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                                <CheckCircle2 className="h-3 w-3 mt-0.5 text-green-500 flex-shrink-0" />
+                                <span>{formatToolName(action.tool)}</span>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        )}
                       </div>
                     )}
                     {message.images && message.images.length > 0 && (
@@ -635,17 +759,50 @@ export function VoiceLogger() {
                 </div>
               ))}
 
-              {isProcessing && (
+              {/* Streaming message display */}
+              {streamingState && (
                 <div className="flex gap-3 justify-start">
                   <div className="h-8 w-8 rounded-full bg-gradient-to-r from-violet-600 to-purple-600 flex items-center justify-center flex-shrink-0">
                     <Bot className="h-4 w-4 text-white" />
                   </div>
-                  <div className="bg-secondary rounded-2xl px-4 py-3">
-                    <div className="flex gap-1">
-                      <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
-                      <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
-                      <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
-                    </div>
+                  <div className="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm bg-secondary">
+                    {/* Show actions being executed */}
+                    {(streamingState.actions.length > 0 || streamingState.currentTool) && (
+                      <div className="mb-2 pb-2 border-b border-border/50">
+                        <div className="flex items-center gap-1.5 text-xs text-violet-600 font-medium mb-1">
+                          <Zap className="h-3 w-3" />
+                          Working...
+                        </div>
+                        {streamingState.actions.map((action, i) => (
+                          <div key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                            <CheckCircle2 className="h-3 w-3 mt-0.5 text-green-500 flex-shrink-0" />
+                            <span>{formatToolName(action.tool)}</span>
+                          </div>
+                        ))}
+                        {streamingState.currentTool && (
+                          <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                            <Loader2 className="h-3 w-3 mt-0.5 text-violet-500 flex-shrink-0 animate-spin" />
+                            <span>{formatToolName(streamingState.currentTool)}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Show streaming content or status */}
+                    {streamingState.content ? (
+                      <p className="whitespace-pre-wrap">{streamingState.content}<span className="inline-block w-1.5 h-4 bg-violet-500 ml-0.5 animate-pulse" /></p>
+                    ) : streamingState.status ? (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin text-violet-500" />
+                        <span>{streamingState.status}</span>
+                      </div>
+                    ) : (
+                      <div className="flex gap-1">
+                        <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
+                        <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
+                        <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
