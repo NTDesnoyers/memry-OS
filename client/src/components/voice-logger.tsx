@@ -462,7 +462,7 @@ export function VoiceLogger() {
           )}
           
           {/* Main Chat Area */}
-          <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           <DialogHeader className="px-4 py-3 border-b flex-shrink-0">
             <div className="flex items-center justify-between">
               <DialogTitle className="flex items-center gap-2 text-base">
