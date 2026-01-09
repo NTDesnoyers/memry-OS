@@ -41,14 +41,41 @@ STRUCTURE:
 
 CONTENT:
 - Open with gratitude or appreciation for the conversation
-- Reference specific topics discussed to show you were listening
+- Reference SPECIFIC details from the conversation (names, inside jokes, things they mentioned)
+- If they mentioned a spouse/partner, reference them by name if known (e.g., "you and Michael")
+- Include light humor or callbacks when appropriate (e.g., "even if the 'maybe two more years' joke keeps coming back around")
 - Include any promised follow-ups or next steps
 - Close with a clear call to action or invitation to continue the relationship
+
+FOR SCHEDULING/AVAILABILITY EMAILS:
+- Include placeholder time slots the user can fill in:
+  * [Day], [Time range]
+  * [Day], [Time range]
+  * [Day], [Time range]
+- Example: "Here are a few windows that work well on my end — let me know what lines up for you:"
 
 TONE:
 - Authentic and personal (not templated or generic)
 - Match the energy of the original conversation
 - Professional but not stiff or overly formal
+- Use relationship-appropriate humor when the conversation warrants it
+- Reference shared experiences or ongoing conversations naturally
+
+EXAMPLE FOLLOW-UP EMAIL:
+"Hi Dennis,
+
+Great catching up today — I'm glad to hear you and Michael are still enjoying life up there (even if the "maybe two more years" joke keeps coming back around).
+
+For the landscaping consult, I'm happy to come by next week. Here are a few windows that work well on my end — let me know what lines up for you:
+
+* [Day], [Time range]
+* [Day], [Time range]
+* [Day], [Time range]
+
+Once we pick a time, I'll plan to walk the property with you and talk through ideas and priorities.
+
+Looking forward to it,
+Nathan"
 `;
 
 export const TASK_GUIDELINES = `
@@ -115,16 +142,32 @@ Look for patterns like:
 - "introduce [Person A] to [Person B]"
 - "[Person A] could help [Person B]" or "[Person B] needs [Person A]"
 - "put [Person A] in touch with [Person B]"
+- "my [role] contractor" or "my go-to [specialty]" - FIND the actual person by matching their occupation/specialty
 
 CONNECTION EMAIL FORMAT:
 - To: Both people (CC format conceptually)
 - Subject: "Introduction: [Person A] <> [Person B]"
 - Body:
   * Warm greeting to both
-  * Explain why you're connecting them (what they have in common or can help each other with)
+  * Position the service provider as a RESOURCE, not a sales push
+  * Explain why you're connecting them naturally
   * Brief description of each person's relevant background/expertise
-  * Encourage them to connect
   * Step back and let them take it from there
+  * Keep it casual and non-salesy
+
+EXAMPLE CONNECTION EMAIL:
+"Dennis & Ricardo,
+
+Wanted to make a quick introduction.
+
+Dennis — meet Ricardo Noserale. Ricardo is a kitchens and baths general contractor I work closely with through BNI. He does great work and is someone I trust when clients are thinking through renovations or upgrades.
+
+Ricardo — Dennis and his husband own a beautiful home and are doing some landscaping and home planning. I thought it'd be helpful for you two to connect in case kitchens, baths, or future projects come into the picture.
+
+I'll let you both take it from here.
+
+Best,
+Nathan"
 
 Add connection emails to the "emails" array with type: "connection" and include both person names.
 `;
@@ -203,8 +246,26 @@ Return JSON with:
       "reason": "Notes say 'pen/snail mail to Harry Henderson'",
       "content": "Thank you for your incredible generosity..."
     }
-  ]
+  ],
+  "fordSummary": {
+    "family": "Dennis and his husband doing well together",
+    "occupation": null,
+    "recreation": null,
+    "dreams": "Ongoing conversation about downsizing and moving somewhere warmer 'in a couple years'",
+    "lifeChangeSignal": "Long-term downsizing consideration (low urgency, recurring)",
+    "actionItems": ["Send availability + schedule onsite landscaping consult", "Introduce to Ricardo Noserale"],
+    "moveScore": "warm"
+  }
 }
+
+FORD SUMMARY RULES:
+- Extract what was learned about this person in each FORD category
+- lifeChangeSignal: Identify any life changes or transitions (new baby, downsizing, job change, moving, divorce, retirement)
+- moveScore: Based on life changes and real estate signals:
+  - "hot": Active buyer/seller, ready to transact in 0-90 days
+  - "warm": Thinking about it, 6-12 months out, recurring life change conversations
+  - "cold": No real estate signals, just relationship building
+- Always include the moveScore recommendation based on what you learned
 
 IMPORTANT: Generate ALL relevant emails based on explicit user instructions. If user says:
 - "send email about availability" → include an "action" type email about scheduling
@@ -247,10 +308,13 @@ When the user describes talking to someone (call, meeting, text, email, in-perso
    - The AI draft generator uses this to create specific emails for each action item
    - A short summary in 'transcript' = generic drafts. Full message = targeted drafts for each item
 3. Use update_person to update FORD fields with any new personal info learned:
-   - fordFamily: family members, kids, pets, spouse details
+   - spouseName: ALWAYS set this when you learn a partner/spouse/husband/wife name (e.g., "Michael")
+   - childrenInfo: names and ages of children (e.g., "Sophia (8), Jake (5)")
+   - fordFamily: family members, kids, pets, spouse details (text notes)
    - fordRecreation: hobbies, interests, sports, pets, vacation plans
    - fordOccupation: job, career changes, work updates
    - fordDreams: goals, aspirations, life plans
+   - profession: their job title/industry if learned
 4. If it's a buyer/seller consultation, ALSO mark them as Hot: pipelineStatus = 'hot'
 5. CREATE TASKS FOR EACH FOLLOW-UP ITEM the user explicitly mentions:
    - If user says "follow-ups are: X, Y, Z" - create a task for EACH item using create_task

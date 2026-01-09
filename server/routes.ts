@@ -1283,7 +1283,7 @@ Respond with valid JSON only, no other text.`;
             personId: { type: "string", description: "The ID of the person to update" },
             updates: { 
               type: "object", 
-              description: "Fields to update: name, email, phone, segment (A/B/C/D), fordFamily, fordOccupation, fordRecreation, fordDreams, notes, isBuyer, buyerAreas, buyerPriceMin, buyerPriceMax, pipelineStatus (hot/warm/null for active deals), etc."
+              description: "Fields to update: name, email, phone, segment (A/B/C/D), fordFamily, fordOccupation, fordRecreation, fordDreams, notes, isBuyer, buyerAreas, buyerPriceMin, buyerPriceMax, pipelineStatus (hot/warm/null for active deals), spouseName (partner/husband/wife name), childrenInfo (children names/ages), profession, etc."
             }
           },
           required: ["personId", "updates"]

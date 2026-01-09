@@ -673,6 +673,122 @@ Analyze the differences and extract writing preferences.`
   }
 }
 
+// Build rich contact context for draft personalization
+function buildContactContext(person: Person): string {
+  const lines: string[] = [];
+  
+  // Spouse/partner info
+  if (person.spouseName) {
+    lines.push(`Spouse/Partner Name: ${person.spouseName}`);
+  }
+  
+  // Children info
+  if (person.childrenInfo) {
+    lines.push(`Children: ${person.childrenInfo}`);
+  }
+  
+  // FORD fields
+  if (person.fordFamily) {
+    lines.push(`Family Notes: ${person.fordFamily}`);
+  }
+  if (person.fordOccupation) {
+    lines.push(`Occupation: ${person.fordOccupation}`);
+  }
+  if (person.fordRecreation) {
+    lines.push(`Recreation/Interests: ${person.fordRecreation}`);
+  }
+  if (person.fordDreams) {
+    lines.push(`Dreams/Goals: ${person.fordDreams}`);
+  }
+  
+  // Profession
+  if (person.profession) {
+    lines.push(`Profession: ${person.profession}`);
+  }
+  
+  // General notes may have relationship context
+  if (person.notes) {
+    lines.push(`Notes: ${person.notes}`);
+  }
+  
+  if (lines.length === 0) {
+    return "";
+  }
+  
+  return `KNOWN CONTACT DETAILS (use these real names, not placeholders):\n${lines.join('\n')}`;
+}
+
+interface RoleBasedContact {
+  role: string;
+  name: string;
+  occupation: string;
+}
+
+// Find contacts by role/specialty when user references them generically
+async function findRoleBasedContacts(
+  transcript: string,
+  ctx?: TenantContext
+): Promise<RoleBasedContact[]> {
+  const matches: RoleBasedContact[] = [];
+  
+  // Common role patterns to look for
+  const rolePatterns = [
+    { pattern: /(?:my|our)\s+(?:go-to\s+)?(?:kitchens?\s*(?:and|&)?\s*baths?|kitchen)\s+(?:contractor|guy|person|GC)/i, role: "kitchens and baths contractor" },
+    { pattern: /(?:my|our)\s+(?:go-to\s+)?(?:general\s+)?contractor/i, role: "general contractor" },
+    { pattern: /(?:my|our)\s+(?:go-to\s+)?plumber/i, role: "plumber" },
+    { pattern: /(?:my|our)\s+(?:go-to\s+)?electrician/i, role: "electrician" },
+    { pattern: /(?:my|our)\s+(?:go-to\s+)?(?:financial\s+)?(?:advisor|planner)/i, role: "financial advisor" },
+    { pattern: /(?:my|our)\s+(?:go-to\s+)?lender/i, role: "lender" },
+    { pattern: /(?:my|our)\s+(?:go-to\s+)?(?:home\s+)?inspector/i, role: "home inspector" },
+    { pattern: /(?:my|our)\s+(?:go-to\s+)?landscaper/i, role: "landscaper" },
+    { pattern: /(?:my|our)\s+(?:go-to\s+)?handyman/i, role: "handyman" },
+    { pattern: /(?:my|our)\s+(?:go-to\s+)?(?:title|escrow)\s+(?:company|officer|agent)/i, role: "title company" },
+    { pattern: /(?:my|our)\s+(?:go-to\s+)?(?:estate|attorney|lawyer)/i, role: "attorney" },
+    { pattern: /(?:my|our)\s+(?:go-to\s+)?(?:HVAC|heating|cooling)\s+(?:guy|person|tech|company)?/i, role: "HVAC" },
+    { pattern: /(?:my|our)\s+(?:go-to\s+)?roofer/i, role: "roofer" },
+  ];
+  
+  // Check which roles are mentioned in the transcript
+  const mentionedRoles = rolePatterns.filter(rp => rp.pattern.test(transcript));
+  
+  if (mentionedRoles.length === 0) {
+    return matches;
+  }
+  
+  // Get all contacts and search for matches
+  try {
+    const allPeople = await storage.getAllPeople(ctx);
+    
+    for (const { role } of mentionedRoles) {
+      const roleLower = role.toLowerCase();
+      
+      // Find a contact whose occupation/profession matches this role
+      const match = allPeople.find(p => {
+        const occupation = (p.fordOccupation || p.profession || '').toLowerCase();
+        const notes = (p.notes || '').toLowerCase();
+        
+        // Check if occupation contains the role keywords
+        const roleWords = roleLower.split(/\s+/);
+        return roleWords.some(word => 
+          word.length > 3 && (occupation.includes(word) || notes.includes(word))
+        );
+      });
+      
+      if (match) {
+        matches.push({
+          role,
+          name: match.name,
+          occupation: match.fordOccupation || match.profession || role
+        });
+      }
+    }
+  } catch (e) {
+    console.warn("Error finding role-based contacts:", e);
+  }
+  
+  return matches;
+}
+
 export async function generateFollowUpDrafts(
   interaction: Interaction,
   person: Person,
@@ -691,6 +807,12 @@ export async function generateFollowUpDrafts(
   // Get Nathan's voice profile to personalize drafts
   const voiceContext = await getVoiceContext();
 
+  // Build rich contact context for personalization
+  const contactContext = buildContactContext(person);
+  
+  // Try to find role-based contacts (e.g., "my kitchens contractor")
+  const roleBasedContacts = await findRoleBasedContacts(transcript, ctx);
+  
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -702,6 +824,7 @@ export async function generateFollowUpDrafts(
         {
           role: "user",
           content: `Person: ${person.name}
+${contactContext}
 Interaction Type: ${interaction.type}
 Date: ${new Date(interaction.occurredAt).toLocaleDateString()}
 Key Topics: ${extractedData.keyTopics?.join(", ") || "General conversation"}
@@ -713,10 +836,14 @@ IMPORTANT CONTEXT FOR HANDWRITTEN NOTE DECISION:
 - ${interaction.type === 'meeting' || interaction.type === 'in_person' ? 'This was an IN-PERSON meeting - a handwritten note IS appropriate' : ''}
 - ${interaction.type === 'call' || interaction.type === 'phone' ? 'This was a phone call - only generate handwritten note if life events mentioned or explicitly requested' : ''}
 
+${roleBasedContacts.length > 0 ? `KNOWN CONTACTS BY ROLE (use these names when user references by role):
+${roleBasedContacts.map(c => `- "${c.role}": ${c.name} (${c.occupation})`).join('\n')}` : ''}
+
 Conversation Summary/Transcript:
 ${transcript.slice(0, 8000)}
 
-Generate follow-up content for this interaction. Remember to scan for third-party mentions who need separate actions.`
+Generate follow-up content for this interaction. Remember to scan for third-party mentions who need separate actions.
+IMPORTANT: Use ACTUAL NAMES from the contact context above - do not use placeholders like [husband's name] if the spouse name is known.`
         }
       ],
       response_format: { type: "json_object" },
@@ -978,7 +1105,61 @@ Generate follow-up content for this interaction. Remember to scan for third-part
       }
     }
 
-    return drafts;
+    // Store FORD summary on the interaction if generated
+    if (generated.fordSummary) {
+      const fordSummary = generated.fordSummary;
+      
+      // Update interaction with FORD summary
+      try {
+        const existingData = interaction.aiExtractedData || {};
+        await storage.updateInteraction(interaction.id, {
+          aiExtractedData: {
+            ...existingData,
+            fordSummary: {
+              family: fordSummary.family,
+              occupation: fordSummary.occupation,
+              recreation: fordSummary.recreation,
+              dreams: fordSummary.dreams,
+              lifeChangeSignal: fordSummary.lifeChangeSignal,
+              actionItems: fordSummary.actionItems,
+              moveScore: fordSummary.moveScore
+            }
+          }
+        }, ctx);
+        console.log(`[FORD Summary] Stored for interaction ${interaction.id}: moveScore=${fordSummary.moveScore}`);
+        
+        // If moveScore suggests pipeline update, update the person
+        if (fordSummary.moveScore && person.id) {
+          const currentPipeline = person.pipelineStatus;
+          const suggestedPipeline = fordSummary.moveScore === 'cold' ? null : fordSummary.moveScore;
+          
+          // Only upgrade pipeline status, don't downgrade
+          if (suggestedPipeline === 'hot' && currentPipeline !== 'hot') {
+            console.log(`[FORD Summary] Recommending pipeline upgrade to HOT for ${person.name}`);
+          } else if (suggestedPipeline === 'warm' && !currentPipeline) {
+            console.log(`[FORD Summary] Recommending pipeline upgrade to WARM for ${person.name}`);
+          }
+        }
+      } catch (e) {
+        console.warn("Error storing FORD summary:", e);
+      }
+    }
+
+    // Validate drafts - remove any with unfilled name/person placeholders
+    // BUT allow scheduling placeholders like [Day], [Time range] which are intentional
+    const validatedDrafts = drafts.filter(draft => {
+      // Only block placeholders for missing person/relationship data
+      const badPlaceholderPattern = /\[(?:husband|wife|spouse|partner|their|his|her|blank)'?s?\s*(?:name)?\]/gi;
+      const hasBadPlaceholders = badPlaceholderPattern.test(draft.content);
+      
+      if (hasBadPlaceholders) {
+        console.warn(`[Draft Validation] Rejecting draft with missing name placeholders: ${draft.title}`);
+        return false;
+      }
+      return true;
+    });
+
+    return validatedDrafts;
   } catch (error) {
     console.error("Error generating follow-up drafts:", error);
     return drafts;
