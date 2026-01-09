@@ -711,6 +711,10 @@ export class DatabaseStorage implements IStorage {
     // Now safe to delete interactions (all FK references are already gone)
     await db.delete(interactions).where(eq(interactions.personId, id));
     await db.delete(deals).where(eq(deals.personId, id));
+    // Delete system events that reference this person
+    await db.delete(systemEvents).where(eq(systemEvents.personId, id));
+    // Delete interaction participants by personId (separate from those deleted by interactionId above)
+    await db.delete(interactionParticipants).where(eq(interactionParticipants.personId, id));
     await db.delete(people).where(eq(people.id, id));
   }
   
