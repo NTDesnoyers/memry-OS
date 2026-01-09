@@ -98,12 +98,17 @@ export class ZapierWebhookProvider implements ICrmProvider {
   }
   
   async createNote(payload: CrmNotePayload): Promise<SyncResult> {
+    // Ensure occurredAt is a Date object (may come as string from frontend)
+    const occurredAtDate = payload.occurredAt instanceof Date 
+      ? payload.occurredAt 
+      : new Date(payload.occurredAt);
+    
     const result = await this.sendWebhook('note_created', {
       contactId: payload.contactExternalId || payload.localContactId,
       title: payload.title,
       content: payload.content,
       type: payload.type,
-      occurredAt: payload.occurredAt.toISOString(),
+      occurredAt: occurredAtDate.toISOString(),
       duration: payload.duration,
       participants: payload.participants,
     });

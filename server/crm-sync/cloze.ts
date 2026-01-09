@@ -143,11 +143,16 @@ export class ClozeProvider implements ICrmProvider {
       payload.duration ? `\nDuration: ${payload.duration} minutes` : '',
     ].filter(Boolean).join('\n');
     
+    // Ensure occurredAt is a Date object (may come as string from frontend)
+    const occurredAtDate = payload.occurredAt instanceof Date 
+      ? payload.occurredAt 
+      : new Date(payload.occurredAt);
+    
     const clozePayload = {
       personId: payload.contactExternalId,
       type: this.mapNoteToClozeType(payload.type),
       content: noteContent,
-      date: payload.occurredAt.toISOString(),
+      date: occurredAtDate.toISOString(),
     };
     
     const result = await this.request<{ id: string }>('/timeline', 'POST', clozePayload);
