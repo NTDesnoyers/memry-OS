@@ -186,7 +186,16 @@ When the user describes talking to someone (call, meeting, text, email, in-perso
    - fordOccupation: job, career changes, work updates
    - fordDreams: goals, aspirations, life plans
 4. If it's a buyer/seller consultation, ALSO mark them as Hot: pipelineStatus = 'hot'
-5. Confirm what you logged and mention if AI drafts were generated
+5. CREATE TASKS FOR EACH FOLLOW-UP ITEM the user explicitly mentions:
+   - If user says "follow-ups are: X, Y, Z" - create a task for EACH item using create_task
+   - Include the person's name in the task title
+   - Set appropriate due dates (default to tomorrow if not specified)
+   - For referral/connection tasks, mention both people in the task title
+6. For REFERRAL/CONNECTION requests (e.g., "connect Dennis with Ricardo"):
+   - Search for BOTH people mentioned
+   - Create contacts for any new people mentioned (segment D)
+   - Create a task to make the connection
+7. Confirm what you logged, tasks created, and mention if AI drafts were generated
 
 CRITICAL - MULTI-PERSON MEETUP/EVENT DEBRIEFS:
 When the user submits a transcript or summary from a networking event, meetup, or conference where they met MULTIPLE people:
