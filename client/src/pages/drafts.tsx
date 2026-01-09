@@ -217,6 +217,7 @@ export default function Drafts() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<"pending" | "completed">("pending");
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedDraft, setSelectedDraft] = useState<GeneratedDraft | null>(null);
   const [editContent, setEditContent] = useState("");
@@ -341,12 +342,17 @@ export default function Drafts() {
   };
 
   const filteredDrafts = drafts.filter(draft => {
-    if (activeTab === "all") return true;
-    return draft.type === activeTab;
+    // Filter by type
+    const typeMatch = activeTab === "all" || draft.type === activeTab;
+    // Filter by status
+    const statusMatch = statusFilter === "pending" 
+      ? draft.status === "pending" 
+      : draft.status !== "pending";
+    return typeMatch && statusMatch;
   });
 
-  const pendingDrafts = filteredDrafts.filter(d => d.status === "pending");
-  const completedDrafts = filteredDrafts.filter(d => d.status !== "pending");
+  const pendingCount = drafts.filter(d => d.status === "pending").length;
+  const completedCount = drafts.filter(d => d.status !== "pending").length;
 
   const handleCopy = async (content: string) => {
     await navigator.clipboard.writeText(content);
@@ -468,6 +474,32 @@ export default function Drafts() {
           </Card>
         </div>
 
+        {/* Status Filter Tabs - Pending / Completed */}
+        <div className="flex items-center gap-2 mb-4">
+          <Button 
+            variant={statusFilter === "pending" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setStatusFilter("pending")}
+            className="flex items-center gap-2"
+            data-testid="pending-filter-btn"
+          >
+            <Clock className="h-4 w-4" />
+            Pending
+            <Badge variant="secondary" className="ml-1">{pendingCount}</Badge>
+          </Button>
+          <Button 
+            variant={statusFilter === "completed" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setStatusFilter("completed")}
+            className="flex items-center gap-2"
+            data-testid="completed-filter-btn"
+          >
+            <Check className="h-4 w-4" />
+            Completed
+            <Badge variant="secondary" className="ml-1">{completedCount}</Badge>
+          </Button>
+        </div>
+
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4 flex-wrap h-auto gap-1">
             {draftTypes.map(type => (
@@ -487,71 +519,49 @@ export default function Drafts() {
             ) : filteredDrafts.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
-                  <Sparkles className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-600">No drafts yet</h3>
-                  <p className="text-gray-400 mt-1">
-                    Import conversations from Fathom and process them to generate follow-up drafts
-                  </p>
-                  <Button 
-                    className="mt-4" 
-                    variant="outline"
-                    onClick={() => processAllMutation.mutate()}
-                    disabled={processAllMutation.isPending}
-                  >
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Process Conversations
-                  </Button>
+                  {statusFilter === "completed" ? (
+                    <>
+                      <Check className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+                      <h3 className="text-lg font-medium text-gray-600">No completed drafts</h3>
+                      <p className="text-gray-400 mt-1">
+                        Drafts you've sent or used will appear here for your records
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+                      <h3 className="text-lg font-medium text-gray-600">No pending drafts</h3>
+                      <p className="text-gray-400 mt-1">
+                        Import conversations from Fathom and process them to generate follow-up drafts
+                      </p>
+                      <Button 
+                        className="mt-4" 
+                        variant="outline"
+                        onClick={() => processAllMutation.mutate()}
+                        disabled={processAllMutation.isPending}
+                      >
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Process Conversations
+                      </Button>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-6">
-                {pendingDrafts.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-3 flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
-                      Pending ({pendingDrafts.length})
-                    </h3>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      {pendingDrafts.map(draft => (
-                        <DraftCard
-                          key={draft.id}
-                          draft={draft}
-                          person={getPerson(draft.personId)}
-                          onMarkSent={() => handleMarkSent(draft)}
-                          onEdit={() => handleEdit(draft)}
-                          onDelete={() => deleteDraft.mutate(draft.id)}
-                          onCopy={() => handleCopy(draft.content)}
-                          onSendEmail={() => handleSendEmail(draft)}
-                          gmailConnected={isFounderMode(user?.email) && gmailStatus?.connected}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {completedDrafts.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500 mb-3 flex items-center gap-2">
-                      <Check className="h-4 w-4" />
-                      Completed ({completedDrafts.length})
-                    </h3>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      {completedDrafts.map(draft => (
-                        <DraftCard
-                          key={draft.id}
-                          draft={draft}
-                          person={getPerson(draft.personId)}
-                          onMarkSent={() => handleMarkSent(draft)}
-                          onEdit={() => handleEdit(draft)}
-                          onDelete={() => deleteDraft.mutate(draft.id)}
-                          onCopy={() => handleCopy(draft.content)}
-                          onSendEmail={() => handleSendEmail(draft)}
-                          gmailConnected={isFounderMode(user?.email) && gmailStatus?.connected}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
+              <div className="grid gap-4 md:grid-cols-2">
+                {filteredDrafts.map(draft => (
+                  <DraftCard
+                    key={draft.id}
+                    draft={draft}
+                    person={getPerson(draft.personId)}
+                    onMarkSent={() => handleMarkSent(draft)}
+                    onEdit={() => handleEdit(draft)}
+                    onDelete={() => deleteDraft.mutate(draft.id)}
+                    onCopy={() => handleCopy(draft.content)}
+                    onSendEmail={() => handleSendEmail(draft)}
+                    gmailConnected={isFounderMode(user?.email) && gmailStatus?.connected}
+                  />
+                ))}
               </div>
             )}
           </TabsContent>
