@@ -656,9 +656,50 @@ export class DatabaseStorage implements IStorage {
     const person = await this.getPerson(id, ctx);
     if (!person) return;
     
-    // Delete all related data first to avoid foreign key constraints
+    // Get all interaction IDs for this person first (needed for proper cascade)
+    const personInteractions = await db.select({ id: interactions.id })
+      .from(interactions)
+      .where(eq(interactions.personId, id));
+    const interactionIds = personInteractions.map(i => i.id);
+    
+    // Get all draft IDs for this person (needed for draftFeedback cascade)
+    const personDrafts = await db.select({ id: generatedDrafts.id })
+      .from(generatedDrafts)
+      .where(eq(generatedDrafts.personId, id));
+    let draftIds = personDrafts.map(d => d.id);
+    
+    // Also get draft IDs linked to interactions
+    if (interactionIds.length > 0) {
+      const interactionDrafts = await db.select({ id: generatedDrafts.id })
+        .from(generatedDrafts)
+        .where(inArray(generatedDrafts.interactionId, interactionIds));
+      const allDraftIds = [...draftIds, ...interactionDrafts.map(d => d.id)];
+      draftIds = Array.from(new Set(allDraftIds));
+    }
+    
+    // Delete all related data in proper order to avoid foreign key constraints
     await db.delete(agentActions).where(eq(agentActions.personId, id));
+    
+    // Delete draftFeedback BEFORE drafts (has FK to generatedDrafts)
+    if (draftIds.length > 0) {
+      await db.delete(draftFeedback).where(inArray(draftFeedback.draftId, draftIds));
+    }
+    
+    // Delete drafts by personId
     await db.delete(generatedDrafts).where(eq(generatedDrafts.personId, id));
+    
+    // Also delete drafts linked to this person's interactions
+    if (interactionIds.length > 0) {
+      await db.delete(generatedDrafts).where(inArray(generatedDrafts.interactionId, interactionIds));
+    }
+    
+    // Delete listeningAnalysis BEFORE interactions (has FK to interactions)
+    if (interactionIds.length > 0) {
+      await db.delete(listeningAnalysis).where(inArray(listeningAnalysis.interactionId, interactionIds));
+      // Delete interactionParticipants BEFORE interactions (has FK to interactions)
+      await db.delete(interactionParticipants).where(inArray(interactionParticipants.interactionId, interactionIds));
+    }
+    
     await db.delete(observerSuggestions).where(eq(observerSuggestions.personId, id));
     await db.delete(lifeEventAlerts).where(eq(lifeEventAlerts.personId, id));
     await db.delete(dormantOpportunities).where(eq(dormantOpportunities.personId, id));
@@ -666,6 +707,8 @@ export class DatabaseStorage implements IStorage {
     await db.delete(calls).where(eq(calls.personId, id));
     await db.delete(meetings).where(eq(meetings.personId, id));
     await db.delete(tasks).where(eq(tasks.personId, id));
+    
+    // Now safe to delete interactions (all FK references are already gone)
     await db.delete(interactions).where(eq(interactions.personId, id));
     await db.delete(deals).where(eq(deals.personId, id));
     await db.delete(people).where(eq(people.id, id));

@@ -1514,9 +1514,22 @@ Respond with valid JSON only, no other text.`;
           if (!person) return `Person not found with ID: ${args.personId}`;
           const deals = await storage.getAllDeals(ctx);
           const personDeals = deals.filter(d => d.personId === args.personId);
+          
+          // CRITICAL: Include recent interactions so AI can recall conversation history
+          const personInteractions = await storage.getInteractionsByPerson(args.personId, ctx);
+          const recentInteractions = personInteractions.slice(0, 10).map(i => ({
+            id: i.id,
+            type: i.type,
+            summary: i.summary,
+            transcript: i.transcript,
+            occurredAt: i.occurredAt,
+            source: i.source
+          }));
+          
           return JSON.stringify({
             ...person,
-            deals: personDeals.map(d => ({ id: d.id, stage: d.stage, side: d.side, type: d.type }))
+            deals: personDeals.map(d => ({ id: d.id, stage: d.stage, side: d.side, type: d.type })),
+            recentInteractions
           });
         }
         
