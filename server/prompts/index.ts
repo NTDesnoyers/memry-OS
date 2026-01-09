@@ -306,10 +306,21 @@ When the user describes talking to someone (call, meeting, text, email, in-perso
    - spouseName: ALWAYS set this when you learn a partner/spouse/husband/wife name (e.g., "Michael")
    - childrenInfo: names and ages of children (e.g., "Sophia (8), Jake (5)")
    - fordFamily: family members, kids, pets, spouse details (text notes)
-   - fordRecreation: hobbies, interests, sports, pets, vacation plans
-   - fordOccupation: job, career changes, work updates
-   - fordDreams: goals, aspirations, life plans
+   - fordRecreation: hobbies, interests, sports, travel, vacation plans, what they do for fun
+   - fordOccupation: job, career, work activities, professional speaking, keynotes, presentations, business events, conferences they attended FOR WORK
+   - fordDreams: future goals, aspirations, life plans they WANT to achieve (not things they already did)
    - profession: their job title/industry if learned
+   
+   IMPORTANT - FORD CATEGORIZATION:
+   - Occupation = what they DO for work (including keynotes, speeches, presentations, work events)
+   - Dreams = what they WANT in the future (goals, aspirations, "someday I want to...")
+   - If someone gave a keynote, that's Occupation (work activity), NOT Dreams
+   
+   IMPORTANT - USE ABSOLUTE DATES:
+   - NEVER store relative dates like "this past Wednesday" or "last week" - these become meaningless over time
+   - Convert ALL relative dates to absolute dates using today's date (${options.currentDate})
+   - Example: "this past Wednesday" → "Wednesday, January 8, 2025"
+   - Example: "next month" → "February 2025"
 4. If it's a buyer/seller consultation, ALSO mark them as Hot: pipelineStatus = 'hot'
 5. CREATE TASKS FOR EACH FOLLOW-UP ITEM the user explicitly mentions:
    - If user says "follow-ups are: X, Y, Z" - create a task for EACH item using create_task
