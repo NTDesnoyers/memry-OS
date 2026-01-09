@@ -115,6 +115,8 @@ export interface IStorage {
   // Tasks - Follow-up actions (syncs to Todoist)
   /** Get all tasks for the authenticated user. */
   getAllTasks(ctx?: TenantContext): Promise<Task[]>;
+  /** Get tasks for a specific person (tenant-scoped). */
+  getTasksByPerson(personId: string, ctx?: TenantContext): Promise<Task[]>;
   /** Get task by ID (only if owned by user). */
   getTask(id: string, ctx?: TenantContext): Promise<Task | undefined>;
   /** Create task for the authenticated user. */
@@ -767,6 +769,14 @@ export class DatabaseStorage implements IStorage {
       return await db.select().from(tasks).where(filter).orderBy(desc(tasks.createdAt));
     }
     return await db.select().from(tasks).orderBy(desc(tasks.createdAt));
+  }
+  
+  async getTasksByPerson(personId: string, ctx?: TenantContext): Promise<Task[]> {
+    const filter = this.getTenantFilter(tasks, ctx);
+    const conditions = filter ? and(eq(tasks.personId, personId), filter) : eq(tasks.personId, personId);
+    return await db.select().from(tasks)
+      .where(conditions)
+      .orderBy(desc(tasks.createdAt));
   }
   
   async getTask(id: string, ctx?: TenantContext): Promise<Task | undefined> {

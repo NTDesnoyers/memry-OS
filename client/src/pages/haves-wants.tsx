@@ -14,13 +14,12 @@ import { Switch } from "@/components/ui/switch";
 import { Plus, Send, Mail, Home, Users, Eye, Trash2, Edit, Building2, DollarSign, Bed, Bath, MapPin } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { type Listing, type Person, type InsertListing } from "@shared/schema";
-import { PersonProfileDrawer } from "@/components/person-profile-drawer";
 
 export default function HavesWants() {
   const queryClient = useQueryClient();
-  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
-  const [profileOpen, setProfileOpen] = useState(false);
+  const [, navigate] = useLocation();
   const [listingDialogOpen, setListingDialogOpen] = useState(false);
   const [editingListing, setEditingListing] = useState<Listing | null>(null);
 
@@ -85,8 +84,7 @@ export default function HavesWants() {
   });
 
   const openPersonProfile = (personId: string) => {
-    setSelectedPersonId(personId);
-    setProfileOpen(true);
+    navigate(`/people/${personId}`);
   };
 
   const formatPrice = (price: number | null | undefined) => {
@@ -123,12 +121,6 @@ export default function HavesWants() {
 
   return (
     <Layout>
-      <PersonProfileDrawer 
-        personId={selectedPersonId} 
-        open={profileOpen} 
-        onClose={() => setProfileOpen(false)} 
-      />
-      
       <div className="min-h-screen bg-secondary/30">
         <div className="container mx-auto px-4 py-8 max-w-[1400px]">
           <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">

@@ -11,13 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { 
   ArrowLeft, Phone, Mail, MapPin, Save, Loader2, User, Briefcase, Heart, Star,
   PhoneCall, Video, FileText, Home, Calendar, MessageSquare, Clock, Building, Flame,
-  Linkedin, Facebook, Instagram, Twitter, ExternalLink, Globe
+  Linkedin, Facebook, Instagram, Twitter, ExternalLink, Globe, CheckSquare, Check, Trash2
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { Link, useParams } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import type { Person, Call, Meeting, Note, Deal, RealEstateReview, Interaction, Household } from "@shared/schema";
+import type { Person, Call, Meeting, Note, Deal, RealEstateReview, Interaction, Household, Task, GeneratedDraft } from "@shared/schema";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
 import { format } from "date-fns";
 
@@ -63,6 +63,18 @@ export default function PersonProfile() {
     enabled: !!id,
   });
 
+  // Fetch tasks for this person (person-scoped endpoint)
+  const { data: personTasks = [] } = useQuery<Task[]>({
+    queryKey: [`/api/people/${id}/tasks`],
+    enabled: !!id,
+  });
+
+  // Fetch generated drafts for this person (person-scoped endpoint)
+  const { data: personDrafts = [] } = useQuery<GeneratedDraft[]>({
+    queryKey: [`/api/people/${id}/drafts`],
+    enabled: !!id,
+  });
+
   // Fetch household members if person has a household
   const { data: householdData } = useQuery<Household & { members: Person[] }>({
     queryKey: ["/api/households", person?.householdId],
@@ -79,6 +91,9 @@ export default function PersonProfile() {
   const personNotes = notes.filter(n => n.personId === id);
   const personDeals = deals.filter(d => d.personId === id);
   const personReviews = reviews.filter(r => r.personId === id);
+  // Filter pending tasks and drafts (already person-scoped from API)
+  const pendingTasks = personTasks.filter(t => !t.completed);
+  const pendingDrafts = personDrafts.filter(d => d.status === 'pending');
 
   useEffect(() => {
     if (person) {
@@ -274,6 +289,64 @@ export default function PersonProfile() {
   };
 
   const totalActivityCount = personCalls.length + personMeetings.length + personNotes.length;
+  const personTodoCount = pendingTasks.length + pendingDrafts.length;
+
+  // Task mutations
+  const completeTaskMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ completed: true }),
+      });
+      if (!res.ok) throw new Error("Failed to complete task");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/people/${id}/tasks`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/people/${id}/interactions`] });
+      toast({ title: "Task completed" });
+    },
+  });
+
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      const res = await fetch(`/api/tasks/${taskId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete task");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/people/${id}/tasks`] });
+      toast({ title: "Task deleted" });
+    },
+  });
+
+  const markDraftSentMutation = useMutation({
+    mutationFn: async (draftId: string) => {
+      const res = await fetch(`/api/generated-drafts/${draftId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "sent" }),
+      });
+      if (!res.ok) throw new Error("Failed to mark draft as sent");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/people/${id}/drafts`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/people/${id}/interactions`] });
+      toast({ title: "Marked as sent" });
+    },
+  });
+
+  const deleteDraftMutation = useMutation({
+    mutationFn: async (draftId: string) => {
+      const res = await fetch(`/api/generated-drafts/${draftId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete draft");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/people/${id}/drafts`] });
+      toast({ title: "Draft deleted" });
+    },
+  });
 
   return (
     <Layout>
@@ -368,7 +441,7 @@ export default function PersonProfile() {
           </div>
 
           <Tabs defaultValue="activity" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+            <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
               <TabsTrigger value="profile" className="gap-2">
                 <User className="h-4 w-4" /> Profile
               </TabsTrigger>
@@ -376,6 +449,12 @@ export default function PersonProfile() {
                 <Clock className="h-4 w-4" /> Activity
                 {totalActivityCount > 0 && (
                   <Badge variant="secondary" className="ml-1 h-5 px-1.5">{totalActivityCount}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="todo" className="gap-2">
+                <CheckSquare className="h-4 w-4" /> To Do
+                {personTodoCount > 0 && (
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5">{personTodoCount}</Badge>
                 )}
               </TabsTrigger>
               <TabsTrigger value="deals" className="gap-2">
@@ -1036,6 +1115,125 @@ export default function PersonProfile() {
                   </>
                 )}
               </div>
+            </TabsContent>
+
+            <TabsContent value="todo" className="space-y-6">
+              {personTodoCount === 0 ? (
+                <Card className="border-dashed">
+                  <CardContent className="py-12 text-center">
+                    <CheckSquare className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                    <p className="text-muted-foreground">No pending tasks or drafts for {person.name}</p>
+                    <p className="text-sm text-muted-foreground mt-1">Tasks created for this contact will appear here</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {pendingTasks.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <CheckSquare className="h-5 w-5" /> Tasks ({pendingTasks.length})
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {pendingTasks.map((task) => (
+                          <div key={task.id} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg" data-testid={`todo-task-${task.id}`}>
+                            <div className="p-2 rounded-full bg-green-100">
+                              <CheckSquare className="h-4 w-4 text-green-600" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-medium">{task.title}</p>
+                              {task.description && (
+                                <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
+                              )}
+                              {task.dueDate && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Due: {format(new Date(task.dueDate), 'MMM d, yyyy')}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => completeTaskMutation.mutate(task.id)}
+                                className="h-8 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                data-testid={`complete-task-${task.id}`}
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => deleteTaskMutation.mutate(task.id)}
+                                className="h-8 px-2 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                data-testid={`delete-task-${task.id}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {pendingDrafts.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <FileText className="h-5 w-5" /> Drafts ({pendingDrafts.length})
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {pendingDrafts.map((draft) => (
+                          <div key={draft.id} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg" data-testid={`todo-draft-${draft.id}`}>
+                            <div className={`p-2 rounded-full ${
+                              draft.type === 'email' ? 'bg-blue-100' : 
+                              draft.type === 'handwritten_note' ? 'bg-amber-100' : 'bg-green-100'
+                            }`}>
+                              {draft.type === 'email' ? (
+                                <Mail className="h-4 w-4 text-blue-600" />
+                              ) : draft.type === 'handwritten_note' ? (
+                                <FileText className="h-4 w-4 text-amber-600" />
+                              ) : (
+                                <CheckSquare className="h-4 w-4 text-green-600" />
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-xs capitalize">{draft.type?.replace('_', ' ')}</Badge>
+                              </div>
+                              {draft.title && <p className="font-medium mt-1">{draft.title}</p>}
+                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{draft.content}</p>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => markDraftSentMutation.mutate(draft.id)}
+                                className="h-8 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                data-testid={`mark-sent-${draft.id}`}
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => deleteDraftMutation.mutate(draft.id)}
+                                className="h-8 px-2 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                data-testid={`delete-draft-${draft.id}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="deals" className="space-y-6">

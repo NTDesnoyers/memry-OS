@@ -2651,6 +2651,17 @@ Respond with valid JSON only, no other text.`;
     }
   });
   
+  // Get tasks for a specific person (tenant and person scoped)
+  app.get("/api/people/:id/tasks", async (req, res) => {
+    try {
+      const ctx = getTenantContext(req);
+      const personTasks = await storage.getTasksByPerson(req.params.id, ctx);
+      res.json(personTasks);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
   // Get task by ID
   app.get("/api/tasks/:id", async (req, res) => {
     try {
@@ -2678,10 +2689,34 @@ Respond with valid JSON only, no other text.`;
   // Update task
   app.patch("/api/tasks/:id", async (req, res) => {
     try {
-      const task = await storage.updateTask(req.params.id, req.body, getTenantContext(req));
+      const ctx = getTenantContext(req);
+      
+      // Get the original task to check if we're completing it
+      const originalTask = await storage.getTask(req.params.id, ctx);
+      const isBeingCompleted = req.body.completed === true && !originalTask?.completed;
+      
+      const task = await storage.updateTask(req.params.id, req.body, ctx);
       if (!task) {
         return res.status(404).json({ message: "Task not found" });
       }
+      
+      // If task was just completed and has a personId, create an interaction for the timeline
+      if (isBeingCompleted && task.personId) {
+        try {
+          await storage.createInteraction({
+            personId: task.personId,
+            type: "task",
+            source: "task_completed",
+            summary: `Completed: ${task.title}`,
+            transcript: task.description || undefined,
+            occurredAt: new Date(),
+          }, ctx);
+          logger.debug(`Created interaction for completed task: ${task.title}`);
+        } catch (err: any) {
+          logger.error(`Failed to create interaction for completed task: ${err.message}`);
+        }
+      }
+      
       res.json(task);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -4877,6 +4912,28 @@ Return ONLY valid JSON, no explanations.`
       // Update the draft
       const updateData = editedContent ? { ...otherUpdates, content: editedContent } : otherUpdates;
       const draft = await storage.updateGeneratedDraft(req.params.id, updateData, ctx);
+      
+      // If draft was just marked as sent and has a personId, create an interaction for the timeline
+      const isBeingSent = (otherUpdates.status === 'sent' || otherUpdates.status === 'used') && originalDraft.status === 'pending';
+      if (isBeingSent && draft?.personId) {
+        try {
+          const typeLabel = draft.type === 'email' ? 'Email sent' : 
+                           draft.type === 'handwritten_note' ? 'Handwritten note sent' : 
+                           'Action completed';
+          await storage.createInteraction({
+            personId: draft.personId,
+            type: draft.type === 'email' ? 'email' : 'note',
+            source: 'draft_sent',
+            summary: `${typeLabel}: ${draft.title || draft.content.slice(0, 50)}...`,
+            transcript: draft.content,
+            occurredAt: new Date(),
+          }, ctx);
+          logger.debug(`Created interaction for sent draft: ${draft.id}`);
+        } catch (err: any) {
+          logger.error(`Failed to create interaction for sent draft: ${err.message}`);
+        }
+      }
+      
       res.json(draft);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
