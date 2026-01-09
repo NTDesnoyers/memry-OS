@@ -881,7 +881,7 @@ IMPORTANT: Use ACTUAL NAMES from the contact context above - do not use placehol
             console.warn(`Could not search for connection party ${email.person2}:`, e);
           }
           
-          // Create draft linked to primary person
+          // Create ONE draft for connection email (linked to primary person only to avoid duplicates)
           drafts.push({
             personId: person.id,
             interactionId: interaction.id,
@@ -895,30 +895,10 @@ IMPORTANT: Use ACTUAL NAMES from the contact context above - do not use placehol
               isConnection: true,
               person1: email.person1,
               person2: email.person2,
-              recipientName: email.recipientName || `${email.person1}, ${email.person2}`
+              recipientName: email.recipientName || `${email.person1}, ${email.person2}`,
+              ...(person2Record && { person2Id: person2Record.id })
             },
           });
-          
-          // If we found the second person, create a copy of the draft linked to them too
-          if (person2Record && person2Record.id !== person.id) {
-            drafts.push({
-              personId: person2Record.id,
-              interactionId: interaction.id,
-              type: "email",
-              title: emailTitle,
-              content: email.body,
-              status: "pending",
-              metadata: { 
-                subject,
-                emailType: "connection",
-                isConnection: true,
-                person1: email.person1,
-                person2: email.person2,
-                recipientName: email.recipientName || `${email.person1}, ${email.person2}`,
-                linkedFromPerson: person.name
-              },
-            });
-          }
         } else {
           // Regular followup or action email
           drafts.push({

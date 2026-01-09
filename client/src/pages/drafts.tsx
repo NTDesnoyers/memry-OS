@@ -90,7 +90,7 @@ function DraftCard({
   gmailConnected?: boolean;
 }) {
   const typeConfig = {
-    email: { icon: Mail, label: "Thank-you Email", color: "bg-blue-50 text-blue-700 border-blue-200" },
+    email: { icon: Mail, label: "Email", color: "bg-blue-50 text-blue-700 border-blue-200" },
     handwritten_note: { icon: FileText, label: "Handwritten Note", color: "bg-amber-50 text-amber-700 border-amber-200" },
     task: { icon: CheckSquare, label: "Follow-up Task", color: "bg-green-50 text-green-700 border-green-200" },
   };

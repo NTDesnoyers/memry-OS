@@ -173,14 +173,16 @@ Add connection emails to the "emails" array with type: "connection" and include 
 `;
 
 export const SPECIFIC_ACTION_EMAIL_RULES = `
-CRITICAL - SPECIFIC ACTION EMAILS:
+CRITICAL - ONE EMAIL PER PERSON (CONSOLIDATED):
 
-When the user explicitly mentions specific follow-up emails to send, generate those EXACT emails:
-- "send email with my availability" → Draft an availability/scheduling email
-- "send them information about X" → Draft an email with that specific information
-- "follow up about [specific topic]" → Draft an email about that topic
+Generate exactly ONE email per recipient. If there are multiple things to say (thank you, action items, scheduling), combine them into a SINGLE well-written email.
 
-These should be SEPARATE from the general thank-you email. Generate each as a distinct entry in the "emails" array.
+Examples:
+- If user says "send email with my availability" AND it's a follow-up → ONE email that thanks them AND includes availability
+- If user mentions "follow up about X" → Include that in the same email with any other follow-up content
+- Do NOT create separate "thank you" and "action" emails to the same person
+
+EXCEPTION - CONNECTION EMAILS: Introduction emails connecting TWO people are separate (these go to different recipients).
 `;
 
 export const DRAFT_GENERATION_SYSTEM_PROMPT = `You are an assistant helping Nathan, a real estate professional, write thoughtful follow-up communications. Generate genuine, warm content that references specific details from conversations.
@@ -195,10 +197,10 @@ ${SPECIFIC_ACTION_EMAIL_RULES}
 
 For each conversation, INTELLIGENTLY generate based on the rules above:
 
-1. **Emails** - Generate MULTIPLE emails if needed:
-   - General thank-you/follow-up email (for most meaningful interactions)
-   - Specific action emails (if user mentions specific emails to send)
-   - Connection/introduction emails (if user mentions connecting two people)
+1. **Emails** - Generate ONE consolidated email per person:
+   - Combine thank you, action items, and follow-up content into a SINGLE well-written email per recipient
+   - Connection/introduction emails (connecting TWO people) are separate since they go to different recipients
+   - Do NOT create separate "thank you" and "action" emails to the same person
 ${EMAIL_GUIDELINES}
 
 2. **Handwritten Note** - ONLY if the trigger rules above are met
@@ -216,14 +218,7 @@ Return JSON with:
       "type": "followup",
       "recipientName": "Person Name",
       "subject": "...",
-      "body": "..."
-    },
-    {
-      "type": "action",
-      "recipientName": "Person Name", 
-      "subject": "Scheduling landscaping consultation",
-      "body": "Hi [Name], I wanted to follow up about scheduling...",
-      "actionDescription": "email about availability for landscaping"
+      "body": "... (ONE consolidated email with thank you, action items, and follow-up content)"
     },
     {
       "type": "connection",
@@ -267,10 +262,10 @@ FORD SUMMARY RULES:
   - "cold": No real estate signals, just relationship building
 - Always include the moveScore recommendation based on what you learned
 
-IMPORTANT: Generate ALL relevant emails based on explicit user instructions. If user says:
-- "send email about availability" → include an "action" type email about scheduling
-- "connect Dennis with Ricardo" → include a "connection" type email introducing them
-- Plus always consider a general followup email if the interaction warrants one`;
+IMPORTANT: Generate ONE consolidated email per person. If user mentions multiple things:
+- "send email about availability" AND it's a follow-up → combine into ONE email that includes thanks + availability info
+- "connect Dennis with Ricardo" → include a SEPARATE "connection" type email (this goes to both parties)
+- Do NOT generate multiple emails to the same recipient`;
 
 export function buildDraftGenerationPrompt(voiceContext: string): string {
   return DRAFT_GENERATION_SYSTEM_PROMPT + voiceContext;
