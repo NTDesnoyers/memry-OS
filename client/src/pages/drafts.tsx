@@ -43,7 +43,7 @@ import {
 } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 import { format, formatDistanceToNow } from "date-fns";
-import type { Person } from "@shared/schema";
+import type { Person, Task } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { getInitials } from "@/lib/utils";
 import { Link } from "wouter";
@@ -64,11 +64,110 @@ type GeneratedDraft = {
 };
 
 const draftTypes = [
-  { value: "all", label: "All Drafts", icon: Sparkles },
+  { value: "all", label: "All", icon: Sparkles },
   { value: "email", label: "Emails", icon: Mail },
-  { value: "handwritten_note", label: "Handwritten Notes", icon: FileText },
+  { value: "handwritten_note", label: "Notes", icon: FileText },
   { value: "task", label: "Tasks", icon: CheckSquare },
 ];
+
+// Card component for actual tasks (from tasks table)
+function ActualTaskCard({ 
+  task, 
+  person, 
+  onComplete, 
+  onDelete 
+}: { 
+  task: Task; 
+  person?: Person;
+  onComplete: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <Card className="hover:shadow-md transition-shadow" data-testid={`task-card-${task.id}`}>
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-lg bg-green-50">
+            <CheckSquare className="h-5 w-5 text-green-700" />
+          </div>
+          
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                Task
+              </Badge>
+              {task.completed ? (
+                <Badge variant="secondary" className="bg-green-100 text-green-700">
+                  <Check className="h-3 w-3 mr-1" />
+                  Done
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-gray-500">
+                  <Clock className="h-3 w-3 mr-1" />
+                  Pending
+                </Badge>
+              )}
+              {task.dueDate && (
+                <Badge variant="outline" className="text-xs">
+                  Due {format(new Date(task.dueDate), "MMM d")}
+                </Badge>
+              )}
+            </div>
+            
+            {person && (
+              <Link href={`/people/${person.id}`}>
+                <div className="flex items-center gap-2 mb-2 hover:underline cursor-pointer">
+                  <Avatar className="h-6 w-6">
+                    <AvatarFallback className="text-xs bg-slate-100">
+                      {getInitials(person.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="font-medium text-sm">{person.name}</span>
+                </div>
+              </Link>
+            )}
+
+            <p className="font-medium text-sm mb-1">{task.title}</p>
+            
+            {task.description && (
+              <p className="text-sm text-gray-600 line-clamp-2">
+                {task.description}
+              </p>
+            )}
+            
+            <div className="flex items-center justify-between mt-3">
+              <span className="text-xs text-gray-400">
+                {formatDistanceToNow(new Date(task.createdAt), { addSuffix: true })}
+              </span>
+              
+              <div className="flex items-center gap-1">
+                {!task.completed && (
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={onComplete}
+                    className="h-8 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+                    data-testid={`complete-task-${task.id}`}
+                  >
+                    <Check className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  onClick={onDelete}
+                  className="h-8 px-2 text-red-500 hover:text-red-600 hover:bg-red-50"
+                  data-testid={`delete-task-${task.id}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 function DraftCard({ 
   draft, 
@@ -241,6 +340,11 @@ export default function Drafts() {
     queryKey: ["/api/gmail/status"],
   });
 
+  // Also fetch actual tasks (from tasks table, created via AI)
+  const { data: actualTasks = [] } = useQuery<Task[]>({
+    queryKey: ["/api/tasks"],
+  });
+
   const sendEmailMutation = useMutation({
     mutationFn: async ({ to, subject, body, draftId }: { to: string; subject: string; body: string; draftId: string }) => {
       return apiRequest("POST", "/api/gmail/send", { to, subject, body, draftId });
@@ -276,6 +380,27 @@ export default function Drafts() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/generated-drafts"] });
       toast({ title: "Draft deleted" });
+    },
+  });
+
+  // Mutations for actual tasks
+  const completeTask = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("PATCH", `/api/tasks/${id}`, { completed: true, status: "completed" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({ title: "Task completed" });
+    },
+  });
+
+  const deleteTask = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/tasks/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      toast({ title: "Task deleted" });
     },
   });
 
@@ -341,6 +466,10 @@ export default function Drafts() {
     return people.find(p => p.id === personId);
   };
 
+  // Filter pending/completed actual tasks
+  const pendingActualTasks = actualTasks.filter(t => !t.completed && t.status === "pending");
+  const completedActualTasks = actualTasks.filter(t => t.completed || t.status !== "pending");
+
   const filteredDrafts = drafts.filter(draft => {
     // Filter by type
     const typeMatch = activeTab === "all" || draft.type === activeTab;
@@ -351,8 +480,13 @@ export default function Drafts() {
     return typeMatch && statusMatch;
   });
 
-  const pendingCount = drafts.filter(d => d.status === "pending").length;
-  const completedCount = drafts.filter(d => d.status !== "pending").length;
+  // Get actual tasks for display based on filters
+  const filteredActualTasks = (activeTab === "all" || activeTab === "task")
+    ? (statusFilter === "pending" ? pendingActualTasks : completedActualTasks)
+    : [];
+
+  const pendingCount = drafts.filter(d => d.status === "pending").length + pendingActualTasks.length;
+  const completedCount = drafts.filter(d => d.status !== "pending").length + completedActualTasks.length;
 
   const handleCopy = async (content: string) => {
     await navigator.clipboard.writeText(content);
@@ -395,11 +529,11 @@ export default function Drafts() {
   };
 
   const stats = {
-    total: drafts.length,
-    pending: drafts.filter(d => d.status === "pending").length,
+    total: drafts.length + actualTasks.length,
+    pending: drafts.filter(d => d.status === "pending").length + pendingActualTasks.length,
     emails: drafts.filter(d => d.type === "email").length,
     notes: drafts.filter(d => d.type === "handwritten_note").length,
-    tasks: drafts.filter(d => d.type === "task").length,
+    tasks: drafts.filter(d => d.type === "task").length + actualTasks.length,
   };
 
   return (
@@ -409,10 +543,10 @@ export default function Drafts() {
           <div>
             <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2">
               <Sparkles className="h-5 w-5 md:h-6 md:w-6 text-amber-500" />
-              AI-Generated Drafts
+              Actions
             </h1>
             <p className="text-gray-500 mt-1 text-sm md:text-base">
-              Review and send follow-up content from your conversations
+              Tasks, emails, and notes to review and send
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
@@ -445,7 +579,7 @@ export default function Drafts() {
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold">{stats.total}</div>
-              <div className="text-sm text-gray-500">Total Drafts</div>
+              <div className="text-sm text-gray-500">Total Actions</div>
             </CardContent>
           </Card>
           <Card>
@@ -516,23 +650,23 @@ export default function Drafts() {
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
               </div>
-            ) : filteredDrafts.length === 0 ? (
+            ) : (filteredDrafts.length === 0 && filteredActualTasks.length === 0) ? (
               <Card>
                 <CardContent className="py-12 text-center">
                   {statusFilter === "completed" ? (
                     <>
                       <Check className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-                      <h3 className="text-lg font-medium text-gray-600">No completed drafts</h3>
+                      <h3 className="text-lg font-medium text-gray-600">No completed actions</h3>
                       <p className="text-gray-400 mt-1">
-                        Drafts you've sent or used will appear here for your records
+                        Actions you've completed will appear here for your records
                       </p>
                     </>
                   ) : (
                     <>
                       <Sparkles className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-                      <h3 className="text-lg font-medium text-gray-600">No pending drafts</h3>
+                      <h3 className="text-lg font-medium text-gray-600">No pending actions</h3>
                       <p className="text-gray-400 mt-1">
-                        Import conversations from Fathom and process them to generate follow-up drafts
+                        Log conversations with the AI assistant to generate follow-up tasks and drafts
                       </p>
                       <Button 
                         className="mt-4" 
@@ -549,6 +683,17 @@ export default function Drafts() {
               </Card>
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
+                {/* Render actual tasks first */}
+                {filteredActualTasks.map(task => (
+                  <ActualTaskCard
+                    key={`task-${task.id}`}
+                    task={task}
+                    person={getPerson(task.personId)}
+                    onComplete={() => completeTask.mutate(task.id)}
+                    onDelete={() => deleteTask.mutate(task.id)}
+                  />
+                ))}
+                {/* Then render drafts */}
                 {filteredDrafts.map(draft => (
                   <DraftCard
                     key={draft.id}

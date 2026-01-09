@@ -55,7 +55,7 @@ const allNavItems = [
   { name: "Today", href: "/dashboard", icon: LayoutDashboard },
   { name: "Weekly Review", href: "/weekly-review", icon: FileText },
   { name: "Contacts", href: "/people", icon: Users },
-  { name: "Drafts", href: "/drafts", icon: FileEdit },
+  { name: "Actions", href: "/drafts", icon: FileEdit },
   { name: "Life Events", href: "/life-events", icon: Eye },
   { name: "Event Log", href: "/event-log", icon: Activity },
   { name: "Lead Inbox", href: "/leads", icon: Inbox },
