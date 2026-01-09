@@ -302,6 +302,9 @@ When the user describes talking to someone (call, meeting, text, email, in-perso
    - Include ALL bullet points, follow-up items, notes about people, etc.
    - The AI draft generator uses this to create specific emails for each action item
    - A short summary in 'transcript' = generic drafts. Full message = targeted drafts for each item
+   - CRITICAL: If user mentions WHEN the conversation happened (e.g., "12/2/25", "last Tuesday", "December 2nd"), 
+     pass the occurredAt parameter with the actual date in ISO format (e.g., "2025-12-02"). Convert relative dates
+     using today (${options.currentDate}). Example: "talked to them last Monday" → calculate the Monday before today.
 3. Use update_person to update FORD fields with any new personal info learned:
    - spouseName: ALWAYS set this when you learn a partner/spouse/husband/wife name (e.g., "Michael")
    - childrenInfo: names and ages of children (e.g., "Sophia (8), Jake (5)")

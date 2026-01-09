@@ -1340,7 +1340,8 @@ Respond with valid JSON only, no other text.`;
             type: { type: "string", enum: ["call", "meeting", "email", "text", "in_person", "social"], description: "Type of interaction" },
             summary: { type: "string", description: "Brief summary of what was discussed (2-3 sentences)" },
             transcript: { type: "string", description: "CRITICAL: Copy the ENTIRE user message here including all follow-up items, bullet points, connection requests, etc. The AI uses this to generate targeted emails for each action item. Short summaries = generic drafts. Full message = specific drafts for each item." },
-            fordUpdates: { type: "string", description: "Any FORD updates learned during this interaction" }
+            fordUpdates: { type: "string", description: "Any FORD updates learned during this interaction" },
+            occurredAt: { type: "string", description: "When the interaction occurred. If user mentions a date like '12/2/25' or 'December 2nd', pass it here as ISO date string (e.g., '2025-12-02'). Defaults to today if not provided." }
           },
           required: ["personId", "type", "summary", "transcript"]
         }
@@ -1617,17 +1618,20 @@ Respond with valid JSON only, no other text.`;
           // Log what we received for debugging
           const transcriptLength = args.transcript?.length || 0;
           const summaryLength = args.summary?.length || 0;
-          logger.info(`log_interaction called: person=${person.name}, type=${args.type}, transcriptLen=${transcriptLength}, summaryLen=${summaryLength}`);
+          logger.info(`log_interaction called: person=${person.name}, type=${args.type}, transcriptLen=${transcriptLength}, summaryLen=${summaryLength}, occurredAt=${args.occurredAt || 'now'}`);
+          
+          // Parse the date if provided, otherwise use current date
+          const interactionDate = args.occurredAt ? new Date(args.occurredAt) : new Date();
           
           const interaction = await storage.createInteraction({
             personId: args.personId,
             type: args.type,
             summary: args.summary,
             transcript: args.transcript || null,
-            occurredAt: new Date()
+            occurredAt: interactionDate
           }, ctx);
-          // Also update last contact date
-          await storage.updatePerson(args.personId, { lastContact: new Date() }, ctx);
+          // Also update last contact date to the interaction date
+          await storage.updatePerson(args.personId, { lastContact: interactionDate }, ctx);
           // Apply FORD updates if provided
           if (args.fordUpdates) {
             const existingNotes = person.notes || "";
