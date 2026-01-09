@@ -710,10 +710,12 @@ export class DatabaseStorage implements IStorage {
     await db.delete(calls).where(eq(calls.personId, id));
     await db.delete(meetings).where(eq(meetings.personId, id));
     await db.delete(tasks).where(eq(tasks.personId, id));
-    // Delete 8x8 campaigns and pricing reviews before person
+    // Delete 8x8 campaigns, pricing reviews, and other linked records before person
     await db.delete(eightByEightCampaigns).where(eq(eightByEightCampaigns.personId, id));
     await db.delete(pricingReviews).where(eq(pricingReviews.personId, id));
     await db.delete(handwrittenNoteUploads).where(eq(handwrittenNoteUploads.personId, id));
+    await db.delete(realEstateReviews).where(eq(realEstateReviews.personId, id));
+    await db.delete(leads).where(eq(leads.personId, id));
     
     // Now safe to delete interactions (all FK references are already gone)
     await db.delete(interactions).where(eq(interactions.personId, id));
