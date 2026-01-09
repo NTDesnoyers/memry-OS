@@ -43,6 +43,7 @@ import {
   type Household, type InsertHousehold,
   type GeneratedDraft, type InsertGeneratedDraft,
   type VoiceProfile, type InsertVoiceProfile,
+  type DraftFeedback, type InsertDraftFeedback,
   type SyncLog, type InsertSyncLog,
   type HandwrittenNoteUpload, type InsertHandwrittenNoteUpload,
   type ContentTopic, type InsertContentTopic,
@@ -71,7 +72,7 @@ import {
   type DecisionTrace, type InsertDecisionTrace,
   type IssueReport, type InsertIssueReport,
   type AiUsageLog, type InsertAiUsageLog,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, interactionParticipants, aiConversations, households, generatedDrafts, voiceProfile, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions, leads, observerSuggestions, observerPatterns, aiActions, savedContent, dailyDigests, userCoreProfile, dormantOpportunities, socialConnections, socialPosts, contextNodes, contextEdges, decisionTraces, issueReports, aiUsageLogs
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, interactionParticipants, aiConversations, households, generatedDrafts, voiceProfile, draftFeedback, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions, leads, observerSuggestions, observerPatterns, aiActions, savedContent, dailyDigests, userCoreProfile, dormantOpportunities, socialConnections, socialPosts, contextNodes, contextEdges, decisionTraces, issueReports, aiUsageLogs
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt, inArray } from "drizzle-orm";
@@ -285,6 +286,12 @@ export interface IStorage {
   updateVoiceProfile(id: string, profile: Partial<InsertVoiceProfile>, ctx?: TenantContext): Promise<VoiceProfile | undefined>;
   deleteVoiceProfile(id: string, ctx?: TenantContext): Promise<void>;
   upsertVoicePattern(category: string, value: string, context?: string, source?: string, ctx?: TenantContext): Promise<VoiceProfile>;
+  
+  // Draft Feedback - Captures edits to learn writing preferences
+  createDraftFeedback(feedback: InsertDraftFeedback, ctx?: TenantContext): Promise<DraftFeedback>;
+  getDraftFeedback(id: string, ctx?: TenantContext): Promise<DraftFeedback | undefined>;
+  getUnprocessedDraftFeedback(ctx?: TenantContext): Promise<DraftFeedback[]>;
+  updateDraftFeedback(id: string, feedback: Partial<InsertDraftFeedback>, ctx?: TenantContext): Promise<DraftFeedback | undefined>;
   
   // Sync Logs
   getAllSyncLogs(): Promise<SyncLog[]>;
@@ -1611,6 +1618,42 @@ export class DatabaseStorage implements IStorage {
       .values({ category, value, context, source, userId, frequency: 1, updatedAt: new Date() })
       .returning();
     return created;
+  }
+  
+  // Draft Feedback - Captures edits to learn writing preferences
+  async createDraftFeedback(insertFeedback: InsertDraftFeedback, ctx?: TenantContext): Promise<DraftFeedback> {
+    const userId = getEffectiveUserId(ctx);
+    const [feedback] = await db
+      .insert(draftFeedback)
+      .values({ ...insertFeedback, userId })
+      .returning();
+    return feedback;
+  }
+  
+  async getDraftFeedback(id: string, ctx?: TenantContext): Promise<DraftFeedback | undefined> {
+    const filter = this.getTenantFilter(draftFeedback, ctx);
+    const conditions = filter ? and(eq(draftFeedback.id, id), filter) : eq(draftFeedback.id, id);
+    const [feedback] = await db.select().from(draftFeedback).where(conditions);
+    return feedback || undefined;
+  }
+  
+  async getUnprocessedDraftFeedback(ctx?: TenantContext): Promise<DraftFeedback[]> {
+    const filter = this.getTenantFilter(draftFeedback, ctx);
+    const conditions = filter 
+      ? and(eq(draftFeedback.processed, false), filter) 
+      : eq(draftFeedback.processed, false);
+    return await db.select().from(draftFeedback).where(conditions).orderBy(desc(draftFeedback.createdAt));
+  }
+  
+  async updateDraftFeedback(id: string, feedback: Partial<InsertDraftFeedback>, ctx?: TenantContext): Promise<DraftFeedback | undefined> {
+    const filter = this.getTenantFilter(draftFeedback, ctx);
+    const conditions = filter ? and(eq(draftFeedback.id, id), filter) : eq(draftFeedback.id, id);
+    const [updated] = await db
+      .update(draftFeedback)
+      .set(feedback)
+      .where(conditions)
+      .returning();
+    return updated || undefined;
   }
   
   // Sync Logs

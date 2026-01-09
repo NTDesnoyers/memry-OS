@@ -542,10 +542,135 @@ export async function getVoiceContext(): Promise<string> {
   if (grouped.question_styles?.length) {
     context += `\nHow he asks questions: ${grouped.question_styles.join("; ")}`;
   }
+  
+  // Include learned draft preferences from user edits
+  if (grouped.draft_tone_preference?.length) {
+    context += `\n\n## Learned Draft Preferences (from past edits):`;
+    context += `\nTone preferences: ${grouped.draft_tone_preference.join("; ")}`;
+  }
+  if (grouped.draft_avoid_pattern?.length) {
+    context += `\nPATTERNS TO AVOID: ${grouped.draft_avoid_pattern.join("; ")}`;
+  }
+  if (grouped.draft_preferred_pattern?.length) {
+    context += `\nPreferred patterns: ${grouped.draft_preferred_pattern.join("; ")}`;
+  }
+  if (grouped.draft_length_preference?.length) {
+    context += `\nLength preference: ${grouped.draft_length_preference[0]}`;
+  }
 
-  context += `\n\nIMPORTANT: Match Nathan's natural speaking style. Use his typical expressions and tone. The content should sound authentically like him.`;
+  context += `\n\nIMPORTANT: Match Nathan's natural speaking style. Use his typical expressions and tone. The content should sound authentically like him. Pay special attention to avoiding patterns he has edited out in past drafts.`;
   
   return context;
+}
+
+// Draft Edit Learning Prompt - Analyzes user edits to learn writing preferences
+const DRAFT_EDIT_LEARNING_PROMPT = `You are analyzing how a user edited an AI-generated draft to learn their writing preferences.
+
+Compare the ORIGINAL AI draft with the USER'S EDITED version and identify patterns in what they changed:
+
+1. **Phrasing Preferences**: Words/phrases they replaced with alternatives
+2. **Tone Adjustments**: Did they make it more/less formal, casual, warm, direct?
+3. **Length Preferences**: Did they shorten/lengthen sentences or the overall content?
+4. **Structure Changes**: How did they reorganize or restructure?
+5. **Removals**: What types of content did they consistently remove?
+6. **Additions**: What types of content did they add that wasn't there?
+
+Return JSON with learned preferences that can improve future drafts:
+{
+  "phraseReplacements": [{"from": "original phrase", "to": "preferred phrase"}],
+  "tonePreferences": ["more casual", "less formal greetings", etc.],
+  "lengthPreference": "shorter" | "longer" | "same",
+  "structureNotes": ["prefers bullets over paragraphs", etc.],
+  "avoidPatterns": ["phrases or patterns to avoid"],
+  "preferredPatterns": ["phrases or patterns they added or prefer"],
+  "overallInsight": "One sentence summary of their editing style"
+}
+
+Focus on actionable patterns that can be used to generate better drafts next time.`;
+
+export async function analyzeDraftEdit(
+  feedbackId: string,
+  ctx?: TenantContext
+): Promise<void> {
+  try {
+    const feedback = await storage.getDraftFeedback(feedbackId, ctx);
+    if (!feedback || feedback.processed) {
+      return;
+    }
+
+    // Analyze the edits using AI
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: DRAFT_EDIT_LEARNING_PROMPT },
+        {
+          role: "user",
+          content: `Draft Type: ${feedback.draftType}
+
+ORIGINAL AI-GENERATED DRAFT:
+---
+${feedback.originalContent}
+---
+
+USER'S EDITED VERSION:
+---
+${feedback.editedContent}
+---
+
+Analyze the differences and extract writing preferences.`
+        }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.3,
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      return;
+    }
+
+    const insights = JSON.parse(content);
+    
+    // Store learned insights on the feedback record
+    await storage.updateDraftFeedback(feedbackId, {
+      learnedInsights: insights,
+      processed: true,
+    }, ctx);
+
+    // Convert insights into voice profile entries for future use
+    const source = `draft_edit:${feedbackId}`;
+    
+    // Store tone preferences
+    if (insights.tonePreferences?.length) {
+      for (const pref of insights.tonePreferences.slice(0, 3)) {
+        await storage.upsertVoicePattern("draft_tone_preference", pref, feedback.draftType, source, ctx);
+      }
+    }
+    
+    // Store patterns to avoid
+    if (insights.avoidPatterns?.length) {
+      for (const pattern of insights.avoidPatterns.slice(0, 3)) {
+        await storage.upsertVoicePattern("draft_avoid_pattern", pattern, feedback.draftType, source, ctx);
+      }
+    }
+    
+    // Store preferred patterns
+    if (insights.preferredPatterns?.length) {
+      for (const pattern of insights.preferredPatterns.slice(0, 3)) {
+        await storage.upsertVoicePattern("draft_preferred_pattern", pattern, feedback.draftType, source, ctx);
+      }
+    }
+    
+    // Store length preference if clear
+    if (insights.lengthPreference && insights.lengthPreference !== "same") {
+      await storage.upsertVoicePattern("draft_length_preference", insights.lengthPreference, feedback.draftType, source, ctx);
+    }
+
+    console.log(`[Draft Learning] Processed feedback ${feedbackId}: ${insights.overallInsight || "Patterns extracted"}`);
+  } catch (error) {
+    console.error("Error analyzing draft edit:", error);
+    throw error;
+  }
 }
 
 export async function generateFollowUpDrafts(

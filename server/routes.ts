@@ -4794,14 +4794,43 @@ Return ONLY valid JSON, no explanations.`
     }
   });
   
-  // Update draft status
+  // Update draft status (with learning from edits)
   app.patch("/api/generated-drafts/:id", async (req, res) => {
     try {
       const ctx = getTenantContext(req);
-      const draft = await storage.updateGeneratedDraft(req.params.id, req.body, ctx);
-      if (!draft) {
+      const { content: editedContent, ...otherUpdates } = req.body;
+      
+      // Get original draft to compare for learning
+      const originalDraft = await storage.getGeneratedDraft(req.params.id, ctx);
+      if (!originalDraft) {
         return res.status(404).json({ message: "Draft not found" });
       }
+      
+      // If content was edited, capture the feedback for learning
+      if (editedContent && editedContent !== originalDraft.content) {
+        // Store the original vs edited for learning (async, don't block response)
+        storage.createDraftFeedback({
+          draftId: originalDraft.id,
+          originalContent: originalDraft.content,
+          editedContent: editedContent,
+          draftType: originalDraft.type,
+          processed: false,
+        }, ctx).then(async (feedback) => {
+          // Trigger async learning analysis
+          try {
+            const { analyzeDraftEdit } = await import("./conversation-processor");
+            await analyzeDraftEdit(feedback.id, ctx);
+          } catch (err) {
+            console.error("Draft learning analysis failed:", err);
+          }
+        }).catch(err => {
+          console.error("Failed to create draft feedback:", err);
+        });
+      }
+      
+      // Update the draft
+      const updateData = editedContent ? { ...otherUpdates, content: editedContent } : otherUpdates;
+      const draft = await storage.updateGeneratedDraft(req.params.id, updateData, ctx);
       res.json(draft);
     } catch (error: any) {
       res.status(500).json({ message: error.message });

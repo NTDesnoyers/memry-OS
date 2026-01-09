@@ -880,6 +880,28 @@ export const insertVoiceProfileSchema = createInsertSchema(voiceProfile).omit({
 export type InsertVoiceProfile = z.infer<typeof insertVoiceProfileSchema>;
 export type VoiceProfile = typeof voiceProfile.$inferSelect;
 
+/** Draft Feedback - Captures original vs edited drafts to learn writing preferences. */
+export const draftFeedback = pgTable("draft_feedback", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
+  draftId: varchar("draft_id").references(() => generatedDrafts.id),
+  originalContent: text("original_content").notNull(),
+  editedContent: text("edited_content").notNull(),
+  draftType: text("draft_type").notNull(), // email, handwritten_note, task
+  learnedInsights: jsonb("learned_insights"), // AI-extracted patterns from edits
+  processed: boolean("processed").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertDraftFeedbackSchema = createInsertSchema(draftFeedback).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+});
+
+export type InsertDraftFeedback = z.infer<typeof insertDraftFeedbackSchema>;
+export type DraftFeedback = typeof draftFeedback.$inferSelect;
+
 /** Listening Analysis - NVC + Question-Based Selling analysis of conversations. */
 export const listeningAnalysis = pgTable("listening_analysis", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
