@@ -682,7 +682,9 @@ export async function generateFollowUpDrafts(
   const drafts: InsertGeneratedDraft[] = [];
   
   const transcript = interaction.transcript || interaction.summary || "";
-  if (!transcript || transcript.length < 50) {
+  // Lower threshold to 20 chars to ensure even brief action items get processed
+  // e.g., "Connect Dennis with Ricardo; send availability email" is ~55 chars
+  if (!transcript || transcript.length < 20) {
     return drafts;
   }
 
@@ -726,7 +728,93 @@ Generate follow-up content for this interaction. Remember to scan for third-part
 
     const generated = JSON.parse(content);
 
-    if (generated.email) {
+    // Handle new multi-email format (emails array)
+    if (generated.emails && Array.isArray(generated.emails)) {
+      for (const email of generated.emails) {
+        // Validate required fields
+        if (!email.body) continue;
+        const subject = email.subject || `Follow-up with ${person.name}`;
+        const emailType = email.type || "followup";
+        
+        // For connection emails, create drafts for both parties
+        if (emailType === "connection" && email.person1 && email.person2) {
+          const emailTitle = `Introduction: ${email.person1} <> ${email.person2}`;
+          
+          // Try to find the second person to link the draft to them as well
+          let person2Record: Person | null = null;
+          try {
+            const allPeople = await storage.getAllPeople(ctx);
+            const person2NameLower = email.person2.toLowerCase().trim();
+            person2Record = allPeople.find(p => 
+              p.name.toLowerCase().trim() === person2NameLower ||
+              p.name.toLowerCase().includes(person2NameLower) ||
+              person2NameLower.includes(p.name.toLowerCase())
+            ) || null;
+          } catch (e) {
+            console.warn(`Could not search for connection party ${email.person2}:`, e);
+          }
+          
+          // Create draft linked to primary person
+          drafts.push({
+            personId: person.id,
+            interactionId: interaction.id,
+            type: "email",
+            title: emailTitle,
+            content: email.body,
+            status: "pending",
+            metadata: { 
+              subject,
+              emailType: "connection",
+              isConnection: true,
+              person1: email.person1,
+              person2: email.person2,
+              recipientName: email.recipientName || `${email.person1}, ${email.person2}`
+            },
+          });
+          
+          // If we found the second person, create a copy of the draft linked to them too
+          if (person2Record && person2Record.id !== person.id) {
+            drafts.push({
+              personId: person2Record.id,
+              interactionId: interaction.id,
+              type: "email",
+              title: emailTitle,
+              content: email.body,
+              status: "pending",
+              metadata: { 
+                subject,
+                emailType: "connection",
+                isConnection: true,
+                person1: email.person1,
+                person2: email.person2,
+                recipientName: email.recipientName || `${email.person1}, ${email.person2}`,
+                linkedFromPerson: person.name
+              },
+            });
+          }
+        } else {
+          // Regular followup or action email
+          drafts.push({
+            personId: person.id,
+            interactionId: interaction.id,
+            type: "email",
+            title: subject,
+            content: email.body,
+            status: "pending",
+            metadata: { 
+              subject,
+              emailType,
+              recipientName: email.recipientName || person.name,
+              ...(emailType === "action" && email.actionDescription && { 
+                actionDescription: email.actionDescription 
+              })
+            },
+          });
+        }
+      }
+    }
+    // Legacy support: handle old single email format
+    else if (generated.email) {
       drafts.push({
         personId: person.id,
         interactionId: interaction.id,

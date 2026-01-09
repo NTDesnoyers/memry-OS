@@ -1312,17 +1312,17 @@ Respond with valid JSON only, no other text.`;
       type: "function",
       function: {
         name: "log_interaction",
-        description: "Log a conversation, call, meeting, or other interaction with a person. IMPORTANT: Always include the full transcript when available - this enables AI draft generation.",
+        description: "Log a conversation, call, meeting, or other interaction with a person. CRITICAL: Always include the FULL user message as transcript - this enables AI to generate specific drafts for each action item mentioned.",
         parameters: {
           type: "object",
           properties: {
             personId: { type: "string", description: "The ID of the person interacted with" },
             type: { type: "string", enum: ["call", "meeting", "email", "text", "in_person", "social"], description: "Type of interaction" },
             summary: { type: "string", description: "Brief summary of what was discussed (2-3 sentences)" },
-            transcript: { type: "string", description: "IMPORTANT: Include the full conversation transcript when provided by the user - this enables AI-powered follow-up draft generation" },
+            transcript: { type: "string", description: "CRITICAL: Copy the ENTIRE user message here including all follow-up items, bullet points, connection requests, etc. The AI uses this to generate targeted emails for each action item. Short summaries = generic drafts. Full message = specific drafts for each item." },
             fordUpdates: { type: "string", description: "Any FORD updates learned during this interaction" }
           },
-          required: ["personId", "type", "summary"]
+          required: ["personId", "type", "summary", "transcript"]
         }
       }
     },

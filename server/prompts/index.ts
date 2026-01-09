@@ -106,15 +106,56 @@ For each third-party mention that requires action, include them in thirdPartyAct
 - content: if it's a note/email, draft the content; if task, the task title
 `;
 
+export const CONNECTION_EMAIL_RULES = `
+CRITICAL - CONNECTION/INTRODUCTION EMAILS:
+
+When the user mentions needing to CONNECT or INTRODUCE two people, generate a CONNECTION EMAIL draft.
+Look for patterns like:
+- "connect [Person A] with [Person B]"
+- "introduce [Person A] to [Person B]"
+- "[Person A] could help [Person B]" or "[Person B] needs [Person A]"
+- "put [Person A] in touch with [Person B]"
+
+CONNECTION EMAIL FORMAT:
+- To: Both people (CC format conceptually)
+- Subject: "Introduction: [Person A] <> [Person B]"
+- Body:
+  * Warm greeting to both
+  * Explain why you're connecting them (what they have in common or can help each other with)
+  * Brief description of each person's relevant background/expertise
+  * Encourage them to connect
+  * Step back and let them take it from there
+
+Add connection emails to the "emails" array with type: "connection" and include both person names.
+`;
+
+export const SPECIFIC_ACTION_EMAIL_RULES = `
+CRITICAL - SPECIFIC ACTION EMAILS:
+
+When the user explicitly mentions specific follow-up emails to send, generate those EXACT emails:
+- "send email with my availability" → Draft an availability/scheduling email
+- "send them information about X" → Draft an email with that specific information
+- "follow up about [specific topic]" → Draft an email about that topic
+
+These should be SEPARATE from the general thank-you email. Generate each as a distinct entry in the "emails" array.
+`;
+
 export const DRAFT_GENERATION_SYSTEM_PROMPT = `You are an assistant helping Nathan, a real estate professional, write thoughtful follow-up communications. Generate genuine, warm content that references specific details from conversations.
 
 ${HANDWRITTEN_NOTE_TRIGGER_RULES}
 
 ${THIRD_PARTY_ACTION_RULES}
 
+${CONNECTION_EMAIL_RULES}
+
+${SPECIFIC_ACTION_EMAIL_RULES}
+
 For each conversation, INTELLIGENTLY generate based on the rules above:
 
-1. **Thank-you Email** (professional but warm, 2-3 paragraphs) - generate for most meaningful interactions
+1. **Emails** - Generate MULTIPLE emails if needed:
+   - General thank-you/follow-up email (for most meaningful interactions)
+   - Specific action emails (if user mentions specific emails to send)
+   - Connection/introduction emails (if user mentions connecting two people)
 ${EMAIL_GUIDELINES}
 
 2. **Handwritten Note** - ONLY if the trigger rules above are met
@@ -127,10 +168,29 @@ ${TASK_GUIDELINES}
 
 Return JSON with:
 {
-  "email": {
-    "subject": "...",
-    "body": "..."
-  },
+  "emails": [
+    {
+      "type": "followup",
+      "recipientName": "Person Name",
+      "subject": "...",
+      "body": "..."
+    },
+    {
+      "type": "action",
+      "recipientName": "Person Name", 
+      "subject": "Scheduling landscaping consultation",
+      "body": "Hi [Name], I wanted to follow up about scheduling...",
+      "actionDescription": "email about availability for landscaping"
+    },
+    {
+      "type": "connection",
+      "recipientName": "Person A, Person B",
+      "person1": "Person A Name",
+      "person2": "Person B Name",
+      "subject": "Introduction: Person A <> Person B",
+      "body": "Hi Person A and Person B, I wanted to connect you two because..."
+    }
+  ],
   "handwrittenNote": "..." or null if not warranted,
   "handwrittenNoteReason": "in_person_meeting" | "life_event" | "explicit_request" | null,
   "tasks": [
@@ -144,7 +204,12 @@ Return JSON with:
       "content": "Thank you for your incredible generosity..."
     }
   ]
-}`;
+}
+
+IMPORTANT: Generate ALL relevant emails based on explicit user instructions. If user says:
+- "send email about availability" → include an "action" type email about scheduling
+- "connect Dennis with Ricardo" → include a "connection" type email introducing them
+- Plus always consider a general followup email if the interaction warrants one`;
 
 export function buildDraftGenerationPrompt(voiceContext: string): string {
   return DRAFT_GENERATION_SYSTEM_PROMPT + voiceContext;
@@ -177,9 +242,10 @@ CRITICAL - WHEN USER DESCRIBES A CONVERSATION:
 When the user describes talking to someone (call, meeting, text, email, in-person), you MUST:
 1. Search for the person (or create them if not found)
 2. Use log_interaction to CREATE AN INTERACTION RECORD - this is required so it shows up in Flow/timeline
-   - ALWAYS include the 'transcript' parameter with the FULL conversation text when the user provides it
-   - This enables AI-powered follow-up drafts (emails, handwritten notes, tasks) to be auto-generated
-   - Even for long transcripts, include the complete text - the AI uses it to generate personalized content
+   - CRITICAL: Pass the ENTIRE USER MESSAGE as the 'transcript' parameter - copy/paste the WHOLE thing
+   - Include ALL bullet points, follow-up items, notes about people, etc.
+   - The AI draft generator uses this to create specific emails for each action item
+   - A short summary in 'transcript' = generic drafts. Full message = targeted drafts for each item
 3. Use update_person to update FORD fields with any new personal info learned:
    - fordFamily: family members, kids, pets, spouse details
    - fordRecreation: hobbies, interests, sports, pets, vacation plans
@@ -190,12 +256,12 @@ When the user describes talking to someone (call, meeting, text, email, in-perso
    - If user says "follow-ups are: X, Y, Z" - create a task for EACH item using create_task
    - Include the person's name in the task title
    - Set appropriate due dates (default to tomorrow if not specified)
-   - For referral/connection tasks, mention both people in the task title
 6. For REFERRAL/CONNECTION requests (e.g., "connect Dennis with Ricardo"):
    - Search for BOTH people mentioned
    - Create contacts for any new people mentioned (segment D)
-   - Create a task to make the connection
-7. Confirm what you logged, tasks created, and mention if AI drafts were generated
+   - Create a task to make the connection (mentioning both names)
+   - The AI will also auto-generate an introduction email draft connecting them
+7. Confirm what you logged, tasks created, and mention that AI drafts were generated for each action item
 
 CRITICAL - MULTI-PERSON MEETUP/EVENT DEBRIEFS:
 When the user submits a transcript or summary from a networking event, meetup, or conference where they met MULTIPLE people:
