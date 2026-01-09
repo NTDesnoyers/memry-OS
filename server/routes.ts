@@ -3972,7 +3972,12 @@ Return ONLY valid JSON, no explanations.`
   app.patch("/api/interactions/:id", async (req, res) => {
     try {
       const ctx = getTenantContext(req);
-      const interaction = await storage.updateInteraction(req.params.id, req.body, ctx);
+      // Convert occurredAt from string to Date if present (Drizzle timestamp requires Date objects)
+      const updateData = { ...req.body };
+      if (updateData.occurredAt && typeof updateData.occurredAt === 'string') {
+        updateData.occurredAt = new Date(updateData.occurredAt);
+      }
+      const interaction = await storage.updateInteraction(req.params.id, updateData, ctx);
       if (!interaction) {
         return res.status(404).json({ message: "Interaction not found" });
       }
