@@ -1329,6 +1329,22 @@ Respond with valid JSON only, no other text.`;
     {
       type: "function",
       function: {
+        name: "update_interaction",
+        description: "Update an existing interaction's transcript, summary, or other details. Use this when the user makes spelling corrections or wants to fix information in a logged conversation.",
+        parameters: {
+          type: "object",
+          properties: {
+            interactionId: { type: "string", description: "The ID of the interaction to update" },
+            transcript: { type: "string", description: "Updated transcript with corrections applied" },
+            summary: { type: "string", description: "Updated summary with corrections applied" }
+          },
+          required: ["interactionId"]
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
         name: "create_task",
         description: "Create a new task or follow-up item",
         parameters: {
@@ -1641,6 +1657,23 @@ Respond with valid JSON only, no other text.`;
           
           const draftMsg = draftsCreated > 0 ? ` ${draftsCreated} follow-up draft(s) generated.` : '';
           return `Logged ${args.type} interaction for ${person.name}. Last contact date updated.${draftMsg}`;
+        }
+        
+        case "update_interaction": {
+          const interaction = await storage.getInteraction(args.interactionId, ctx);
+          if (!interaction) return `Interaction not found with ID: ${args.interactionId}`;
+          
+          const updates: Record<string, any> = {};
+          if (args.transcript) updates.transcript = args.transcript;
+          if (args.summary) updates.summary = args.summary;
+          
+          if (Object.keys(updates).length === 0) {
+            return `Error: no valid fields to update`;
+          }
+          
+          await storage.updateInteraction(args.interactionId, updates, ctx);
+          const updatedFields = Object.keys(updates).join(", ");
+          return `Successfully updated interaction ${updatedFields}`;
         }
         
         case "create_task": {

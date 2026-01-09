@@ -378,6 +378,16 @@ export function VoiceLogger() {
       };
       setMessages(prev => [...prev, assistantMessage]);
       
+      // Always invalidate all relevant caches after AI assistant completes
+      // This ensures changes are immediately visible across the app even when
+      // actions happen via backend logic (fallback drafts, post-save processing, etc.)
+      queryClient.invalidateQueries({ queryKey: ["/api/people"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/interactions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/generated-drafts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/weekly-review"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+      
     } catch (error) {
       console.error("AI error:", error);
       const errorMessage: Message = { 

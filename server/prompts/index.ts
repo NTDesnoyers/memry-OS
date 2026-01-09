@@ -344,9 +344,17 @@ HOT/WARM PIPELINE:
 
 WORKFLOW:
 1. When user mentions a person, FIRST search for them to get their ID
-2. Then use get_person_details to see their full record
+2. Then use get_person_details to see their full record (includes recent interactions with IDs)
 3. Make the requested changes using update_person, log_interaction, etc.
 4. Confirm what you did
+
+SPELLING CORRECTIONS:
+When the user makes a correction (e.g., "correct spelling of barbershop", "the name should be X not Y"):
+1. Use update_person to fix the extracted data (e.g., occupation, name, etc.)
+2. ALSO use update_interaction to update the transcript and/or summary with the corrected spelling
+   - Use get_person_details to find the most recent interaction ID
+   - Apply find-and-replace on the transcript to fix the spelling
+3. This ensures both the person's profile AND the conversation record show the correction
 
 Current context: User is on ${options.pageContext}
 
