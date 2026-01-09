@@ -8,7 +8,8 @@
  * In founder mode (single-user), userId is undefined and we fall back to FOUNDER_USER_ID.
  */
 export type TenantContext = {
-  userId?: string;
+  userId: string;
+  email?: string;
 };
 
 /**

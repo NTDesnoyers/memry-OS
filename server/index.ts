@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import rateLimit from "express-rate-limit";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -10,7 +11,7 @@ import { registerWorkflowCoachAgent } from "./workflow-coach-agent";
 import { startRelationshipChecker } from "./relationship-checker";
 import { startMaintenanceScheduler } from "./maintenance";
 import { setupVoiceRelay } from "./voice-relay";
-import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
+import { setupAuth, registerAuthRoutes, registerAdminRoutes, authStorage } from "./replit_integrations/auth";
 
 const app = express();
 const httpServer = createServer(app);
@@ -78,6 +79,166 @@ app.use((req, res, next) => {
   // Setup Replit Auth (must be before other routes)
   await setupAuth(app);
   registerAuthRoutes(app);
+  
+  // Rate limiting - protect against abuse
+  // General API rate limit: 100 requests per minute per IP
+  const generalLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 100,
+    message: { message: 'Too many requests, please try again later' },
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: (req) => {
+      // Skip rate limiting for health checks
+      return req.path === '/health';
+    },
+  });
+  
+  // Stricter rate limit for AI endpoints: 20 requests per minute
+  const aiLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 20,
+    message: { message: 'AI rate limit exceeded, please wait a moment' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  
+  // Very strict rate limit for auth endpoints: 10 attempts per 15 minutes
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10,
+    message: { message: 'Too many login attempts, please try again later' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  
+  // Apply rate limiters
+  app.use('/api', generalLimiter);
+  // Auth rate limiting on actual auth endpoints
+  app.use('/api/login', authLimiter);
+  app.use('/api/callback', authLimiter);
+  // AI rate limiting on all AI-related endpoints
+  app.use('/api/ai', aiLimiter);
+  app.use('/api/assistant', aiLimiter);
+  app.use('/api/voice', aiLimiter);
+  app.use('/api/chat', aiLimiter);
+  app.use('/api/process-interactions', aiLimiter);
+  app.use('/api/admin', authLimiter); // Admin actions rate limited
+  
+  // CSRF Protection middleware - validate origin for state-changing requests
+  // This protects against cross-site request forgery attacks
+  app.use('/api', (req: Request, res: Response, next: NextFunction) => {
+    // Only check state-changing methods
+    const stateChangingMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
+    if (!stateChangingMethods.includes(req.method)) {
+      return next();
+    }
+    
+    // Skip CSRF for webhooks (they use secret verification)
+    if (req.path.startsWith('/webhooks/')) {
+      return next();
+    }
+    
+    // Skip CSRF for auth callback (OAuth flow)
+    if (req.path === '/callback') {
+      return next();
+    }
+    
+    // Validate origin or referer header
+    const origin = req.get('origin');
+    const referer = req.get('referer');
+    const host = req.get('host');
+    
+    // In development, be more permissive
+    if (process.env.NODE_ENV === 'development') {
+      return next();
+    }
+    
+    // Extract origin from referer if origin not present
+    let requestOrigin = origin;
+    if (!requestOrigin && referer) {
+      try {
+        requestOrigin = new URL(referer).origin;
+      } catch {
+        // Invalid referer URL
+      }
+    }
+    
+    // CRITICAL: Require Origin or Referer header for state-changing requests
+    // Requests without these headers are potentially CSRF attacks
+    if (!requestOrigin) {
+      log(`CSRF blocked: missing Origin/Referer header on ${req.method} ${req.path}`, 'security');
+      return res.status(403).json({ message: 'Request origin required' });
+    }
+    
+    // Validate that request comes from our domain
+    if (host) {
+      const expectedOrigins = [
+        `https://${host}`,
+        `http://${host}`, // Allow http in case of proxy
+      ];
+      
+      if (!expectedOrigins.some(expected => requestOrigin === expected)) {
+        log(`CSRF blocked: origin=${requestOrigin} expected=${expectedOrigins.join(',')}`, 'security');
+        return res.status(403).json({ message: 'Invalid request origin' });
+      }
+    }
+    
+    next();
+  });
+  
+  // Global authentication middleware - protect ALL /api routes except auth & health endpoints
+  // This ensures no unauthenticated requests can access any data
+  // Note: Use paths WITHOUT /api prefix since app.use('/api',...) strips the prefix
+  const PUBLIC_API_PATHS = [
+    '/login',
+    '/logout', 
+    '/callback',
+    '/auth/user',
+    '/webhooks/', // Webhooks use secret verification
+  ];
+  
+  app.use('/api', async (req: Request, res: Response, next: NextFunction) => {
+    // Skip auth check for public routes
+    // req.path is the path after /api mount point (e.g., '/login' not '/api/login')
+    const isPublicRoute = PUBLIC_API_PATHS.some(route => 
+      req.path === route || req.path.startsWith(route)
+    );
+    
+    if (isPublicRoute) {
+      return next();
+    }
+    
+    // Check if user is authenticated
+    const user = req.user as any;
+    if (!req.isAuthenticated() || !user?.claims?.sub) {
+      log(`Unauthorized access attempt: ${req.method} /api${req.path}`, 'security');
+      return res.status(401).json({ message: 'Unauthorized - Please log in' });
+    }
+    
+    // Check user's approval status (skip for status check endpoint)
+    if (req.path !== '/auth/status') {
+      try {
+        const dbUser = await authStorage.getUser(user.claims.sub);
+        if (!dbUser || dbUser.status !== 'approved') {
+          // User exists but not approved - return 403 with status info
+          log(`Access denied for pending/denied user: ${user.claims.email}`, 'security');
+          return res.status(403).json({ 
+            message: 'Access pending approval',
+            status: dbUser?.status || 'pending'
+          });
+        }
+      } catch (error) {
+        log(`Error checking user status: ${error}`, 'security');
+        return res.status(500).json({ message: 'Error verifying access' });
+      }
+    }
+    
+    next();
+  });
+  
+  // Register admin routes (after middleware for proper security checks)
+  registerAdminRoutes(app);
   
   await registerRoutes(httpServer, app);
 

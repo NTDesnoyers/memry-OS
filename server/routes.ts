@@ -113,16 +113,36 @@ async function trackAiUsage(
 
 /**
  * Extract TenantContext from authenticated request.
- * Returns context with userId from Replit Auth claims, or undefined if not authenticated.
+ * SECURITY: Returns context with userId from Replit Auth claims.
+ * Since global auth middleware enforces authentication, this should always have a userId.
+ * Throws if called without authentication (indicates a security misconfiguration).
  */
-function getTenantContext(req: Request): TenantContext | undefined {
+function getTenantContext(req: Request): TenantContext {
   const user = req.user as any;
   const userId = user?.claims?.sub;
+  const email = user?.claims?.email;
+  
   // Debug logging for multi-tenancy
   if (process.env.NODE_ENV === 'development') {
-    logger.debug(`TenantContext: userId=${userId}, email=${user?.claims?.email || 'none'}, path=${req.path}`);
+    logger.debug(`TenantContext: userId=${userId}, email=${email || 'none'}, path=${req.path}`);
   }
-  return userId ? { userId } : undefined;
+  
+  // SECURITY: Fail-safe - if we somehow reach here without auth, throw error
+  if (!userId) {
+    logger.error(`SECURITY: getTenantContext called without authenticated user on ${req.method} ${req.path}`);
+    throw new Error('Authentication required - no user context available');
+  }
+  
+  return { userId, email };
+}
+
+/**
+ * Optional tenant context for routes that may work without auth (webhooks, etc.)
+ */
+function getOptionalTenantContext(req: Request): TenantContext | undefined {
+  const user = req.user as any;
+  const userId = user?.claims?.sub;
+  return userId ? { userId, email: user?.claims?.email } : undefined;
 }
 
 // Background processing for batch operations

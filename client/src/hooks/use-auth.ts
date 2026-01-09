@@ -10,6 +10,19 @@ async function fetchUser(): Promise<AuthUser | null> {
     return null;
   }
 
+  // Handle 403 - user authenticated but pending approval
+  // Fetch status from dedicated endpoint that works for pending users
+  if (response.status === 403) {
+    const statusRes = await fetch("/api/auth/status", { credentials: "include" });
+    if (statusRes.ok) {
+      const statusData = await statusRes.json();
+      // Return user data from status endpoint
+      // This endpoint is designed for pending users and returns real data
+      return statusData as AuthUser;
+    }
+    return null;
+  }
+
   if (!response.ok) {
     throw new Error(`${response.status}: ${response.statusText}`);
   }

@@ -11,6 +11,8 @@ import { ProtectedRoute } from "@/components/protected-route";
 import { isFounderMode } from "@/lib/feature-mode";
 import { useAuth } from "@/hooks/use-auth";
 import NotFound from "@/pages/not-found";
+import PendingApproval from "@/pages/pending-approval";
+import AdminUsers from "@/pages/admin-users";
 import Dashboard from "@/pages/dashboard";
 import WeeklyReport from "@/pages/weekly-report";
 import People from "@/pages/people";
@@ -88,6 +90,7 @@ function Router() {
         <Route path="/revival" component={RevivalOpportunities} />
         <Route path="/welcome" component={BetaWelcome} />
         <Route path="/issues" component={IssuesReview} />
+        <Route path="/admin/users" component={AdminUsers} />
         <Route component={NotFound} />
       </Switch>
     </ProtectedRoute>
@@ -108,6 +111,11 @@ function AuthenticatedApp() {
   
   if (!founderMode && !isAuthenticated) {
     return <Landing />;
+  }
+  
+  // Check if user is pending approval
+  if (user && user.status !== 'approved') {
+    return <PendingApproval />;
   }
   
   return (
