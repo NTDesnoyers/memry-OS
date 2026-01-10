@@ -3972,22 +3972,36 @@ Return ONLY valid JSON, no explanations.`
   app.patch("/api/interactions/:id", async (req, res) => {
     try {
       const ctx = getTenantContext(req);
+      
+      // Fetch existing interaction to compare for changes
+      const existingInteraction = await storage.getInteraction(req.params.id, ctx);
+      if (!existingInteraction) {
+        return res.status(404).json({ message: "Interaction not found" });
+      }
+      
       // Convert occurredAt from string to Date if present (Drizzle timestamp requires Date objects)
       const updateData = { ...req.body };
       if (updateData.occurredAt && typeof updateData.occurredAt === 'string') {
         updateData.occurredAt = new Date(updateData.occurredAt);
       }
+      
+      // Check if transcript or summary actually changed (not just present in request)
+      const transcriptChanged = req.body.transcript !== undefined && 
+        req.body.transcript !== existingInteraction.transcript;
+      const summaryChanged = req.body.summary !== undefined && 
+        req.body.summary !== existingInteraction.summary;
+      
       const interaction = await storage.updateInteraction(req.params.id, updateData, ctx);
       if (!interaction) {
-        return res.status(404).json({ message: "Interaction not found" });
+        return res.status(404).json({ message: "Update failed" });
       }
       
-      // If transcript or summary was added/updated, trigger AI processing for drafts
-      if (req.body.transcript || req.body.summary) {
+      // Only trigger AI processing if transcript or summary actually changed
+      if (transcriptChanged || summaryChanged) {
         try {
           const { processInteraction } = await import("./conversation-processor");
           await processInteraction(interaction.id, ctx);
-          logger.info(`Triggered AI processing for updated interaction ${interaction.id}`);
+          logger.info(`Triggered AI processing for updated interaction ${interaction.id} (transcript: ${transcriptChanged}, summary: ${summaryChanged})`);
         } catch (processingError: any) {
           logger.error(`Failed to process interaction ${interaction.id}:`, processingError);
           // Don't fail the request, just log the error
