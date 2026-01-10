@@ -21,7 +21,9 @@ import {
   Star,
   Loader2
 } from "lucide-react";
-import { startOfWeek, endOfWeek, format, isWithinInterval, parseISO } from "date-fns";
+import { startOfWeek, endOfWeek, format, isWithinInterval, parseISO, addDays, isSameDay } from "date-fns";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown, Calendar } from "lucide-react";
 
 type Person = {
   id: string;
@@ -78,6 +80,7 @@ const typeConfig: Record<string, { icon: any; label: string; color: string }> = 
 
 export default function WeeklyReview() {
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
+  const [expandedDay, setExpandedDay] = useState<string | null>(null);
   
   const { data: people = [] } = useQuery<Person[]>({
     queryKey: ["/api/people"],
@@ -106,6 +109,42 @@ export default function WeeklyReview() {
   const getPersonInteractions = (personId: string) => {
     return weeklyInteractions.filter(i => i.personId === personId);
   };
+
+  const dailyData = useMemo(() => {
+    const days: { date: Date; dayName: string; count: number; households: { id: string; members: Person[] }[]; isToday: boolean }[] = [];
+    const today = new Date();
+    
+    for (let i = 0; i < 7; i++) {
+      const day = addDays(weekStart, i);
+      const dayInteractions = weeklyInteractions.filter(int => 
+        isSameDay(parseISO(int.occurredAt), day)
+      );
+      const uniquePersonIds = [...new Set(dayInteractions.map(int => int.personId))];
+      const dayPeople = people.filter(p => uniquePersonIds.includes(p.id));
+      
+      const householdMap = new Map<string, Person[]>();
+      for (const person of dayPeople) {
+        const key = person.householdId || person.id;
+        if (!householdMap.has(key)) {
+          householdMap.set(key, []);
+        }
+        householdMap.get(key)!.push(person);
+      }
+      
+      const households = Array.from(householdMap.entries()).map(([id, members]) => ({ id, members }));
+      
+      days.push({
+        date: day,
+        dayName: format(day, "EEE"),
+        count: households.length,
+        households,
+        isToday: isSameDay(day, today),
+      });
+    }
+    return days;
+  }, [weekStart, weeklyInteractions, people]);
+
+  const maxDailyCount = Math.max(...dailyData.map(d => d.count), 1);
 
   const weeklyCount = peopleContactedThisWeek.length;
   const percentage = Math.min((weeklyCount / WEEKLY_GOAL) * 100, 100);
@@ -225,6 +264,91 @@ export default function WeeklyReview() {
               </CardContent>
             </Card>
           </div>
+
+          <Card className="border-none shadow-md mb-8">
+            <CardHeader className="pb-4">
+              <CardTitle className="font-serif flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-primary" />
+                Daily Breakdown
+              </CardTitle>
+              <CardDescription>Click a day to see who you connected with</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-end gap-2 h-32 mb-2">
+                {dailyData.map((day) => {
+                  const barHeight = day.count > 0 ? Math.max((day.count / maxDailyCount) * 100, 15) : 0;
+                  const isExpanded = expandedDay === format(day.date, "yyyy-MM-dd");
+                  return (
+                    <button
+                      key={day.dayName}
+                      onClick={() => setExpandedDay(isExpanded ? null : format(day.date, "yyyy-MM-dd"))}
+                      className={`flex-1 flex flex-col items-center gap-1 transition-all ${isExpanded ? "scale-105" : "hover:scale-102"}`}
+                      data-testid={`button-day-${day.dayName.toLowerCase()}`}
+                    >
+                      <span className="text-xs font-medium text-muted-foreground">{day.count}</span>
+                      <div 
+                        className={`w-full rounded-t-lg transition-all ${
+                          day.isToday ? "bg-emerald-500" : day.count > 0 ? "bg-primary/70" : "bg-muted"
+                        } ${isExpanded ? "ring-2 ring-primary ring-offset-2" : ""}`}
+                        style={{ height: `${barHeight}%`, minHeight: day.count > 0 ? "8px" : "4px" }}
+                      />
+                      <span className={`text-xs ${day.isToday ? "font-bold text-emerald-600" : "text-muted-foreground"}`}>
+                        {day.dayName}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              
+              {expandedDay && (
+                <div className="mt-4 pt-4 border-t">
+                  {(() => {
+                    const dayInfo = dailyData.find(d => format(d.date, "yyyy-MM-dd") === expandedDay);
+                    if (!dayInfo || dayInfo.households.length === 0) {
+                      return (
+                        <p className="text-sm text-muted-foreground text-center py-2">
+                          No conversations on {format(parseISO(expandedDay), "EEEE, MMM d")}
+                        </p>
+                      );
+                    }
+                    return (
+                      <div>
+                        <h4 className="text-sm font-medium mb-3">
+                          {format(dayInfo.date, "EEEE, MMM d")} - {dayInfo.households.length} {dayInfo.households.length === 1 ? "household" : "households"}
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {dayInfo.households.map((household) => (
+                            <button
+                              key={household.id}
+                              onClick={() => setSelectedPerson(household.members[0])}
+                              className="flex items-center gap-2 px-3 py-2 bg-secondary rounded-lg hover:bg-secondary/80 transition-colors"
+                              data-testid={`button-household-${household.id}`}
+                            >
+                              <Avatar className="h-6 w-6">
+                                <AvatarFallback className="text-xs bg-primary/10">
+                                  {getInitials(household.members[0].name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm font-medium">
+                                {household.members.length === 1 
+                                  ? household.members[0].name 
+                                  : household.members.map(m => m.name).join(" & ")}
+                              </span>
+                              {household.members[0].segment && (
+                                <Badge variant="outline" className="text-[10px] h-4">
+                                  {household.members[0].segment}
+                                </Badge>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {fordHighlights.length > 0 && (
             <Card className="border-none shadow-md mb-8">

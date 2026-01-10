@@ -94,11 +94,14 @@ export async function logIssueToSheet(issue: {
   }
   
   try {
+    // Sanitize description - replace newlines with spaces to prevent row splitting in Google Sheets
+    const sanitizedDescription = issue.description.replace(/[\r\n]+/g, ' ').trim();
+    
     await appendToSheet(spreadsheetId, 'Issues', [
       [
         issue.createdAt,
         issue.type,
-        issue.description,
+        sanitizedDescription,
         issue.route || '',
         issue.userEmail || 'Anonymous',
         issue.featureMode || '',

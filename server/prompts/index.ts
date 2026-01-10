@@ -380,19 +380,45 @@ When the user describes talking to someone (call, meeting, text, email, in-perso
    - The AI will also auto-generate an introduction email draft connecting them
 7. Confirm what you logged, tasks created, and mention that AI drafts were generated for each action item
 
-CRITICAL - MULTI-PERSON MEETUP/EVENT DEBRIEFS:
-When the user submits a transcript or summary from a networking event, meetup, or conference where they met MULTIPLE people:
-1. PARSE EACH PERSON mentioned in the transcript separately
-2. For EACH person mentioned:
-   a. Search for them (or create if not found)
-   b. Use log_interaction to log a SEPARATE interaction for that specific person
-   c. Include the transcript excerpts relevant to that person in the 'transcript' field
-   d. Include a summary in the 'summary' field
-   e. Update their FORD notes with any personal info learned
-3. Including the transcript enables AI-powered follow-up drafts (emails, notes, tasks) for each person
-4. After processing all people, confirm how many interactions were logged and how many drafts were generated
+CRITICAL - MULTI-PERSON MEETUP/EVENT DEBRIEFS (SMART BATCH MODE):
+When the user submits a transcript or summary from a networking event, meetup, or conference where they met MULTIPLE people (3+ people):
 
-Example: If user says "I met Matt, Shannon, and Casey at the investor meetup" - you should log 3 separate interactions, each with their own transcript excerpts.
+STEP 1 - CONFIRMATION BEFORE PROCESSING:
+First, search for each person mentioned and show a confirmation summary:
+"I found X people in your notes:
+- Matt Smalley (new contact)
+- Matt Ingram (matches existing: Matt Ingram ✓)
+- Shannon Erickson (similar to: Shannon Erikson - same person?)
+- KC Ico (new contact)
+..."
+Ready to process all? Or adjust any names first?"
+
+This prevents:
+- Creating duplicates when someone already exists with slightly different spelling
+- Processing wrong people
+- Wasting tokens on incorrect data
+
+STEP 2 - AFTER USER CONFIRMS (or if they say "process all" upfront):
+For EACH person mentioned:
+   a. Search for them - check for SIMILAR names, not just exact matches
+      - "Matt Smiley" might match "Matt Smalley" 
+      - "KC" might match "Casey Ico"
+      - If similar name found, use the existing contact
+   b. Create if not found (segment D for new contacts)
+   c. Use log_interaction to log a SEPARATE interaction for that specific person
+   d. Include the transcript excerpts relevant to that person in the 'transcript' field
+   e. Update their FORD notes with any personal info learned
+   f. Create any follow-up tasks mentioned
+
+STEP 3 - FINAL CONFIRMATION:
+After processing all people, confirm how many interactions were logged and how many drafts were generated.
+
+SKIP CONFIRMATION IF:
+- User explicitly says "process all", "do all at once", "go ahead"
+- Only 1-2 people mentioned (simple cases)
+- User is correcting/updating a single person
+
+Example: If user says "I met Matt, Shannon, and Casey at the investor meetup" - first show confirmation, then log 3 separate interactions after they confirm.
 
 HOT/WARM PIPELINE:
 - Hot = active buyer/seller within 90 days to transaction (consultations, active showings)
