@@ -33,11 +33,13 @@ import {
   Instagram,
   Facebook,
   Unlink,
-  Link2
+  Link2,
+  CreditCard
 } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { format, formatDistanceToNow, differenceInDays } from "date-fns";
 import type { Interaction, Person, HandwrittenNoteUpload } from "@shared/schema";
 import paperBg from "@assets/generated_images/subtle_paper_texture_background.png";
@@ -87,9 +89,42 @@ const settingsLinks = [
 export default function SettingsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [personSearch, setPersonSearch] = useState("");
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
+  const [isLoadingPortal, setIsLoadingPortal] = useState(false);
+
+  const openBillingPortal = async () => {
+    setIsLoadingPortal(true);
+    try {
+      const response = await fetch("/api/stripe/create-portal-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast({ title: "Error", description: "Could not open billing portal", variant: "destructive" });
+        setIsLoadingPortal(false);
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to open billing portal", variant: "destructive" });
+      setIsLoadingPortal(false);
+    }
+  };
+
+  const getSubscriptionStatusDisplay = (status: string | null | undefined) => {
+    switch (status) {
+      case 'active': return { label: 'Active', variant: 'default' as const, color: 'bg-green-100 text-green-800' };
+      case 'trialing': return { label: 'Trial', variant: 'secondary' as const, color: 'bg-blue-100 text-blue-800' };
+      case 'past_due': return { label: 'Past Due', variant: 'destructive' as const, color: 'bg-red-100 text-red-800' };
+      case 'canceled': return { label: 'Canceled', variant: 'outline' as const, color: 'bg-gray-100 text-gray-800' };
+      default: return { label: 'No Subscription', variant: 'outline' as const, color: 'bg-gray-100 text-gray-600' };
+    }
+  };
 
   const { data: deletedInteractions = [], isLoading: isLoadingDeleted } = useQuery<(Interaction & { participantsList: any[] })[]>({
     queryKey: ["/api/interactions/deleted"],
@@ -387,6 +422,63 @@ export default function SettingsPage() {
                   </Link>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Billing & Subscription Card */}
+          <Card className="mb-6" data-testid="card-billing">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Billing & Subscription</CardTitle>
+              </div>
+              <CardDescription>
+                Manage your Flow OS subscription and payment details
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">Status:</span>
+                    <Badge className={getSubscriptionStatusDisplay(user?.subscriptionStatus).color}>
+                      {getSubscriptionStatusDisplay(user?.subscriptionStatus).label}
+                    </Badge>
+                  </div>
+                  {user?.currentPeriodEnd && (
+                    <p className="text-xs text-muted-foreground">
+                      {user.subscriptionStatus === 'canceled' 
+                        ? `Access until ${format(new Date(user.currentPeriodEnd), 'MMM d, yyyy')}`
+                        : `Renews ${format(new Date(user.currentPeriodEnd), 'MMM d, yyyy')}`
+                      }
+                    </p>
+                  )}
+                  {user?.trialEnd && user.subscriptionStatus === 'trialing' && (
+                    <p className="text-xs text-muted-foreground">
+                      Trial ends {format(new Date(user.trialEnd), 'MMM d, yyyy')}
+                    </p>
+                  )}
+                </div>
+                <Button 
+                  onClick={openBillingPortal}
+                  disabled={isLoadingPortal || !user?.stripeCustomerId}
+                  variant="outline"
+                  size="sm"
+                  data-testid="button-manage-billing"
+                >
+                  {isLoadingPortal ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Opening...
+                    </>
+                  ) : (
+                    <>
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      Manage Billing
+                    </>
+                  )}
+                </Button>
+              </div>
             </CardContent>
           </Card>
 

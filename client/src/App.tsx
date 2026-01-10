@@ -12,6 +12,7 @@ import { isFounderMode } from "@/lib/feature-mode";
 import { useAuth } from "@/hooks/use-auth";
 import NotFound from "@/pages/not-found";
 import PendingApproval from "@/pages/pending-approval";
+import SubscriptionRequired from "@/pages/subscription-required";
 import AdminUsers from "@/pages/admin-users";
 import Dashboard from "@/pages/dashboard";
 import WeeklyReport from "@/pages/weekly-report";
@@ -98,7 +99,7 @@ function Router() {
 }
 
 function AuthenticatedApp() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, requiresSubscription } = useAuth();
   const founderMode = isFounderMode(user?.email);
   
   if (isLoading) {
@@ -116,6 +117,11 @@ function AuthenticatedApp() {
   // Check if user is pending approval
   if (user && user.status !== 'approved') {
     return <PendingApproval />;
+  }
+  
+  // Check if subscription is required (approved but no active subscription)
+  if (requiresSubscription) {
+    return <SubscriptionRequired />;
   }
   
   return (

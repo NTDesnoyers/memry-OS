@@ -1,13 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { AuthUser } from "@shared/models/auth";
 
-async function fetchUser(): Promise<AuthUser | null> {
+type FetchUserResult = {
+  user: AuthUser | null;
+  requiresSubscription: boolean;
+};
+
+async function fetchUser(): Promise<FetchUserResult> {
   const response = await fetch("/api/auth/user", {
     credentials: "include",
   });
 
   if (response.status === 401) {
-    return null;
+    return { user: null, requiresSubscription: false };
   }
 
   // Handle 403 - user authenticated but pending approval
@@ -16,18 +21,27 @@ async function fetchUser(): Promise<AuthUser | null> {
     const statusRes = await fetch("/api/auth/status", { credentials: "include" });
     if (statusRes.ok) {
       const statusData = await statusRes.json();
-      // Return user data from status endpoint
-      // This endpoint is designed for pending users and returns real data
-      return statusData as AuthUser;
+      return { user: statusData as AuthUser, requiresSubscription: false };
     }
-    return null;
+    return { user: null, requiresSubscription: false };
+  }
+
+  // Handle 402 - subscription required (user approved but no active subscription)
+  if (response.status === 402) {
+    const statusRes = await fetch("/api/auth/status", { credentials: "include" });
+    if (statusRes.ok) {
+      const statusData = await statusRes.json();
+      return { user: statusData as AuthUser, requiresSubscription: true };
+    }
+    return { user: null, requiresSubscription: true };
   }
 
   if (!response.ok) {
     throw new Error(`${response.status}: ${response.statusText}`);
   }
 
-  return response.json();
+  const user = await response.json();
+  return { user, requiresSubscription: false };
 }
 
 async function logout(): Promise<void> {
@@ -36,7 +50,7 @@ async function logout(): Promise<void> {
 
 export function useAuth() {
   const queryClient = useQueryClient();
-  const { data: user, isLoading } = useQuery<AuthUser | null>({
+  const { data, isLoading } = useQuery<FetchUserResult>({
     queryKey: ["/api/auth/user"],
     queryFn: fetchUser,
     retry: false,
@@ -46,14 +60,15 @@ export function useAuth() {
   const logoutMutation = useMutation({
     mutationFn: logout,
     onSuccess: () => {
-      queryClient.setQueryData(["/api/auth/user"], null);
+      queryClient.setQueryData(["/api/auth/user"], { user: null, requiresSubscription: false });
     },
   });
 
   return {
-    user,
+    user: data?.user ?? null,
     isLoading,
-    isAuthenticated: !!user,
+    isAuthenticated: !!data?.user,
+    requiresSubscription: data?.requiresSubscription ?? false,
     logout: logoutMutation.mutate,
     isLoggingOut: logoutMutation.isPending,
   };

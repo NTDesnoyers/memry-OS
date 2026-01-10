@@ -248,16 +248,35 @@ app.use((req, res, next) => {
       return res.status(401).json({ message: 'Unauthorized - Please log in' });
     }
     
-    // Check user's approval status (skip for status check endpoint)
-    if (req.path !== '/auth/status') {
+    // Check user's approval status and subscription (skip for status check and stripe endpoints)
+    const SUBSCRIPTION_EXEMPT_PATHS = ['/auth/status', '/stripe/'];
+    const isExemptPath = SUBSCRIPTION_EXEMPT_PATHS.some(path => 
+      req.path === path || req.path.startsWith(path)
+    );
+    
+    if (!isExemptPath) {
       try {
         const dbUser = await authStorage.getUser(user.claims.sub);
+        
+        // First check: approval status
         if (!dbUser || dbUser.status !== 'approved') {
-          // User exists but not approved - return 403 with status info
           log(`Access denied for pending/denied user: ${user.claims.email}`, 'security');
           return res.status(403).json({ 
             message: 'Access pending approval',
             status: dbUser?.status || 'pending'
+          });
+        }
+        
+        // Second check: subscription status (founder exempt)
+        const FOUNDER_EMAIL = "nathan@desnoyersproperties.com";
+        const isFounder = dbUser.email?.toLowerCase() === FOUNDER_EMAIL.toLowerCase();
+        const hasActiveSubscription = ['active', 'trialing'].includes(dbUser.subscriptionStatus || '');
+        
+        if (!isFounder && !hasActiveSubscription) {
+          log(`Subscription required for user: ${user.claims.email}, status: ${dbUser.subscriptionStatus}`, 'security');
+          return res.status(402).json({ 
+            message: 'Subscription required',
+            subscriptionStatus: dbUser.subscriptionStatus || 'none'
           });
         }
       } catch (error) {
