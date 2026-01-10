@@ -1,4 +1,4 @@
-import { authUsers, type AuthUser, type UpsertAuthUser } from "@shared/models/auth";
+import { authUsers, type AuthUser, type UpsertAuthUser, type SubscriptionStatus } from "@shared/models/auth";
 import { db } from "../../db";
 import { eq, desc, ne } from "drizzle-orm";
 
@@ -14,6 +14,14 @@ export interface IAuthStorage {
   getAllUsers(): Promise<AuthUser[]>;
   getPendingUsers(): Promise<AuthUser[]>;
   updateUserStatus(id: string, status: 'pending' | 'approved' | 'denied'): Promise<AuthUser | undefined>;
+  updateSubscription(id: string, data: {
+    stripeCustomerId?: string;
+    subscriptionId?: string;
+    subscriptionStatus: SubscriptionStatus;
+    currentPeriodEnd?: Date;
+    trialEnd?: Date;
+    canceledAt?: Date | null;
+  }): Promise<AuthUser | undefined>;
 }
 
 class AuthStorage implements IAuthStorage {
@@ -78,6 +86,35 @@ class AuthStorage implements IAuthStorage {
       .set({ status, updatedAt: new Date() })
       .where(eq(authUsers.id, id))
       .returning();
+    return user;
+  }
+
+  async updateSubscription(id: string, data: {
+    stripeCustomerId?: string;
+    subscriptionId?: string;
+    subscriptionStatus: SubscriptionStatus;
+    currentPeriodEnd?: Date;
+    trialEnd?: Date;
+    canceledAt?: Date | null;
+  }): Promise<AuthUser | undefined> {
+    const [user] = await db
+      .update(authUsers)
+      .set({
+        stripeCustomerId: data.stripeCustomerId,
+        subscriptionId: data.subscriptionId,
+        subscriptionStatus: data.subscriptionStatus,
+        currentPeriodEnd: data.currentPeriodEnd,
+        trialEnd: data.trialEnd,
+        canceledAt: data.canceledAt,
+        updatedAt: new Date(),
+      })
+      .where(eq(authUsers.id, id))
+      .returning();
+    return user;
+  }
+
+  async getUserByStripeCustomerId(customerId: string): Promise<AuthUser | undefined> {
+    const [user] = await db.select().from(authUsers).where(eq(authUsers.stripeCustomerId, customerId));
     return user;
   }
 }

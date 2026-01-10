@@ -19,6 +19,12 @@ export const sessions = pgTable(
 // - 'approved': Full access
 // - 'pending': Awaiting approval (default for new signups)
 // - 'denied': Access denied
+// Subscription status for billing:
+// - 'none': No subscription yet
+// - 'trialing': In trial period
+// - 'active': Paid and active
+// - 'past_due': Payment failed, grace period
+// - 'canceled': Subscription canceled
 export const authUsers = pgTable("auth_users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
@@ -27,9 +33,16 @@ export const authUsers = pgTable("auth_users", {
   profileImageUrl: varchar("profile_image_url"),
   status: varchar("status", { length: 20 }).default("pending").notNull(), // pending, approved, denied
   isAdmin: boolean("is_admin").default(false).notNull(), // true for founder/admin
+  stripeCustomerId: varchar("stripe_customer_id"),
+  subscriptionStatus: varchar("subscription_status", { length: 20 }).default("none").notNull(), // none, trialing, active, past_due, canceled
+  subscriptionId: varchar("subscription_id"),
+  currentPeriodEnd: timestamp("current_period_end"),
+  trialEnd: timestamp("trial_end"),
+  canceledAt: timestamp("canceled_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export type UpsertAuthUser = typeof authUsers.$inferInsert;
 export type AuthUser = typeof authUsers.$inferSelect;
+export type SubscriptionStatus = 'none' | 'trialing' | 'active' | 'past_due' | 'canceled';
