@@ -1314,7 +1314,7 @@ Respond with valid JSON only, no other text.`;
       type: "function",
       function: {
         name: "create_person",
-        description: "Create a new contact/person in the database",
+        description: "Create a new contact/person. IMPORTANT: If similar names exist, this tool returns 'Did you mean X?' and requires confirmed=true to proceed. Always check the response - if it asks about similar names, confirm with the user first.",
         parameters: {
           type: "object",
           properties: {
@@ -1322,7 +1322,8 @@ Respond with valid JSON only, no other text.`;
             email: { type: "string", description: "Email address" },
             phone: { type: "string", description: "Phone number" },
             segment: { type: "string", enum: ["A", "B", "C", "D"], description: "Relationship segment" },
-            notes: { type: "string", description: "Initial notes about this person" }
+            notes: { type: "string", description: "Initial notes about this person" },
+            confirmed: { type: "boolean", description: "Set to true ONLY after user confirms this is NOT one of the similar names found. Required when similar names exist." }
           },
           required: ["name"]
         }
@@ -1663,6 +1664,70 @@ Respond with valid JSON only, no other text.`;
         }
         
         case "create_person": {
+          // Fuzzy name matching - check for similar existing contacts
+          const searchName = args.name.toLowerCase().trim();
+          const searchWords = searchName.split(/\s+/).filter((w: string) => w.length > 1);
+          
+          if (!args.confirmed && searchWords.length > 0) {
+            const allPeople = await storage.getAllPeople(ctx);
+            const similarPeople: Array<{ id: string; name: string; score: number }> = [];
+            
+            for (const person of allPeople) {
+              if (!person.name) continue;
+              const personName = person.name.toLowerCase();
+              const personWords = personName.split(/\s+/);
+              
+              // Calculate similarity score
+              let score = 0;
+              
+              // Check each search word against person's name
+              for (const searchWord of searchWords) {
+                for (const personWord of personWords) {
+                  // Exact word match
+                  if (searchWord === personWord) {
+                    score += 10;
+                  }
+                  // One word starts with the other (prefix match)
+                  else if (searchWord.startsWith(personWord) || personWord.startsWith(searchWord)) {
+                    score += 7;
+                  }
+                  // Levenshtein-like: off by 1-2 characters (common typos)
+                  else if (searchWord.length >= 3 && personWord.length >= 3) {
+                    const maxLen = Math.max(searchWord.length, personWord.length);
+                    const minLen = Math.min(searchWord.length, personWord.length);
+                    // Same length or close, check character differences
+                    if (maxLen - minLen <= 2) {
+                      let diffs = 0;
+                      const shorter = searchWord.length <= personWord.length ? searchWord : personWord;
+                      const longer = searchWord.length > personWord.length ? searchWord : personWord;
+                      for (let i = 0; i < shorter.length; i++) {
+                        if (shorter[i] !== longer[i]) diffs++;
+                      }
+                      diffs += longer.length - shorter.length;
+                      if (diffs <= 2) {
+                        score += 6 - diffs; // 5 for 1 diff, 4 for 2 diffs
+                      }
+                    }
+                  }
+                }
+              }
+              
+              // Require at least one significant match
+              if (score >= 5) {
+                similarPeople.push({ id: person.id, name: person.name, score });
+              }
+            }
+            
+            // Sort by score descending and take top 3
+            similarPeople.sort((a, b) => b.score - a.score);
+            const topMatches = similarPeople.slice(0, 3);
+            
+            if (topMatches.length > 0) {
+              const matchList = topMatches.map(p => `"${p.name}" (ID: ${p.id})`).join(', ');
+              return `SIMILAR NAMES FOUND: ${matchList}. Did you mean one of these? If this is truly a NEW person, call create_person again with confirmed=true. ASK THE USER before proceeding.`;
+            }
+          }
+          
           const newPerson = await storage.createPerson({
             name: args.name,
             email: args.email || null,
