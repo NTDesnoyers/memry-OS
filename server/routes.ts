@@ -1314,7 +1314,7 @@ Respond with valid JSON only, no other text.`;
       type: "function",
       function: {
         name: "create_person",
-        description: "Create a new contact/person. IMPORTANT: If similar names exist, this tool returns 'Did you mean X?' and requires confirmed=true to proceed. Always check the response - if it asks about similar names, confirm with the user first.",
+        description: "Create a new contact. CRITICAL: This tool BLOCKS creation if similar names exist and returns an error with 'BLOCKED:' prefix. You MUST ask the user 'Did you mean [similar name]?' and wait for their response. Only call again with force=true if user explicitly says it's a NEW person.",
         parameters: {
           type: "object",
           properties: {
@@ -1323,7 +1323,7 @@ Respond with valid JSON only, no other text.`;
             phone: { type: "string", description: "Phone number" },
             segment: { type: "string", enum: ["A", "B", "C", "D"], description: "Relationship segment" },
             notes: { type: "string", description: "Initial notes about this person" },
-            confirmed: { type: "boolean", description: "Set to true ONLY after user confirms this is NOT one of the similar names found. Required when similar names exist." }
+            force: { type: "boolean", description: "ONLY set true after user explicitly confirms this is a NEW person, not a typo of an existing contact. Never set force=true without asking the user first." }
           },
           required: ["name"]
         }
@@ -1668,7 +1668,8 @@ Respond with valid JSON only, no other text.`;
           const searchName = args.name.toLowerCase().trim();
           const searchWords = searchName.split(/\s+/).filter((w: string) => w.length > 1);
           
-          if (!args.confirmed && searchWords.length > 0) {
+          // BLOCK creation unless force=true when similar names found
+          if (!args.force && searchWords.length > 0) {
             const allPeople = await storage.getAllPeople(ctx);
             const similarPeople: Array<{ id: string; name: string; score: number }> = [];
             
@@ -1724,7 +1725,9 @@ Respond with valid JSON only, no other text.`;
             
             if (topMatches.length > 0) {
               const matchList = topMatches.map(p => `"${p.name}" (ID: ${p.id})`).join(', ');
-              return `SIMILAR NAMES FOUND: ${matchList}. Did you mean one of these? If this is truly a NEW person, call create_person again with confirmed=true. ASK THE USER before proceeding.`;
+              logger.info(`BLOCKED create_person: "${args.name}" similar to ${matchList}`);
+              // Return ERROR format so AI knows this is a hard block
+              return `BLOCKED: Cannot create "${args.name}" - similar contacts exist: ${matchList}. You MUST ask the user: "Did you mean [name]? Or is this a different person?" DO NOT proceed until user responds. If user confirms it's a NEW person, call create_person with force=true.`;
             }
           }
           
