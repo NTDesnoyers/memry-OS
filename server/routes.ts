@@ -1503,6 +1503,36 @@ Respond with valid JSON only, no other text.`;
         description: "Check if Instagram/Facebook is connected and get the account details",
         parameters: { type: "object", properties: {} }
       }
+    },
+    {
+      type: "function",
+      function: {
+        name: "search_drafts",
+        description: "Search for drafts (emails, handwritten notes, etc.) by person name or status. Use this to find drafts before deleting them.",
+        parameters: {
+          type: "object",
+          properties: {
+            personName: { type: "string", description: "Optional: name of person to search drafts for" },
+            status: { type: "string", enum: ["pending", "approved", "sent", "discarded"], description: "Optional: filter by draft status" },
+            type: { type: "string", enum: ["email", "handwritten_note", "task", "referral_intro"], description: "Optional: filter by draft type" }
+          }
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "delete_draft",
+        description: "Delete a draft (email, handwritten note, etc.) by its ID. Use search_drafts first to find the draft ID.",
+        parameters: {
+          type: "object",
+          properties: {
+            draftId: { type: "string", description: "The ID of the draft to delete" },
+            reason: { type: "string", description: "Brief reason for deletion (for logging)" }
+          },
+          required: ["draftId"]
+        }
+      }
     }
   ];
 
@@ -1979,6 +2009,62 @@ Respond with valid JSON only, no other text.`;
           } else {
             return `Instagram/Facebook is not connected. Please go to Settings to connect your Meta account.`;
           }
+        }
+        
+        case "search_drafts": {
+          const allDrafts = await storage.getAllGeneratedDrafts(ctx);
+          const people = await storage.getAllPeople(ctx);
+          const peopleMap = new Map(people.map(p => [p.id, p.name]));
+          
+          let filtered = allDrafts;
+          
+          if (args.personName) {
+            const searchName = args.personName.toLowerCase();
+            const matchingPersonIds = people
+              .filter(p => p.name?.toLowerCase().includes(searchName))
+              .map(p => p.id);
+            filtered = filtered.filter((d: any) => d.personId && matchingPersonIds.includes(d.personId));
+          }
+          
+          if (args.status) {
+            filtered = filtered.filter((d: any) => d.status === args.status);
+          }
+          
+          if (args.type) {
+            filtered = filtered.filter((d: any) => d.type === args.type);
+          }
+          
+          const results = filtered.slice(0, 20).map((d: any) => ({
+            id: d.id,
+            type: d.type,
+            status: d.status,
+            personName: d.personId ? peopleMap.get(d.personId) : null,
+            subject: d.subject,
+            createdAt: d.createdAt,
+            contentPreview: d.content ? d.content.substring(0, 100) + (d.content.length > 100 ? '...' : '') : ''
+          }));
+          
+          return JSON.stringify({
+            count: results.length,
+            totalMatches: filtered.length,
+            drafts: results
+          });
+        }
+        
+        case "delete_draft": {
+          const draft = await storage.getGeneratedDraft(args.draftId, ctx);
+          if (!draft) {
+            return `Draft not found with ID: ${args.draftId}`;
+          }
+          
+          const people = await storage.getAllPeople(ctx);
+          const personName = draft.personId ? people.find(p => p.id === draft.personId)?.name : null;
+          
+          await storage.deleteGeneratedDraft(args.draftId, ctx);
+          
+          logger.info(`AI deleted draft: ${draft.type} for ${personName || 'unknown'}, reason: ${args.reason || 'not specified'}`);
+          
+          return `Successfully deleted ${draft.type} draft${personName ? ` for ${personName}` : ''}. Subject: "${draft.subject || 'no subject'}"`;
         }
         
         default:

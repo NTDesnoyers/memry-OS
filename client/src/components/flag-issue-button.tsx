@@ -13,6 +13,7 @@ import { useLocation } from "wouter";
 import html2canvas from "html2canvas";
 import { isFounderMode } from "@/lib/feature-mode";
 import { useAuth } from "@/hooks/use-auth";
+import { VoiceDictationButton } from "./voice-dictation-button";
 
 type IssueType = "bug" | "suggestion" | "question";
 
@@ -166,7 +167,7 @@ export function FlagIssueButton({ recentActions = [], aiConversation = [] }: Fla
         <span className="hidden sm:inline">Flag Issue</span>
       </Button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={setOpen} modal={false}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -200,14 +201,21 @@ export function FlagIssueButton({ recentActions = [], aiConversation = [] }: Fla
 
             <div className="space-y-2">
               <Label htmlFor="description">What happened?</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe the issue or suggestion..."
-                rows={4}
-                data-testid="input-issue-description"
-              />
+              <div className="relative">
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Describe the issue or suggestion... (or use the mic button to dictate)"
+                  rows={4}
+                  className="pr-10"
+                  data-testid="input-issue-description"
+                />
+                <VoiceDictationButton
+                  onTranscript={(text) => setDescription(prev => prev ? `${prev} ${text}` : text)}
+                  className="absolute right-2 top-2"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
