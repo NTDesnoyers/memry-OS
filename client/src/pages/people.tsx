@@ -1064,10 +1064,10 @@ export default function People() {
           )}
         </div>
 
-        {/* Right Sidebar - Contact Info & Details (hidden on mobile) */}
+        {/* Right Sidebar - Contact Info & Details (hidden on mobile, sticky) */}
         {selectedPerson && (
-          <div className="hidden lg:flex w-72 border-l bg-card flex-col flex-shrink-0">
-            <ScrollArea className="flex-1">
+          <div className="hidden lg:flex w-72 border-l bg-card flex-col flex-shrink-0 sticky top-0 h-screen overflow-y-auto">
+            <div className="flex-1">
               <div className="p-4 space-y-6">
                 {/* Relationship Segment */}
                 <div>
@@ -1255,7 +1255,7 @@ export default function People() {
                   </>
                 )}
               </div>
-            </ScrollArea>
+            </div>
           </div>
         )}
       </div>

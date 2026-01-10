@@ -1332,11 +1332,11 @@ Respond with valid JSON only, no other text.`;
       type: "function",
       function: {
         name: "log_interaction",
-        description: "Log a conversation, call, meeting, or other interaction with a person. CRITICAL: Always include the FULL user message as transcript - this enables AI to generate specific drafts for each action item mentioned.",
+        description: "Log a conversation, call, meeting, or other interaction that ACTUALLY HAPPENED with a person. ONLY log the primary interaction - do NOT create separate interactions for mentioned follow-ups or action items. For example, if user says 'Had dinner with Jen, need to text Ben later', only log ONE interaction with Jen. Use create_task for action items like 'text Ben'. CRITICAL: Always include the FULL user message as transcript.",
         parameters: {
           type: "object",
           properties: {
-            personId: { type: "string", description: "The ID of the person interacted with" },
+            personId: { type: "string", description: "The ID of the person the user ACTUALLY interacted with (not people just mentioned for follow-up)" },
             type: { type: "string", enum: ["call", "meeting", "email", "text", "in_person", "social"], description: "Type of interaction" },
             summary: { type: "string", description: "Brief summary of what was discussed (2-3 sentences)" },
             transcript: { type: "string", description: "CRITICAL: Copy the ENTIRE user message here including all follow-up items, bullet points, connection requests, etc. The AI uses this to generate targeted emails for each action item. Short summaries = generic drafts. Full message = specific drafts for each item." },
@@ -1653,6 +1653,26 @@ Respond with valid JSON only, no other text.`;
           
           // Parse the date if provided, otherwise use current date
           const interactionDate = args.occurredAt ? new Date(args.occurredAt) : new Date();
+          
+          // Duplicate detection: check for similar interactions within 5 minutes
+          const existingInteractions = await storage.getInteractionsByPerson(args.personId, ctx);
+          const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+          const potentialDuplicate = existingInteractions.find(existing => {
+            const existingDate = new Date(existing.createdAt || existing.occurredAt || 0);
+            if (existingDate < fiveMinutesAgo) return false;
+            if (existing.type !== args.type) return false;
+            // Check for similar summary (first 50 chars match or substring match)
+            const existingSummary = (existing.summary || '').toLowerCase().substring(0, 50);
+            const newSummary = (args.summary || '').toLowerCase().substring(0, 50);
+            return existingSummary === newSummary || 
+                   existingSummary.includes(newSummary.substring(0, 30)) ||
+                   newSummary.includes(existingSummary.substring(0, 30));
+          });
+          
+          if (potentialDuplicate) {
+            logger.info(`Duplicate interaction detected for ${person.name} - skipping. Existing ID: ${potentialDuplicate.id}`);
+            return `This interaction appears to already be logged (similar ${args.type} for ${person.name} within the last 5 minutes). Skipping duplicate.`;
+          }
           
           const interaction = await storage.createInteraction({
             personId: args.personId,
