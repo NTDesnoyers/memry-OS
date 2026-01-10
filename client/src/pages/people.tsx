@@ -859,12 +859,12 @@ export default function People() {
           </div>
         </div>
 
-        {/* Center - Timeline (hidden on mobile when viewing list) */}
-        <div className={`flex-1 flex flex-col min-w-0 bg-secondary/30 ${mobileView === "list" ? "hidden md:flex" : "flex"}`}>
+        {/* Center - Timeline (hidden on mobile when viewing list, with own scroll) */}
+        <div className={`flex-1 flex flex-col min-w-0 bg-secondary/30 overflow-y-auto ${mobileView === "list" ? "hidden md:flex" : "flex"}`}>
           {selectedPerson ? (
             <>
-              {/* Person Header */}
-              <div className="p-4 bg-card border-b">
+              {/* Person Header - Sticky at top */}
+              <div className="p-4 bg-card border-b sticky top-0 z-10">
                 <div className="flex items-start gap-4">
                   <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl font-bold">
                     {getInitials(selectedPerson.name)}
@@ -1064,9 +1064,9 @@ export default function People() {
           )}
         </div>
 
-        {/* Right Sidebar - Contact Info & Details (hidden on mobile, sticky) */}
+        {/* Right Sidebar - Contact Info & Details (hidden on mobile, fixed height with own scroll) */}
         {selectedPerson && (
-          <div className="hidden lg:flex w-72 border-l bg-card flex-col flex-shrink-0 sticky top-0 h-screen overflow-y-auto">
+          <div className="hidden lg:flex w-72 border-l bg-card flex-col flex-shrink-0 overflow-y-auto">
             <div className="flex-1">
               <div className="p-4 space-y-6">
                 {/* Relationship Segment */}
