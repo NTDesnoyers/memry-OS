@@ -12,6 +12,9 @@ import { startRelationshipChecker } from "./relationship-checker";
 import { startMaintenanceScheduler } from "./maintenance";
 import { setupVoiceRelay } from "./voice-relay";
 import { setupAuth, registerAuthRoutes, registerAdminRoutes, authStorage } from "./replit_integrations/auth";
+import { initStripe } from "./stripe/initStripe";
+import { registerStripeRoutes } from "./stripe/stripeRoutes";
+import { WebhookHandlers } from "./stripe/webhookHandlers";
 
 const app = express();
 const httpServer = createServer(app);
@@ -21,6 +24,35 @@ declare module "http" {
     rawBody: unknown;
   }
 }
+
+// CRITICAL: Stripe webhook must be registered BEFORE express.json() middleware
+// Webhooks need raw Buffer, not parsed JSON
+app.post(
+  '/api/stripe/webhook',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    const signature = req.headers['stripe-signature'];
+
+    if (!signature) {
+      return res.status(400).json({ error: 'Missing stripe-signature' });
+    }
+
+    try {
+      const sig = Array.isArray(signature) ? signature[0] : signature;
+
+      if (!Buffer.isBuffer(req.body)) {
+        console.error('STRIPE WEBHOOK ERROR: req.body is not a Buffer');
+        return res.status(500).json({ error: 'Webhook processing error' });
+      }
+
+      await WebhookHandlers.processWebhook(req.body as Buffer, sig);
+      res.status(200).json({ received: true });
+    } catch (error: any) {
+      console.error('Webhook error:', error.message);
+      res.status(400).json({ error: 'Webhook processing error' });
+    }
+  }
+);
 
 app.use(
   express.json({
@@ -239,6 +271,12 @@ app.use((req, res, next) => {
   
   // Register admin routes (after middleware for proper security checks)
   registerAdminRoutes(app);
+  
+  // Register Stripe routes
+  registerStripeRoutes(app);
+  
+  // Initialize Stripe (schema, webhooks, backfill)
+  await initStripe();
   
   await registerRoutes(httpServer, app);
 
