@@ -8116,11 +8116,27 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
   app.post("/api/feedback", async (req, res) => {
     try {
       const { betaFeedback, insertBetaFeedbackSchema } = await import("@shared/schema");
+      const { logIssueToSheet } = await import("./google-sheets");
       const parsed = insertBetaFeedbackSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ message: fromZodError(parsed.error).message });
       }
       const [feedback] = await db.insert(betaFeedback).values(parsed.data).returning();
+      
+      // Also log to Google Sheets for bug reports
+      if (parsed.data.type === 'bug') {
+        const user = req.user as any;
+        logIssueToSheet({
+          id: feedback.id?.toString() || crypto.randomUUID(),
+          type: 'Bug Report',
+          description: parsed.data.message || '',
+          userEmail: user?.claims?.email || 'Anonymous',
+          route: parsed.data.page || '',
+          featureMode: '',
+          createdAt: new Date().toISOString(),
+        }).catch(err => console.error('Failed to log feedback to sheets:', err));
+      }
+      
       res.status(201).json(feedback);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
