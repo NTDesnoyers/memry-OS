@@ -271,14 +271,58 @@ export function buildDraftGenerationPrompt(voiceContext: string): string {
   return DRAFT_GENERATION_SYSTEM_PROMPT + voiceContext;
 }
 
+function generateUpcomingDatesCalendar(): string {
+  // Generate calendar entirely in UTC to ensure weekday names match ISO dates globally
+  // Step 1: Get today's date as a pure YYYY-MM-DD string (in user's local time)
+  const now = new Date();
+  const todayYear = now.getFullYear();
+  const todayMonth = now.getMonth() + 1;
+  const todayDay = now.getDate();
+  
+  const days: string[] = [];
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                      'July', 'August', 'September', 'October', 'November', 'December'];
+  
+  for (let i = 0; i <= 10; i++) {
+    // Use Date.UTC to add days in UTC space, then extract UTC components
+    const baseMs = Date.UTC(todayYear, todayMonth - 1, todayDay + i);
+    const date = new Date(baseMs);
+    
+    // Get all components in UTC to ensure consistency
+    const year = date.getUTCFullYear();
+    const month = date.getUTCMonth();
+    const day = date.getUTCDate();
+    const dayOfWeek = date.getUTCDay();
+    
+    const dayName = dayNames[dayOfWeek];
+    const monthName = monthNames[month];
+    const isoDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const label = i === 0 ? '(TODAY)' : i === 1 ? '(tomorrow)' : '';
+    days.push(`  ${dayName}, ${monthName} ${day}, ${year} = ${isoDate} ${label}`);
+  }
+  return days.join('\n');
+}
+
 export function buildAssistantSystemPrompt(options: {
   currentDate: string;
   pageContext: string;
 }): string {
+  const upcomingDates = generateUpcomingDatesCalendar();
+  
   return `You are the Flow AI Assistant - an AGENTIC AI with full control to search, view, and modify data in Flow OS (a real estate business operating system).
 
 TODAY'S DATE: ${options.currentDate}
-When creating tasks or setting due dates, always use dates relative to TODAY (${options.currentDate}). Never use dates from the past.
+
+UPCOMING DATES REFERENCE (use this for scheduling):
+${upcomingDates}
+
+CRITICAL DATE HANDLING FOR TASKS:
+- ALWAYS use the calendar above to find the correct ISO date for day names
+- When user says "Monday", "next Monday", or "on Monday" → find the NEXT Monday in the calendar and use that ISO date
+- Example: if today is Saturday January 10, 2026 and user says "Monday" → use 2026-01-12 (NOT 2026-01-11)
+- NEVER create tasks with past due dates - always use today or a future date
+- Use ISO format (YYYY-MM-DD) for the dueDate parameter
 
 FORMATTING: Use plain text only. Do NOT use markdown formatting like asterisks (*bold*), underscores, or bullet points. Write naturally like you're texting a colleague.
 

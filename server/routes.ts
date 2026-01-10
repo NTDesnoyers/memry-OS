@@ -1367,13 +1367,14 @@ Respond with valid JSON only, no other text.`;
       type: "function",
       function: {
         name: "create_task",
-        description: "Create a new task or follow-up item",
+        description: "Create a new task or follow-up item. CRITICAL: If you set dueDate, you MUST also set intendedDayOfWeek - the system will reject the request otherwise.",
         parameters: {
           type: "object",
           properties: {
             title: { type: "string", description: "Task title/description" },
             personId: { type: "string", description: "Optional: ID of the related person" },
-            dueDate: { type: "string", description: "Due date in ISO format (YYYY-MM-DD)" },
+            dueDate: { type: "string", description: "Due date in ISO format (YYYY-MM-DD). Use the calendar in the system prompt. If set, intendedDayOfWeek is MANDATORY." },
+            intendedDayOfWeek: { type: "string", enum: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], description: "MANDATORY when dueDate is set. The day of week for validation. System rejects tasks with dueDate but no intendedDayOfWeek." },
             priority: { type: "string", enum: ["low", "medium", "high"], description: "Task priority" }
           },
           required: ["title"]
@@ -1701,14 +1702,93 @@ Respond with valid JSON only, no other text.`;
         }
         
         case "create_task": {
+          let dueDate: Date | null = null;
+          let dueDateStr = "";
+          let dateWarning = "";
+          const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+          
+          // Helper: parse YYYY-MM-DD string to get day of week (timezone-agnostic)
+          const getDayOfWeekFromIso = (isoDate: string): number => {
+            const [year, month, day] = isoDate.split('-').map(Number);
+            const date = new Date(Date.UTC(year, month - 1, day));
+            return date.getUTCDay();
+          };
+          
+          // Helper: add days to YYYY-MM-DD string (timezone-agnostic)
+          const addDaysToIso = (isoDate: string, days: number): string => {
+            const [year, month, day] = isoDate.split('-').map(Number);
+            const date = new Date(Date.UTC(year, month - 1, day + days));
+            return date.toISOString().split('T')[0];
+          };
+          
+          // Get today's date as YYYY-MM-DD (timezone-agnostic)
+          const now = new Date();
+          const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+          
+          if (args.dueDate) {
+            let dateIso = args.dueDate as string; // YYYY-MM-DD format
+            
+            // ENFORCE intendedDayOfWeek when dueDate is provided for validation
+            if (!args.intendedDayOfWeek) {
+              const inferredDay = dayNames[getDayOfWeekFromIso(dateIso)];
+              logger.error(`create_task: dueDate ${args.dueDate} provided without intendedDayOfWeek. Rejecting request.`);
+              return `Error: When setting dueDate, you MUST also provide intendedDayOfWeek (e.g., "Monday", "Tuesday"). The date ${args.dueDate} appears to be a ${inferredDay}. Please retry with intendedDayOfWeek="${inferredDay}" to confirm, or use a different date.`;
+            }
+            
+            // Validate day of week
+            const actualDayIndex = getDayOfWeekFromIso(dateIso);
+            const actualDayOfWeek = dayNames[actualDayIndex];
+            const intendedDayIndex = dayNames.indexOf(args.intendedDayOfWeek);
+            
+            if (actualDayOfWeek !== args.intendedDayOfWeek) {
+              // Mismatch detected - adjust the date to the intended day
+              // Calculate smallest adjustment to reach intended day
+              let daysToAdd = intendedDayIndex - actualDayIndex;
+              
+              // Choose the closer direction (max 3 days in either direction)
+              if (daysToAdd < -3) daysToAdd += 7;
+              if (daysToAdd > 3) daysToAdd -= 7;
+              
+              const correctedIso = addDaysToIso(dateIso, daysToAdd);
+              
+              // Verify correction is not in the past
+              if (correctedIso < todayIso) {
+                // Find next occurrence of intended day from today
+                const todayDayIndex = getDayOfWeekFromIso(todayIso);
+                let daysFromToday = intendedDayIndex - todayDayIndex;
+                if (daysFromToday <= 0) daysFromToday += 7;
+                dateIso = addDaysToIso(todayIso, daysFromToday);
+              } else {
+                dateIso = correctedIso;
+              }
+              
+              logger.warn(`create_task: Date mismatch - ${args.dueDate} is ${actualDayOfWeek}, not ${args.intendedDayOfWeek}. Corrected to ${dateIso}`);
+              dateWarning = ` (Corrected: ${args.dueDate} was ${actualDayOfWeek}, adjusted to ${args.intendedDayOfWeek})`;
+            }
+            
+            // Check for past dates
+            if (dateIso < todayIso) {
+              dateIso = todayIso;
+              dateWarning = ` (Note: adjusted from ${args.dueDate} to today since past dates aren't allowed)`;
+              logger.warn(`create_task: Corrected past date ${args.dueDate} to today`);
+            }
+            
+            // Convert final ISO string to Date for storage using UTC to avoid timezone drift
+            // This ensures 2026-01-12 stores as 2026-01-12T00:00:00.000Z, not shifted
+            const [year, month, day] = dateIso.split('-').map(Number);
+            dueDate = new Date(Date.UTC(year, month - 1, day));
+            dueDateStr = dateIso;
+          }
+          
           const task = await storage.createTask({
             title: args.title,
             personId: args.personId || null,
-            dueDate: args.dueDate ? new Date(args.dueDate) : null,
+            dueDate,
             priority: args.priority || "medium",
             status: "pending"
           }, ctx);
-          return `Created task: "${task.title}" ${args.dueDate ? `due ${args.dueDate}` : ""}`;
+          
+          return `Created task: "${task.title}"${dueDateStr ? ` due ${dueDateStr}` : ""}${dateWarning}`;
         }
         
         case "update_deal_stage": {
