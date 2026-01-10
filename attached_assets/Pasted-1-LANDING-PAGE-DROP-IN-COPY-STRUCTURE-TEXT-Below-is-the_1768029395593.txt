@@ -1,0 +1,119 @@
+1️⃣ LANDING PAGE — DROP-IN COPY (STRUCTURE + TEXT)
+
+Below is the exact order and exact copy I recommend.
+
+⸻
+
+HERO SECTION
+
+Headline (H1)
+
+Stop Losing Deals Because You Forgot to Follow Up
+
+Subheadline (H2)
+
+Flow OS remembers your conversations, shows you who needs your attention today, and drafts your follow-ups so nothing slips through the cracks.
+
+CTA (Primary Button)
+
+Apply for the Founding Agent Beta →
+
+Trust Line (Small Text Under CTA)
+
+Limited spots · Early pricing · Built with real agent feedback
+
+⸻
+
+WHO IT’S FOR (SHORT, OPTIONAL BUT POWERFUL)
+
+For relationship-based real estate agents who:
+	•	Talk to a lot of people every week
+	•	Rely on referrals and repeat business
+	•	Hate updating CRMs
+	•	Know follow-up makes money — but struggle to stay consistent
+
+(Do NOT add a CTA here.)
+
+⸻
+
+WHAT YOU GET IN THE BETA
+
+Section Header
+
+What you get in the beta
+
+⸻
+
+Card 1 — Conversation Capture (FIRST)
+
+Conversation Capture
+Log calls, meetings, and notes in seconds — voice or text.
+Automatically imports meeting transcripts (Fathom) and keeps everything tied to the right person.
+
+⸻
+
+Card 2 — AI Follow-Ups (SECOND)
+
+AI Follow-Ups
+Drafts thank-you emails, check-ins, and next steps from your real conversations — in your voice.
+
+⸻
+
+Card 3 — Relationship CRM (THIRD)
+
+Relationship CRM
+FORD notes + A/B/C/D segments so you always know who matters most and where each relationship stands.
+
+⸻
+
+HOW IT ACTUALLY WORKS (VERY IMPORTANT)
+
+Section Header
+
+How Flow OS works
+	1.	Log a conversation
+Talk or type naturally — no formatting required.
+	2.	Flow OS extracts what matters
+People, topics, action items, and FORD insights.
+	3.	Get the right follow-up instantly
+See who to contact next and exactly what to say.
+
+This reinforces the mental model without overexplaining.
+
+⸻
+
+WHAT MAKES IT DIFFERENT
+
+Section Header
+
+Why agents switch to Flow OS
+	•	Built for relationships, not transactions
+	•	Designed around conversation memory, not data entry
+	•	Works the way agents actually operate day-to-day
+	•	Feels like a second brain — not another system to maintain
+
+⸻
+
+FOUNDING AGENT BETA (SCARCITY + PRICING)
+
+Section Header
+
+Founding Agent Beta
+	•	Limited number of early users
+	•	Direct access to the founder
+	•	Help shape what gets built next
+	•	Preferred pricing locked in
+
+Pricing Line (Be explicit)
+
+$29/month during beta
+
+CTA (Second Button)
+
+Apply for the Founding Agent Beta →
+
+⸻
+
+FOOTER MICROCOPY
+
+Flow OS Beta · Built for relationship-based real estate agents
