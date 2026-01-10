@@ -43,16 +43,25 @@ class AuthStorage implements IAuthStorage {
     const isFounder = userData.email?.toLowerCase() === FOUNDER_EMAIL.toLowerCase();
     
     if (existingUser) {
-      // User exists - update profile info but preserve status/isAdmin
+      // User exists - update profile info
+      // For founder: always ensure approved status and admin rights
+      const updateData: any = {
+        email: userData.email,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        profileImageUrl: userData.profileImageUrl,
+        updatedAt: new Date(),
+      };
+      
+      // Auto-fix founder status if somehow not set correctly
+      if (isFounder) {
+        updateData.status = 'approved';
+        updateData.isAdmin = true;
+      }
+      
       const [user] = await db
         .update(authUsers)
-        .set({
-          email: userData.email,
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          profileImageUrl: userData.profileImageUrl,
-          updatedAt: new Date(),
-        })
+        .set(updateData)
         .where(eq(authUsers.id, userData.id!))
         .returning();
       return user;
