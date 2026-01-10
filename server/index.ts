@@ -15,6 +15,7 @@ import { setupAuth, registerAuthRoutes, registerAdminRoutes, authStorage } from 
 import { initStripe } from "./stripe/initStripe";
 import { registerStripeRoutes } from "./stripe/stripeRoutes";
 import { WebhookHandlers } from "./stripe/webhookHandlers";
+import { startCostAggregationScheduler } from "./cost-aggregation";
 
 const app = express();
 const httpServer = createServer(app);
@@ -334,6 +335,7 @@ app.use((req, res, next) => {
     registerWorkflowCoachAgent();
     startRelationshipChecker();
     startMaintenanceScheduler(7);
+    startCostAggregationScheduler();
     
     // Setup voice relay WebSocket server
     setupVoiceRelay(httpServer);

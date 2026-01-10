@@ -2341,5 +2341,44 @@ export const insertAiUsageLogSchema = createInsertSchema(aiUsageLogs).omit({
 export type InsertAiUsageLog = z.infer<typeof insertAiUsageLogSchema>;
 export type AiUsageLog = typeof aiUsageLogs.$inferSelect;
 
+/** AI Cost Daily Summary - Aggregated daily costs per user for reporting */
+export const aiCostDailySummary = pgTable("ai_cost_daily_summary", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  date: varchar("date", { length: 10 }).notNull(), // YYYY-MM-DD
+  userId: varchar("user_id"),
+  userEmail: text("user_email"),
+  totalPromptTokens: integer("total_prompt_tokens").notNull().default(0),
+  totalCompletionTokens: integer("total_completion_tokens").notNull().default(0),
+  totalTokens: integer("total_tokens").notNull().default(0),
+  totalCost: integer("total_cost").notNull().default(0), // in micro-cents
+  totalRequests: integer("total_requests").notNull().default(0),
+  successfulRequests: integer("successful_requests").notNull().default(0),
+  failedRequests: integer("failed_requests").notNull().default(0),
+  featureBreakdown: jsonb("feature_breakdown").$type<Record<string, {
+    requests: number;
+    tokens: number;
+    cost: number;
+  }>>(),
+  modelBreakdown: jsonb("model_breakdown").$type<Record<string, {
+    requests: number;
+    tokens: number;
+    cost: number;
+  }>>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("ai_cost_date_idx").on(table.date),
+  index("ai_cost_user_idx").on(table.userId),
+]);
+
+export const insertAiCostDailySummarySchema = createInsertSchema(aiCostDailySummary).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAiCostDailySummary = z.infer<typeof insertAiCostDailySummarySchema>;
+export type AiCostDailySummary = typeof aiCostDailySummary.$inferSelect;
+
 /** Replit Auth - Sessions and Auth Users */
 export * from "./models/auth";

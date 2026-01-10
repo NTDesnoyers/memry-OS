@@ -111,6 +111,42 @@ export async function logIssueToSheet(issue: {
     console.log(`Issue ${issue.id} logged to Google Sheets`);
   } catch (error) {
     console.error('Failed to log issue to Google Sheets:', error);
-    // Don't throw - we don't want to fail the API call if Sheets fails
+  }
+}
+
+// Export weekly cost summary to Google Sheets
+export async function exportWeeklyCostSummary(summaries: {
+  date: string;
+  userEmail: string | null;
+  totalTokens: number;
+  totalCost: number;
+  totalRequests: number;
+  featureBreakdown: Record<string, { requests: number; tokens: number; cost: number }> | null;
+}[]): Promise<void> {
+  const spreadsheetId = process.env.COST_SPREADSHEET_ID;
+  
+  if (!spreadsheetId) {
+    console.log('COST_SPREADSHEET_ID not set - skipping cost export');
+    return;
+  }
+  
+  try {
+    const rows = summaries.map(s => [
+      s.date,
+      s.userEmail || 'Unknown',
+      s.totalRequests.toString(),
+      s.totalTokens.toString(),
+      (s.totalCost / 10000).toFixed(4), // Convert micro-cents to dollars
+      s.featureBreakdown ? Object.entries(s.featureBreakdown)
+        .map(([k, v]) => `${k}: ${v.requests}`)
+        .join(', ') : '',
+    ]);
+    
+    if (rows.length > 0) {
+      await appendToSheet(spreadsheetId, 'WeeklyCosts', rows);
+      console.log(`Exported ${rows.length} cost summary rows to Google Sheets`);
+    }
+  } catch (error) {
+    console.error('Failed to export cost summary to Google Sheets:', error);
   }
 }
