@@ -76,3 +76,18 @@ Flow OS is a multi-agent, event-driven system orchestrating actions while CRMs r
 - **Granola**: Meeting notes.
 - **OpenAI/Anthropic/Gemini**: AI processing for voice logs.
 - **Gmail/Google Calendar**: Email and scheduling.
+- **Stripe**: Beta billing ($29/month) with checkout, webhooks, and customer portal.
+
+### Billing & Access Control
+- **Beta Pricing**: $29/month via Stripe Checkout
+- **Access Gate**: Approved status + active subscription required (founder exempt: nathan@desnoyersproperties.com)
+- **HTTP Status Codes**: 401 (unauthorized) → 403 (pending approval) → 402 (subscription required) → access
+- **Webhook Events**: checkout.session.completed, invoice.payment_failed, customer.subscription.deleted
+- **Stripe Files**: server/stripe/stripeClient.ts, stripeRoutes.ts, webhookHandlers.ts, initStripe.ts
+
+### AI Cost Tracking
+- **Usage Logging**: All OpenAI calls tracked via server/ai/trackedOpenAI.ts wrapper
+- **Daily Aggregation**: Runs at 12:05 AM, aggregates into aiCostDailySummary table
+- **Weekly Export**: Monday scheduler exports previous week to Google Sheets (requires COST_SPREADSHEET_ID env var)
+- **Keying Logic**: Disambiguates by userId, or by userEmail when userId is null
+- **Implementation**: server/cost-aggregation.ts, server/google-sheets.ts
