@@ -1533,6 +1533,37 @@ Respond with valid JSON only, no other text.`;
           required: ["draftId"]
         }
       }
+    },
+    {
+      type: "function",
+      function: {
+        name: "search_interactions",
+        description: "Search for logged interactions (calls, meetings, texts, etc.) by person name, type, or date. Use this to find interactions before deleting them.",
+        parameters: {
+          type: "object",
+          properties: {
+            personName: { type: "string", description: "Name of person to search interactions for" },
+            type: { type: "string", enum: ["call", "meeting", "email", "text", "in_person", "social"], description: "Optional: filter by interaction type" },
+            limit: { type: "number", description: "Max results to return (default 10)" }
+          },
+          required: ["personName"]
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
+        name: "delete_interaction",
+        description: "Delete a logged interaction by its ID. IMPORTANT: Before deleting, you MUST show the user what you're about to delete and ask for confirmation. Only call this after user confirms.",
+        parameters: {
+          type: "object",
+          properties: {
+            interactionId: { type: "string", description: "The ID of the interaction to delete" },
+            confirmed: { type: "boolean", description: "Set to true only after user has confirmed the deletion" }
+          },
+          required: ["interactionId", "confirmed"]
+        }
+      }
     }
   ];
 
@@ -2085,6 +2116,74 @@ Respond with valid JSON only, no other text.`;
           logger.info(`AI deleted draft: ${draft.type} for ${personName || 'unknown'}, reason: ${args.reason || 'not specified'}`);
           
           return `Successfully deleted ${draft.type} draft${personName ? ` for ${personName}` : ''}. Subject: "${draft.subject || 'no subject'}"`;
+        }
+        
+        case "search_interactions": {
+          const people = await storage.getAllPeople(ctx);
+          const searchName = args.personName.toLowerCase().trim();
+          
+          // Find matching people
+          const matchingPeople = people.filter(p => 
+            p.name?.toLowerCase().includes(searchName) ||
+            p.nickname?.toLowerCase().includes(searchName)
+          );
+          
+          if (matchingPeople.length === 0) {
+            return `No people found matching "${args.personName}"`;
+          }
+          
+          // Get interactions for all matching people
+          const allInteractions: any[] = [];
+          for (const person of matchingPeople) {
+            const personInteractions = await storage.getInteractionsByPerson(person.id, ctx);
+            for (const i of personInteractions) {
+              if (!args.type || i.type === args.type) {
+                allInteractions.push({
+                  id: i.id,
+                  personId: person.id,
+                  personName: person.name,
+                  type: i.type,
+                  summary: i.summary,
+                  occurredAt: i.occurredAt,
+                  createdAt: i.createdAt
+                });
+              }
+            }
+          }
+          
+          // Sort by date, most recent first
+          allInteractions.sort((a, b) => 
+            new Date(b.occurredAt || b.createdAt).getTime() - new Date(a.occurredAt || a.createdAt).getTime()
+          );
+          
+          const limit = args.limit || 10;
+          const results = allInteractions.slice(0, limit);
+          
+          if (results.length === 0) {
+            return `No ${args.type || ''} interactions found for "${args.personName}"`;
+          }
+          
+          return JSON.stringify(results);
+        }
+        
+        case "delete_interaction": {
+          if (!args.confirmed) {
+            return `STOP: You must show the user what interaction you're about to delete and ask for their confirmation before calling this tool with confirmed=true.`;
+          }
+          
+          const interaction = await storage.getInteraction(args.interactionId, ctx);
+          if (!interaction) {
+            return `Interaction not found with ID: ${args.interactionId}`;
+          }
+          
+          const people = await storage.getAllPeople(ctx);
+          const personName = interaction.personId ? people.find(p => p.id === interaction.personId)?.name : 'unknown';
+          
+          await storage.deleteInteraction(args.interactionId, ctx);
+          
+          logger.info(`AI deleted interaction: ${interaction.type} with ${personName}, ID: ${args.interactionId}`);
+          
+          return `Successfully deleted ${interaction.type} interaction with ${personName} from ${new Date(interaction.occurredAt || interaction.createdAt!).toLocaleDateString()}. Summary: "${interaction.summary?.slice(0, 100) || 'no summary'}"`;
         }
         
         default:

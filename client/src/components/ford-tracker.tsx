@@ -78,13 +78,11 @@ export function FordTrackerCompact() {
         <div className="p-1.5 bg-emerald-100 rounded-full">
           <Users className="h-4 w-4 text-emerald-600" />
         </div>
-        <span className="text-sm font-medium text-emerald-800">FORD Conversations</span>
+        <span className="text-sm font-medium text-emerald-800">Conversations</span>
       </div>
-      
       <div className="flex-1 max-w-xs">
         <Progress value={percentage} className="h-2" />
       </div>
-      
       <div className="flex items-center gap-3">
         <span className="text-lg font-bold text-emerald-700" data-testid="text-ford-count">
           {weeklyCount}
@@ -103,7 +101,6 @@ export function FordTrackerCompact() {
           </span>
         )}
       </div>
-      
       <span className="text-xs text-muted-foreground">
         {format(weekStart, "MMM d")} - {format(weekEnd, "MMM d")}
       </span>

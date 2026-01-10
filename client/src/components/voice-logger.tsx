@@ -507,7 +507,7 @@ export function VoiceLogger() {
         <Sparkles className="h-6 w-6 text-white" />
       </Button>
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog open={isOpen} onOpenChange={setIsOpen} modal={false}>
         <DialogContent className={cn(
           "h-[85vh] sm:h-[600px] max-h-[85vh] flex flex-row p-0 gap-0 transition-all duration-300 overflow-hidden",
           showHistory ? "sm:max-w-3xl" : "sm:max-w-lg"
@@ -897,7 +897,7 @@ export function VoiceLogger() {
                 placeholder="Ask me anything... (paste images with Ctrl+V)"
                 className="min-h-[44px] max-h-[200px] resize-none overflow-y-auto"
                 rows={1}
-                disabled={isProcessing || isRecording}
+                disabled={isRecording}
               />
               
               <Button
