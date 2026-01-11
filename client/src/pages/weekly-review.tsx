@@ -12,13 +12,8 @@ import {
   Phone, 
   Video, 
   Coffee, 
-  Sparkles,
   TrendingUp,
   Target,
-  Heart,
-  Briefcase,
-  Gamepad2,
-  Star,
   Loader2
 } from "lucide-react";
 import { startOfWeek, endOfWeek, format, isWithinInterval, parseISO, addDays, isSameDay } from "date-fns";
@@ -152,44 +147,6 @@ export default function WeeklyReview() {
   const expectedByNow = Math.round((WEEKLY_GOAL / 7) * dayOfWeek);
   const isOnTrack = weeklyCount >= expectedByNow;
 
-  const fordHighlights = useMemo(() => {
-    const highlights: { person: Person; category: string; note: string; icon: any; color: string }[] = [];
-    
-    for (const interaction of weeklyInteractions) {
-      const person = people.find(p => p.id === interaction.personId);
-      if (!person) continue;
-      
-      const summary = interaction.summary || "";
-      const aiData = interaction.aiData;
-      
-      if (aiData?.fordUpdates) {
-        const { family, occupation, recreation, dreams } = aiData.fordUpdates;
-        if (family) highlights.push({ person, category: "Family", note: family, icon: Heart, color: "text-rose-600 bg-rose-50" });
-        if (occupation) highlights.push({ person, category: "Occupation", note: occupation, icon: Briefcase, color: "text-blue-600 bg-blue-50" });
-        if (recreation) highlights.push({ person, category: "Recreation", note: recreation, icon: Gamepad2, color: "text-green-600 bg-green-50" });
-        if (dreams) highlights.push({ person, category: "Dreams", note: dreams, icon: Star, color: "text-purple-600 bg-purple-50" });
-      }
-      
-      if (summary.toLowerCase().includes("family:")) {
-        const match = summary.match(/family:\s*([^\n]+)/i);
-        if (match) highlights.push({ person, category: "Family", note: match[1], icon: Heart, color: "text-rose-600 bg-rose-50" });
-      }
-      if (summary.toLowerCase().includes("occupation:")) {
-        const match = summary.match(/occupation:\s*([^\n]+)/i);
-        if (match) highlights.push({ person, category: "Occupation", note: match[1], icon: Briefcase, color: "text-blue-600 bg-blue-50" });
-      }
-      if (summary.toLowerCase().includes("recreation:")) {
-        const match = summary.match(/recreation:\s*([^\n]+)/i);
-        if (match) highlights.push({ person, category: "Recreation", note: match[1], icon: Gamepad2, color: "text-green-600 bg-green-50" });
-      }
-      if (summary.toLowerCase().includes("dreams:")) {
-        const match = summary.match(/dreams:\s*([^\n]+)/i);
-        if (match) highlights.push({ person, category: "Dreams", note: match[1], icon: Star, color: "text-purple-600 bg-purple-50" });
-      }
-    }
-    
-    return highlights.slice(0, 6);
-  }, [weeklyInteractions, people]);
 
   return (
     <Layout>
@@ -245,37 +202,6 @@ export default function WeeklyReview() {
               </CardContent>
             </Card>
 
-            <Card className="border-none shadow-lg bg-gradient-to-br from-violet-50 to-purple-50">
-              <CardHeader className="pb-2">
-                <CardTitle className="font-serif flex items-center gap-2 text-base">
-                  <Sparkles className="h-5 w-5 text-violet-600" />
-                  FORD Highlights
-                </CardTitle>
-                <CardDescription className="text-xs text-violet-600/80">
-                  Family, Occupation, Recreation, Dreams
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {fordHighlights.length > 0 ? (
-                  <div>
-                    <div className="text-2xl font-bold text-violet-700">
-                      {fordHighlights.length}
-                      <span className="text-sm font-normal text-violet-600 ml-2">insights captured</span>
-                    </div>
-                    <p className="text-xs text-violet-600/70 mt-1">
-                      Personal details learned from conversations this week
-                    </p>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="text-sm text-muted-foreground">No FORD notes yet this week</p>
-                    <p className="text-xs text-violet-600/70 mt-1">
-                      Log conversations to capture relationship insights
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           </div>
 
           <Card className="border-none shadow-md mb-8">
@@ -362,48 +288,6 @@ export default function WeeklyReview() {
               )}
             </CardContent>
           </Card>
-
-          {fordHighlights.length > 0 && (
-            <Card className="border-none shadow-md mb-8">
-              <CardHeader>
-                <CardTitle className="font-serif flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  FORD Digest
-                </CardTitle>
-                <CardDescription>
-                  Key learnings from your conversations this week
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-3 md:grid-cols-2">
-                  {fordHighlights.map((highlight, index) => {
-                    const Icon = highlight.icon;
-                    return (
-                      <div 
-                        key={index}
-                        className={`p-4 rounded-xl border ${highlight.color} cursor-pointer hover:shadow-md transition-shadow`}
-                        onClick={() => setSelectedPerson(highlight.person)}
-                        data-testid={`card-ford-highlight-${index}`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="p-2 rounded-lg bg-white/50">
-                            <Icon className="h-4 w-4" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-bold text-sm">{highlight.person.name}</span>
-                              <Badge variant="secondary" className="text-[10px]">{highlight.category}</Badge>
-                            </div>
-                            <p className="text-sm line-clamp-2">{highlight.note}</p>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           <Card className="border-none shadow-md">
             <CardHeader>
