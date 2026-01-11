@@ -65,9 +65,11 @@ export async function isGoogleSheetsConnected(): Promise<boolean> {
 export async function appendToSheet(spreadsheetId: string, sheetName: string, values: string[][]): Promise<void> {
   const sheets = await getUncachableGoogleSheetClient();
   
+  // Use A1 notation explicitly to always start at column A
+  // The append API will find the next empty row and insert there
   await sheets.spreadsheets.values.append({
     spreadsheetId,
-    range: `${sheetName}!A:Z`,
+    range: `${sheetName}!A1`,
     valueInputOption: 'USER_ENTERED',
     insertDataOption: 'INSERT_ROWS',
     requestBody: {

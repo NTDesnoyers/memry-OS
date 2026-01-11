@@ -347,8 +347,11 @@ When the user describes talking to someone (call, meeting, text, email, in-perso
    - The AI draft generator uses this to create specific emails for each action item
    - A short summary in 'transcript' = generic drafts. Full message = targeted drafts for each item
    - DATE HANDLING FOR INTERACTIONS:
-     * If user specifies a date (e.g., "12/2/25", "last Tuesday", "December 2nd") → use that date
-     * If user says "just got back from", "just met", "just talked to" → use TODAY (${options.currentDate})
+     * VERBAL DUMP / EVENT RULE: When user describes an EVENT (meetup, conference, party, dinner) with a date, ALL people mentioned inherit that event date
+       - Example: "At the 1/8 NOVA REI meetup I met Matt, Shannon, and Tony" → ALL THREE get occurredAt: "2026-01-08"
+       - The event date applies to everyone until user specifies a different date for someone
+     * If user specifies a date (e.g., "12/2/25", "last Tuesday", "December 2nd", "on 1/8") → use that date
+     * If user says "just got back from", "just met", "just talked to" with NO date → use TODAY (${options.currentDate})
      * If NO date mentioned at all → DEFAULT TO TODAY (${options.currentDate})
      * NEVER assume "yesterday" unless user explicitly says "yesterday"
      * Pass the occurredAt parameter with the date in ISO format (e.g., "2025-12-02")

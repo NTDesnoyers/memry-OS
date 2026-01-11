@@ -1435,6 +1435,21 @@ Respond with valid JSON only, no other text.`;
     {
       type: "function",
       function: {
+        name: "merge_contacts",
+        description: "Merge duplicate contacts into one. Keeps the primary contact and merges data from the secondary. All interactions, tasks, and drafts from the secondary are transferred to the primary. The secondary contact is deleted after merge.",
+        parameters: {
+          type: "object",
+          properties: {
+            primaryId: { type: "string", description: "ID of the contact to KEEP (the main record)" },
+            secondaryId: { type: "string", description: "ID of the duplicate contact to merge INTO the primary (will be deleted)" }
+          },
+          required: ["primaryId", "secondaryId"]
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
         name: "link_household",
         description: "Link people together as a household. Creates a household and assigns all specified people to it. They will count as one unit for FORD conversations and mailers. If no name is provided, automatically generates '[Last Name] Family' from the first person's name.",
         parameters: {
@@ -2033,6 +2048,61 @@ Respond with valid JSON only, no other text.`;
             return due <= today;
           });
           return JSON.stringify(dueTasks.map(t => ({ title: t.title, priority: t.priority, dueDate: t.dueDate })));
+        }
+        
+        case "merge_contacts": {
+          if (!args.primaryId || !args.secondaryId) {
+            return `Error: Both primaryId and secondaryId are required`;
+          }
+          if (args.primaryId === args.secondaryId) {
+            return `Error: Cannot merge a contact with itself`;
+          }
+          
+          const primaryPerson = await storage.getPerson(args.primaryId, ctx);
+          const secondaryPerson = await storage.getPerson(args.secondaryId, ctx);
+          
+          if (!primaryPerson) {
+            return `Error: Primary contact not found with ID: ${args.primaryId}`;
+          }
+          if (!secondaryPerson) {
+            return `Error: Secondary contact not found with ID: ${args.secondaryId}`;
+          }
+          
+          // Merge fields: keep primary's value if exists, otherwise use secondary's
+          const mergedData: Record<string, any> = {};
+          const fieldsToMerge = [
+            'email', 'phone', 'role', 'address', 'company', 'profession',
+            'linkedinUrl', 'facebookUrl', 'twitterUrl', 'instagramUrl',
+            'fordFamily', 'fordOccupation', 'fordRecreation', 'fordDreams',
+            'segment', 'realtorBrokerage', 'notes', 'spouseName', 'childrenInfo'
+          ];
+          
+          for (const field of fieldsToMerge) {
+            const primaryVal = (primaryPerson as any)[field];
+            const secondaryVal = (secondaryPerson as any)[field];
+            if (!primaryVal && secondaryVal) {
+              mergedData[field] = secondaryVal;
+            } else if (field === 'notes' && primaryVal && secondaryVal && primaryVal !== secondaryVal) {
+              mergedData[field] = `${primaryVal}\n\n--- Merged from ${secondaryPerson.name} ---\n${secondaryVal}`;
+            }
+          }
+          
+          // Update primary with merged data
+          if (Object.keys(mergedData).length > 0) {
+            await storage.updatePerson(args.primaryId, mergedData, ctx);
+          }
+          
+          // Transfer all related data from secondary to primary
+          await db.update(interactions).set({ personId: args.primaryId }).where(eq(interactions.personId, args.secondaryId));
+          await db.update(deals).set({ personId: args.primaryId }).where(eq(deals.personId, args.secondaryId));
+          await db.update(generatedDrafts).set({ personId: args.primaryId }).where(eq(generatedDrafts.personId, args.secondaryId));
+          await db.update(agentActions).set({ personId: args.primaryId }).where(eq(agentActions.personId, args.secondaryId));
+          await db.update(tasks).set({ personId: args.primaryId }).where(eq(tasks.personId, args.secondaryId));
+          
+          // Delete the secondary contact
+          await storage.deletePerson(args.secondaryId, ctx);
+          
+          return `Successfully merged "${secondaryPerson.name}" into "${primaryPerson.name}". All interactions, tasks, and drafts have been transferred. The duplicate contact has been deleted.`;
         }
         
         case "link_household": {
