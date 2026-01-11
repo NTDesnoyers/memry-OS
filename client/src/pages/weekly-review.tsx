@@ -251,15 +251,28 @@ export default function WeeklyReview() {
                   <Sparkles className="h-5 w-5 text-violet-600" />
                   FORD Highlights
                 </CardTitle>
+                <CardDescription className="text-xs text-violet-600/80">
+                  Family, Occupation, Recreation, Dreams
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {fordHighlights.length > 0 ? (
-                  <div className="text-2xl font-bold text-violet-700">
-                    {fordHighlights.length}
-                    <span className="text-sm font-normal text-violet-600 ml-2">insights captured</span>
+                  <div>
+                    <div className="text-2xl font-bold text-violet-700">
+                      {fordHighlights.length}
+                      <span className="text-sm font-normal text-violet-600 ml-2">insights captured</span>
+                    </div>
+                    <p className="text-xs text-violet-600/70 mt-1">
+                      Personal details learned from conversations this week
+                    </p>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No FORD notes yet this week</p>
+                  <div>
+                    <p className="text-sm text-muted-foreground">No FORD notes yet this week</p>
+                    <p className="text-xs text-violet-600/70 mt-1">
+                      Log conversations to capture relationship insights
+                    </p>
+                  </div>
                 )}
               </CardContent>
             </Card>

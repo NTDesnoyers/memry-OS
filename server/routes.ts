@@ -1435,6 +1435,19 @@ Respond with valid JSON only, no other text.`;
     {
       type: "function",
       function: {
+        name: "find_duplicates",
+        description: "Search for potential duplicate contacts. Returns groups of contacts that might be duplicates based on similar names. Use this when user asks to find or identify duplicates.",
+        parameters: {
+          type: "object",
+          properties: {
+            name: { type: "string", description: "Optional: specific name to search for duplicates of" }
+          }
+        }
+      }
+    },
+    {
+      type: "function",
+      function: {
         name: "merge_contacts",
         description: "Merge duplicate contacts into one. Keeps the primary contact and merges data from the secondary. All interactions, tasks, and drafts from the secondary are transferred to the primary. The secondary contact is deleted after merge.",
         parameters: {
@@ -2048,6 +2061,73 @@ Respond with valid JSON only, no other text.`;
             return due <= today;
           });
           return JSON.stringify(dueTasks.map(t => ({ title: t.title, priority: t.priority, dueDate: t.dueDate })));
+        }
+        
+        case "find_duplicates": {
+          const allPeople = await storage.getPeople(ctx);
+          
+          // Group by normalized names (lowercase, no extra spaces)
+          const normalizeForComparison = (name: string) => {
+            return name.toLowerCase().trim().replace(/\s+/g, ' ');
+          };
+          
+          // Get first name for fuzzy matching
+          const getFirstName = (name: string) => {
+            return normalizeForComparison(name).split(' ')[0];
+          };
+          
+          // Find potential duplicates
+          const duplicateGroups: { name: string; contacts: { id: string; name: string; email?: string; phone?: string }[] }[] = [];
+          const processed = new Set<string>();
+          
+          for (const person of allPeople) {
+            if (processed.has(person.id) || !person.name) continue;
+            
+            // If searching for a specific name, filter
+            if (args.name) {
+              const searchName = normalizeForComparison(args.name);
+              const personName = normalizeForComparison(person.name);
+              if (!personName.includes(searchName) && !searchName.includes(personName.split(' ')[0])) {
+                continue;
+              }
+            }
+            
+            const firstName = getFirstName(person.name);
+            const matches = allPeople.filter(p => {
+              if (p.id === person.id || processed.has(p.id) || !p.name) return false;
+              const pFirstName = getFirstName(p.name);
+              const pNorm = normalizeForComparison(p.name);
+              const personNorm = normalizeForComparison(person.name);
+              
+              // Exact match or first name match
+              return pNorm === personNorm || pFirstName === firstName;
+            });
+            
+            if (matches.length > 0) {
+              const group = [person, ...matches].map(p => ({
+                id: p.id,
+                name: p.name || 'Unknown',
+                email: p.email || undefined,
+                phone: p.phone || undefined
+              }));
+              duplicateGroups.push({ name: firstName, contacts: group });
+              matches.forEach(m => processed.add(m.id));
+            }
+            processed.add(person.id);
+          }
+          
+          if (duplicateGroups.length === 0) {
+            return args.name 
+              ? `No duplicate contacts found matching "${args.name}"`
+              : `No duplicate contacts found in your database`;
+          }
+          
+          return `Found ${duplicateGroups.length} potential duplicate group(s):\n\n` + 
+            duplicateGroups.map(g => 
+              `"${g.name}" variants:\n` + g.contacts.map(c => 
+                `  - ${c.name} (ID: ${c.id})${c.email ? ` - ${c.email}` : ''}${c.phone ? ` - ${c.phone}` : ''}`
+              ).join('\n')
+            ).join('\n\n');
         }
         
         case "merge_contacts": {
