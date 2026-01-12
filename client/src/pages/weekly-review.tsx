@@ -14,7 +14,8 @@ import {
   Coffee, 
   TrendingUp,
   Target,
-  Loader2
+  Loader2,
+  Heart
 } from "lucide-react";
 import { startOfWeek, endOfWeek, format, isWithinInterval, parseISO, addDays, isSameDay } from "date-fns";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -101,6 +102,17 @@ export default function WeeklyReview() {
     return people.filter(p => personIds.has(p.id));
   }, [weeklyInteractions, people]);
 
+  // Count unique households (people in same household count as 1)
+  const uniqueHouseholdsContactedThisWeek = useMemo(() => {
+    const householdKeys = new Set<string>();
+    for (const person of peopleContactedThisWeek) {
+      // Use householdId if available, otherwise use personId (individual counts as their own household)
+      const key = person.householdId || person.id;
+      householdKeys.add(key);
+    }
+    return householdKeys.size;
+  }, [peopleContactedThisWeek]);
+
   const getPersonInteractions = (personId: string) => {
     return weeklyInteractions.filter(i => i.personId === personId);
   };
@@ -141,7 +153,8 @@ export default function WeeklyReview() {
 
   const maxDailyCount = Math.max(...dailyData.map(d => d.count), 1);
 
-  const weeklyCount = peopleContactedThisWeek.length;
+  // Use household count for weekly goal tracking (couples/families count as 1)
+  const weeklyCount = uniqueHouseholdsContactedThisWeek;
   const percentage = Math.min((weeklyCount / WEEKLY_GOAL) * 100, 100);
   const dayOfWeek = new Date().getDay() || 7;
   const expectedByNow = Math.round((WEEKLY_GOAL / 7) * dayOfWeek);
@@ -296,7 +309,7 @@ export default function WeeklyReview() {
                 People You Connected With
               </CardTitle>
               <CardDescription>
-                {weeklyCount} {weeklyCount === 1 ? 'person' : 'people'} this week
+                {weeklyCount} {weeklyCount === 1 ? 'household' : 'households'} this week
               </CardDescription>
             </CardHeader>
             <CardContent>
