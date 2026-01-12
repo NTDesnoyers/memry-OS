@@ -508,10 +508,19 @@ export function VoiceLogger() {
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen} modal={false}>
-        <DialogContent className={cn(
-          "h-[85vh] sm:h-[600px] max-h-[85vh] flex flex-row p-0 gap-0 transition-all duration-300 overflow-hidden",
-          showHistory ? "sm:max-w-3xl" : "sm:max-w-lg"
-        )}>
+        <DialogContent 
+          className={cn(
+            "h-[85vh] sm:h-[600px] max-h-[85vh] flex flex-row p-0 gap-0 transition-all duration-300 overflow-hidden",
+            showHistory ? "sm:max-w-3xl" : "sm:max-w-lg"
+          )}
+          onPointerDownOutside={(e) => {
+            // Don't close the chat when clicking on the FlagIssueButton or its dialog
+            const target = e.target as HTMLElement;
+            if (target.closest('.flag-issue-button') || target.closest('[role="dialog"]')) {
+              e.preventDefault();
+            }
+          }}
+        >
           {/* History Sidebar */}
           {showHistory && (
             <div className="w-56 border-r flex flex-col bg-muted/30 flex-shrink-0 h-full overflow-hidden">
