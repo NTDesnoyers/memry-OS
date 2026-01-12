@@ -28,7 +28,7 @@ export default function PersonProfile() {
   const [formData, setFormData] = useState<Partial<Person>>({});
   const [isEditing, setIsEditing] = useState(false);
 
-  const { data: person, isLoading } = useQuery<Person>({
+  const { data: person, isLoading, isError } = useQuery<Person>({
     queryKey: [`/api/people/${id}`],
     enabled: !!id,
   });
@@ -223,7 +223,7 @@ export default function PersonProfile() {
     );
   }
 
-  if (!person) {
+  if (isError || !person) {
     return (
       <Layout>
         <div className="min-h-screen flex flex-col items-center justify-center gap-4">

@@ -17,9 +17,10 @@ import {
   Loader2,
   Heart
 } from "lucide-react";
-import { startOfWeek, endOfWeek, format, isWithinInterval, parseISO, addDays, isSameDay } from "date-fns";
+import { startOfWeek, endOfWeek, format, isWithinInterval, parseISO, addDays, addWeeks, isSameDay } from "date-fns";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Calendar } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 type Person = {
   id: string;
@@ -49,10 +50,15 @@ type Interaction = {
 
 const WEEKLY_GOAL = 50;
 
-function getWeekBounds() {
+// Only these interaction types count toward the weekly conversation goal
+// Excludes: text, email, handwritten_note (these are touchpoints, not live conversations)
+const CONVERSATION_TYPES = ['call', 'meeting', 'in_person', 'video', 'coffee', 'social'];
+
+function getWeekBounds(weekOffset: number = 0) {
   const now = new Date();
-  const weekStart = startOfWeek(now, { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+  const targetDate = addWeeks(now, weekOffset);
+  const weekStart = startOfWeek(targetDate, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(targetDate, { weekStartsOn: 1 });
   return { weekStart, weekEnd };
 }
 
@@ -77,6 +83,7 @@ const typeConfig: Record<string, { icon: any; label: string; color: string }> = 
 export default function WeeklyReview() {
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
+  const [weekOffset, setWeekOffset] = useState(0);
   
   const { data: people = [] } = useQuery<Person[]>({
     queryKey: ["/api/people"],
@@ -86,8 +93,9 @@ export default function WeeklyReview() {
     queryKey: ["/api/interactions"],
   });
 
-  const { weekStart, weekEnd } = getWeekBounds();
+  const { weekStart, weekEnd } = getWeekBounds(weekOffset);
 
+  // All interactions this week (for display purposes)
   const weeklyInteractions = useMemo(() => {
     return interactions.filter((i) => {
       if (i.deletedAt) return false;
@@ -97,21 +105,33 @@ export default function WeeklyReview() {
     });
   }, [interactions, weekStart, weekEnd]);
 
+  // Only live conversations (for goal counting) - excludes texts, emails, handwritten notes
+  const weeklyConversations = useMemo(() => {
+    return weeklyInteractions.filter(i => CONVERSATION_TYPES.includes(i.type));
+  }, [weeklyInteractions]);
+
+  // All people touched this week (for display)
   const peopleContactedThisWeek = useMemo(() => {
     const personIds = new Set(weeklyInteractions.map(i => i.personId));
     return people.filter(p => personIds.has(p.id));
   }, [weeklyInteractions, people]);
 
-  // Count unique households (people in same household count as 1)
+  // People with actual conversations (for goal counting)
+  const peopleWithConversationsThisWeek = useMemo(() => {
+    const personIds = new Set(weeklyConversations.map(i => i.personId));
+    return people.filter(p => personIds.has(p.id));
+  }, [weeklyConversations, people]);
+
+  // Count unique households WITH CONVERSATIONS (for the 50/week goal)
   const uniqueHouseholdsContactedThisWeek = useMemo(() => {
     const householdKeys = new Set<string>();
-    for (const person of peopleContactedThisWeek) {
+    for (const person of peopleWithConversationsThisWeek) {
       // Use householdId if available, otherwise use personId (individual counts as their own household)
       const key = person.householdId || person.id;
       householdKeys.add(key);
     }
     return householdKeys.size;
-  }, [peopleContactedThisWeek]);
+  }, [peopleWithConversationsThisWeek]);
 
   const getPersonInteractions = (personId: string) => {
     return weeklyInteractions.filter(i => i.personId === personId);
@@ -123,10 +143,11 @@ export default function WeeklyReview() {
     
     for (let i = 0; i < 7; i++) {
       const day = addDays(weekStart, i);
-      const dayInteractions = weeklyInteractions.filter(int => 
+      // Only count live conversations for the daily goal breakdown
+      const dayConversations = weeklyConversations.filter(int => 
         isSameDay(parseISO(int.occurredAt), day)
       );
-      const uniquePersonIds = [...new Set(dayInteractions.map(int => int.personId))];
+      const uniquePersonIds = [...new Set(dayConversations.map(int => int.personId))];
       const dayPeople = people.filter(p => uniquePersonIds.includes(p.id));
       
       const householdMap = new Map<string, Person[]>();
@@ -149,7 +170,7 @@ export default function WeeklyReview() {
       });
     }
     return days;
-  }, [weekStart, weeklyInteractions, people]);
+  }, [weekStart, weeklyConversations, people]);
 
   const maxDailyCount = Math.max(...dailyData.map(d => d.count), 1);
 
@@ -169,9 +190,43 @@ export default function WeeklyReview() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <h1 className="text-3xl font-serif font-bold text-primary">Weekly Review</h1>
-                <p className="text-muted-foreground">
-                  {format(weekStart, "MMM d")} - {format(weekEnd, "MMM d, yyyy")}
-                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setWeekOffset(prev => prev - 1)}
+                    data-testid="button-prev-week"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <p className="text-muted-foreground min-w-[180px] text-center">
+                    {format(weekStart, "MMM d")} - {format(weekEnd, "MMM d, yyyy")}
+                    {weekOffset === 0 && <span className="ml-2 text-xs text-primary">(This Week)</span>}
+                    {weekOffset === -1 && <span className="ml-2 text-xs text-muted-foreground">(Last Week)</span>}
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setWeekOffset(prev => prev + 1)}
+                    disabled={weekOffset >= 0}
+                    data-testid="button-next-week"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  {weekOffset !== 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setWeekOffset(0)}
+                      className="ml-2"
+                      data-testid="button-today"
+                    >
+                      Today
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </header>

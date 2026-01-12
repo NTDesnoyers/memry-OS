@@ -830,6 +830,7 @@ export const generatedDrafts = pgTable("generated_drafts", {
   content: text("content").notNull(),
   status: text("status").notNull().default("pending"), // pending, sent, dismissed
   metadata: jsonb("metadata"), // Additional context (email subject, recipient, etc.)
+  businessCardIncluded: boolean("business_card_included").default(false), // For handwritten notes - did user include business card?
   sentAt: timestamp("sent_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Command,
   CommandEmpty,
@@ -59,6 +60,7 @@ type GeneratedDraft = {
   subject: string | null;
   status: string;
   metadata: any;
+  businessCardIncluded: boolean | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -177,7 +179,8 @@ function DraftCard({
   onDelete, 
   onCopy,
   onSendEmail,
-  gmailConnected
+  gmailConnected,
+  onToggleBusinessCard
 }: { 
   draft: GeneratedDraft; 
   person?: Person;
@@ -187,6 +190,7 @@ function DraftCard({
   onCopy: () => void;
   onSendEmail?: () => void;
   gmailConnected?: boolean;
+  onToggleBusinessCard?: (included: boolean) => void;
 }) {
   const typeConfig = {
     email: { icon: Mail, label: "Email", color: "bg-blue-50 text-blue-700 border-blue-200" },
@@ -243,6 +247,23 @@ function DraftCard({
             <p className="text-sm text-gray-600 line-clamp-3 whitespace-pre-wrap">
               {draft.content}
             </p>
+            
+            {draft.type === "handwritten_note" && (
+              <div className="flex items-center gap-2 mt-3 py-2 px-3 bg-amber-50 rounded-lg">
+                <Checkbox
+                  id={`business-card-${draft.id}`}
+                  checked={draft.businessCardIncluded ?? false}
+                  onCheckedChange={(checked) => onToggleBusinessCard?.(checked === true)}
+                  data-testid={`checkbox-business-card-${draft.id}`}
+                />
+                <Label 
+                  htmlFor={`business-card-${draft.id}`}
+                  className="text-sm text-amber-800 cursor-pointer"
+                >
+                  Business card included
+                </Label>
+              </div>
+            )}
             
             <div className="flex items-center justify-between mt-3">
               <span className="text-xs text-gray-400">
@@ -363,7 +384,7 @@ export default function Drafts() {
   });
 
   const updateDraft = useMutation({
-    mutationFn: async ({ id, ...data }: { id: string; status?: string; content?: string }) => {
+    mutationFn: async ({ id, ...data }: { id: string; status?: string; content?: string; businessCardIncluded?: boolean }) => {
       return apiRequest("PATCH", `/api/generated-drafts/${id}`, data);
     },
     onSuccess: () => {
@@ -508,6 +529,10 @@ export default function Drafts() {
   const handleMarkSent = (draft: GeneratedDraft) => {
     const newStatus = draft.type === "task" ? "used" : "sent";
     updateDraft.mutate({ id: draft.id, status: newStatus });
+  };
+
+  const handleToggleBusinessCard = (draftId: string, included: boolean) => {
+    updateDraft.mutate({ id: draftId, businessCardIncluded: included });
   };
 
   const handleSendEmail = (draft: GeneratedDraft) => {
@@ -705,6 +730,7 @@ export default function Drafts() {
                     onCopy={() => handleCopy(draft.content)}
                     onSendEmail={() => handleSendEmail(draft)}
                     gmailConnected={isFounderMode(user?.email) && gmailStatus?.connected}
+                    onToggleBusinessCard={(included) => handleToggleBusinessCard(draft.id, included)}
                   />
                 ))}
               </div>
