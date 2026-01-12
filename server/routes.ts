@@ -1693,8 +1693,84 @@ Respond with valid JSON only, no other text.`;
         
         case "create_person": {
           // Fuzzy name matching - check for similar existing contacts
-          const searchName = args.name.toLowerCase().trim();
-          const searchWords = searchName.split(/\s+/).filter((w: string) => w.length > 1);
+          const suffixes = ['jr', 'sr', 'ii', 'iii', 'iv', 'phd', 'md', 'esq'];
+          
+          // Normalize a name: lowercase, remove punctuation, strip suffixes
+          const normalizeName = (name: string): string[] => {
+            return name.toLowerCase()
+              .replace(/[,.'"-]/g, ' ')  // Remove punctuation
+              .split(/\s+/)
+              .filter((w: string) => w.length > 1 && !suffixes.includes(w));
+          };
+          
+          const searchWords = normalizeName(args.name);
+          
+          // Helper function: calculate word similarity (0-10 scale)
+          const wordSimilarity = (word1: string, word2: string): number => {
+            if (word1 === word2) return 10;
+            // Prefix match (Ben/Benjamin)
+            if (word1.startsWith(word2) || word2.startsWith(word1)) return 8;
+            // Check Levenshtein-like distance for typos
+            if (word1.length >= 3 && word2.length >= 3) {
+              const maxLen = Math.max(word1.length, word2.length);
+              const minLen = Math.min(word1.length, word2.length);
+              if (maxLen - minLen <= 2) {
+                let diffs = 0;
+                const shorter = word1.length <= word2.length ? word1 : word2;
+                const longer = word1.length > word2.length ? word1 : word2;
+                for (let i = 0; i < shorter.length; i++) {
+                  if (shorter[i] !== longer[i]) diffs++;
+                }
+                diffs += longer.length - shorter.length;
+                if (diffs <= 1) return 7; // One character off (Martin/Marten)
+                if (diffs <= 2) return 5; // Two characters off
+              }
+            }
+            return 0; // No similarity
+          };
+          
+          // Find best match between two sets of name words (handles order variations like "Martin, Ben")
+          const findBestWordPairing = (words1: string[], words2: string[]): { firstScore: number; lastScore: number } => {
+            let bestFirstScore = 0;
+            let bestLastScore = 0;
+            
+            // For each word in words1, find best matching word in words2
+            for (const w1 of words1) {
+              for (const w2 of words2) {
+                const sim = wordSimilarity(w1, w2);
+                // Heuristically assign as "first" or "last" based on word characteristics
+                // Short common first names vs longer last names
+                if (w1.length <= 4 || w2.length <= 4) {
+                  if (sim > bestFirstScore) bestFirstScore = sim;
+                } else {
+                  if (sim > bestLastScore) bestLastScore = sim;
+                }
+              }
+            }
+            
+            // If we couldn't distinguish, try positional matching
+            if (bestFirstScore === 0 || bestLastScore === 0) {
+              // Match first words
+              if (words1.length > 0 && words2.length > 0) {
+                const firstSim = wordSimilarity(words1[0], words2[0]);
+                if (firstSim > bestFirstScore) bestFirstScore = firstSim;
+              }
+              // Match last words  
+              if (words1.length > 0 && words2.length > 0) {
+                const lastSim = wordSimilarity(words1[words1.length - 1], words2[words2.length - 1]);
+                if (lastSim > bestLastScore) bestLastScore = lastSim;
+              }
+              // Also try cross-matching (inverted names like "Martin, Ben")
+              if (words1.length > 0 && words2.length > 0) {
+                const crossSim1 = wordSimilarity(words1[0], words2[words2.length - 1]);
+                const crossSim2 = wordSimilarity(words1[words1.length - 1], words2[0]);
+                if (crossSim1 > bestFirstScore) bestFirstScore = crossSim1;
+                if (crossSim2 > bestLastScore) bestLastScore = crossSim2;
+              }
+            }
+            
+            return { firstScore: bestFirstScore, lastScore: bestLastScore };
+          };
           
           // BLOCK creation unless force=true when similar names found
           if (!args.force && searchWords.length > 0) {
@@ -1703,47 +1779,33 @@ Respond with valid JSON only, no other text.`;
             
             for (const person of allPeople) {
               if (!person.name) continue;
-              const personName = person.name.toLowerCase();
-              const personWords = personName.split(/\s+/);
+              const personWords = normalizeName(person.name);
+              if (personWords.length === 0) continue;
               
-              // Calculate similarity score
-              let score = 0;
+              // For multi-word names, require BOTH first AND last name to have similarity
+              // "Ben Martin" should only match "Benjamin Martin" or "Ben Marten", NOT "Ben Kia"
               
-              // Check each search word against person's name
-              for (const searchWord of searchWords) {
-                for (const personWord of personWords) {
-                  // Exact word match
-                  if (searchWord === personWord) {
-                    score += 10;
-                  }
-                  // One word starts with the other (prefix match)
-                  else if (searchWord.startsWith(personWord) || personWord.startsWith(searchWord)) {
-                    score += 7;
-                  }
-                  // Levenshtein-like: off by 1-2 characters (common typos)
-                  else if (searchWord.length >= 3 && personWord.length >= 3) {
-                    const maxLen = Math.max(searchWord.length, personWord.length);
-                    const minLen = Math.min(searchWord.length, personWord.length);
-                    // Same length or close, check character differences
-                    if (maxLen - minLen <= 2) {
-                      let diffs = 0;
-                      const shorter = searchWord.length <= personWord.length ? searchWord : personWord;
-                      const longer = searchWord.length > personWord.length ? searchWord : personWord;
-                      for (let i = 0; i < shorter.length; i++) {
-                        if (shorter[i] !== longer[i]) diffs++;
-                      }
-                      diffs += longer.length - shorter.length;
-                      if (diffs <= 2) {
-                        score += 6 - diffs; // 5 for 1 diff, 4 for 2 diffs
-                      }
-                    }
+              if (searchWords.length >= 2 && personWords.length >= 2) {
+                const { firstScore, lastScore } = findBestWordPairing(searchWords, personWords);
+                
+                // Both first AND last name must have some similarity (at least 5 each)
+                if (firstScore >= 5 && lastScore >= 5) {
+                  const totalScore = firstScore + lastScore;
+                  similarPeople.push({ id: person.id, name: person.name, score: totalScore });
+                }
+              } else {
+                // Single-word name: need high similarity on that one word
+                let bestScore = 0;
+                for (const searchWord of searchWords) {
+                  for (const personWord of personWords) {
+                    const sim = wordSimilarity(searchWord, personWord);
+                    if (sim > bestScore) bestScore = sim;
                   }
                 }
-              }
-              
-              // Require at least one significant match
-              if (score >= 5) {
-                similarPeople.push({ id: person.id, name: person.name, score });
+                // Single word needs very high similarity (at least 8 = prefix match or exact)
+                if (bestScore >= 8) {
+                  similarPeople.push({ id: person.id, name: person.name, score: bestScore });
+                }
               }
             }
             
