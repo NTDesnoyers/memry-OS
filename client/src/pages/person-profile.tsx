@@ -213,29 +213,6 @@ export default function PersonProfile() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  if (isLoading) {
-    return (
-      <Layout>
-        <div className="min-h-screen flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      </Layout>
-    );
-  }
-
-  if (isError || !person) {
-    return (
-      <Layout>
-        <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-          <p className="text-muted-foreground">Person not found</p>
-          <Link href="/people">
-            <Button variant="outline">Back to People</Button>
-          </Link>
-        </div>
-      </Layout>
-    );
-  }
-
   const getSegmentColor = (segment: string | null | undefined) => {
     if (!segment) return "bg-gray-100 text-gray-700";
     const lower = segment.toLowerCase();
@@ -347,6 +324,30 @@ export default function PersonProfile() {
       toast({ title: "Draft deleted" });
     },
   });
+
+  // Early returns AFTER all hooks to avoid "Rendered fewer hooks" error
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (isError || !person) {
+    return (
+      <Layout>
+        <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+          <p className="text-muted-foreground">Person not found</p>
+          <Link href="/people">
+            <Button variant="outline">Back to People</Button>
+          </Link>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>

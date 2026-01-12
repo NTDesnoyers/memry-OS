@@ -191,6 +191,10 @@ export default function People() {
     }
   }, [filteredPeople, selectedPersonId]);
 
+  // Separate drafts by status: only sent/used go in timeline, pending goes in To Do
+  const sentDrafts = drafts.filter(d => d.status === 'sent' || d.status === 'used');
+  const pendingDrafts = drafts.filter(d => d.status === 'pending');
+  
   const timelineItems: TimelineItem[] = [
     ...interactions.map(i => ({
       id: i.id,
@@ -201,10 +205,11 @@ export default function People() {
       source: i.source,
       data: i,
     })),
-    ...drafts.map(d => ({
+    // Only include sent/used drafts in timeline - pending drafts go in To Do tab
+    ...sentDrafts.map(d => ({
       id: d.id,
       type: 'draft' as const,
-      title: d.title || `${d.type} draft`,
+      title: d.title || `${d.type} sent`,
       preview: d.content?.slice(0, 200) || '',
       date: new Date(d.createdAt || Date.now()),
       source: d.type,
@@ -1047,10 +1052,55 @@ export default function People() {
                 </TabsContent>
 
                 <TabsContent value="todos" className="flex-1 overflow-auto p-4">
-                  <div className="text-center py-12 text-muted-foreground">
-                    <ListTodo className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>To Do feature coming soon</p>
-                  </div>
+                  {pendingDrafts.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <ListTodo className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No pending actions for {selectedPerson?.name}</p>
+                      <p className="text-sm mt-1">Pending drafts and tasks will appear here</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {pendingDrafts.map((draft) => (
+                        <Card key={draft.id} className="hover:shadow-md transition-shadow" data-testid={`todo-draft-${draft.id}`}>
+                          <CardContent className="p-4">
+                            <div className="flex items-start gap-3">
+                              <div className={`p-2 rounded-full flex-shrink-0 ${
+                                draft.type === 'email' ? 'bg-blue-100' : 
+                                draft.type === 'handwritten_note' ? 'bg-amber-100' : 'bg-green-100'
+                              }`}>
+                                {draft.type === 'email' ? (
+                                  <Mail className="h-4 w-4 text-blue-600" />
+                                ) : draft.type === 'handwritten_note' ? (
+                                  <FileText className="h-4 w-4 text-amber-600" />
+                                ) : (
+                                  <MessageSquare className="h-4 w-4 text-green-600" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Badge variant="outline" className="text-xs">
+                                    {draft.type === 'handwritten_note' ? 'Handwritten Note' : draft.type}
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs text-orange-600">
+                                    Pending
+                                  </Badge>
+                                </div>
+                                {draft.title && (
+                                  <p className="font-medium text-sm">{draft.title}</p>
+                                )}
+                                <p className="text-sm text-muted-foreground line-clamp-2">
+                                  {draft.content?.slice(0, 150)}...
+                                </p>
+                                <span className="text-xs text-muted-foreground mt-2 block">
+                                  Created {format(new Date(draft.createdAt || Date.now()), 'MMM d, yyyy')}
+                                </span>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
             </>
