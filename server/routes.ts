@@ -1694,13 +1694,14 @@ Respond with valid JSON only, no other text.`;
         case "create_person": {
           // Fuzzy name matching - check for similar existing contacts
           const suffixes = ['jr', 'sr', 'ii', 'iii', 'iv', 'phd', 'md', 'esq'];
+          const prefixes = ['dr', 'mr', 'mrs', 'ms', 'miss', 'prof', 'rev', 'hon', 'pastor', 'father', 'sister', 'brother', 'rabbi', 'imam'];
           
-          // Normalize a name: lowercase, remove punctuation, strip suffixes
+          // Normalize a name: lowercase, remove punctuation, strip prefixes and suffixes
           const normalizeName = (name: string): string[] => {
             return name.toLowerCase()
               .replace(/[,.'"-]/g, ' ')  // Remove punctuation
               .split(/\s+/)
-              .filter((w: string) => w.length > 1 && !suffixes.includes(w));
+              .filter((w: string) => w.length > 1 && !suffixes.includes(w) && !prefixes.includes(w));
           };
           
           const searchWords = normalizeName(args.name);
@@ -1729,47 +1730,38 @@ Respond with valid JSON only, no other text.`;
             return 0; // No similarity
           };
           
-          // Find best match between two sets of name words (handles order variations like "Martin, Ben")
-          const findBestWordPairing = (words1: string[], words2: string[]): { firstScore: number; lastScore: number } => {
-            let bestFirstScore = 0;
-            let bestLastScore = 0;
+          // Compare names: requires BOTH first AND last name to be similar
+          // Simple positional matching - first word is first name, last word is last name
+          const compareNames = (words1: string[], words2: string[]): { firstScore: number; lastScore: number } => {
+            // First names: compare first word of each
+            const firstScore = wordSimilarity(words1[0], words2[0]);
             
-            // For each word in words1, find best matching word in words2
-            for (const w1 of words1) {
-              for (const w2 of words2) {
-                const sim = wordSimilarity(w1, w2);
-                // Heuristically assign as "first" or "last" based on word characteristics
-                // Short common first names vs longer last names
-                if (w1.length <= 4 || w2.length <= 4) {
-                  if (sim > bestFirstScore) bestFirstScore = sim;
-                } else {
-                  if (sim > bestLastScore) bestLastScore = sim;
-                }
-              }
+            // Last names: compare last word, but also check for compound surnames
+            // "Maria Lopez" should match "Maria Lopez Garcia" (Lopez appears in both)
+            let lastScore = wordSimilarity(words1[words1.length - 1], words2[words2.length - 1]);
+            
+            // For compound surnames: check if the last word matches any of the last 2 words
+            if (lastScore < 5 && words2.length > 2) {
+              const altScore = wordSimilarity(words1[words1.length - 1], words2[words2.length - 2]);
+              if (altScore > lastScore) lastScore = altScore;
+            }
+            if (lastScore < 5 && words1.length > 2) {
+              const altScore = wordSimilarity(words1[words1.length - 2], words2[words2.length - 1]);
+              if (altScore > lastScore) lastScore = altScore;
             }
             
-            // If we couldn't distinguish, try positional matching
-            if (bestFirstScore === 0 || bestLastScore === 0) {
-              // Match first words
-              if (words1.length > 0 && words2.length > 0) {
-                const firstSim = wordSimilarity(words1[0], words2[0]);
-                if (firstSim > bestFirstScore) bestFirstScore = firstSim;
-              }
-              // Match last words  
-              if (words1.length > 0 && words2.length > 0) {
-                const lastSim = wordSimilarity(words1[words1.length - 1], words2[words2.length - 1]);
-                if (lastSim > bestLastScore) bestLastScore = lastSim;
-              }
-              // Also try cross-matching (inverted names like "Martin, Ben")
-              if (words1.length > 0 && words2.length > 0) {
-                const crossSim1 = wordSimilarity(words1[0], words2[words2.length - 1]);
-                const crossSim2 = wordSimilarity(words1[words1.length - 1], words2[0]);
-                if (crossSim1 > bestFirstScore) bestFirstScore = crossSim1;
-                if (crossSim2 > bestLastScore) bestLastScore = crossSim2;
-              }
-            }
+            // Also check inverted names: "Martin, Ben" vs "Ben Martin"
+            const invertedFirst = wordSimilarity(words1[0], words2[words2.length - 1]);
+            const invertedLast = wordSimilarity(words1[words1.length - 1], words2[0]);
             
-            return { firstScore: bestFirstScore, lastScore: bestLastScore };
+            // Use inverted matching only if it gives a better overall result
+            const normalMin = Math.min(firstScore, lastScore);
+            const invertedMin = Math.min(invertedFirst, invertedLast);
+            
+            if (invertedMin > normalMin) {
+              return { firstScore: invertedFirst, lastScore: invertedLast };
+            }
+            return { firstScore, lastScore };
           };
           
           // BLOCK creation unless force=true when similar names found
@@ -1786,7 +1778,7 @@ Respond with valid JSON only, no other text.`;
               // "Ben Martin" should only match "Benjamin Martin" or "Ben Marten", NOT "Ben Kia"
               
               if (searchWords.length >= 2 && personWords.length >= 2) {
-                const { firstScore, lastScore } = findBestWordPairing(searchWords, personWords);
+                const { firstScore, lastScore } = compareNames(searchWords, personWords);
                 
                 // Both first AND last name must have some similarity (at least 5 each)
                 if (firstScore >= 5 && lastScore >= 5) {
