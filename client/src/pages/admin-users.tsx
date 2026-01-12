@@ -189,7 +189,7 @@ export default function AdminUsers() {
           <Users className="h-8 w-8 text-primary" />
           <div>
             <h1 className="text-2xl font-serif font-bold">User Management</h1>
-            <p className="text-muted-foreground">Approve or deny access to Flow OS</p>
+            <p className="text-muted-foreground">Approve or deny access to Memry</p>
           </div>
         </div>
 

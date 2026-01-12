@@ -33,7 +33,7 @@ export function setupVoiceRelay(httpServer: Server) {
     activeSessions.set(sessionId, session);
 
     try {
-      const basePrompt = `You are the AI assistant for Flow OS, a relationship intelligence platform for real estate professionals focused on relationship-based selling. 
+      const basePrompt = `You are the AI assistant for Memry, a relationship intelligence platform for real estate professionals focused on relationship-based selling. 
 
 You help with:
 - Managing relationships and FORD notes (Family, Occupation, Recreation, Dreams)

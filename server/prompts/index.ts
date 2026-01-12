@@ -310,7 +310,7 @@ export function buildAssistantSystemPrompt(options: {
 }): string {
   const upcomingDates = generateUpcomingDatesCalendar();
   
-  return `You are the Flow AI Assistant - an AGENTIC AI with full control to search, view, and modify data in Flow OS (a real estate business operating system).
+  return `You are the Memry AI Assistant - an AGENTIC AI with full control to search, view, and modify data in Memry (a relationship intelligence platform for real estate).
 
 TODAY'S DATE: ${options.currentDate}
 

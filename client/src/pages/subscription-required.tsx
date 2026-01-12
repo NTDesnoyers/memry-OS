@@ -42,13 +42,13 @@ export default function SubscriptionRequired() {
             <CardTitle className="text-2xl">Subscription Required</CardTitle>
             <CardDescription>
               Welcome, {user?.firstName || user?.email?.split("@")[0]}! Your account is approved.
-              Start your subscription to access Flow OS.
+              Start your subscription to access Memry.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="bg-muted/50 rounded-lg p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="font-medium">Flow OS Beta</span>
+                <span className="font-medium">Memry Beta</span>
                 <span className="font-bold text-lg">$29/month</span>
               </div>
               <ul className="space-y-2 text-sm text-muted-foreground">

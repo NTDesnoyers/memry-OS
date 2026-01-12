@@ -10,7 +10,7 @@ export default function Landing() {
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
             <Sparkles className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-semibold text-white">Flow OS</span>
+          <span className="text-xl font-semibold text-white">Memry</span>
         </div>
         <Button 
           variant="outline"
@@ -29,7 +29,7 @@ export default function Landing() {
           </h1>
           
           <p className="text-lg md:text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
-            Flow OS remembers your conversations, shows you who needs your attention today, and drafts your follow-ups so nothing slips through the cracks.
+            Memry remembers your conversations, shows you who needs your attention today, and drafts your follow-ups so nothing slips through the cracks.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -117,7 +117,7 @@ export default function Landing() {
 
         {/* HOW IT WORKS */}
         <div className="max-w-3xl mx-auto w-full mb-20">
-          <h2 className="text-2xl font-semibold text-white text-center mb-10">How Flow OS works</h2>
+          <h2 className="text-2xl font-semibold text-white text-center mb-10">How Memry works</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center">
@@ -128,7 +128,7 @@ export default function Landing() {
             
             <div className="text-center">
               <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground font-bold flex items-center justify-center mx-auto mb-4">2</div>
-              <h3 className="font-semibold text-white mb-2">Flow OS extracts what matters</h3>
+              <h3 className="font-semibold text-white mb-2">Memry extracts what matters</h3>
               <p className="text-slate-400 text-sm">People, topics, action items, and FORD insights.</p>
             </div>
             
@@ -142,7 +142,7 @@ export default function Landing() {
 
         {/* WHY AGENTS SWITCH */}
         <div className="max-w-2xl mx-auto w-full mb-20">
-          <h2 className="text-2xl font-semibold text-white text-center mb-10">Why agents switch to Flow OS</h2>
+          <h2 className="text-2xl font-semibold text-white text-center mb-10">Why agents switch to Memry</h2>
           
           <div className="space-y-4">
             <div className="flex items-start gap-3">
@@ -206,7 +206,7 @@ export default function Landing() {
       </main>
 
       <footer className="p-6 text-center text-slate-500 text-sm border-t border-slate-800">
-        Flow OS Beta · Built for relationship-based real estate agents
+        Memry Beta · Built for relationship-based real estate agents
       </footer>
     </div>
   );

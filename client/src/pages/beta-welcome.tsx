@@ -117,7 +117,7 @@ export default function BetaWelcome() {
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">You're In!</h1>
             <p className="text-gray-600 mb-6">
-              Welcome to the Flow OS beta. You now have full access to explore and test the platform.
+              Welcome to the Memry beta. You now have full access to explore and test the platform.
             </p>
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 text-left">
               <h3 className="font-semibold text-amber-900 mb-2">Quick Start Tips:</h3>
@@ -256,7 +256,7 @@ export default function BetaWelcome() {
             </div>
 
             <div>
-              <Label htmlFor="expectations">What are you hoping to get from Flow OS? (optional)</Label>
+              <Label htmlFor="expectations">What are you hoping to get from Memry? (optional)</Label>
               <Textarea
                 id="expectations"
                 data-testid="input-beta-expectations"
@@ -311,7 +311,7 @@ export default function BetaWelcome() {
         <div className="text-center mb-12">
           <Badge className="bg-amber-100 text-amber-800 mb-4">Beta Access</Badge>
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Welcome to <span className="text-amber-600">Flow OS</span>
+            Welcome to <span className="text-amber-600">Memry</span>
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Your AI-powered relationship intelligence platform for real estate. 

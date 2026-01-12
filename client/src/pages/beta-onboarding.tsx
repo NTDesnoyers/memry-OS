@@ -225,7 +225,7 @@ function IntakeForm({ onSuccess }: { onSuccess: () => void }) {
       {step === 1 && (
         <Card>
           <CardHeader>
-            <CardTitle className="font-serif">Welcome to Flow OS Beta</CardTitle>
+            <CardTitle className="font-serif">Welcome to Memry Beta</CardTitle>
             <CardDescription>Let's get you set up. First, tell us about yourself.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

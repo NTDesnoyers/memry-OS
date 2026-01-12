@@ -78,7 +78,7 @@ export async function appendToSheet(spreadsheetId: string, sheetName: string, va
   });
 }
 
-// Log an issue to the Flow OS Issues Google Sheet
+// Log an issue to the Memry Issues Google Sheet
 export async function logIssueToSheet(issue: {
   id: string;
   type: string;

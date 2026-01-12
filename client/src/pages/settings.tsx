@@ -366,7 +366,7 @@ export default function SettingsPage() {
               <h1 className="text-2xl font-serif font-bold">Settings</h1>
             </div>
             <p className="text-muted-foreground">
-              Configure your Flow OS preferences and integrations.
+              Configure your Memry preferences and integrations.
             </p>
           </div>
 
@@ -433,7 +433,7 @@ export default function SettingsPage() {
                 <CardTitle className="text-lg">Billing & Subscription</CardTitle>
               </div>
               <CardDescription>
-                Manage your Flow OS subscription and payment details
+                Manage your Memry subscription and payment details
               </CardDescription>
             </CardHeader>
             <CardContent>

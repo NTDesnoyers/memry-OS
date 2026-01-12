@@ -64,7 +64,7 @@ export function registerStripeRoutes(app: Express): void {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: 'Flow OS Founding Agent Beta',
+              name: 'Memry Founding Agent Beta',
               description: 'Monthly subscription for relationship-based real estate agents',
             },
             unit_amount: BETA_PRICE_AMOUNT,

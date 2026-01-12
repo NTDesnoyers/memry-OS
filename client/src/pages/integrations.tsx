@@ -295,7 +295,7 @@ function WebhooksSection() {
           <div>
             <CardTitle className="font-serif">Webhook Endpoints</CardTitle>
             <CardDescription>
-              Use these webhook URLs in Zapier or your capture tools to send data to Flow OS
+              Use these webhook URLs in Zapier or your capture tools to send data to Memry
             </CardDescription>
           </div>
         </div>
@@ -560,7 +560,7 @@ function GmailIntegrationCard() {
               <span className="font-medium">{status?.email || 'Unknown'}</span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Flow OS can send emails, create drafts, and scan for dormant leads on your behalf.
+              Memry can send emails, create drafts, and scan for dormant leads on your behalf.
             </p>
           </>
         ) : (
@@ -633,7 +633,7 @@ function TodoistIntegrationCard() {
         {isConnected ? (
           <>
             <p className="text-sm text-gray-600">
-              Tasks created in Flow OS will sync to Todoist with the "flow-os" label.
+              Tasks created in Memry will sync to Todoist with the "memry" label.
               Following GTD principles, Todoist is your single task inbox.
             </p>
             <div className="flex gap-2">

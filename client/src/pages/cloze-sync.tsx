@@ -91,7 +91,7 @@ export default function ClozeSync() {
               </div>
               <div>
                 <h1 className="text-3xl font-serif font-bold text-primary">Cloze Integration</h1>
-                <p className="text-muted-foreground">Sync Flow OS data to your Cloze CRM</p>
+                <p className="text-muted-foreground">Sync Memry data to your Cloze CRM</p>
               </div>
             </div>
           </header>
@@ -114,7 +114,7 @@ export default function ClozeSync() {
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  <strong>Flow OS is the source of truth.</strong> Data flows ONE direction: from Flow OS → Cloze. Changes made in Cloze won't update here, but this allows Cloze to be a "downstream mirror" for reminders and follow-ups.
+                  <strong>Memry is the source of truth.</strong> Data flows ONE direction: from Memry → Cloze. Changes made in Cloze won't update here, but this allows Cloze to be a "downstream mirror" for reminders and follow-ups.
                 </AlertDescription>
               </Alert>
 
@@ -241,7 +241,7 @@ export default function ClozeSync() {
             <TabsContent value="mapping" className="space-y-6 mt-6">
               <Card className="border-none shadow-md">
                 <CardHeader className="bg-primary/5 pb-4">
-                  <CardTitle className="font-serif">Flow OS → Cloze Field Mapping</CardTitle>
+                  <CardTitle className="font-serif">Memry → Cloze Field Mapping</CardTitle>
                   <CardDescription>How your data is transformed for Cloze</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6 space-y-6">
@@ -251,7 +251,7 @@ export default function ClozeSync() {
                       <table className="w-full text-sm">
                         <thead className="bg-secondary/50">
                           <tr>
-                            <th className="p-3 text-left font-medium">Flow OS Field</th>
+                            <th className="p-3 text-left font-medium">Memry Field</th>
                             <th className="p-3 text-left font-medium">Cloze Field</th>
                             <th className="p-3 text-left font-medium">Type</th>
                           </tr>
@@ -285,7 +285,7 @@ export default function ClozeSync() {
                       <table className="w-full text-sm">
                         <thead className="bg-secondary/50">
                           <tr>
-                            <th className="p-3 text-left font-medium">Flow OS Field</th>
+                            <th className="p-3 text-left font-medium">Memry Field</th>
                             <th className="p-3 text-left font-medium">Cloze Field</th>
                             <th className="p-3 text-left font-medium">Type</th>
                           </tr>
@@ -316,7 +316,7 @@ export default function ClozeSync() {
                       <table className="w-full text-sm">
                         <thead className="bg-secondary/50">
                           <tr>
-                            <th className="p-3 text-left font-medium">Flow OS Field</th>
+                            <th className="p-3 text-left font-medium">Memry Field</th>
                             <th className="p-3 text-left font-medium">Cloze Field</th>
                             <th className="p-3 text-left font-medium">Type</th>
                           </tr>
@@ -341,7 +341,7 @@ export default function ClozeSync() {
 
                   <Alert>
                     <AlertDescription>
-                      <strong>One-way sync only:</strong> Flow OS → Cloze. Any changes you make in Cloze won't update back to Flow OS. This keeps Flow OS as the authoritative source.
+                      <strong>One-way sync only:</strong> Memry → Cloze. Any changes you make in Cloze won't update back to Memry. This keeps Memry as the authoritative source.
                     </AlertDescription>
                   </Alert>
                 </CardContent>

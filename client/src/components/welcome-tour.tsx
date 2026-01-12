@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 
 const TOUR_STEPS = [
   {
-    title: "Welcome to Flow OS Beta",
+    title: "Welcome to Memry Beta",
     description: "You're one of our first testers! Your feedback shapes this product. Use the feedback button (bottom right) to report bugs or share ideas.",
     icon: Sparkles,
   },
@@ -38,7 +38,7 @@ export function WelcomeTour() {
   const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
-    const hasSeenTour = localStorage.getItem("flow-os-tour-completed");
+    const hasSeenTour = localStorage.getItem("memry-tour-completed");
     if (!hasSeenTour) {
       const timer = setTimeout(() => setIsOpen(true), 1000);
       return () => clearTimeout(timer);
@@ -46,7 +46,7 @@ export function WelcomeTour() {
   }, []);
 
   const handleComplete = () => {
-    localStorage.setItem("flow-os-tour-completed", "true");
+    localStorage.setItem("memry-tour-completed", "true");
     setIsOpen(false);
   };
 

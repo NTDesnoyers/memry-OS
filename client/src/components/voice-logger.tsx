@@ -202,7 +202,7 @@ export function VoiceLogger() {
       "/automation": "Automation Hub - workflow automations and integrations",
       "/integrations": "Integrations - connected services and API settings",
     };
-    return pageContexts[currentPage] || "Flow OS - Real Estate Business Operating System";
+    return pageContexts[currentPage] || "Memry - Relationship Intelligence for Real Estate";
   };
 
   const processFile = useCallback((file: File) => {
@@ -272,7 +272,7 @@ export function VoiceLogger() {
           context: {
             currentPage: currentPage,
             pageDescription: getPageContext(),
-            appName: "Flow OS",
+            appName: "Memry",
             appDescription: "A real estate business operating system for relationship-based selling",
           }
         }),

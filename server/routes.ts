@@ -2561,7 +2561,7 @@ Respond with valid JSON only, no other text.`;
       
       const systemPrompt = buildAssistantSystemPrompt({
         currentDate,
-        pageContext: context?.pageDescription || context?.currentPage || 'Flow OS'
+        pageContext: context?.pageDescription || context?.currentPage || 'Memry'
       });
 
       // Build messages array, handling images with vision API format
@@ -2720,7 +2720,7 @@ Respond with valid JSON only, no other text.`;
       
       const systemPrompt = buildAssistantSystemPrompt({
         currentDate,
-        pageContext: context?.pageDescription || context?.currentPage || 'Flow OS'
+        pageContext: context?.pageDescription || context?.currentPage || 'Memry'
       });
 
       // Build messages array, handling images with vision API format
@@ -5852,7 +5852,7 @@ Return ONLY valid JSON, no explanations.`
     }
   });
 
-  // Sync Flow OS tasks to Todoist
+  // Sync Memry tasks to Todoist
   app.post("/api/todoist/sync-tasks", async (req, res) => {
     try {
       const tasks = await storage.getAllTasks();
@@ -5874,7 +5874,7 @@ Return ONLY valid JSON, no explanations.`
               description: description,
               dueString: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : undefined,
               priority: task.priority === "high" ? 4 : task.priority === "medium" ? 3 : 2,
-              labels: ["flow-os"]
+              labels: ["memry"]
             });
             
             // Update task with todoistId

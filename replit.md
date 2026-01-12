@@ -1,7 +1,7 @@
-# Flow OS - Relationship Intelligence Platform
+# Memry - Relationship Intelligence Platform
 
 ## Overview
-Flow OS is a multi-tenant SaaS platform designed for real estate professionals to enhance relationship-based selling. It integrates key workflows such as Weekly Meeting Agenda (WMA), FORD relationship tracking, client intelligence, business execution, and deal management. The platform aims to be a central source of truth for relationship selling, improving efficiency for tasks like WMA completion and FORD interaction logging. Based on Getting Things Done (GTD) principles, it functions as an intelligent reference system, integrating with external task managers. The project's ambition is to provide an AI Chief of Staff experience, offering anticipatory intelligence, network insights, reflective analysis, memory augmentation, decision support, and skill development to optimize relationship management and business strategy.
+Memry (formerly Flow OS, domain: memryos.io) is a multi-tenant SaaS platform designed for real estate professionals to enhance relationship-based selling. It integrates key workflows such as Weekly Meeting Agenda (WMA), FORD relationship tracking, client intelligence, business execution, and deal management. The platform aims to be a central source of truth for relationship selling, improving efficiency for tasks like WMA completion and FORD interaction logging. Based on Getting Things Done (GTD) principles, it functions as an intelligent reference system, integrating with external task managers. The project's ambition is to provide an AI Chief of Staff experience, offering anticipatory intelligence, network insights, reflective analysis, memory augmentation, decision support, and skill development to optimize relationship management and business strategy.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -10,7 +10,7 @@ The system learns the user's unique communication style (greetings, sign-offs, e
 The system generates drafts of thank-you emails, handwritten notes, and follow-up tasks from conversations, stored for review and editing.
 
 ## System Architecture
-Flow OS uses an event-driven, multi-agent architecture specifically tailored for real estate orchestration.
+Memry uses an event-driven, multi-agent architecture specifically tailored for real estate orchestration.
 
 ### Frontend
 - **Framework**: React 18 with TypeScript
@@ -53,7 +53,7 @@ The design emphasizes GTD principles, focusing on speed for daily reviews and in
 - **Context Graph**: Captures "event clock" and decision traces, recording reasoning chains for actions and interactions.
 
 ### Orchestration Layer
-Flow OS is a multi-agent, event-driven system orchestrating actions while CRMs remain systems of record. It adheres to principles like Event-Driven, Agent-Based, Dossier Abstraction, Guardrails First, and Revenue Focus. It utilizes named agents (e.g., LeadIntakeAgent, NurtureAgent) and various event types (Lead, Relationship, Transaction, Communication, Intelligence Events).
+Memry is a multi-agent, event-driven system orchestrating actions while CRMs remain systems of record. It adheres to principles like Event-Driven, Agent-Based, Dossier Abstraction, Guardrails First, and Revenue Focus. It utilizes named agents (e.g., LeadIntakeAgent, NurtureAgent) and various event types (Lead, Relationship, Transaction, Communication, Intelligence Events).
 
 ## External Dependencies
 

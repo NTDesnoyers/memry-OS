@@ -1633,7 +1633,7 @@ export const crmIntegrations = pgTable("crm_integrations", {
     refreshToken?: string; // For OAuth-based integrations
     accessToken?: string;
     tokenExpiresAt?: string;
-    customFields?: Record<string, string>; // Map Flow OS fields to CRM fields
+    customFields?: Record<string, string>; // Map Memry fields to CRM fields
   }>(),
   lastSyncAt: timestamp("last_sync_at"),
   lastSyncStatus: text("last_sync_status"), // 'success', 'failed', 'partial'
