@@ -2190,13 +2190,29 @@ Respond with valid JSON only, no other text.`;
             return `Error: personIds must be an array with at least 2 person IDs`;
           }
           
-          // Get person details to auto-generate household name if not provided
-          const peopleForHousehold: { id: string; name: string }[] = [];
+          // Get person details and check current household status
+          const peopleForHousehold: { id: string; name: string; householdId: string | null }[] = [];
           for (const personId of args.personIds) {
             const person = await storage.getPerson(personId, ctx);
             if (person) {
-              peopleForHousehold.push({ id: person.id, name: person.name || personId });
+              peopleForHousehold.push({ id: person.id, name: person.name || personId, householdId: person.householdId });
             }
+          }
+          
+          if (peopleForHousehold.length < 2) {
+            return `Error: Could not find enough people to link`;
+          }
+          
+          // Check if all people are already in the same household
+          const householdIds = peopleForHousehold.map(p => p.householdId).filter((id): id is string => id !== null && id !== undefined);
+          const uniqueHouseholdIds = [...new Set(householdIds)];
+          
+          // Only consider "already linked" if ALL people have a householdId AND they're all the same
+          if (uniqueHouseholdIds.length === 1 && householdIds.length === peopleForHousehold.length && uniqueHouseholdIds[0]) {
+            // All people are already in the same household
+            const existingHousehold = await storage.getHousehold(uniqueHouseholdIds[0], ctx);
+            const householdNameStr = existingHousehold?.name || 'the same household';
+            return `${peopleForHousehold.map(p => p.name).join(" and ")} are already linked as "${householdNameStr}". No changes needed.`;
           }
           
           // Auto-generate household name from last name if not provided
