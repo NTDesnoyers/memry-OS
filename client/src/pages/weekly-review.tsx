@@ -309,7 +309,7 @@ export default function WeeklyReview() {
                 People You Connected With
               </CardTitle>
               <CardDescription>
-                {weeklyCount} {weeklyCount === 1 ? 'household' : 'households'} this week
+                {peopleContactedThisWeek.length} {peopleContactedThisWeek.length === 1 ? 'person' : 'people'} across {weeklyCount} {weeklyCount === 1 ? 'household' : 'households'}
               </CardDescription>
             </CardHeader>
             <CardContent>

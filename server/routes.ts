@@ -1604,36 +1604,96 @@ Respond with valid JSON only, no other text.`;
           const query = args.query.toLowerCase().trim();
           const queryWords = query.split(/\s+/).filter((w: string) => w.length > 0);
           
-          // Fuzzy matching function - handles middle initials, partial names, etc.
-          const fuzzyNameMatch = (name: string | null | undefined, searchWords: string[]): boolean => {
-            if (!name) return false;
-            const nameLower = name.toLowerCase();
-            // Direct substring match
-            if (nameLower.includes(query)) return true;
-            // All search words must appear somewhere in name
-            const nameWords = nameLower.split(/\s+/);
-            return searchWords.every(sw => 
-              nameWords.some(nw => nw.includes(sw) || sw.includes(nw))
-            );
+          // Word similarity scoring (0-10 scale)
+          const wordSimilarity = (word1: string, word2: string): number => {
+            if (word1 === word2) return 10;
+            // Prefix match (Ben/Benjamin, Mom/Monica)
+            if (word1.startsWith(word2) || word2.startsWith(word1)) return 8;
+            // Simple Levenshtein-like for typos
+            if (word1.length >= 3 && word2.length >= 3) {
+              const maxLen = Math.max(word1.length, word2.length);
+              const minLen = Math.min(word1.length, word2.length);
+              if (maxLen - minLen <= 2) {
+                let diffs = 0;
+                const shorter = word1.length <= word2.length ? word1 : word2;
+                const longer = word1.length > word2.length ? word1 : word2;
+                for (let i = 0; i < shorter.length; i++) {
+                  if (shorter[i] !== longer[i]) diffs++;
+                }
+                diffs += longer.length - shorter.length;
+                if (diffs <= 1) return 7;
+                if (diffs <= 2) return 5;
+              }
+            }
+            return 0;
           };
           
-          const matches = people.filter(p => 
-            fuzzyNameMatch(p.name, queryWords) ||
-            fuzzyNameMatch(p.nickname, queryWords) ||
-            p.email?.toLowerCase().includes(query) ||
-            p.phone?.includes(query) ||
-            p.segment?.toLowerCase() === query ||
-            p.notes?.toLowerCase().includes(query)
-          ).slice(0, 10);
-          if (matches.length === 0) return `No people found matching "${args.query}"`;
-          return JSON.stringify(matches.map(p => ({
-            id: p.id,
-            name: p.name,
-            nickname: p.nickname,
-            email: p.email,
-            phone: p.phone,
-            segment: p.segment,
-            lastContact: p.lastContact
+          // Calculate match score for a person
+          const getMatchScore = (person: typeof people[0]): number => {
+            const name = person.name?.toLowerCase() || '';
+            const nickname = person.nickname?.toLowerCase() || '';
+            const email = person.email?.toLowerCase() || '';
+            const phone = person.phone || '';
+            const segment = person.segment?.toLowerCase() || '';
+            const notes = person.notes?.toLowerCase() || '';
+            
+            // Exact matches in email, phone, segment
+            if (email && email.includes(query)) return 10;
+            if (phone && phone.includes(query)) return 10;
+            if (segment === query) return 10;
+            
+            // Exact match in name or nickname
+            if (name.includes(query) || nickname.includes(query)) return 10;
+            
+            // Single-word search: require higher match quality
+            if (queryWords.length === 1) {
+              const searchWord = queryWords[0];
+              const nameWords = name.split(/\s+/);
+              const nicknameWords = nickname.split(/\s+/);
+              
+              // Check each word in name/nickname for similarity
+              let bestScore = 0;
+              for (const nw of [...nameWords, ...nicknameWords]) {
+                const score = wordSimilarity(searchWord, nw);
+                if (score > bestScore) bestScore = score;
+              }
+              // For single-word searches, require at least score 5 (reasonable match)
+              return bestScore >= 5 ? bestScore : 0;
+            }
+            
+            // Multi-word search: all query words must appear somewhere
+            const nameWords = name.split(/\s+/);
+            let matchedWords = 0;
+            for (const sw of queryWords) {
+              let matched = false;
+              for (const nw of nameWords) {
+                if (wordSimilarity(sw, nw) >= 5) {
+                  matched = true;
+                  break;
+                }
+              }
+              if (matched) matchedWords++;
+            }
+            // Require all words to match
+            return matchedWords === queryWords.length ? 8 : 0;
+          };
+          
+          // Score all people and filter to quality matches
+          const scoredMatches = people
+            .map(p => ({ person: p, score: getMatchScore(p) }))
+            .filter(m => m.score > 0)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 10);
+          
+          if (scoredMatches.length === 0) return `No people found matching "${args.query}"`;
+          return JSON.stringify(scoredMatches.map(m => ({
+            id: m.person.id,
+            name: m.person.name,
+            nickname: m.person.nickname,
+            email: m.person.email,
+            phone: m.person.phone,
+            segment: m.person.segment,
+            lastContact: m.person.lastContact
           })));
         }
         
