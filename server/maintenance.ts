@@ -17,13 +17,15 @@ export async function cleanupOldEvents(retentionDays: number = 7): Promise<Clean
 
   logger.info(`Cleaning up events older than ${retentionDays} days (before ${cutoffDate.toISOString()})`);
 
-  const eventsResult = await db.delete(systemEvents)
-    .where(lt(systemEvents.createdAt, cutoffDate))
-    .returning({ id: systemEvents.id });
-
+  // Delete from agentActions FIRST since it has a foreign key to systemEvents
   const actionsResult = await db.delete(agentActions)
     .where(lt(agentActions.createdAt, cutoffDate))
     .returning({ id: agentActions.id });
+
+  // Then delete from systemEvents
+  const eventsResult = await db.delete(systemEvents)
+    .where(lt(systemEvents.createdAt, cutoffDate))
+    .returning({ id: systemEvents.id });
 
   const result = {
     eventsDeleted: eventsResult.length,

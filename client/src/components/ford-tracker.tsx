@@ -19,6 +19,10 @@ type Person = {
 
 const WEEKLY_GOAL = 50;
 
+// Only these interaction types count toward the weekly conversation goal
+// Excludes: text, email, handwritten_note (these are touchpoints, not live conversations)
+const CONVERSATION_TYPES = ['call', 'meeting', 'in_person', 'video', 'coffee', 'social'];
+
 function getWeekBounds() {
   const now = new Date();
   const weekStart = startOfWeek(now, { weekStartsOn: 1 });
@@ -39,6 +43,8 @@ function countWeeklyHouseholds(interactions: Interaction[], people: Person[]): n
   for (const interaction of interactions) {
     if (interaction.deletedAt) continue;
     if (!interaction.personId) continue;
+    // Only count live conversations, not touchpoints like text/email/handwritten notes
+    if (!CONVERSATION_TYPES.includes(interaction.type)) continue;
     
     const interactionDate = parseISO(interaction.occurredAt);
     if (!isWithinInterval(interactionDate, { start: weekStart, end: weekEnd })) {
