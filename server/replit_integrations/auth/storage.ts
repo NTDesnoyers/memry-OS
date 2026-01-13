@@ -36,8 +36,13 @@ class AuthStorage implements IAuthStorage {
   }
 
   async upsertUser(userData: UpsertAuthUser): Promise<AuthUser> {
-    // Check if user already exists to preserve status/isAdmin
-    const existingUser = await this.getUser(userData.id!);
+    // Check if user already exists by ID first
+    let existingUser = await this.getUser(userData.id!);
+    
+    // Also check by email to handle OIDC with different sub but same email
+    if (!existingUser && userData.email) {
+      existingUser = await this.getUserByEmail(userData.email);
+    }
     
     // Auto-approve founder
     const isFounder = userData.email?.toLowerCase() === FOUNDER_EMAIL.toLowerCase();
@@ -62,7 +67,7 @@ class AuthStorage implements IAuthStorage {
       const [user] = await db
         .update(authUsers)
         .set(updateData)
-        .where(eq(authUsers.id, userData.id!))
+        .where(eq(authUsers.id, existingUser.id))
         .returning();
       return user;
     } else {
