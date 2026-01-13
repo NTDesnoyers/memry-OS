@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Mic, Square, Loader2, Send, MessageSquare, Sparkles, X, Bot, User, CheckCircle2, Zap, Paperclip, Plus, History, Trash2, ChevronLeft, ChevronRight, Phone, ChevronDown, ChevronUp } from "lucide-react";
+import { Mic, Square, Loader2, Send, MessageSquare, Sparkles, Bot, User, CheckCircle2, Zap, Paperclip, Plus, History, Trash2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Minus, Check } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { VoiceConversation } from "./voice-conversation";
 
 interface AiConversation {
   id: string;
@@ -67,11 +66,12 @@ export function VoiceLogger() {
   const [attachedImages, setAttachedImages] = useState<AttachedImage[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
-  const [isVoiceMode, setIsVoiceMode] = useState(false);
   const [streamingState, setStreamingState] = useState<StreamingState | null>(null);
   const [expandedActions, setExpandedActions] = useState<Set<number>>(new Set());
+  const [showCompletionBadge, setShowCompletionBadge] = useState(false);
   
   const recognitionRef = useRef<any>(null);
+  const completionBadgeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -399,6 +399,25 @@ export function VoiceLogger() {
     
     setStreamingState(null);
     setIsProcessing(false);
+    
+    // Show completion badge on floating button when not open
+    if (!isOpen) {
+      // Clear any existing timeout
+      if (completionBadgeTimeoutRef.current) {
+        clearTimeout(completionBadgeTimeoutRef.current);
+      }
+      setShowCompletionBadge(true);
+      // Auto-hide badge after 5 seconds
+      completionBadgeTimeoutRef.current = setTimeout(() => {
+        setShowCompletionBadge(false);
+        completionBadgeTimeoutRef.current = null;
+      }, 5000);
+    }
+  };
+  
+  // Handle minimize with animation - close immediately, animation is handled by Dialog's exit animation
+  const handleMinimize = () => {
+    setIsOpen(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -496,21 +515,64 @@ export function VoiceLogger() {
     return toolLabels[toolName] || toolName;
   };
 
+  // Clear completion badge when opening the chat
+  useEffect(() => {
+    if (isOpen) {
+      setShowCompletionBadge(false);
+      // Clear the timeout since badge was dismissed by opening
+      if (completionBadgeTimeoutRef.current) {
+        clearTimeout(completionBadgeTimeoutRef.current);
+        completionBadgeTimeoutRef.current = null;
+      }
+    }
+  }, [isOpen]);
+  
+  // Cleanup completion badge timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (completionBadgeTimeoutRef.current) {
+        clearTimeout(completionBadgeTimeoutRef.current);
+      }
+    };
+  }, []);
+
   return (
     <>
+      {/* Floating AI Assistant Button */}
       <Button
         size="lg"
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-xl z-50 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 animate-in zoom-in duration-300"
+        className={cn(
+          "fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-xl z-50 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 transition-all duration-300",
+          isProcessing && !isOpen && "animate-pulse ring-4 ring-violet-400/50",
+          showCompletionBadge && "ring-4 ring-green-400/70"
+        )}
         onClick={() => setIsOpen(true)}
         data-testid="button-ai-assistant"
       >
-        <Sparkles className="h-6 w-6 text-white" />
+        {showCompletionBadge ? (
+          <Check className="h-6 w-6 text-white" />
+        ) : isProcessing && !isOpen ? (
+          <Loader2 className="h-6 w-6 text-white animate-spin" />
+        ) : (
+          <Sparkles className="h-6 w-6 text-white" />
+        )}
+        {/* Processing indicator badge */}
+        {isProcessing && !isOpen && (
+          <span className="absolute -top-1 -right-1 h-4 w-4 bg-amber-500 rounded-full animate-pulse" />
+        )}
+        {/* Completion indicator badge */}
+        {showCompletionBadge && (
+          <span className="absolute -top-1 -right-1 h-4 w-4 bg-green-500 rounded-full flex items-center justify-center">
+            <Check className="h-2.5 w-2.5 text-white" />
+          </span>
+        )}
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen} modal={false}>
         <DialogContent 
+          hideCloseButton
           className={cn(
-            "h-[85vh] sm:h-[600px] max-h-[85vh] flex flex-row p-0 gap-0 transition-all duration-300 overflow-hidden",
+            "h-[85vh] sm:h-[600px] max-h-[85vh] flex flex-row p-0 gap-0 overflow-hidden",
             showHistory ? "sm:max-w-3xl" : "sm:max-w-lg"
           )}
           onPointerDownOutside={(e) => {
@@ -604,34 +666,28 @@ export function VoiceLogger() {
                 Flow AI Assistant
               </DialogTitle>
               <div className="flex items-center gap-1">
-                <Button 
-                  variant={isVoiceMode ? "default" : "ghost"} 
-                  size="sm" 
-                  onClick={() => setIsVoiceMode(!isVoiceMode)}
-                  className={cn("gap-1", isVoiceMode && "bg-violet-600 hover:bg-violet-700")}
-                  title={isVoiceMode ? "Switch to text chat" : "Switch to voice conversation"}
-                  data-testid="button-toggle-voice-mode"
-                >
-                  <Phone className="h-4 w-4" />
-                  {isVoiceMode ? "Text" : "Voice"}
-                </Button>
-                {messages.length > 0 && !isVoiceMode && (
+                {messages.length > 0 && (
                   <Button variant="ghost" size="sm" onClick={clearConversation} className="text-xs text-muted-foreground">
                     Clear
                   </Button>
                 )}
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 rounded-sm opacity-70 hover:opacity-100 transition-opacity"
+                  onClick={handleMinimize}
+                  title="Minimize"
+                  data-testid="button-minimize-chat"
+                >
+                  <Minus className="h-4 w-4" />
+                </Button>
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {isVoiceMode ? "Talk to your AI assistant with voice" : "Agentic AI that can search, update, and create data for you"}
+              Agentic AI that can search, update, and create data for you
             </p>
           </DialogHeader>
 
-          {isVoiceMode ? (
-            <div className="flex-1 flex items-center justify-center">
-              <VoiceConversation isOpen={isOpen && isVoiceMode} onClose={() => setIsVoiceMode(false)} />
-            </div>
-          ) : (
           <>
           <ScrollArea className="flex-1 px-4" ref={scrollRef}>
             <div className="py-4 space-y-4">
@@ -920,7 +976,6 @@ export function VoiceLogger() {
             </div>
           </div>
           </>
-          )}
           </div>
         </DialogContent>
       </Dialog>
