@@ -1,6 +1,6 @@
-import { authUsers, betaEvents, type AuthUser, type UpsertAuthUser, type SubscriptionStatus, type InsertBetaEvent, type BetaEvent } from "@shared/models/auth";
+import { authUsers, betaEvents, betaWhitelist, type AuthUser, type UpsertAuthUser, type SubscriptionStatus, type InsertBetaEvent, type BetaEvent, type BetaWhitelistEntry, type InsertBetaWhitelistEntry } from "@shared/models/auth";
 import { db } from "../../db";
-import { eq, desc, ne, sql, gte, and, count } from "drizzle-orm";
+import { eq, desc, ne, sql, gte, and, count, ilike } from "drizzle-orm";
 
 // Founder email - auto-approved and admin
 const FOUNDER_EMAIL = "nathan@desnoyersproperties.com";
@@ -31,7 +31,7 @@ class AuthStorage implements IAuthStorage {
   }
 
   async getUserByEmail(email: string): Promise<AuthUser | undefined> {
-    const [user] = await db.select().from(authUsers).where(eq(authUsers.email, email));
+    const [user] = await db.select().from(authUsers).where(ilike(authUsers.email, email));
     return user;
   }
 
@@ -46,6 +46,9 @@ class AuthStorage implements IAuthStorage {
     
     // Auto-approve founder
     const isFounder = userData.email?.toLowerCase() === FOUNDER_EMAIL.toLowerCase();
+    
+    // Check if email is whitelisted for auto-approval
+    const isWhitelisted = userData.email ? await this.isEmailWhitelisted(userData.email) : false;
     
     if (existingUser) {
       // User exists - update profile info
@@ -64,6 +67,14 @@ class AuthStorage implements IAuthStorage {
         updateData.isAdmin = true;
       }
       
+      // Auto-approve whitelisted users who are still pending
+      if (isWhitelisted && existingUser.status === 'pending') {
+        updateData.status = 'approved';
+        updateData.signupSource = 'invited';
+        // Mark whitelist entry as used
+        await this.markWhitelistUsed(userData.email!);
+      }
+      
       const [user] = await db
         .update(authUsers)
         .set(updateData)
@@ -72,16 +83,39 @@ class AuthStorage implements IAuthStorage {
       return user;
     } else {
       // New user - set initial status
+      // Auto-approve if founder or whitelisted
+      const shouldAutoApprove = isFounder || isWhitelisted;
+      
       const [user] = await db
         .insert(authUsers)
         .values({
           ...userData,
-          status: isFounder ? 'approved' : 'pending',
+          status: shouldAutoApprove ? 'approved' : 'pending',
           isAdmin: isFounder,
+          signupSource: isWhitelisted ? 'invited' : 'organic',
         })
         .returning();
+      
+      // Mark whitelist entry as used
+      if (isWhitelisted && userData.email) {
+        await this.markWhitelistUsed(userData.email);
+      }
+      
       return user;
     }
+  }
+  
+  async isEmailWhitelisted(email: string): Promise<boolean> {
+    const [entry] = await db.select()
+      .from(betaWhitelist)
+      .where(ilike(betaWhitelist.email, email));
+    return !!entry;
+  }
+  
+  async markWhitelistUsed(email: string): Promise<void> {
+    await db.update(betaWhitelist)
+      .set({ usedAt: new Date() })
+      .where(ilike(betaWhitelist.email, email));
   }
 
   async getAllUsers(): Promise<AuthUser[]> {
@@ -201,6 +235,42 @@ class AuthStorage implements IAuthStorage {
       avgConversationsPerUser: Math.round(avgConversationsPerUser * 10) / 10,
       retentionWeekOverWeek,
     };
+  }
+  
+  // Whitelist management methods
+  async getWhitelist(): Promise<BetaWhitelistEntry[]> {
+    return await db.select().from(betaWhitelist).orderBy(desc(betaWhitelist.createdAt));
+  }
+  
+  async addToWhitelist(email: string, addedBy?: string, note?: string): Promise<BetaWhitelistEntry> {
+    const [entry] = await db.insert(betaWhitelist)
+      .values({ 
+        email: email.toLowerCase().trim(), 
+        addedBy, 
+        note 
+      })
+      .returning();
+    return entry;
+  }
+  
+  async removeFromWhitelist(id: string): Promise<boolean> {
+    const result = await db.delete(betaWhitelist).where(eq(betaWhitelist.id, id)).returning();
+    return result.length > 0;
+  }
+  
+  async addMultipleToWhitelist(emails: string[], addedBy?: string): Promise<BetaWhitelistEntry[]> {
+    const entries = emails.map(email => ({
+      email: email.toLowerCase().trim(),
+      addedBy,
+    }));
+    
+    // Use ON CONFLICT to skip duplicates
+    const result = await db.insert(betaWhitelist)
+      .values(entries)
+      .onConflictDoNothing({ target: betaWhitelist.email })
+      .returning();
+    
+    return result;
   }
 }
 

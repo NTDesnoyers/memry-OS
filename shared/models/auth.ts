@@ -61,6 +61,21 @@ export const betaEvents = pgTable("beta_events", {
 export type BetaEvent = typeof betaEvents.$inferSelect;
 export type InsertBetaEvent = typeof betaEvents.$inferInsert;
 
+// Beta whitelist - pre-approved emails for instant access
+export const betaWhitelist = pgTable("beta_whitelist", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email").notNull().unique(),
+  addedBy: varchar("added_by"), // userId of admin who added this email
+  note: varchar("note"), // optional note about this invitee
+  usedAt: timestamp("used_at"), // when the user signed up (null = not yet used)
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_beta_whitelist_email").on(table.email),
+]);
+
+export type BetaWhitelistEntry = typeof betaWhitelist.$inferSelect;
+export type InsertBetaWhitelistEntry = typeof betaWhitelist.$inferInsert;
+
 export type UpsertAuthUser = typeof authUsers.$inferInsert;
 export type AuthUser = typeof authUsers.$inferSelect;
 export type SubscriptionStatus = 'none' | 'trialing' | 'active' | 'past_due' | 'canceled';

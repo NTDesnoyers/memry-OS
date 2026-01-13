@@ -257,15 +257,21 @@ app.use((req, res, next) => {
     
     if (!isExemptPath) {
       try {
-        const dbUser = await authStorage.getUser(user.claims.sub);
+        // Founder always gets access (even if their DB record is in weird state)
+        const FOUNDER_EMAIL = "nathan@desnoyersproperties.com";
+        const isFounder = user.claims.email?.toLowerCase() === FOUNDER_EMAIL.toLowerCase();
         
-        // First check: approval status
-        if (!dbUser || dbUser.status !== 'approved') {
-          log(`Access denied for pending/denied user: ${user.claims.email}`, 'security');
-          return res.status(403).json({ 
-            message: 'Access pending approval',
-            status: dbUser?.status || 'pending'
-          });
+        if (!isFounder) {
+          const dbUser = await authStorage.getUser(user.claims.sub);
+          
+          // First check: approval status
+          if (!dbUser || dbUser.status !== 'approved') {
+            log(`Access denied for pending/denied user: ${user.claims.email}`, 'security');
+            return res.status(403).json({ 
+              message: 'Access pending approval',
+              status: dbUser?.status || 'pending'
+            });
+          }
         }
         
         // BETA MODE: Subscription check disabled - all approved users get free access

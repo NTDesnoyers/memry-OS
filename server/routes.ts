@@ -9320,6 +9320,97 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
       res.status(500).json({ message: error.message });
     }
   });
+  
+  // ==================== BETA WHITELIST ROUTES ====================
+  
+  // Helper to check admin access
+  async function isAdminUser(userEmail?: string): Promise<boolean> {
+    if (!userEmail) return false;
+    const email = userEmail.toLowerCase();
+    // Founder always has admin access
+    if (email === 'nathan@desnoyersproperties.com') return true;
+    // Check isAdmin flag in database
+    const user = await authStorage.getUserByEmail(email);
+    return user?.isAdmin === true;
+  }
+  
+  // Get all whitelisted emails (admin only)
+  app.get("/api/beta/whitelist", async (req: any, res) => {
+    try {
+      const userEmail = req.user?.claims?.email;
+      if (!(await isAdminUser(userEmail))) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const whitelist = await authStorage.getWhitelist();
+      res.json(whitelist);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Add email to whitelist (admin only)
+  app.post("/api/beta/whitelist", async (req: any, res) => {
+    try {
+      const userEmail = req.user?.claims?.email;
+      const userId = req.user?.claims?.sub;
+      if (!(await isAdminUser(userEmail))) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const { email, note } = req.body;
+      if (!email || typeof email !== 'string') {
+        return res.status(400).json({ message: "Email is required" });
+      }
+      
+      const entry = await authStorage.addToWhitelist(email, userId, note);
+      res.json(entry);
+    } catch (error: any) {
+      if (error.code === '23505') { // Unique constraint violation
+        return res.status(409).json({ message: "Email already whitelisted" });
+      }
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Add multiple emails to whitelist (admin only)
+  app.post("/api/beta/whitelist/bulk", async (req: any, res) => {
+    try {
+      const userEmail = req.user?.claims?.email;
+      const userId = req.user?.claims?.sub;
+      if (!(await isAdminUser(userEmail))) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const { emails } = req.body;
+      if (!Array.isArray(emails) || emails.length === 0) {
+        return res.status(400).json({ message: "Emails array is required" });
+      }
+      
+      const entries = await authStorage.addMultipleToWhitelist(emails, userId);
+      res.json({ added: entries.length, entries });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Remove email from whitelist (admin only)
+  app.delete("/api/beta/whitelist/:id", async (req: any, res) => {
+    try {
+      const userEmail = req.user?.claims?.email;
+      if (!(await isAdminUser(userEmail))) {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      
+      const deleted = await authStorage.removeFromWhitelist(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Whitelist entry not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
 
   return httpServer;
 }

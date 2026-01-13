@@ -79,11 +79,19 @@ Memry is a multi-agent, event-driven system orchestrating actions while CRMs rem
 - **Stripe**: Beta billing ($29/month) with checkout, webhooks, and customer portal.
 
 ### Billing & Access Control
-- **Beta Pricing**: $29/month via Stripe Checkout
-- **Access Gate**: Approved status + active subscription required (founder exempt: nathan@desnoyersproperties.com)
+- **Beta Pricing**: $29/month via Stripe Checkout (currently disabled - free beta)
+- **Access Gate**: Approved status required (founder exempt: nathan@desnoyersproperties.com)
 - **HTTP Status Codes**: 401 (unauthorized) → 403 (pending approval) → 402 (subscription required) → access
 - **Webhook Events**: checkout.session.completed, invoice.payment_failed, customer.subscription.deleted
 - **Stripe Files**: server/stripe/stripeClient.ts, stripeRoutes.ts, webhookHandlers.ts, initStripe.ts
+
+### Beta Email Whitelist
+- **Purpose**: Pre-approve emails for instant beta access before users sign up
+- **Auto-Approval**: Whitelisted emails are automatically approved on sign-in with signupSource='invited'
+- **Admin UI**: /admin/beta dashboard includes whitelist management section
+- **API Endpoints**: GET/POST/DELETE /api/beta/whitelist (admin only)
+- **Table**: beta_whitelist (id, email, addedBy, note, usedAt, createdAt)
+- **Files**: shared/models/auth.ts, server/replit_integrations/auth/storage.ts
 
 ### AI Cost Tracking
 - **Usage Logging**: All OpenAI calls tracked via server/ai/trackedOpenAI.ts wrapper
