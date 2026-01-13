@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { MessageSquare, Sparkles, ArrowRight, Brain, Users, CheckCircle2 } from "lucide-react";
+import { MessageSquare, Sparkles, ArrowRight, Brain, Users, CheckCircle2, Lock } from "lucide-react";
 
 export default function Landing() {
   return (
@@ -29,9 +29,14 @@ export default function Landing() {
             You just forgot to follow up.
           </h1>
           
-          <p className="text-lg md:text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-slate-300 mb-6 max-w-2xl mx-auto">
             Memry is a relationship-first CRM that remembers every conversation, tells you exactly who to contact next, and drafts the follow-up <span className="text-white font-medium">in your voice</span>—so deals don't go cold.
           </p>
+          
+          <div className="flex items-center justify-center gap-2 text-slate-400 text-sm mb-6" data-testid="trust-block">
+            <Lock className="h-4 w-4" />
+            <span><span className="text-slate-300 font-medium">Private by default.</span> Memry never pulls contacts, messages, or data without explicit action from you.</span>
+          </div>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button 

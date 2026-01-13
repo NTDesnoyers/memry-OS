@@ -1,0 +1,135 @@
+Good. This is high-signal beta feedback. Don’t brush past it.
+
+Let’s break this down ruthlessly.
+
+⸻
+
+1️⃣ What this feedback ACTUALLY means (not what she said)
+
+She’s not asking about contacts.
+
+She’s asking:
+
+“Can I trust this with my relationships?”
+
+That’s existential trust, not a feature question.
+
+For a relationship-centric product, this is a core adoption blocker, not an edge case.
+
+If people even suspect silent contact scraping, you’re dead.
+
+⸻
+
+2️⃣ Your response was directionally right — but too soft
+
+What you sent was accurate, but:
+	•	Slightly rambling
+	•	Leaves ambiguity
+	•	Mentions future capability (“not yet”) which re-introduces fear
+
+In early beta, clarity > completeness.
+
+You want:
+	•	Explicit denial
+	•	Explicit control
+	•	Explicit data ownership
+
+⸻
+
+3️⃣ The reply you SHOULD send now (copy/paste)
+
+Send a clean follow-up to reset confidence:
+
+Totally fair question — and I want to be very clear.
+
+Memry does not access, sync, or pull contacts from your phone in any way.
+
+You control exactly what goes in:
+• Contacts are created only when you add them or you upload a file
+• Nothing is read or imported automatically
+• No data is shared or sold — this is a private workspace
+
+If anything ever changes here, it would be explicit opt-in only.
+
+Trust > features for me at this stage.
+
+This does three things:
+	•	Removes ambiguity
+	•	Signals founder values
+	•	Reframes “missing feature” as intentional design
+
+⸻
+
+4️⃣ PRODUCT INSIGHT: This belongs on the landing page
+
+You should add a micro-trust block immediately.
+
+Not a policy page. A sentence.
+
+Example (above the CTA):
+
+🔒 Private by default
+Memry never pulls contacts, messages, or data without explicit action from you.
+
+This will:
+	•	Reduce beta friction
+	•	Increase conversion
+	•	Prevent this question from repeating 100× via text
+
+If you don’t add this, you’ll keep answering it manually — that’s a tax.
+
+⸻
+
+5️⃣ Lean Startup lens — what assumption just got surfaced
+
+Assumption exposed:
+
+“Users will trust a relationship CRM by default.”
+
+❌ False.
+
+New learning:
+Trust + data boundaries are part of the value proposition, not a footnote.
+
+This is value risk, not feature risk.
+
+⸻
+
+6️⃣ What NOT to do (important)
+
+Do not:
+	•	Say “not yet” casually in the future
+	•	Promise phone sync unless demanded
+	•	Over-explain architecture
+	•	Hide behind “privacy policy” links
+
+Early users don’t want compliance — they want control.
+
+⸻
+
+7️⃣ Action list (non-negotiable)
+
+Do these today:
+	1.	Send the follow-up text above
+	2.	Add a 1-line privacy/trust statement to landing page
+	3.	Add a short FAQ item:
+	•	“Does Memry access my contacts automatically?” → “No.”
+
+Optional but smart:
+	•	Add “Private by Default” as a positioning phrase
+
+⸻
+
+This is good news.
+You just found a core buying objection early, for free.
+
+Handle it cleanly and you increase:
+	•	Trust
+	•	Activation
+	•	Willingness to pay later
+
+If you want, next we can:
+	•	Rewrite your landing page trust section
+	•	Or decide whether phone contact sync should ever exist
+
+Your move.
