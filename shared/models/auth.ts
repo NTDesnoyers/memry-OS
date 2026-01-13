@@ -39,9 +39,27 @@ export const authUsers = pgTable("auth_users", {
   currentPeriodEnd: timestamp("current_period_end"),
   trialEnd: timestamp("trial_end"),
   canceledAt: timestamp("canceled_at"),
+  signupSource: varchar("signup_source", { length: 20 }).default("organic"), // invited, organic
+  lastActiveAt: timestamp("last_active_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Beta analytics events table
+export const betaEvents = pgTable("beta_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  eventType: varchar("event_type", { length: 50 }).notNull(), // app_opened, feature_opened, conversation_logged, followup_created, weekly_review_viewed
+  properties: jsonb("properties").$type<Record<string, unknown>>(), // Additional event properties
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_beta_events_user").on(table.userId),
+  index("idx_beta_events_type").on(table.eventType),
+  index("idx_beta_events_created").on(table.createdAt),
+]);
+
+export type BetaEvent = typeof betaEvents.$inferSelect;
+export type InsertBetaEvent = typeof betaEvents.$inferInsert;
 
 export type UpsertAuthUser = typeof authUsers.$inferInsert;
 export type AuthUser = typeof authUsers.$inferSelect;

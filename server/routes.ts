@@ -1,6 +1,7 @@
 import type { Express, Request } from "express";
 import type { Server } from "http";
 import { storage, type TenantContext } from "./storage";
+import { authStorage } from "./replit_integrations/auth/storage";
 import { db } from "./db";
 import { eq, sql } from "drizzle-orm";
 import { 
@@ -9254,6 +9255,67 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
       
       const logs = await storage.getAiUsageByUser(req.params.userId, start, end);
       res.json(logs);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ==================== BETA ANALYTICS ROUTES ====================
+  
+  // Track a beta event (authenticated users)
+  app.post("/api/beta/track", async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const { eventType, properties } = req.body;
+      if (!eventType) {
+        return res.status(400).json({ message: "eventType is required" });
+      }
+      
+      // Update last active timestamp
+      await authStorage.updateLastActive(userId);
+      
+      // Track the event
+      const event = await authStorage.trackBetaEvent({
+        userId,
+        eventType,
+        properties: properties || {},
+      });
+      
+      res.json(event);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get beta stats (founder only)
+  app.get("/api/beta/stats", async (req: any, res) => {
+    try {
+      const userEmail = req.user?.claims?.email;
+      if (userEmail !== 'nathan@desnoyersproperties.com') {
+        return res.status(403).json({ message: "Only the founder can view beta stats" });
+      }
+      
+      const stats = await authStorage.getBetaStats();
+      res.json(stats);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Update user's last active (called on app mount)
+  app.post("/api/beta/heartbeat", async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      await authStorage.updateLastActive(userId);
+      res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

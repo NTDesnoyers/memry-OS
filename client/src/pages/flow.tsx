@@ -40,6 +40,7 @@ import type { Person, Interaction } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { getInitials } from "@/lib/utils";
 import { Link } from "wouter";
+import { trackBetaEvent } from "@/lib/beta-analytics";
 
 const liveFlowTypes = [
   { value: "call", label: "Phone Call", icon: Phone, color: "bg-green-50 text-green-700 border-green-200" },
@@ -448,7 +449,7 @@ function InteractionList({
       });
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/interactions"] });
       toast({ title: "Interaction logged" });
       setShowLogDialog(false);
@@ -458,6 +459,10 @@ function InteractionList({
         occurredAt: new Date().toISOString().slice(0, 16),
         summary: "",
       });
+      const liveTypes = ['call', 'meeting', 'in_person', 'video'];
+      if (liveTypes.includes(variables?.type)) {
+        trackBetaEvent('conversation_logged', { type: variables?.type });
+      }
     },
   });
 
@@ -737,12 +742,16 @@ export default function Flow() {
     mutationFn: async (data: any) => {
       return apiRequest("POST", "/api/interactions", data);
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/interactions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/people"] });
       setShowAddDialog(false);
       resetForm();
       toast({ title: "Flow logged", description: "Your interaction has been saved." });
+      const liveTypes = ['call', 'meeting', 'in_person', 'video'];
+      if (liveTypes.includes(variables?.type)) {
+        trackBetaEvent('conversation_logged', { type: variables?.type });
+      }
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message || "Failed to save", variant: "destructive" });

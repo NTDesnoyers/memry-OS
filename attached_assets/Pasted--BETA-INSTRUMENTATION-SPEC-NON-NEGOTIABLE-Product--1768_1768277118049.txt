@@ -1,0 +1,194 @@
+############################################
+# BETA INSTRUMENTATION SPEC (NON-NEGOTIABLE)
+# Product: Memry / Flow OS
+# Goal: Measure real usage, retention, and value during beta
+############################################
+
+############################
+# 1. USER MODEL (REQUIRED)
+############################
+
+User {
+  user_id: string (uuid)
+  email: string
+  signup_date: timestamp
+  signup_source: enum ["invited", "organic"]
+  role: enum ["agent", "admin"]
+  status: enum ["active", "inactive", "churned"]
+  last_active_at: timestamp
+}
+
+----------------------------
+# Kill Signal:
+# If >40% of users go inactive within 7 days → value or onboarding failure
+----------------------------
+
+
+############################
+# 2. CORE VALUE EVENTS
+############################
+
+# These events define whether the product is valuable.
+# DO NOT add vanity events.
+
+Event: user_signed_up
+Properties:
+  - signup_source
+  - timestamp
+
+Event: conversation_logged
+Properties:
+  - user_id
+  - contact_id
+  - input_type: enum ["manual", "voice", "paste"]
+  - is_new_contact: boolean
+  - content_length_chars: number
+  - timestamp
+
+Event: followup_created
+Properties:
+  - user_id
+  - contact_id
+  - source: enum ["auto", "manual"]
+  - scheduled_for: date
+  - timestamp
+
+Event: weekly_review_viewed
+Properties:
+  - user_id
+  - timestamp
+
+Event: app_opened
+Properties:
+  - user_id
+  - timestamp
+
+----------------------------
+# Core Value Definition:
+# A user is "activated" ONLY if they log at least 1 conversation.
+----------------------------
+
+
+############################
+# 3. FUNNEL (MUST EXIST)
+############################
+
+Signup →
+First Conversation Logged →
+First Follow-Up Created →
+3 Separate App Sessions
+
+----------------------------
+# Targets:
+# - 60%+ of users log a conversation within 48 hours
+# - 40%+ create at least one follow-up
+----------------------------
+
+
+############################
+# 4. RETENTION TRACKING
+############################
+
+Daily Active User (DAU):
+- app_opened OR conversation_logged
+
+Weekly Active User (WAU):
+- >=1 conversation_logged in last 7 days
+
+----------------------------
+# Kill Signal:
+# If users stop logging conversations → product not sticky
+----------------------------
+
+
+############################
+# 5. FEATURE USAGE TRACKING
+############################
+
+Track feature entry ONLY (not clicks):
+
+Event: feature_opened
+Properties:
+  - user_id
+  - feature_name: enum [
+      "flow",
+      "contacts",
+      "followups",
+      "weekly_review",
+      "settings"
+    ]
+  - timestamp
+
+----------------------------
+# Rule:
+# Features with <20% usage during beta should be removed or hidden.
+----------------------------
+
+
+############################
+# 6. MONETIZATION SIGNALS
+############################
+
+Event: pricing_viewed
+Properties:
+  - user_id
+  - timestamp
+
+Event: upgrade_clicked
+Properties:
+  - user_id
+  - plan_name
+  - timestamp
+
+----------------------------
+# Truth Rule:
+# If users ask about pricing unprompted → strong value signal
+----------------------------
+
+
+############################
+# 7. BETA DASHBOARD (MINIMUM)
+############################
+
+Metrics to display DAILY:
+- Total beta users
+- Weekly Active Users (WAU)
+- Avg conversations per user per week
+- % users with >=1 follow-up
+- Retention: Week 1 → Week 2
+
+----------------------------
+# If you cannot answer:
+# "Is usage improving week over week?"
+# then instrumentation is failing.
+----------------------------
+
+
+############################
+# 8. NON-GOALS (DO NOT TRACK)
+############################
+
+- Page views
+- Button clicks
+- Time on page
+- NPS
+- AI sentiment scores
+- Vanity charts
+
+----------------------------
+# Beta goal is TRUTH, not prettiness.
+----------------------------
+
+
+############################
+# 9. SUCCESS DEFINITION
+############################
+
+Beta is successful ONLY IF:
+- Users log conversations without reminders
+- Users return weekly
+- Users trust the system
+- 2–3 users say: "I would pay for this right now"
+
+Anything else = learning, not success.
+############################################

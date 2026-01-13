@@ -50,6 +50,7 @@ import RevivalOpportunities from "@/pages/revival-opportunities";
 import BetaWelcome from "@/pages/beta-welcome";
 import Landing from "@/pages/landing";
 import IssuesReview from "@/pages/issues-review";
+import BetaDashboard from "@/pages/beta-dashboard";
 
 function Router() {
   return (
@@ -92,6 +93,7 @@ function Router() {
         <Route path="/welcome" component={BetaWelcome} />
         <Route path="/issues" component={IssuesReview} />
         <Route path="/admin/users" component={AdminUsers} />
+        <Route path="/admin/beta" component={BetaDashboard} />
         <Route component={NotFound} />
       </Switch>
     </ProtectedRoute>
@@ -119,10 +121,11 @@ function AuthenticatedApp() {
     return <PendingApproval />;
   }
   
-  // Check if subscription is required (approved but no active subscription)
-  if (requiresSubscription) {
-    return <SubscriptionRequired />;
-  }
+  // BETA MODE: Subscription check disabled - all approved users get free access
+  // To re-enable paid subscriptions, uncomment the block below:
+  // if (requiresSubscription) {
+  //   return <SubscriptionRequired />;
+  // }
   
   return (
     <>

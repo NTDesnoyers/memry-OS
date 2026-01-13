@@ -268,7 +268,9 @@ app.use((req, res, next) => {
           });
         }
         
-        // Second check: subscription status (founder exempt)
+        // BETA MODE: Subscription check disabled - all approved users get free access
+        // To re-enable paid subscriptions, uncomment the block below:
+        /*
         const FOUNDER_EMAIL = "nathan@desnoyersproperties.com";
         const isFounder = dbUser.email?.toLowerCase() === FOUNDER_EMAIL.toLowerCase();
         const hasActiveSubscription = ['active', 'trialing'].includes(dbUser.subscriptionStatus || '');
@@ -280,6 +282,7 @@ app.use((req, res, next) => {
             subscriptionStatus: dbUser.subscriptionStatus || 'none'
           });
         }
+        */
       } catch (error) {
         log(`Error checking user status: ${error}`, 'security');
         return res.status(500).json({ message: 'Error verifying access' });

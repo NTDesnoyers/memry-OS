@@ -39,8 +39,9 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
+import { sendHeartbeat, trackBetaEvent } from "@/lib/beta-analytics";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { VoiceLogger } from "@/components/voice-logger";
@@ -393,6 +394,15 @@ export default function LayoutComponent({ children }: { children: React.ReactNod
     queryKey: ["/api/profile"],
     staleTime: 5 * 60 * 1000,
   });
+  
+  const heartbeatSent = useRef(false);
+  useEffect(() => {
+    if (!heartbeatSent.current) {
+      heartbeatSent.current = true;
+      sendHeartbeat();
+      trackBetaEvent('app_opened', { page: location });
+    }
+  }, []);
   
   const showModeToggle = isFounderToggleEnabled(userEmail);
 

@@ -1,6 +1,6 @@
-import { authUsers, type AuthUser, type UpsertAuthUser, type SubscriptionStatus } from "@shared/models/auth";
+import { authUsers, betaEvents, type AuthUser, type UpsertAuthUser, type SubscriptionStatus, type InsertBetaEvent, type BetaEvent } from "@shared/models/auth";
 import { db } from "../../db";
-import { eq, desc, ne } from "drizzle-orm";
+import { eq, desc, ne, sql, gte, and, count } from "drizzle-orm";
 
 // Founder email - auto-approved and admin
 const FOUNDER_EMAIL = "nathan@desnoyersproperties.com";
@@ -125,6 +125,77 @@ class AuthStorage implements IAuthStorage {
   async getUserByStripeCustomerId(customerId: string): Promise<AuthUser | undefined> {
     const [user] = await db.select().from(authUsers).where(eq(authUsers.stripeCustomerId, customerId));
     return user;
+  }
+
+  async updateLastActive(id: string): Promise<void> {
+    await db
+      .update(authUsers)
+      .set({ lastActiveAt: new Date() })
+      .where(eq(authUsers.id, id));
+  }
+
+  async trackBetaEvent(event: InsertBetaEvent): Promise<BetaEvent> {
+    const [created] = await db.insert(betaEvents).values(event).returning();
+    return created;
+  }
+
+  async getBetaStats(): Promise<{
+    totalUsers: number;
+    activeUsersLast7Days: number;
+    usersWithFollowupsLast7Days: number;
+    avgConversationsPerUser: number;
+    retentionWeekOverWeek: number;
+  }> {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+
+    const [totalUsersResult] = await db.select({ count: count() }).from(authUsers).where(eq(authUsers.status, 'approved'));
+    const totalUsers = totalUsersResult?.count || 0;
+
+    const conversationsThisWeekResult = await db.selectDistinct({ userId: betaEvents.userId })
+      .from(betaEvents)
+      .where(and(
+        eq(betaEvents.eventType, 'conversation_logged'),
+        gte(betaEvents.createdAt, sevenDaysAgo)
+      ));
+    const activeUsersLast7Days = conversationsThisWeekResult.length;
+
+    const followupsResult = await db.selectDistinct({ userId: betaEvents.userId })
+      .from(betaEvents)
+      .where(and(
+        eq(betaEvents.eventType, 'followup_created'),
+        gte(betaEvents.createdAt, sevenDaysAgo)
+      ));
+    const usersWithFollowupsLast7Days = followupsResult.length;
+
+    const [convCountResult] = await db.select({ count: count() }).from(betaEvents)
+      .where(and(eq(betaEvents.eventType, 'conversation_logged'), gte(betaEvents.createdAt, sevenDaysAgo)));
+    const totalConversations = convCountResult?.count || 0;
+    const avgConversationsPerUser = activeUsersLast7Days > 0 ? totalConversations / activeUsersLast7Days : 0;
+
+    const conversationsPriorWeekResult = await db.selectDistinct({ userId: betaEvents.userId })
+      .from(betaEvents)
+      .where(and(
+        eq(betaEvents.eventType, 'conversation_logged'),
+        gte(betaEvents.createdAt, fourteenDaysAgo),
+        sql`${betaEvents.createdAt} < ${sevenDaysAgo}`
+      ));
+    const activeLastWeekUserIds = new Set(conversationsPriorWeekResult.map(r => r.userId));
+    
+    const retainedUsers = conversationsThisWeekResult.filter(r => activeLastWeekUserIds.has(r.userId)).length;
+    const retentionWeekOverWeek = activeLastWeekUserIds.size > 0 
+      ? Math.round((retainedUsers / activeLastWeekUserIds.size) * 100) 
+      : 0;
+
+    return {
+      totalUsers,
+      activeUsersLast7Days,
+      usersWithFollowupsLast7Days,
+      avgConversationsPerUser: Math.round(avgConversationsPerUser * 10) / 10,
+      retentionWeekOverWeek,
+    };
   }
 }
 

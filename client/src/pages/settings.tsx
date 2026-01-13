@@ -425,59 +425,25 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Billing & Subscription Card */}
-          <Card className="mb-6" data-testid="card-billing">
+          {/* Beta Access Card */}
+          <Card className="mb-6 border-green-200 bg-green-50/50" data-testid="card-billing">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Billing & Subscription</CardTitle>
+                <Sparkles className="h-5 w-5 text-green-600" />
+                <CardTitle className="text-lg">Beta Access</CardTitle>
               </div>
               <CardDescription>
-                Manage your Memry subscription and payment details
+                You have free access during the beta period
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">Status:</span>
-                    <Badge className={getSubscriptionStatusDisplay(user?.subscriptionStatus).color}>
-                      {getSubscriptionStatusDisplay(user?.subscriptionStatus).label}
-                    </Badge>
-                  </div>
-                  {user?.currentPeriodEnd && (
-                    <p className="text-xs text-muted-foreground">
-                      {user.subscriptionStatus === 'canceled' 
-                        ? `Access until ${format(new Date(user.currentPeriodEnd), 'MMM d, yyyy')}`
-                        : `Renews ${format(new Date(user.currentPeriodEnd), 'MMM d, yyyy')}`
-                      }
-                    </p>
-                  )}
-                  {user?.trialEnd && user.subscriptionStatus === 'trialing' && (
-                    <p className="text-xs text-muted-foreground">
-                      Trial ends {format(new Date(user.trialEnd), 'MMM d, yyyy')}
-                    </p>
-                  )}
-                </div>
-                <Button 
-                  onClick={openBillingPortal}
-                  disabled={isLoadingPortal || !user?.stripeCustomerId}
-                  variant="outline"
-                  size="sm"
-                  data-testid="button-manage-billing"
-                >
-                  {isLoadingPortal ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Opening...
-                    </>
-                  ) : (
-                    <>
-                      <ExternalLink className="mr-2 h-4 w-4" />
-                      Manage Billing
-                    </>
-                  )}
-                </Button>
+              <div className="flex items-center gap-3">
+                <Badge className="bg-green-100 text-green-700 border-green-200">
+                  Beta Tester
+                </Badge>
+                <span className="text-sm text-muted-foreground">
+                  Thank you for helping us build Memry!
+                </span>
               </div>
             </CardContent>
           </Card>

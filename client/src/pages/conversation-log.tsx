@@ -53,6 +53,7 @@ import { isFounderMode } from "@/lib/feature-mode";
 import { apiRequest } from "@/lib/queryClient";
 import { getInitials } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import { trackBetaEvent } from "@/lib/beta-analytics";
 import { VoiceRecorder } from "@/components/voice-recorder";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -192,6 +193,11 @@ export default function ConversationLog() {
       
       setShowAddDialog(false);
       resetForm();
+      
+      trackBetaEvent('conversation_logged', { type: 'voice_note', hasDrafts: result.draftsCreated > 0 });
+      if (result.draftsCreated > 0) {
+        trackBetaEvent('followup_created', { count: result.draftsCreated, source: 'voice_memory' });
+      }
       
       toast({
         title: "Voice Memory Saved",
