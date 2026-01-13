@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Mic, Square, Loader2, Send, MessageSquare, Sparkles, Bot, User, CheckCircle2, Zap, Paperclip, Plus, History, Trash2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Minus, Check } from "lucide-react";
+import { Mic, Square, Loader2, Send, MessageSquare, Sparkles, Bot, User, CheckCircle2, Zap, Paperclip, Plus, History, Trash2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Minus, Check, X } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";

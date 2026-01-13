@@ -52,9 +52,9 @@ import Landing from "@/pages/landing";
 import IssuesReview from "@/pages/issues-review";
 import BetaDashboard from "@/pages/beta-dashboard";
 
-function Router() {
+function Router({ userEmail }: { userEmail?: string | null }) {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute userEmail={userEmail}>
       <Switch>
         <Route path="/" component={Flow} />
         <Route path="/dashboard" component={Dashboard} />
@@ -102,8 +102,11 @@ function Router() {
 
 function AuthenticatedApp() {
   const { user, isAuthenticated, isLoading, requiresSubscription } = useAuth();
-  const founderMode = isFounderMode(user?.email);
+  const userEmail = user?.email ?? null;
+  const founderMode = isFounderMode(userEmail);
   
+  // Always show loading spinner until auth state is fully resolved
+  // This prevents React hook ordering issues during navigation (Error #310)
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -127,12 +130,14 @@ function AuthenticatedApp() {
   //   return <SubscriptionRequired />;
   // }
   
+  // At this point, auth is fully resolved and we have a stable userEmail
+  // Pass it to Router/ProtectedRoute to avoid re-calling useAuth()
   return (
     <>
       <CommandPalette />
       {founderMode && <FeedbackWidget />}
       {founderMode && <WelcomeTour />}
-      <Router />
+      <Router userEmail={userEmail} />
     </>
   );
 }

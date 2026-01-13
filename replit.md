@@ -99,3 +99,10 @@ Memry is a multi-agent, event-driven system orchestrating actions while CRMs rem
 - **Weekly Export**: Monday scheduler exports previous week to Google Sheets (requires COST_SPREADSHEET_ID env var)
 - **Keying Logic**: Disambiguates by userId, or by userEmail when userId is null
 - **Implementation**: server/cost-aggregation.ts, server/google-sheets.ts
+
+### Authentication Flow Architecture
+- **Single useAuth() Call**: Auth state is resolved once in AuthenticatedApp component
+- **Prop Drilling for Protected Routes**: userEmail is passed as prop to Router → ProtectedRoute to avoid duplicate useAuth() calls
+- **React Error #310 Prevention**: ProtectedRoute does NOT call useAuth() directly; receives userEmail via props to maintain consistent hook counts during navigation
+- **Loading State Gate**: Router only renders after auth state is fully resolved (isLoading === false)
+- **Key Files**: client/src/App.tsx, client/src/components/protected-route.tsx

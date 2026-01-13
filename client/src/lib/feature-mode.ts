@@ -136,7 +136,12 @@ export const BETA_ALLOWED_ROUTES: string[] = [
 
 // Helper to check if a route is allowed in beta mode
 // Handles dynamic routes like /people/:id
-export function isRouteAllowedInBetaMode(pathname: string): boolean {
+export function isRouteAllowedInBetaMode(pathname: string, userEmail?: string | null): boolean {
+  // Founder can access all routes including admin routes
+  if (isFounderEmail(userEmail)) {
+    return true;
+  }
+  
   // Check exact matches first
   if (BETA_ALLOWED_ROUTES.includes(pathname)) {
     return true;
