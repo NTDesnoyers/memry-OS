@@ -25,11 +25,12 @@ export default function Landing() {
         {/* HERO SECTION */}
         <div className="text-center max-w-3xl mx-auto mb-20">
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight">
-            Stop Losing Deals Because You Forgot to Follow Up
+            You didn't lose that deal.<br />
+            You just forgot to follow up.
           </h1>
           
           <p className="text-lg md:text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
-            Memry remembers your conversations, shows you who needs your attention today, and drafts your follow-ups so nothing slips through the cracks.
+            Memry is a relationship-first CRM that remembers every conversation, tells you exactly who to contact next, and drafts the follow-up <span className="text-white font-medium">in your voice</span>—so deals don't go cold.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -39,24 +40,24 @@ export default function Landing() {
               className="text-lg px-8 py-6"
               data-testid="button-get-started"
             >
-              Apply for the Founding Agent Beta
+              Join the Free Founding Agent Beta
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </div>
           
           <p className="text-sm text-slate-400 mt-4">
-            Limited spots · Early pricing · Built with real agent feedback
+            Limited spots · Built with real agent workflows
           </p>
         </div>
 
         {/* WHO IT'S FOR */}
         <div className="max-w-2xl mx-auto w-full mb-20 text-center">
-          <p className="text-slate-300 text-lg mb-4">For relationship-based real estate agents who:</p>
+          <p className="text-slate-300 text-lg mb-4">Memry is for relationship-based agents who:</p>
           <ul className="text-slate-400 space-y-2">
-            <li>• Talk to a lot of people every week</li>
-            <li>• Rely on referrals and repeat business</li>
-            <li>• Hate updating CRMs</li>
-            <li>• Know follow-up makes money — but struggle to stay consistent</li>
+            <li>• Talk to people all day—and forget half of it by tomorrow</li>
+            <li>• Live on referrals, not cold leads</li>
+            <li>• Hate "updating the CRM" after a long day</li>
+            <li>• Know follow-up makes money—but still let it slide</li>
           </ul>
         </div>
 
@@ -74,7 +75,7 @@ export default function Landing() {
                   <div>
                     <h3 className="font-semibold text-white mb-2">Conversation Capture</h3>
                     <p className="text-slate-400 text-sm">
-                      Log calls, meetings, and notes in seconds — voice or text. Automatically imports meeting transcripts (Fathom) and keeps everything tied to the right person.
+                      Dump conversations in seconds—voice or text—and never wonder "what did we talk about?" again.
                     </p>
                   </div>
                 </div>
@@ -90,7 +91,7 @@ export default function Landing() {
                   <div>
                     <h3 className="font-semibold text-white mb-2">AI Follow-Ups</h3>
                     <p className="text-slate-400 text-sm">
-                      Drafts thank-you emails, check-ins, and next steps from your real conversations — in your voice.
+                      Get follow-ups drafted from real conversations—so reaching out never feels awkward or late.
                     </p>
                   </div>
                 </div>
@@ -106,7 +107,7 @@ export default function Landing() {
                   <div>
                     <h3 className="font-semibold text-white mb-2">Relationship CRM</h3>
                     <p className="text-slate-400 text-sm">
-                      FORD notes + A/B/C/D segments so you always know who matters most and where each relationship stands.
+                      Always know who matters most, who's going cold, and who you should contact today.
                     </p>
                   </div>
                 </div>
@@ -123,19 +124,19 @@ export default function Landing() {
             <div className="text-center">
               <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground font-bold flex items-center justify-center mx-auto mb-4">1</div>
               <h3 className="font-semibold text-white mb-2">Log a conversation</h3>
-              <p className="text-slate-400 text-sm">Talk or type naturally — no formatting required.</p>
+              <p className="text-slate-400 text-sm">Talk or type naturally—no forms, no cleanup.</p>
             </div>
             
             <div className="text-center">
               <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground font-bold flex items-center justify-center mx-auto mb-4">2</div>
               <h3 className="font-semibold text-white mb-2">Memry extracts what matters</h3>
-              <p className="text-slate-400 text-sm">People, topics, action items, and FORD insights.</p>
+              <p className="text-slate-400 text-sm">People, topics, follow-ups, and FORD insights—automatically.</p>
             </div>
             
             <div className="text-center">
               <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground font-bold flex items-center justify-center mx-auto mb-4">3</div>
               <h3 className="font-semibold text-white mb-2">Get the right follow-up instantly</h3>
-              <p className="text-slate-400 text-sm">See who to contact next and exactly what to say.</p>
+              <p className="text-slate-400 text-sm">Know who to contact next and exactly what to say.</p>
             </div>
           </div>
         </div>
@@ -147,28 +148,39 @@ export default function Landing() {
           <div className="space-y-4">
             <div className="flex items-start gap-3">
               <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-              <p className="text-slate-300">Built for relationships, not transactions</p>
+              <p className="text-slate-300">Built for relationships—not data entry</p>
             </div>
             <div className="flex items-start gap-3">
               <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-              <p className="text-slate-300">Designed around conversation memory, not data entry</p>
+              <p className="text-slate-300">Designed around memory, not pipelines</p>
             </div>
             <div className="flex items-start gap-3">
               <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-              <p className="text-slate-300">Works the way agents actually operate day-to-day</p>
+              <p className="text-slate-300">Matches how agents actually work day-to-day</p>
             </div>
             <div className="flex items-start gap-3">
               <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-              <p className="text-slate-300">Feels like a second brain — not another system to maintain</p>
+              <p className="text-slate-300">Feels like a second brain, not another system to maintain</p>
             </div>
           </div>
+        </div>
+
+        {/* FOUNDER CREDIBILITY */}
+        <div className="max-w-2xl mx-auto w-full mb-16 text-center">
+          <p className="text-slate-400 italic text-lg">
+            "I built Memry because I was tired of knowing I <span className="text-white">should</span> follow up—and still not doing it."
+          </p>
+          <p className="text-slate-500 text-sm mt-3">
+            — Built by a relationship-based real estate agent
+          </p>
         </div>
 
         {/* FOUNDING AGENT BETA */}
         <div className="max-w-2xl mx-auto w-full mb-16">
           <Card className="bg-slate-800/70 border-slate-600">
             <CardContent className="p-8 text-center">
-              <h2 className="text-2xl font-semibold text-white mb-6">Founding Agent Beta</h2>
+              <h2 className="text-2xl font-semibold text-white mb-2">Founding Agent Beta</h2>
+              <p className="text-primary text-lg font-medium mb-6">Free for early users</p>
               
               <div className="space-y-3 mb-6 text-left max-w-sm mx-auto">
                 <div className="flex items-center gap-3">
@@ -185,11 +197,9 @@ export default function Landing() {
                 </div>
                 <div className="flex items-center gap-3">
                   <CheckCircle2 className="h-5 w-5 text-primary flex-shrink-0" />
-                  <p className="text-slate-300">Preferred pricing locked in</p>
+                  <p className="text-slate-300">Early-user perks when paid plans launch</p>
                 </div>
               </div>
-              
-              <p className="text-3xl font-bold text-white mb-6">$29/month <span className="text-lg font-normal text-slate-400">during beta</span></p>
               
               <Button 
                 size="lg" 
@@ -197,7 +207,7 @@ export default function Landing() {
                 className="text-lg px-8 py-6"
                 data-testid="button-apply-beta"
               >
-                Apply for the Founding Agent Beta
+                Join the Free Founding Agent Beta
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </CardContent>

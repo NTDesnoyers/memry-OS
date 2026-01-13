@@ -1,0 +1,343 @@
+Good news: this is **already better than 90% of early SaaS landing pages**.
+
+Bad news (and where the money is): it’s still **too polite, too generic, and not sharp enough to force action**, especially for a *free beta*.
+
+I’m going to do this **Hormozi × Lean** style:
+
+1. Diagnose what’s weak
+2. Rewrite key sections (copy-level, not design)
+3. Show you **exact changes** to increase conversion *now*
+4. Align it with **free beta reality** (your current constraint)
+
+No fluff.
+
+---
+
+## 1️⃣ THE CORE PROBLEM WITH THE PAGE
+
+### Right now, your page answers:
+
+> “What is this?”
+
+But it does **not** aggressively answer:
+
+> “Why should I stop what I’m doing and sign up *right now*?”
+
+Your ICP (relationship-based agents) already:
+
+* Knows follow-up matters
+* Knows CRMs suck
+* Believes they’re “pretty good” at staying in touch
+
+So generic statements like:
+
+> “Stop losing deals because you forget to follow up”
+
+are **true but not emotionally expensive enough**.
+
+Agents don’t feel the pain as “forgetting.”
+They feel it as:
+
+* “I *meant* to follow up”
+* “That deal went cold”
+* “They went with another agent”
+* “I’m embarrassed it’s been too long to reach out”
+
+We need to **name that pain explicitly**.
+
+---
+
+## 2️⃣ HERO SECTION: MAKE IT SHARPER & MORE COSTLY
+
+### CURRENT HEADLINE
+
+> Stop Losing Deals Because You Forget to Follow Up
+
+❌ Too soft
+❌ Sounds like a productivity app
+❌ Doesn’t call out *agents specifically*
+
+### REWRITE (CHOOSE ONE)
+
+**Option A (Loss-Framed, High Pain):**
+
+> Deals don’t fall apart.
+> They fade when you don’t follow up.
+
+**Option B (Agent-Specific, Ego Hit):**
+
+> You’re not bad at real estate.
+> You’re bad at remembering who to follow up with.
+
+**Option C (My Favorite – Direct & Concrete):**
+
+> You didn’t lose that deal.
+> You just forgot to follow up.
+
+---
+
+### SUBHEAD (CURRENT)
+
+> Memry remembers your conversations, shows you who needs your attention today, and drafts your follow-ups so nothing slips through the cracks.
+
+❌ Feature-heavy
+❌ Reads like documentation
+❌ No outcome
+
+### SUBHEAD (REWRITE)
+
+> Memry is a relationship-first CRM that remembers every conversation, tells you exactly who to contact next, and drafts the follow-up **in your voice**—so deals don’t go cold.
+
+Key change:
+
+* Outcome first
+* “In your voice” emphasized
+* “Relationship-first CRM” positions against incumbents
+
+---
+
+### CTA (CRITICAL)
+
+Right now:
+
+> Apply for the Founding Agent Beta
+
+This is fine, but **free beta ≠ application energy**.
+
+If it’s free, the CTA should feel:
+
+* Low risk
+* Fast
+* Slightly exclusive
+
+#### RECOMMENDED:
+
+> Join the Free Founding Agent Beta →
+
+And under it:
+
+> Limited spots · Built with real agent workflows
+
+---
+
+## 3️⃣ AUDIENCE QUALIFICATION: PUSH HARDER
+
+This section is good, but too gentle.
+
+### CURRENT
+
+> For relationship-based real estate agents who:
+> • Talk to a lot of people every week
+> • Rely on referrals and repeat business
+> • Hate updating CRMs
+> • Know follow-up makes money — but struggle to stay consistent
+
+### REWRITE (MORE DISQUALIFYING)
+
+> Memry is for relationship-based agents who:
+> • Talk to people all day—and forget half of it by tomorrow
+> • Live on referrals, not cold leads
+> • Hate “updating the CRM” after a long day
+> • Know follow-up makes money—but still let it slide
+
+This does two things:
+
+* Makes the reader say “that’s me”
+* Makes non-ICP bounce (good)
+
+---
+
+## 4️⃣ “WHAT YOU GET” → SHIFT FROM FEATURES TO WINS
+
+Your features are solid. The framing isn’t.
+
+### CURRENT CARD: Conversation Capture
+
+> Log calls, meetings, and notes in seconds…
+
+### REWRITE:
+
+**Conversation Capture**
+
+> Dump conversations in seconds—voice or text—and never wonder *“what did we talk about?”* again.
+
+---
+
+### AI Follow-Ups
+
+> Drafts thank-you emails, check-ins, and next steps…
+
+🔧 Add **stakes**:
+
+**AI Follow-Ups**
+
+> Get follow-ups drafted from real conversations—so reaching out never feels awkward or late.
+
+---
+
+### Relationship CRM
+
+> FORD notes + A/B/C/D segments…
+
+Agents don’t care about segmentation. They care about *who to call today*.
+
+**Relationship CRM**
+
+> Always know who matters most, who’s going cold, and who you should contact today.
+
+---
+
+## 5️⃣ “HOW MEMRY WORKS” – GOOD, JUST TIGHTEN
+
+This section is strong conceptually. Just sharpen language.
+
+### STEP 1
+
+> Log a conversation
+> Talk or type naturally — no formatting required.
+
+✅ Good
+🔧 Minor tweak:
+
+> Log a conversation
+> Talk or type naturally—no forms, no cleanup.
+
+---
+
+### STEP 2
+
+> Memry extracts what matters
+
+Add clarity:
+
+> Memry extracts what matters
+> People, topics, follow-ups, and FORD insights—automatically.
+
+---
+
+### STEP 3
+
+> Get the right follow-up instantly
+
+Make it outcome-driven:
+
+> Get the right follow-up instantly
+> Know who to contact next and exactly what to say.
+
+---
+
+## 6️⃣ “WHY AGENTS SWITCH” – ADD CONTRAST
+
+This is where you should **subtly attack CRMs**.
+
+### CURRENT BULLETS (GOOD, BUT SAFE)
+
+### REWRITE (STRONGER):
+
+> • Built for relationships—not data entry
+> • Designed around memory, not pipelines
+> • Matches how agents actually work day-to-day
+> • Feels like a second brain, not another system to maintain
+
+This positions Memry as a **category shift**, not a feature upgrade.
+
+---
+
+## 7️⃣ PRICING SECTION: FIX THE CONTRADICTION
+
+You said:
+
+> “I’m currently running the free beta”
+
+But the page says:
+
+> $29/month during beta
+
+❌ This creates friction and distrust.
+
+### IF THE BETA IS FREE:
+
+Change to:
+
+**Founding Agent Beta**
+
+> Free for early users
+> Paid plans coming later
+
+Bullets:
+
+* Limited number of early users
+* Direct access to the founder
+* Help shape what gets built next
+* Early-user perks when pricing launches
+
+CTA:
+
+> Join the Free Founding Agent Beta →
+
+---
+
+### IF YOU WANT A PAID BETA LATER:
+
+Add a **price anchor**, not a charge:
+
+> Future price: $29/month
+> Free for founding beta users
+
+This preserves pricing power without blocking signups.
+
+---
+
+## 8️⃣ ONE MISSING SECTION (HIGH LEVERAGE)
+
+You are missing **social proof / founder credibility**, even lightweight.
+
+Add **one short section**:
+
+### Example:
+
+> Built by a relationship-based agent
+> Memry was built out of daily frustration with CRMs that don’t match how real agents work.
+
+Or even:
+
+> “I built Memry because I was tired of knowing I *should* follow up—and still not doing it.”
+
+This humanizes and increases trust massively in a beta.
+
+---
+
+## 9️⃣ SUMMARY: WHAT TO FIX FIRST (ORDERED)
+
+If you only do **5 things**, do these:
+
+1. Rewrite the **headline** to be sharper and more costly
+2. Change CTA to **Join the Free Founding Agent Beta**
+3. Remove pricing friction if beta is free
+4. Add stronger pain language around *awkward, late follow-ups*
+5. Add light founder credibility
+
+---
+
+## FINAL TRUTH (NO SUGARCOATING)
+
+You don’t have a traffic problem.
+You don’t have a feature problem.
+
+You have a **“this feels nice, not urgent” problem**.
+
+Fix the language to:
+
+* Increase perceived loss
+* Increase specificity
+* Reduce friction
+
+Do that, and this page will convert **far better**, even with the same product.
+
+If you want next:
+
+* I can rewrite this **line-by-line copy** in final form
+* Or help you **A/B test 2 hero sections**
+* Or tighten it for a **paid beta transition**
+
+Your move.
