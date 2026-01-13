@@ -204,6 +204,46 @@ We're comfortable at 35% margins. Incumbents need 80%.
 
 ---
 
+## Feature Backlog (Idea Capture)
+
+*Running list of feature ideas from conversations. Priority and timing are fluid - build, measure, learn.*
+
+### High Priority (Next Sprint Candidates)
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Adaptive Learning System** | Learn follow-up patterns from user behavior (voicemail → text). "What's next?" prompts that learn over time. | Idea |
+| **User Playbook/Rules** | Explicit directives like "call A-segment monthly". AI monitors and surfaces overdue contacts. | Idea |
+| **Graduated Suggestions** | Ask → Suggest → Auto-generate. System confidence grows with usage. | Idea |
+| **Edit Conversations Anywhere** | Allow editing conversations from contact profiles, not just Flow section. | Pending |
+| **Manual Completed Notes** | Add ability to manually add written notes to the 'completed' section on drafts page. | Pending |
+
+### Medium Priority (Future Sprints)
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Unified Rules Engine** | Consolidate segment rules, voice profile, draft feedback, playbooks into one system. | Idea |
+| **Quick Follow-Up Actions** | After logging interaction, show quick-action buttons for common next steps. | Idea |
+| **Batch Review Mode** | End-of-day review of logged interactions with quick multi-select for follow-ups. | Idea |
+
+### Long-Term Vision (V2+)
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| **Modular Blank Slate Architecture** | Industry-agnostic core with optional overlays (Realtor Pack, Consultant Pack, etc.). Users teach the system through conversations, not forms. | Idea |
+| **Auto-Capture Integrations** | Pull texts, emails, calls automatically from external services. | Idea |
+| **Full Agentic Autonomy** | System observes all actions, proactively manages relationships with minimal user input. | Idea |
+
+### Completed
+
+| Feature | Description | Completed |
+|---------|-------------|-----------|
+| **Beta Email Whitelist** | Pre-approve emails for instant access | Jan 2026 |
+| **SPA Routing Fix** | Fix direct URL access for deployed routes | Jan 2026 |
+| **Auto-Approve Beta Users** | Frictionless signup - all new users auto-approved | Jan 2026 |
+
+---
+
 ## Appendix: Baker's Key Quotes
 
 > "If you're trying to preserve an 80% gross-margin structure, you are guaranteed not to succeed in AI."
@@ -216,5 +256,5 @@ We're comfortable at 35% margins. Incumbents need 80%.
 
 ---
 
-*Last Updated: December 2024*
+*Last Updated: January 2026*
 *Strategic Framework: AI-Native Relationship Intelligence*

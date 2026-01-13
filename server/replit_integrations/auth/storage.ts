@@ -67,12 +67,14 @@ class AuthStorage implements IAuthStorage {
         updateData.isAdmin = true;
       }
       
-      // Auto-approve whitelisted users who are still pending
-      if (isWhitelisted && existingUser.status === 'pending') {
+      // BETA MODE: Auto-approve any pending users on login
+      // To restore approval gate later, change condition to: isWhitelisted && existingUser.status === 'pending'
+      if (existingUser.status === 'pending') {
         updateData.status = 'approved';
-        updateData.signupSource = 'invited';
-        // Mark whitelist entry as used
-        await this.markWhitelistUsed(userData.email!);
+        if (isWhitelisted) {
+          updateData.signupSource = 'invited';
+          await this.markWhitelistUsed(userData.email!);
+        }
       }
       
       const [user] = await db
@@ -83,8 +85,9 @@ class AuthStorage implements IAuthStorage {
       return user;
     } else {
       // New user - set initial status
-      // Auto-approve if founder or whitelisted
-      const shouldAutoApprove = isFounder || isWhitelisted;
+      // BETA MODE: Auto-approve all new users for frictionless onboarding
+      // To restore approval gate later, change this to: isFounder || isWhitelisted
+      const shouldAutoApprove = true;
       
       const [user] = await db
         .insert(authUsers)
