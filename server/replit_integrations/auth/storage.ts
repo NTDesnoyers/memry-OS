@@ -2,8 +2,11 @@ import { authUsers, betaEvents, type AuthUser, type UpsertAuthUser, type Subscri
 import { db } from "../../db";
 import { eq, desc, ne, sql, gte, and, count } from "drizzle-orm";
 
-// Founder email - auto-approved and admin
-const FOUNDER_EMAIL = "nathan@desnoyersproperties.com";
+// Founder emails - auto-approved and admin
+const FOUNDER_EMAILS = [
+  "nathan@desnoyersproperties.com",
+  "desnoyers94@gmail.com"
+];
 
 // Interface for auth storage operations
 // (IMPORTANT) These user operations are mandatory for Replit Auth.
@@ -45,7 +48,9 @@ class AuthStorage implements IAuthStorage {
     }
     
     // Auto-approve founder
-    const isFounder = userData.email?.toLowerCase() === FOUNDER_EMAIL.toLowerCase();
+    const isFounder = FOUNDER_EMAILS.some(
+      email => userData.email?.toLowerCase() === email.toLowerCase()
+    );
     
     if (existingUser) {
       // User exists - update profile info
