@@ -1,7 +1,8 @@
 import OpenAI from "openai";
 import { storage, type TenantContext } from "./storage";
-import type { Interaction, Person, AIExtractedData, InsertGeneratedDraft, VoiceProfile, ContentTopic } from "@shared/schema";
+import type { Interaction, Person, AIExtractedData, InsertGeneratedDraft, VoiceProfile, ContentTopic, InsertFollowUpSignal } from "@shared/schema";
 import { buildDraftGenerationPrompt } from "./prompts";
+import { addDays } from "date-fns";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -789,6 +790,138 @@ async function findRoleBasedContacts(
   return matches;
 }
 
+// Real estate life event triggers (context graph industry layer)
+const LIFE_EVENT_KEYWORDS = {
+  divorce: ['divorce', 'separated', 'splitting up', 'ex-wife', 'ex-husband', 'custody'],
+  new_child: ['baby', 'pregnant', 'expecting', 'new baby', 'just had a baby', 'newborn', 'maternity', 'paternity'],
+  job_change: ['new job', 'got promoted', 'starting at', 'just started', 'new position', 'career change', 'laid off', 'left my job'],
+  long_tenure: ['been here for years', 'lived here forever', '7 years', '8 years', '10 years', '15 years'],
+  retirement: ['retiring', 'retired', 'retirement', 'leaving work'],
+  empty_nest: ['kids moved out', 'empty nest', 'last one left', 'all on our own now'],
+  downsizing: ['too much space', 'don\'t need all this room', 'downsizing'],
+  upsizing: ['need more room', 'outgrown', 'need a bigger place', 'cramped'],
+  death_spouse: ['passed away', 'widowed', 'lost my spouse', 'lost my husband', 'lost my wife'],
+  marriage: ['getting married', 'engaged', 'just got married', 'wedding'],
+  relocation: ['moving to', 'transferring', 'relocated', 'relocation'],
+  inheritance: ['inherited', 'estate', 'probate'],
+  investment: ['rental property', 'investment property', 'thinking about investing'],
+  health_issue: ['health problems', 'can\'t do stairs', 'need single level', 'accessibility'],
+  school_change: ['school district', 'better schools', 'kids starting school'],
+  neighborhood_issue: ['neighborhood going downhill', 'crime', 'neighbors'],
+  renovation_need: ['needs too much work', 'falling apart', 'major repairs needed']
+};
+
+function detectLifeEvents(transcript: string): string[] {
+  const lowerTranscript = transcript.toLowerCase();
+  const detectedEvents: string[] = [];
+  
+  for (const [eventType, keywords] of Object.entries(LIFE_EVENT_KEYWORDS)) {
+    if (keywords.some(kw => lowerTranscript.includes(kw))) {
+      detectedEvents.push(eventType);
+    }
+  }
+  
+  return detectedEvents;
+}
+
+function calculateSignalPriority(
+  person: Person, 
+  interaction: Interaction, 
+  lifeEvents: string[]
+): number {
+  let score = 50; // Base score
+  
+  // Segment priority: A=30, B=20, C=10, D=0
+  const segmentScores: Record<string, number> = { 'A': 30, 'B': 20, 'C': 10, 'D': 0 };
+  score += segmentScores[person.segment || 'D'] || 0;
+  
+  // Life event detection: +15 per event (max 30)
+  score += Math.min(lifeEvents.length * 15, 30);
+  
+  // Interaction type priority
+  const typeScores: Record<string, number> = {
+    'meeting': 10, 'in_person': 10, 'dinner': 10,
+    'call': 5, 'phone': 5,
+    'email': 2, 'text': 2, 'voicemail': 2
+  };
+  score += typeScores[interaction.type] || 0;
+  
+  // Hot/warm/active deal contacts get priority (using available fields)
+  // Check if person has an active deal (buyer status indicates hot)
+  if (person.buyerStatus === 'active') score += 10;
+  
+  return Math.min(100, score); // Cap at 100
+}
+
+function buildSignalReasoning(
+  interaction: Interaction,
+  person: Person,
+  lifeEvents: string[],
+  extractedData: AIExtractedData
+): string {
+  const parts: string[] = [];
+  
+  // Interaction type
+  parts.push(interaction.type.replace('_', ' '));
+  
+  // Segment
+  if (person.segment) {
+    parts.push(`${person.segment}-contact`);
+  }
+  
+  // Life events detected
+  if (lifeEvents.length > 0) {
+    parts.push(lifeEvents.map(e => e.replace('_', ' ')).join(', '));
+  }
+  
+  // Key topics if available
+  if (extractedData.keyTopics && extractedData.keyTopics.length > 0) {
+    parts.push(extractedData.keyTopics.slice(0, 2).join(', '));
+  }
+  
+  // Action items mentioned
+  if (extractedData.actionItems && extractedData.actionItems.length > 0) {
+    parts.push(`${extractedData.actionItems.length} action item(s)`);
+  }
+  
+  return parts.join(' + ');
+}
+
+export async function createFollowUpSignal(
+  interaction: Interaction,
+  person: Person,
+  extractedData: AIExtractedData,
+  ctx?: TenantContext
+): Promise<InsertFollowUpSignal | null> {
+  const transcript = interaction.transcript || interaction.summary || '';
+  
+  // Skip if no meaningful content
+  if (transcript.length < 20) {
+    return null;
+  }
+  
+  // Detect life events from transcript
+  const lifeEvents = detectLifeEvents(transcript);
+  
+  // Calculate priority score
+  const priorityScore = calculateSignalPriority(person, interaction, lifeEvents);
+  
+  // Build reasoning string
+  const reasoning = buildSignalReasoning(interaction, person, lifeEvents, extractedData);
+  
+  // Signal expires in 7 days
+  const expiresAt = addDays(new Date(), 7);
+  
+  return {
+    personId: person.id,
+    interactionId: interaction.id,
+    reasoning,
+    priorityScore,
+    status: 'pending',
+    expiresAt
+  };
+}
+
 export async function generateFollowUpDrafts(
   interaction: Interaction,
   person: Person,
@@ -1150,6 +1283,7 @@ export async function processInteraction(interactionId: string, ctx?: TenantCont
   success: boolean;
   extractedData?: AIExtractedData;
   draftsCreated?: number;
+  signalCreated?: boolean;
   voicePatternsExtracted?: boolean;
   contentTopicsFound?: number;
   error?: string;
@@ -1274,15 +1408,24 @@ export async function processInteraction(interactionId: string, ctx?: TenantCont
         await storage.updatePerson(person.id, personUpdates, ctx);
       }
 
-      const drafts = await generateFollowUpDrafts(interaction, person, extractedData, ctx);
-      for (const draft of drafts) {
-        await storage.createGeneratedDraft(draft, ctx);
+      // Create Follow-Up Signal instead of auto-generating drafts
+      // Only one active signal per person - check if one already exists
+      const existingSignal = await storage.getFollowUpSignalByPerson(person.id, ctx);
+      let signalCreated = false;
+      
+      if (!existingSignal) {
+        const signal = await createFollowUpSignal(interaction, person, extractedData, ctx);
+        if (signal) {
+          await storage.createFollowUpSignal(signal, ctx);
+          signalCreated = true;
+        }
       }
 
       return {
         success: true,
         extractedData,
-        draftsCreated: drafts.length,
+        draftsCreated: 0, // No longer auto-generating drafts
+        signalCreated,
         voicePatternsExtracted,
         contentTopicsFound,
       };
