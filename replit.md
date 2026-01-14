@@ -51,6 +51,14 @@ The design emphasizes GTD principles, focusing on speed for daily reviews and in
 - **Dormant Lead Revival Engine**: Gmail scanning for dormant contacts, dormancy scoring, approval workflow, and one-click campaign generation.
 - **DIA-Style Skill Packs**: Command Palette shortcuts for relationship-compounding actions (e.g., `/draft`, `/bulk`, `/text`).
 - **Context Graph**: Captures "event clock" and decision traces, recording reasoning chains for actions and interactions.
+- **Experience Layer v1**: Semantic meaning extraction replacing keyword-based signals:
+  - **Table**: experiences (personId, interactionId, type, summary, emotionalValence, magnitudeScore, acknowledged, confidenceScore)
+  - **Types**: life_event, achievement, struggle, transition
+  - **Magnitude Scale**: 5=life-altering (death, divorce), 4=major milestone (promotion, home purchase), 3=notable transition (new job), 2=everyday (vacation), 1=ambient context
+  - **Flow**: Conversations → AI extraction (gpt-4o-mini) → Experiences → Signals → Drafts
+  - **Priority**: High-magnitude unacknowledged experiences get signal priority; resolution marks experience acknowledged
+  - **Draft Integration**: Experience summary passed to draft generator for grounded, non-generic follow-ups
+  - **Files**: server/conversation-processor.ts, server/signal-draft-generator.ts, shared/schema.ts
 
 ### Orchestration Layer
 Memry is a multi-agent, event-driven system orchestrating actions while CRMs remain systems of record. It adheres to principles like Event-Driven, Agent-Based, Dossier Abstraction, Guardrails First, and Revenue Focus. It utilizes named agents (e.g., LeadIntakeAgent, NurtureAgent) and various event types (Lead, Relationship, Transaction, Communication, Intelligence Events).
