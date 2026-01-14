@@ -59,6 +59,18 @@ The design emphasizes GTD principles, focusing on speed for daily reviews and in
   - **Priority**: High-magnitude unacknowledged experiences get signal priority; resolution marks experience acknowledged
   - **Draft Integration**: Experience summary passed to draft generator for grounded, non-generic follow-ups
   - **Files**: server/conversation-processor.ts, server/signal-draft-generator.ts, shared/schema.ts
+- **Phase 1 Signal System (Supervised)**: Fully supervised signal-based follow-up system
+  - **Architecture**: log conversation → signal created → user resolves → draft created (no autonomous drafts)
+  - **Signal Resolution Types**: text, email, handwritten_note, task, skip (5 options)
+  - **One Signal Per Person Rule**: Only one active signal per person (prevents spam)
+  - **Expiration**: Signals expire after 7 days but remain in DB for future learning layer
+  - **Entry Points**: All 3 endpoints return `signalCreated` status:
+    - `/api/voice-memories` (voice memory)
+    - `/api/voice-memories/quick-log` (quick voice log)
+    - `log_interaction` tool (AI assistant)
+  - **No Auto-Drafts**: Fallback draft generation removed from all endpoints
+  - **UX**: Immediate query invalidation on all resolution types with sonnerToast feedback
+  - **Files**: server/routes.ts, client/src/pages/signals.tsx, server/signal-draft-generator.ts
 
 ### Orchestration Layer
 Memry is a multi-agent, event-driven system orchestrating actions while CRMs remain systems of record. It adheres to principles like Event-Driven, Agent-Based, Dossier Abstraction, Guardrails First, and Revenue Focus. It utilizes named agents (e.g., LeadIntakeAgent, NurtureAgent) and various event types (Lead, Relationship, Transaction, Communication, Intelligence Events).
