@@ -130,6 +130,7 @@ export const BETA_ALLOWED_ROUTES: string[] = [
   '/people',              // Contacts list
   '/people/new',          // Add new contact
   '/people/:id',          // Person profile (read interaction history, FORD notes)
+  '/signals',             // Follow-Up Signals - decision checkpoints
   '/drafts',              // Generated follow-ups and revival drafts
   '/welcome',             // Beta welcome page
 ];
@@ -161,7 +162,8 @@ export const BETA_NAV_ITEMS = [
   { name: "Flow", href: "/", icon: "Repeat" },
   { name: "Weekly Review", href: "/weekly-review", icon: "FileText" },
   { name: "Contacts", href: "/people", icon: "Users" },
-  { name: "Drafts", href: "/drafts", icon: "FileEdit" },
+  { name: "Signals", href: "/signals", icon: "Zap" },
+  { name: "Actions", href: "/drafts", icon: "FileEdit" },
 ];
 
 // Navigation items allowed in beta mode (by href)
@@ -169,6 +171,7 @@ export const BETA_NAV_HREFS = new Set([
   '/',
   '/weekly-review',
   '/people',
+  '/signals',
   '/drafts',
 ]);
 

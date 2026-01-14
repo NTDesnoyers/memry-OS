@@ -51,6 +51,7 @@ import BetaWelcome from "@/pages/beta-welcome";
 import Landing from "@/pages/landing";
 import IssuesReview from "@/pages/issues-review";
 import BetaDashboard from "@/pages/beta-dashboard";
+import Signals from "@/pages/signals";
 
 function Router({ userEmail }: { userEmail?: string | null }) {
   return (
@@ -92,6 +93,7 @@ function Router({ userEmail }: { userEmail?: string | null }) {
         <Route path="/revival" component={RevivalOpportunities} />
         <Route path="/welcome" component={BetaWelcome} />
         <Route path="/issues" component={IssuesReview} />
+        <Route path="/signals" component={Signals} />
         <Route path="/admin/users" component={AdminUsers} />
         <Route path="/admin/beta" component={BetaDashboard} />
         <Route component={NotFound} />

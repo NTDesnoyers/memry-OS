@@ -39,7 +39,8 @@ import {
   emailCampaigns,
   lifeEventAlerts,
   observerSuggestions,
-  dormantOpportunities
+  dormantOpportunities,
+  followUpSignals
 } from "@shared/schema";
 import { fromZodError } from "zod-validation-error";
 import multer from "multer";
@@ -5623,6 +5624,116 @@ Return ONLY valid JSON, no explanations.`
       const ctx = getTenantContext(req);
       await storage.deleteGeneratedDraft(req.params.id, ctx);
       res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // ============= Follow-Up Signals =============
+  
+  // Get all pending signals (ranked by priority)
+  app.get("/api/signals", async (req, res) => {
+    try {
+      const ctx = getTenantContext(req);
+      const signals = await storage.getPendingFollowUpSignals(ctx);
+      res.json(signals);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get signal by ID
+  app.get("/api/signals/:id", async (req, res) => {
+    try {
+      const ctx = getTenantContext(req);
+      const signal = await storage.getFollowUpSignal(req.params.id, ctx);
+      if (!signal) {
+        return res.status(404).json({ message: "Signal not found" });
+      }
+      res.json(signal);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Resolve a signal (text, email, handwritten_note, skip)
+  app.post("/api/signals/:id/resolve", async (req, res) => {
+    try {
+      const ctx = getTenantContext(req);
+      const { resolutionType } = req.body;
+      
+      if (!resolutionType || !['text', 'email', 'handwritten_note', 'skip'].includes(resolutionType)) {
+        return res.status(400).json({ message: "Invalid resolution type. Must be: text, email, handwritten_note, or skip" });
+      }
+      
+      const signal = await storage.resolveFollowUpSignal(req.params.id, resolutionType, ctx);
+      if (!signal) {
+        return res.status(404).json({ message: "Signal not found" });
+      }
+      
+      res.json(signal);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Undo signal resolution (revert to pending)
+  app.post("/api/signals/:id/undo", async (req, res) => {
+    try {
+      const ctx = getTenantContext(req);
+      const signal = await storage.getFollowUpSignal(req.params.id, ctx);
+      
+      if (!signal) {
+        return res.status(404).json({ message: "Signal not found" });
+      }
+      
+      if (signal.status !== 'resolved') {
+        return res.status(400).json({ message: "Can only undo resolved signals" });
+      }
+      
+      // Check if undo is within time window (e.g., 30 seconds)
+      const resolvedAt = signal.resolvedAt ? new Date(signal.resolvedAt).getTime() : 0;
+      const now = Date.now();
+      const undoWindowMs = 30 * 1000; // 30 seconds
+      
+      if (now - resolvedAt > undoWindowMs) {
+        return res.status(400).json({ message: "Undo window has expired" });
+      }
+      
+      // Revert to pending (manual DB update since we don't have a dedicated method)
+      const updated = await db.update(followUpSignals)
+        .set({ status: 'pending', resolutionType: null, resolvedAt: null, updatedAt: new Date() })
+        .where(eq(followUpSignals.id, req.params.id))
+        .returning();
+      
+      res.json(updated[0]);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get signal stats for a date range (for weekly review)
+  app.get("/api/signals/stats", async (req, res) => {
+    try {
+      const ctx = getTenantContext(req);
+      const { startDate, endDate } = req.query;
+      
+      const start = startDate ? new Date(startDate as string) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const end = endDate ? new Date(endDate as string) : new Date();
+      
+      const stats = await storage.getSignalStats(start, end, ctx);
+      res.json(stats);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get pending signal count (for nav badge)
+  app.get("/api/signals/count", async (req, res) => {
+    try {
+      const ctx = getTenantContext(req);
+      const signals = await storage.getPendingFollowUpSignals(ctx);
+      res.json({ count: signals.length });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

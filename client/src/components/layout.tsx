@@ -34,7 +34,8 @@ import {
   Eye,
   Activity,
   Inbox,
-  Flag
+  Flag,
+  Zap
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -56,6 +57,7 @@ const allNavItems = [
   { name: "Today", href: "/dashboard", icon: LayoutDashboard },
   { name: "Weekly Review", href: "/weekly-review", icon: FileText },
   { name: "Contacts", href: "/people", icon: Users },
+  { name: "Signals", href: "/signals", icon: Zap },
   { name: "Actions", href: "/drafts", icon: FileEdit },
   { name: "Life Events", href: "/life-events", icon: Eye },
   { name: "Event Log", href: "/event-log", icon: Activity },
