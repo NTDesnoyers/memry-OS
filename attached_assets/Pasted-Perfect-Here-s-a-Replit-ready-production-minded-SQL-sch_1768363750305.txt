@@ -1,0 +1,274 @@
+Perfect. Here’s a Replit-ready, production-minded SQL schema you can paste directly into Postgres / Supabase / Neon.
+(No abstractions. No theory. This runs.)
+
+I’ll also annotate why each table exists so engineering decisions stay tight.
+
+⸻
+
+🧠 CONTEXT GRAPH — SQL SCHEMA (AWE-CAPABLE)
+
+Assumptions
+	•	Postgres (UUIDs, enums)
+	•	You can port to Prisma easily afterward
+	•	This is MVP-safe but extensible
+
+⸻
+
+1️⃣ ENUMS (LOCK THESE EARLY)
+
+-- Relationship segmentation
+CREATE TYPE relationship_segment AS ENUM ('A', 'B', 'C', 'D');
+
+-- Experience types
+CREATE TYPE experience_type AS ENUM (
+  'life_event',
+  'achievement',
+  'struggle',
+  'transition'
+);
+
+-- Emotional valence (simple, robust)
+CREATE TYPE emotional_valence AS ENUM (
+  'positive',
+  'negative',
+  'mixed'
+);
+
+-- Awe trigger taxonomy (from research)
+CREATE TYPE awe_trigger_type AS ENUM (
+  'NATURE',
+  'MORAL_BEAUTY',
+  'COLLECTIVE_EXPERIENCE',
+  'BIG_IDEA',
+  'MUSIC_ART',
+  'LIFE_DEATH',
+  'PERSONAL_GROWTH'
+);
+
+-- Action types
+CREATE TYPE action_type AS ENUM (
+  'HANDWRITTEN_NOTE',
+  'TEXT_MESSAGE',
+  'INTRODUCTION',
+  'INVITATION',
+  'GRATITUDE',
+  'ACKNOWLEDGMENT'
+);
+
+-- Delivery channels
+CREATE TYPE delivery_mode AS ENUM (
+  'text',
+  'handwritten',
+  'in_person',
+  'async'
+);
+
+-- Effort classification
+CREATE TYPE effort_cost AS ENUM (
+  'low',
+  'medium',
+  'high'
+);
+
+-- Emotional signal detection
+CREATE TYPE emotional_signal AS ENUM (
+  'gratitude',
+  'warmth',
+  'neutral',
+  'none'
+);
+
+
+⸻
+
+2️⃣ PERSON (RELATIONSHIP OBJECT)
+
+CREATE TABLE person (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  segment relationship_segment NOT NULL,
+  relationship_score FLOAT DEFAULT 0.0,
+  baseline_response_latency_hours FLOAT,
+  last_meaningful_interaction_at TIMESTAMP,
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+Why this survives reality
+	•	Score is earned, not guessed
+	•	Segment is simple, human-set
+	•	No over-modeling emotions
+
+⸻
+
+3️⃣ EXPERIENCE (MEANING STORAGE)
+
+CREATE TABLE experience (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  person_id UUID REFERENCES person(id) ON DELETE CASCADE,
+  type experience_type NOT NULL,
+  summary TEXT NOT NULL,
+  emotional_valence emotional_valence,
+  magnitude_score INT CHECK (magnitude_score BETWEEN 1 AND 5),
+  occurred_at TIMESTAMP,
+  acknowledged BOOLEAN DEFAULT FALSE,
+  logged_at TIMESTAMP DEFAULT NOW()
+);
+
+Non-negotiable rule
+If magnitude_score >= 3 and acknowledged = false → system owes action.
+
+This is where competitors fail.
+
+⸻
+
+4️⃣ AWE TRIGGER (REFERENCE TABLE)
+
+CREATE TABLE awe_trigger (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  type awe_trigger_type UNIQUE NOT NULL,
+  default_intimacy_level INT CHECK (default_intimacy_level BETWEEN 1 AND 5),
+  notes TEXT
+);
+
+Seed this once:
+
+INSERT INTO awe_trigger (type, default_intimacy_level) VALUES
+('MORAL_BEAUTY', 4),
+('PERSONAL_GROWTH', 3),
+('LIFE_DEATH', 5),
+('BIG_IDEA', 3),
+('COLLECTIVE_EXPERIENCE', 4),
+('NATURE', 2),
+('MUSIC_ART', 2);
+
+
+⸻
+
+5️⃣ ACTION (CAPABILITY CATALOG)
+
+CREATE TABLE action (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  type action_type NOT NULL,
+  delivery_mode delivery_mode NOT NULL,
+  effort_cost effort_cost NOT NULL,
+  intimacy_level INT CHECK (intimacy_level BETWEEN 1 AND 5),
+  avg_completion_time_minutes INT
+);
+
+Example seeds:
+
+INSERT INTO action (type, delivery_mode, effort_cost, intimacy_level, avg_completion_time_minutes)
+VALUES
+('HANDWRITTEN_NOTE', 'handwritten', 'high', 4, 10),
+('TEXT_MESSAGE', 'text', 'low', 2, 2),
+('INTRODUCTION', 'async', 'medium', 3, 5),
+('GRATITUDE', 'text', 'low', 2, 1),
+('ACKNOWLEDGMENT', 'text', 'low', 3, 3);
+
+
+⸻
+
+6️⃣ ACTION INSTANCE (VALUE CREATION)
+
+CREATE TABLE action_instance (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  person_id UUID REFERENCES person(id) ON DELETE CASCADE,
+  experience_id UUID REFERENCES experience(id),
+  action_id UUID REFERENCES action(id),
+  awe_trigger_id UUID REFERENCES awe_trigger(id),
+  generated_by TEXT CHECK (generated_by IN ('system', 'user')),
+  content_draft TEXT,
+  approved_at TIMESTAMP,
+  sent_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+Key insight
+	•	If experience_id IS NOT NULL, this action is meaning-anchored
+	•	This prevents “AI generic follow-ups”
+
+⸻
+
+7️⃣ OUTCOME (LEARNING LOOP)
+
+CREATE TABLE outcome (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  action_instance_id UUID REFERENCES action_instance(id) ON DELETE CASCADE,
+  response_received BOOLEAN,
+  response_latency_hours FLOAT,
+  response_length_chars INT,
+  emotional_signal emotional_signal,
+  relationship_delta FLOAT,
+  logged_at TIMESTAMP DEFAULT NOW()
+);
+
+No surveys.
+No feelings.
+Only signals.
+
+⸻
+
+8️⃣ CRITICAL MVP VIEWS (COPY THESE)
+
+🔥 Awe Opportunities Queue
+
+CREATE VIEW awe_opportunities AS
+SELECT
+  e.id AS experience_id,
+  p.id AS person_id,
+  p.name,
+  e.summary,
+  e.magnitude_score,
+  e.logged_at
+FROM experience e
+JOIN person p ON e.person_id = p.id
+WHERE e.magnitude_score >= 3
+AND e.acknowledged = FALSE
+ORDER BY e.logged_at ASC;
+
+This is your highest-leverage UI surface.
+
+⸻
+
+📈 What Actually Deepens Relationships
+
+CREATE VIEW action_effectiveness AS
+SELECT
+  a.type,
+  AVG(o.relationship_delta) AS avg_delta,
+  COUNT(*) AS sample_size
+FROM outcome o
+JOIN action_instance ai ON o.action_instance_id = ai.id
+JOIN action a ON ai.action_id = a.id
+GROUP BY a.type;
+
+This becomes your moat over time.
+
+⸻
+
+9️⃣ WHAT THIS ENABLES IMMEDIATELY
+
+With zero extra features, you now have:
+	•	A system that notices meaning
+	•	A queue of socially important actions
+	•	A learning loop on relationship depth
+	•	A defensible emotional intelligence layer
+
+Most CRMs can’t touch this because:
+
+They don’t model human experience — only transactions.
+
+⸻
+
+NEXT MOVE (LOCK MOMENTUM)
+
+Reply with one:
+
+1️⃣ “Generate the production prompt templates for action drafts”
+2️⃣ “Define the MVP UI surfaces that expose this power”
+3️⃣ “Stress-test this schema against real estate agents”
+4️⃣ “Cut scope: what we do NOT build yet”
+
+Say the number.

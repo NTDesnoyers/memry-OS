@@ -1,0 +1,88 @@
+Absolutely. Here is a clean, copy-paste-ready response with no meta framing, suitable to drop directly into Replit.
+
+⸻
+
+These are the right implementation questions. Here are clear decisions on each, optimized for v1 speed and correctness:
+
+⸻
+
+1. Deduplication
+
+Decision: Light deduplication only in v1.
+
+Approach:
+	•	Deduplicate by:
+	•	person_id
+	•	experience.type
+	•	logged_at within the same processing window / conversation
+	•	Do not attempt semantic similarity or embedding-based dedupe yet.
+
+Rationale:
+	•	Duplicate experiences are low-cost and reversible.
+	•	Missing a meaningful experience is high-cost and irreversible.
+	•	Experience records should be treated as append-only observations in v1.
+
+Cleanup and consolidation can happen later once real data exists.
+
+⸻
+
+2. One-to-Many Extraction
+
+Decision: Extract all meaningful experiences from a single conversation.
+
+Approach:
+	•	One conversation can yield multiple experience records.
+	•	Each experience gets its own:
+	•	type
+	•	summary
+	•	magnitude_score
+	•	acknowledged flag
+
+Rationale:
+	•	Real conversations often surface multiple independent life events.
+	•	Collapsing them loses meaning and forces generic follow-ups.
+	•	Signal ranking will naturally prioritize the most important experiences.
+
+⸻
+
+3. Existing Signals Without Experiences
+
+Decision: This behavior is intentional and correct.
+
+Approach:
+	•	experience_id on signals is nullable.
+	•	Signals backed by unacknowledged, high-magnitude experiences should rank above time-based or routine signals.
+	•	Existing signals continue to function normally, just with lower priority.
+
+Rationale:
+	•	This preserves backward compatibility.
+	•	It gradually shifts the system from time-based pressure to meaning-based pressure.
+	•	No migrations or rewrites required.
+
+⸻
+
+4. Magnitude Calibration
+
+Decision: The proposed magnitude scale is correct and should be locked.
+
+Scale:
+	•	5 – Life-altering (death, birth, divorce, major health crisis)
+	•	4 – Major milestone (promotion, home purchase, engagement)
+	•	3 – Notable transition (new job, moving, kid starting school)
+	•	2 – Everyday life (vacation, minor wins, routine updates)
+	•	1 – Ambient context (weather, casual chatter)
+
+Implementation guidance:
+	•	Default ambiguous cases to 2.
+	•	Assign 4–5 only when language is explicit.
+	•	Be conservative; it’s easier to escalate later than downgrade.
+
+⸻
+
+Summary
+	•	Accept some experience duplication in v1.
+	•	Extract multiple experiences per conversation.
+	•	Let experience-backed signals naturally outrank others.
+	•	Use a simple, conservative magnitude scale.
+
+With these decisions, the v1 scope is clear and ready to build.

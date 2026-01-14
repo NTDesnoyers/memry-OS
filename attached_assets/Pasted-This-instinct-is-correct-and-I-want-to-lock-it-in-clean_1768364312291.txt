@@ -1,0 +1,161 @@
+This instinct is correct — and I want to lock it in cleanly so you don’t overbuild.
+
+⸻
+
+DECISION (FINAL, NO WIGGLE)
+
+V1 = Experience extraction only.
+Awe triggers stay conceptual, not structural (yet).
+
+You do not ship the awe taxonomy table in v1.
+
+Why:
+	•	Experience extraction is the hard, high-signal part
+	•	Awe classification is a refinement layer, not a dependency
+	•	Premature taxonomy = false precision + complexity
+	•	You’ll learn which experiences actually matter before labeling them
+
+This is exactly how a disciplined Lean system should evolve.
+
+⸻
+
+HOW TO THINK ABOUT AWE IN V1 (IMPORTANT)
+
+Awe is implicit, not explicit, in v1.
+
+In v1:
+	•	Awe = magnitude_score ≥ 3 AND unacknowledged
+	•	No trigger labels
+	•	No facet modeling
+	•	No taxonomy debates
+
+You are still building awe mechanics, you’re just not naming them yet.
+
+That’s correct sequencing.
+
+⸻
+
+CONFIRMED V1 SCOPE (LOCKED)
+
+What you outlined is exactly right.
+I’m going to restate it crisply so engineering has zero ambiguity.
+
+✅ V1 INCLUDES
+	1.	Experiences table
+	•	person_id
+	•	type (life_event | achievement | struggle | transition)
+	•	summary
+	•	emotional_valence (optional but useful)
+	•	magnitude_score (1–5)
+	•	acknowledged (boolean)
+	2.	Conversation processor upgrade
+	•	Extract experiences automatically
+	•	Persist them
+	•	Be conservative (default magnitude = 2–3)
+	3.	Signals reference experiences
+	•	Add experience_id to follow_up_signals
+	•	Signals may exist without experiences, but not vice versa
+	4.	Ranking logic
+	•	Unacknowledged experiences
+	•	Higher magnitude first
+	•	Time-based signals fall below meaning-based ones
+	5.	Resolution behavior
+	•	Resolving a signal tied to an experience → acknowledged = true
+	•	This is critical (closure + no repeat nagging)
+	6.	Draft generation upgrade
+	•	Drafts receive experience context
+	•	No awe language, just grounded specificity
+
+This is a powerful v1. Anything more would be ego.
+
+⸻
+
+❌ EXPLICITLY OUT OF SCOPE FOR V1
+
+Do not build these yet:
+	•	Awe trigger taxonomy table
+	•	Explicit awe classification
+	•	Facet scoring (self-diminishment, connectedness, etc.)
+	•	Manual experience logging UI
+	•	User-facing “meaning” labels
+	•	Any educational explanation of awe
+
+Those come after you see real data.
+
+⸻
+
+WHY THIS SEQUENCING IS STRATEGIC
+
+You are following the exact pattern of strong systems:
+	1.	Capture reality
+	2.	Persist meaning
+	3.	Act on it
+	4.	Observe outcomes
+	5.	Only then classify
+
+Most products try to classify before they understand reality.
+You’re doing the opposite.
+
+That’s how you end up with a moat instead of a taxonomy.
+
+⸻
+
+ANSWER TO YOUR QUESTION
+
+Should I create the task list for this? Or refine scope first?
+
+Create the task list. Scope is already tight enough.
+
+So here’s the directive:
+
+👉 Yes — create the task list.
+But structure it exactly like this:
+
+⸻
+
+TASK LIST STRUCTURE (MANDATORY)
+
+Break it into 4 epics, not random tickets:
+
+Epic 1: Experience Persistence
+	•	Add experiences table
+	•	Add indexes (person_id, acknowledged, magnitude_score)
+
+Epic 2: Conversation → Experience Extraction
+	•	Update processor prompt
+	•	Confidence thresholding
+	•	Safe defaults (don’t block pipeline)
+
+Epic 3: Signals Integration
+	•	Add experience_id to signals
+	•	Update ranking logic
+	•	Update resolution behavior
+
+Epic 4: Draft Context Upgrade
+	•	Pass experience summary into draft generation
+	•	Remove generic fallback phrasing
+
+Each epic should be independently shippable.
+
+⸻
+
+ONE LAST IMPORTANT NOTE (DON’T MISS THIS)
+
+When you do add awe triggers later, they should be:
+	•	Derived, not stored initially
+	•	Re-runnable on historical experiences
+	•	Optional, not required for action
+
+That’s future-proofing — but not today’s work.
+
+⸻
+
+NEXT STEP (EXECUTION)
+
+Reply with one of these:
+
+1️⃣ “Here’s the task list — sanity check it”
+2️⃣ “Write the exact experience-extraction prompt for the conversation processor”
+3️⃣ “Help me define the signal ranking formula precisely”
+
+Pick one. We keep moving.

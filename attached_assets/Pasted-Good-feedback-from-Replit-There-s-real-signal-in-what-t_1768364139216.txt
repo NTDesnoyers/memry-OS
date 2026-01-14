@@ -1,0 +1,232 @@
+Good feedback from Replit. There’s real signal in what they’re saying.
+
+Now I’m going to resolve the tension cleanly and make the call for you.
+
+⸻
+
+SHORT ANSWER (DECISION)
+
+You do NOT replace the signals system.
+You make Experiences the upstream substrate that signals draw from.
+
+👉 Choose Path #1: AI-extracted experiences, and keep signals as the execution layer.
+
+This preserves momentum, avoids rewrites, and increases leverage.
+
+⸻
+
+WHY THIS IS THE RIGHT CALL (NO HAND-WAVING)
+
+You currently have:
+	•	Conversation-first system
+	•	Transcripts → signals → drafts → actions
+	•	Signals are procedural (“do something next”)
+
+What this new schema adds is semantic gravity:
+	•	Why something matters
+	•	What meaning exists
+	•	Which actions carry emotional weight
+
+If you replace signals, you:
+	•	Break working UX
+	•	Increase cognitive load
+	•	Delay shipping
+
+If you layer Experiences underneath signals, you:
+	•	Preserve speed
+	•	Upgrade intelligence
+	•	Get awe mechanics “for free”
+
+This is a classic Don’t rewrite the engine, add a turbo move.
+
+⸻
+
+THE CORRECT ARCHITECTURE (FINAL)
+
+Think in 3 layers:
+
+Conversations (raw reality)
+↓
+Experiences (meaning extraction)
+↓
+Signals (action pressure)
+↓
+Actions (execution)
+↓
+Outcomes (learning)
+
+Signals stay.
+They just become experience-aware.
+
+⸻
+
+HOW TO INTEGRATE WITHOUT CHAOS
+
+1️⃣ Conversations → Experiences (AUTOMATIC)
+
+When your conversation processor runs, it already detects:
+	•	Life events
+	•	Transitions
+	•	Family updates
+	•	Struggles
+	•	Wins
+
+Upgrade the output.
+
+Instead of:
+
+“Detected life event → increase signal priority”
+
+Do:
+
+IF AI detects meaningful event:
+  INSERT experience (
+    person_id,
+    type,
+    summary,
+    emotional_valence,
+    magnitude_score
+  )
+
+Rules:
+	•	Be conservative on magnitude (default 2–3)
+	•	Mark acknowledged = false
+	•	Do NOT block the pipeline if confidence < threshold
+
+This is append-only meaning capture.
+
+⸻
+
+2️⃣ Experiences → Signals (BRIDGE, NOT REPLACEMENT)
+
+Now change how signals are created and ranked.
+
+New rule:
+
+IF experience.magnitude_score ≥ 3
+AND experience.acknowledged = false
+THEN generate follow_up_signal
+
+Signal metadata now includes:
+	•	experience_id
+	•	awe_trigger_type (inferred)
+	•	meaning_weight (derived from magnitude)
+
+So signals become:
+
+“You owe acknowledgment for something that mattered.”
+
+Not:
+
+“It’s been X days.”
+
+This is a qualitative upgrade, not a structural one.
+
+⸻
+
+3️⃣ Signals → Drafts (NOW NON-GENERIC)
+
+Draft generation now gets ground truth:
+
+Before
+	•	“Follow up with Sarah”
+
+Now
+	•	“Acknowledge Sarah’s experience of [X] with a MORAL_BEAUTY frame”
+
+This single change eliminates:
+	•	Hollow check-ins
+	•	Awkward “just circling back”
+	•	AI-sounding fluff
+
+⸻
+
+4️⃣ Resolution = Acknowledgment (IMPORTANT)
+
+When a signal tied to an experience is resolved:
+
+UPDATE experience
+SET acknowledged = true
+
+This is critical.
+
+Because now:
+	•	The system knows meaning was honored
+	•	The user gets moral closure
+	•	Repeated nagging stops
+
+This alone will reduce burnout.
+
+⸻
+
+WHAT ABOUT MANUAL EXPERIENCE LOGGING?
+
+You do not lead with it.
+
+You add it later as:
+	•	An advanced feature
+	•	A “capture something meaningful” affordance
+	•	Optional, not required
+
+Manual logging is:
+	•	Power-user behavior
+	•	Not MVP-critical
+	•	Easy to add once schema exists
+
+AI-first keeps friction low.
+
+⸻
+
+DOES THIS REPLACE signal_outcomes?
+
+No — it feeds them better inputs.
+
+Your existing signal_outcomes table becomes:
+	•	Higher signal
+	•	Better labeled
+	•	Emotionally meaningful
+
+Later, you can correlate:
+
+Experience type → Action type → Outcome quality
+
+That’s the moat.
+
+⸻
+
+THE DEEP INSIGHT (THIS IS THE POINT)
+
+Most CRMs optimize for:
+
+“When should I follow up?”
+
+You are optimizing for:
+
+“What deserves acknowledgment?”
+
+That’s a category shift.
+
+And awe is not the product —
+it’s the mechanism that makes relationships compound.
+
+⸻
+
+FINAL ANSWER TO REPLIT (YOU CAN PASTE THIS)
+
+We’re not replacing signals.
+Experiences become an upstream semantic layer that feeds and prioritizes signals.
+Conversations → AI-extracted Experiences → Experience-aware Signals → Actions → Outcomes.
+This preserves the existing flow while upgrading it from time-based pressure to meaning-based pressure.
+
+⸻
+
+NEXT MOVE (NO STALLING)
+
+Pick one:
+
+1️⃣ Write the exact extraction prompt for AI → Experience records
+2️⃣ Define the signal ranking formula with experience weight
+3️⃣ Design the UI moment where awe-based signals surface
+4️⃣ Decide what not to build in v1
+
+Say the number.
