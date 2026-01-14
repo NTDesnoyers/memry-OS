@@ -1,0 +1,224 @@
+Good instincts again. I’ll answer this **cleanly, decisively, and with execution bias**, especially on #5 — because that’s the only one that can quietly derail momentum if mishandled.
+
+I’ll go point-by-point, then give you a **clear ruling** you can drop back into Replit if needed.
+
+---
+
+# QUICK ALIGNMENT ON 1–4 (YOU’RE MOSTLY RIGHT)
+
+## 1️⃣ Existing drafts
+
+**Your instinct is correct.**
+
+**Decision:**
+✅ Leave them as-is.
+❌ Do not migrate, mark, or retroactively “fix” them.
+
+**Why:**
+
+* Phase 1 is about **future correctness**, not historical purity
+* Users don’t care how a draft was created last month
+* Migration logic = risk + time with zero learning value
+
+**Rule:**
+
+> New architecture applies forward only.
+
+---
+
+## 2️⃣ Interactions without a linked person
+
+You are not overthinking this — but you *are* approaching the boundary correctly.
+
+**Decision:**
+✅ Prompt: *“Who was that?”*
+❌ Do not auto-create anonymous signals
+
+**Why:**
+
+* Signals without a person can’t be acted on
+* Forcing a name creates clarity
+* If they can’t remember → it probably shouldn’t create follow-up debt
+
+**Important nuance (keep it light):**
+
+* One inline prompt
+* No modal
+* No blocking
+
+This preserves flow while nudging correctness.
+
+---
+
+## 3️⃣ Signal expiration (7 days)
+
+This is **not a Phase 1 blocker**, but your intuition matters.
+
+**Decision:**
+✅ Let expired signals disappear from the active UI
+✅ Keep them queryable in the database
+
+**Why:**
+
+* Expiration is a **UX concern**, not a data deletion rule
+* You’ll want historical resolution / non-resolution later
+* Deleting signals kills future learning
+
+So:
+
+* UI hides them
+* DB keeps them
+
+No extra work needed now if that’s already true.
+
+---
+
+## 4️⃣ Multiple signals per person
+
+You’re touching the most important conceptual issue here — and your instinct is **directionally correct**, but the solution is **not** “multiple signals per interaction.”
+
+Let’s slow this down.
+
+### The mistake to avoid
+
+❌ One interaction → many signals
+That explodes cognitive load and breaks prioritization.
+
+### The correct mental model
+
+✅ One **active signal per person**, representing:
+
+> “The most important unresolved next action for this person”
+
+Everything else belongs **inside the resolution flow**, not the signal list.
+
+### How to handle your examples
+
+* Text them → resolve signal
+* Intro someone else → that creates a **separate signal for the other person**
+* Handwritten note → resolution type
+* Call later → task resolution
+
+This keeps:
+
+* Signals = *people needing attention*
+* Resolutions = *how you act*
+
+You do **not** want:
+
+* 4 signals for Sarah
+* You want 1 signal that you resolve 4 times over time
+
+So:
+👉 **Current one-signal-per-person rule is correct for Phase 1.**
+
+We can revisit *compound actions* later.
+
+---
+
+# NOW: YOUR REAL QUESTION — #5 (THE ONLY ONE THAT MATTERS)
+
+## 5️⃣ The 49 LSP diagnostics in `routes.ts`
+
+### Short answer:
+
+**Do not touch them now.**
+
+### Long answer (important):
+
+These diagnostics are:
+
+* Pre-existing
+* Orthogonal to Phase 1 goals
+* A classic “cleanup temptation”
+
+This is how good teams accidentally stall.
+
+---
+
+## WHY YOU SHOULD IGNORE #5 (FOR NOW)
+
+### 1️⃣ They do not affect the learning loop
+
+Phase 1 success criteria are:
+
+* Signals appear reliably
+* Signals resolve cleanly
+* Drafts are single-path
+* UX feedback is crisp
+
+LSP diagnostics do **not** change any of that.
+
+---
+
+### 2️⃣ They expand scope without increasing learning
+
+Fixing them:
+
+* Feels productive
+* Produces zero validated learning
+* Risks regressions
+
+That’s the definition of **non-leverage work**.
+
+---
+
+### 3️⃣ They create false “completion”
+
+Teams clean warnings to feel done.
+
+You are not optimizing for code elegance.
+You are optimizing for **behavioral truth**.
+
+---
+
+## THE RIGHT MOVE ON #5
+
+**Decision:**
+🟡 Log it.
+🟡 Tag it “non-blocking cleanup.”
+🟡 Revisit after Phase 2 or during stabilization.
+
+If Replit needs an answer, here’s the exact copy.
+
+---
+
+### 📌 COPY-PASTE RESPONSE FOR REPLIT (ON #5)
+
+```
+Decision on LSP diagnostics in routes.ts:
+
+We are intentionally not addressing the existing LSP diagnostics as part of Phase 1.
+
+Rationale:
+- They are pre-existing and unrelated to the signal → resolution → draft loop
+- They do not affect user-facing behavior or learning goals
+- Fixing them now would expand scope without increasing validated learning
+
+We will log them as a separate cleanup task to be addressed during a later stabilization pass.
+```
+
+---
+
+# FINAL EXECUTION SUMMARY
+
+You are doing this right because you are:
+
+* Resisting edge-case obsession
+* Protecting the core loop
+* Deferring non-leverage cleanup
+* Making *explicit architectural decisions*
+
+That’s founder behavior, not engineer drift.
+
+### Next correct move:
+
+Finish the **3-task fix** (Issues 1–3), then we re-run the test conversations.
+
+When you’re ready, we’ll tackle:
+
+> **How to represent “compound outcomes” without breaking signal simplicity**
+
+But not yet.
+
+You’re on the right track. Keep pressure on the core.

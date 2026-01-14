@@ -700,43 +700,18 @@ export async function registerRoutes(
         await storage.updatePerson(personId, { lastContact: new Date(occurredAt || Date.now()) }, ctx);
       }
       
-      // Process the interaction asynchronously (FORD extraction, draft generation)
+      // Process the interaction (FORD extraction, signal generation)
+      // Phase 1: Drafts are only created via signal resolution
       const { processInteraction } = await import("./conversation-processor");
       const processResult = await processInteraction(interaction.id, ctx);
-      let draftsCreated = processResult.draftsCreated || 0;
       
-      logger.info(`Voice memory: AI processing for interaction ${interaction.id}: ${draftsCreated} drafts`);
-      
-      // Always create a fallback draft if person exists but no AI drafts were generated
-      if (personId && draftsCreated === 0) {
-        try {
-          const person = await storage.getPerson(personId, ctx);
-          if (person) {
-            const firstName = person.name?.split(' ')[0] || 'there';
-            const draftContent = `Hi ${firstName},\n\nGreat connecting! ${transcript.slice(0, 200)}\n\nLooking forward to staying in touch.\n\nBest regards`;
-            
-            await storage.createGeneratedDraft({
-              personId,
-              interactionId: interaction.id,
-              type: 'email',
-              title: `Follow-up with ${person.name}`,
-              content: draftContent,
-              status: 'pending',
-              metadata: { source: 'voice_memory_fallback' }
-            }, ctx);
-            draftsCreated = 1;
-            logger.info(`Voice memory: Created fallback draft for ${person.name}`);
-          }
-        } catch (draftError) {
-          logger.warn('Voice memory: Draft creation skipped:', draftError);
-        }
-      }
+      logger.info(`Voice memory: AI processing for interaction ${interaction.id}, signal created: ${processResult.signalCreated || false}`);
       
       res.json({
         success: true,
         interactionId: interaction.id,
         processed: processResult.success,
-        draftsCreated,
+        signalCreated: processResult.signalCreated || false,
       });
     } catch (error: any) {
       console.error("Voice memory creation error:", error);
@@ -870,41 +845,16 @@ IMPORTANT: Infer the interaction type from context clues. If they say "left a vo
         }, ctx);
       }
 
-      // Process interaction and generate drafts if we have a person
-      let draftsCreated = 0;
+      // Process interaction for signal generation (Phase 1: drafts only via signal resolution)
+      let signalCreated = false;
       if (validatedPersonId && transcript.length >= 50) {
         try {
           const { processInteraction } = await import("./conversation-processor");
           const result = await processInteraction(interaction.id, ctx);
-          draftsCreated = result.draftsCreated || 0;
-          logger.info(`Quick log: AI processing completed for ${parsed.personName}: ${draftsCreated} drafts`);
+          signalCreated = result.signalCreated || false;
+          logger.info(`Quick log: AI processing completed for ${parsed.personName}, signal created: ${signalCreated}`);
         } catch (err) {
           logger.warn('Quick log: AI processing failed:', err);
-        }
-      }
-      
-      // Always create a fallback draft if person exists but no AI drafts were generated
-      if (validatedPersonId && draftsCreated === 0) {
-        try {
-          const person = await storage.getPerson(validatedPersonId, ctx);
-          if (person) {
-            const firstName = person.name?.split(' ')[0] || 'there';
-            const draftContent = `Hi ${firstName},\n\nGreat talking with you! ${parsed.summary || ''}\n\nLooking forward to staying in touch.\n\nBest regards`;
-            
-            await storage.createGeneratedDraft({
-              personId: validatedPersonId,
-              interactionId: interaction.id,
-              type: 'email',
-              title: `Follow-up with ${person.name}`,
-              content: draftContent,
-              status: 'pending',
-              metadata: { source: 'quick_voice_fallback', interactionType: detectedType }
-            }, ctx);
-            draftsCreated = 1;
-            logger.info(`Quick log: Created fallback draft for ${person.name}`);
-          }
-        } catch (draftError) {
-          logger.warn('Quick log: Draft creation skipped:', draftError);
         }
       }
 
@@ -918,7 +868,7 @@ IMPORTANT: Infer the interaction type from context clues. If they say "left a vo
         isNewContact: !validatedPersonId && parsed.personName,
         fordNotes: parsed.fordNotes,
         followUpCreated: parsed.followUpNeeded && parsed.suggestedFollowUp,
-        draftsCreated,
+        signalCreated,
       });
     } catch (error: any) {
       console.error("Quick voice log error:", error);
@@ -1934,16 +1884,16 @@ Respond with valid JSON only, no other text.`;
             }, ctx);
           }
           
-          // Use processInteraction for AI-powered draft generation
-          // Requires at least 50 chars of transcript/summary for AI drafts
-          let draftsCreated = 0;
+          // Phase 1: Use processInteraction for signal generation only
+          // Drafts are created via signal resolution, not auto-generated
           const contentLength = transcriptLength || summaryLength;
+          let signalCreated = false;
           
           if (contentLength >= 50) {
             try {
               const result = await processInteraction(interaction.id, ctx);
-              draftsCreated = result.draftsCreated || 0;
-              logger.info(`AI processing completed for interaction ${interaction.id}: ${draftsCreated} drafts created`);
+              signalCreated = result.signalCreated || false;
+              logger.info(`AI processing completed for interaction ${interaction.id}, signal created: ${signalCreated}`);
             } catch (processError) {
               logger.warn('AI processing failed:', processError);
             }
@@ -1951,30 +1901,8 @@ Respond with valid JSON only, no other text.`;
             logger.info(`Skipping AI processing - content too short (${contentLength} chars, need 50+)`);
           }
           
-          // Always create a fallback draft if AI didn't generate any
-          if (draftsCreated === 0) {
-            try {
-              const firstName = person.name?.split(' ')[0] || 'there';
-              const draftContent = `Hi ${firstName},\n\nIt was great connecting with you! Following up on our ${args.type}.\n\n${args.summary ? `Key points from our conversation:\n${args.summary}\n\n` : ''}Looking forward to staying in touch.\n\nBest regards`;
-              
-              await storage.createGeneratedDraft({
-                personId: args.personId,
-                interactionId: interaction.id,
-                type: 'email',
-                title: `Follow-up with ${person.name} after ${args.type}`,
-                content: draftContent,
-                status: 'pending',
-                metadata: { source: 'ai_assistant_fallback', interactionType: args.type }
-              }, ctx);
-              draftsCreated = 1;
-              logger.info(`Created fallback draft for ${person.name}`);
-            } catch (draftError) {
-              logger.warn('Draft creation skipped:', draftError);
-            }
-          }
-          
-          const draftMsg = draftsCreated > 0 ? ` ${draftsCreated} follow-up draft(s) generated.` : '';
-          return `Logged ${args.type} interaction for ${person.name}. Last contact date updated.${draftMsg}`;
+          const signalMsg = signalCreated ? ' A follow-up signal was created - check your Signals page.' : '';
+          return `Logged ${args.type} interaction for ${person.name}. Last contact date updated.${signalMsg}`;
         }
         
         case "update_interaction": {

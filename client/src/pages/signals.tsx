@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   MessageSquare,
@@ -12,12 +11,9 @@ import {
   X,
   Loader2,
   Clock,
-  Undo2,
-  Check,
   Zap,
   CheckSquare
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import type { Person, FollowUpSignal } from "@shared/schema";
@@ -40,22 +36,17 @@ const resolutionOptions = [
 function SignalCard({ 
   signal, 
   onResolve,
-  isResolving,
-  recentlyResolved,
-  onUndo
+  isResolving
 }: { 
   signal: SignalWithPerson;
   onResolve: (signalId: string, resolutionType: ResolutionType) => void;
   isResolving: boolean;
-  recentlyResolved?: { signalId: string; resolutionType: string; timestamp: number };
-  onUndo: (signalId: string) => void;
 }) {
   const person = signal.person;
-  const isThisRecentlyResolved = recentlyResolved?.signalId === signal.id;
   
   return (
     <Card 
-      className={`transition-all duration-300 ${isThisRecentlyResolved ? 'opacity-50 bg-green-50' : 'hover:shadow-md'}`}
+      className="transition-all duration-300 hover:shadow-md"
       data-testid={`signal-card-${signal.id}`}
     >
       <CardContent className="p-4">
@@ -97,51 +88,29 @@ function SignalCard({
           </div>
         </div>
         
-        {isThisRecentlyResolved ? (
-          <div className="flex items-center justify-between mt-4 pt-3 border-t">
-            <div className="flex items-center gap-2 text-green-700">
-              <Check className="h-4 w-4" />
-              <span className="text-sm font-medium">
-                Resolved: {recentlyResolved?.resolutionType}
-              </span>
-            </div>
+        <div className="flex items-center gap-2 mt-4 pt-3 border-t">
+          {resolutionOptions.map((option) => (
             <Button
+              key={option.type}
               variant="ghost"
               size="sm"
-              onClick={() => onUndo(signal.id)}
-              data-testid="undo-resolve"
+              className={`flex-1 ${option.color}`}
+              onClick={() => onResolve(signal.id, option.type)}
+              disabled={isResolving}
+              data-testid={`resolve-${option.type}`}
             >
-              <Undo2 className="h-4 w-4 mr-1" />
-              Undo
+              <option.icon className="h-4 w-4 mr-1" />
+              {option.label}
             </Button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 mt-4 pt-3 border-t">
-            {resolutionOptions.map((option) => (
-              <Button
-                key={option.type}
-                variant="ghost"
-                size="sm"
-                className={`flex-1 ${option.color}`}
-                onClick={() => onResolve(signal.id, option.type)}
-                disabled={isResolving}
-                data-testid={`resolve-${option.type}`}
-              >
-                <option.icon className="h-4 w-4 mr-1" />
-                {option.label}
-              </Button>
-            ))}
-          </div>
-        )}
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
 }
 
 export default function SignalsPage() {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [recentlyResolved, setRecentlyResolved] = useState<{ signalId: string; resolutionType: string; timestamp: number } | null>(null);
   
   const { data: signals = [], isLoading } = useQuery<SignalWithPerson[]>({
     queryKey: ["/api/signals"],
@@ -154,9 +123,11 @@ export default function SignalsPage() {
       return res.json();
     },
     onSuccess: (_, { signalId, resolutionType }) => {
+      // Always immediately refresh signals list
+      queryClient.invalidateQueries({ queryKey: ["/api/signals"] });
+      
       if (resolutionType === 'skip') {
-        // Skip: instant removal with 5-second undo toast
-        queryClient.invalidateQueries({ queryKey: ["/api/signals"] });
+        // Skip: 5-second undo toast
         sonnerToast("Signal skipped", {
           duration: 5000,
           action: {
@@ -165,28 +136,23 @@ export default function SignalsPage() {
           },
         });
       } else if (resolutionType === 'task') {
-        // Task: instant removal, invalidate tasks so Actions page shows the new task
-        queryClient.invalidateQueries({ queryKey: ["/api/signals"] });
+        // Task: invalidate tasks so Actions page shows the new task
         queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
         sonnerToast.success("Task created", {
           description: "View it in your Actions page",
         });
       } else {
-        // Other resolutions: show brief confirmation, then refresh
-        setRecentlyResolved({ signalId, resolutionType, timestamp: Date.now() });
+        // Draft resolutions (email, text, handwritten_note): refresh drafts list
         queryClient.invalidateQueries({ queryKey: ["/api/drafts"] });
-        const actionLabel = `${resolutionType} draft created`;
-        toast({
-          title: "Signal resolved",
-          description: actionLabel,
+        const draftTypeLabel = resolutionType === 'handwritten_note' ? 'handwritten note' : resolutionType;
+        sonnerToast.success(`${draftTypeLabel.charAt(0).toUpperCase() + draftTypeLabel.slice(1)} draft created`, {
+          description: "View it in your Drafts page",
         });
       }
     },
     onError: (error: any) => {
-      toast({
-        title: "Error resolving signal",
+      sonnerToast.error("Error resolving signal", {
         description: error.message,
-        variant: "destructive",
       });
     },
   });
@@ -197,44 +163,23 @@ export default function SignalsPage() {
       return res.json();
     },
     onSuccess: () => {
-      setRecentlyResolved(null);
       queryClient.invalidateQueries({ queryKey: ["/api/signals"] });
       sonnerToast.success("Undo successful", {
         description: "Signal restored to pending.",
       });
     },
     onError: (error: any) => {
-      toast({
-        title: "Undo failed",
+      sonnerToast.error("Undo failed", {
         description: error.message,
-        variant: "destructive",
       });
     },
   });
-  
-  useEffect(() => {
-    if (recentlyResolved) {
-      // For non-skip resolutions, refresh after 3 seconds (faster than before)
-      const timeout = setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ["/api/signals"] });
-        setRecentlyResolved(null);
-      }, 3000);
-      
-      return () => clearTimeout(timeout);
-    }
-  }, [recentlyResolved, queryClient]);
   
   const handleResolve = (signalId: string, resolutionType: ResolutionType) => {
     resolveMutation.mutate({ signalId, resolutionType });
   };
   
-  const handleUndo = (signalId: string) => {
-    undoMutation.mutate(signalId);
-  };
-  
-  const pendingSignals = signals.filter(s => 
-    s.status === 'pending' || recentlyResolved?.signalId === s.id
-  );
+  const pendingSignals = signals.filter(s => s.status === 'pending');
   
   return (
     <Layout>
@@ -283,8 +228,6 @@ export default function SignalsPage() {
                 signal={signal}
                 onResolve={handleResolve}
                 isResolving={resolveMutation.isPending}
-                recentlyResolved={recentlyResolved || undefined}
-                onUndo={handleUndo}
               />
             ))}
           </div>
