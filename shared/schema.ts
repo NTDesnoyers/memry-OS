@@ -858,6 +858,81 @@ export const generatedDraftsRelations = relations(generatedDrafts, ({ one }) => 
   }),
 }));
 
+/** Follow-Up Signals - Decision checkpoints created after interactions for user to resolve. */
+export const followUpSignals = pgTable("follow_up_signals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
+  personId: varchar("person_id").references(() => people.id),
+  interactionId: varchar("interaction_id").references(() => interactions.id),
+  reasoning: text("reasoning").notNull(), // e.g. "Phone call + A-contact + new job mentioned"
+  priorityScore: integer("priority_score").default(50), // 0-100, for ranking
+  status: text("status").notNull().default("pending"), // pending, resolved, expired
+  resolutionType: text("resolution_type"), // text, email, handwritten_note, skip (null if pending)
+  resolvedAt: timestamp("resolved_at"),
+  expiresAt: timestamp("expires_at").notNull(), // 7 days from creation
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("follow_up_signals_user_status_idx").on(table.userId, table.status),
+  index("follow_up_signals_expires_at_idx").on(table.expiresAt),
+]);
+
+export const insertFollowUpSignalSchema = createInsertSchema(followUpSignals).omit({
+  id: true,
+  userId: true,
+  resolvedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertFollowUpSignal = z.infer<typeof insertFollowUpSignalSchema>;
+export type FollowUpSignal = typeof followUpSignals.$inferSelect;
+
+// Relations for Follow-Up Signals
+export const followUpSignalsRelations = relations(followUpSignals, ({ one }) => ({
+  person: one(people, {
+    fields: [followUpSignals.personId],
+    references: [people.id],
+  }),
+  interaction: one(interactions, {
+    fields: [followUpSignals.interactionId],
+    references: [interactions.id],
+  }),
+}));
+
+/** Signal Outcomes - Internal tracking of follow-up effectiveness for learning. */
+export const signalOutcomes = pgTable("signal_outcomes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
+  signalId: varchar("signal_id").references(() => followUpSignals.id),
+  outcomeType: text("outcome_type").notNull(), // success, neutral, missed
+  nextInteractionId: varchar("next_interaction_id").references(() => interactions.id),
+  daysToResponse: integer("days_to_response"), // Days between action and next interaction
+  measuredAt: timestamp("measured_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertSignalOutcomeSchema = createInsertSchema(signalOutcomes).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+});
+
+export type InsertSignalOutcome = z.infer<typeof insertSignalOutcomeSchema>;
+export type SignalOutcome = typeof signalOutcomes.$inferSelect;
+
+// Relations for Signal Outcomes
+export const signalOutcomesRelations = relations(signalOutcomes, ({ one }) => ({
+  signal: one(followUpSignals, {
+    fields: [signalOutcomes.signalId],
+    references: [followUpSignals.id],
+  }),
+  nextInteraction: one(interactions, {
+    fields: [signalOutcomes.nextInteractionId],
+    references: [interactions.id],
+  }),
+}));
+
 // Voice Profile - Stores learned communication patterns from Nathan's conversations
 export const voiceProfile = pgTable("voice_profile", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

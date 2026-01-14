@@ -73,7 +73,9 @@ import {
   type DecisionTrace, type InsertDecisionTrace,
   type IssueReport, type InsertIssueReport,
   type AiUsageLog, type InsertAiUsageLog,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, interactionParticipants, aiConversations, households, generatedDrafts, voiceProfile, draftFeedback, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions, leads, observerSuggestions, observerPatterns, aiActions, savedContent, dailyDigests, userCoreProfile, dormantOpportunities, socialConnections, socialPosts, contextNodes, contextEdges, decisionTraces, issueReports, aiUsageLogs
+  type FollowUpSignal, type InsertFollowUpSignal,
+  type SignalOutcome, type InsertSignalOutcome,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, interactionParticipants, aiConversations, households, generatedDrafts, voiceProfile, draftFeedback, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions, leads, observerSuggestions, observerPatterns, aiActions, savedContent, dailyDigests, userCoreProfile, dormantOpportunities, socialConnections, socialPosts, contextNodes, contextEdges, decisionTraces, issueReports, aiUsageLogs, followUpSignals, signalOutcomes
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt, inArray } from "drizzle-orm";
@@ -295,6 +297,30 @@ export interface IStorage {
   getDraftFeedback(id: string, ctx?: TenantContext): Promise<DraftFeedback | undefined>;
   getUnprocessedDraftFeedback(ctx?: TenantContext): Promise<DraftFeedback[]>;
   updateDraftFeedback(id: string, feedback: Partial<InsertDraftFeedback>, ctx?: TenantContext): Promise<DraftFeedback | undefined>;
+  
+  // Follow-Up Signals - Decision checkpoints for relationship follow-ups
+  /** Get all pending signals, ranked by priority. */
+  getPendingFollowUpSignals(ctx?: TenantContext): Promise<(FollowUpSignal & { person?: Person })[]>;
+  /** Get signal by ID. */
+  getFollowUpSignal(id: string, ctx?: TenantContext): Promise<FollowUpSignal | undefined>;
+  /** Get signal for a specific person (one active signal per person). */
+  getFollowUpSignalByPerson(personId: string, ctx?: TenantContext): Promise<FollowUpSignal | undefined>;
+  /** Create a new signal (typically after interaction). */
+  createFollowUpSignal(signal: InsertFollowUpSignal, ctx?: TenantContext): Promise<FollowUpSignal>;
+  /** Resolve a signal (text, email, note, skip). */
+  resolveFollowUpSignal(id: string, resolutionType: string, ctx?: TenantContext): Promise<FollowUpSignal | undefined>;
+  /** Expire signals that have passed their expiresAt date. */
+  expireOldSignals(ctx?: TenantContext): Promise<number>;
+  /** Get signals resolved within a date range (for weekly review). */
+  getResolvedSignals(startDate: Date, endDate: Date, ctx?: TenantContext): Promise<FollowUpSignal[]>;
+  /** Get signal counts for weekly review (surfaced, resolved, expired). */
+  getSignalStats(startDate: Date, endDate: Date, ctx?: TenantContext): Promise<{ surfaced: number; resolved: number; expired: number; byResolutionType: Record<string, number> }>;
+  
+  // Signal Outcomes - Learning from follow-up effectiveness
+  /** Create outcome measurement. */
+  createSignalOutcome(outcome: InsertSignalOutcome, ctx?: TenantContext): Promise<SignalOutcome>;
+  /** Get outcomes for learning analysis. */
+  getSignalOutcomes(ctx?: TenantContext): Promise<SignalOutcome[]>;
   
   // Sync Logs
   getAllSyncLogs(): Promise<SyncLog[]>;
@@ -1718,6 +1744,138 @@ export class DatabaseStorage implements IStorage {
       .where(conditions)
       .returning();
     return updated || undefined;
+  }
+  
+  // Follow-Up Signals - Decision checkpoints
+  async getPendingFollowUpSignals(ctx?: TenantContext): Promise<(FollowUpSignal & { person?: Person })[]> {
+    const filter = this.getTenantFilter(followUpSignals, ctx);
+    const conditions = filter 
+      ? and(eq(followUpSignals.status, 'pending'), filter)
+      : eq(followUpSignals.status, 'pending');
+    
+    const signals = await db.select().from(followUpSignals)
+      .where(conditions)
+      .orderBy(desc(followUpSignals.priorityScore), desc(followUpSignals.createdAt));
+    
+    // Load person data for each signal
+    const signalsWithPerson = await Promise.all(signals.map(async (signal) => {
+      if (!signal.personId) return { ...signal, person: undefined };
+      const [person] = await db.select().from(people).where(eq(people.id, signal.personId));
+      return { ...signal, person: person || undefined };
+    }));
+    
+    return signalsWithPerson;
+  }
+  
+  async getFollowUpSignal(id: string, ctx?: TenantContext): Promise<FollowUpSignal | undefined> {
+    const filter = this.getTenantFilter(followUpSignals, ctx);
+    const conditions = filter ? and(eq(followUpSignals.id, id), filter) : eq(followUpSignals.id, id);
+    const [signal] = await db.select().from(followUpSignals).where(conditions);
+    return signal || undefined;
+  }
+  
+  async getFollowUpSignalByPerson(personId: string, ctx?: TenantContext): Promise<FollowUpSignal | undefined> {
+    const filter = this.getTenantFilter(followUpSignals, ctx);
+    const conditions = filter 
+      ? and(eq(followUpSignals.personId, personId), eq(followUpSignals.status, 'pending'), filter)
+      : and(eq(followUpSignals.personId, personId), eq(followUpSignals.status, 'pending'));
+    const [signal] = await db.select().from(followUpSignals).where(conditions);
+    return signal || undefined;
+  }
+  
+  async createFollowUpSignal(insertSignal: InsertFollowUpSignal, ctx?: TenantContext): Promise<FollowUpSignal> {
+    const userId = getEffectiveUserId(ctx);
+    const [signal] = await db
+      .insert(followUpSignals)
+      .values({ ...insertSignal, userId, updatedAt: new Date() })
+      .returning();
+    return signal;
+  }
+  
+  async resolveFollowUpSignal(id: string, resolutionType: string, ctx?: TenantContext): Promise<FollowUpSignal | undefined> {
+    const filter = this.getTenantFilter(followUpSignals, ctx);
+    const conditions = filter ? and(eq(followUpSignals.id, id), filter) : eq(followUpSignals.id, id);
+    const [updated] = await db
+      .update(followUpSignals)
+      .set({ 
+        status: 'resolved', 
+        resolutionType, 
+        resolvedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(conditions)
+      .returning();
+    return updated || undefined;
+  }
+  
+  async expireOldSignals(ctx?: TenantContext): Promise<number> {
+    const now = new Date();
+    const filter = this.getTenantFilter(followUpSignals, ctx);
+    const conditions = filter 
+      ? and(eq(followUpSignals.status, 'pending'), lte(followUpSignals.expiresAt, now), filter)
+      : and(eq(followUpSignals.status, 'pending'), lte(followUpSignals.expiresAt, now));
+    
+    const result = await db
+      .update(followUpSignals)
+      .set({ status: 'expired', updatedAt: new Date() })
+      .where(conditions)
+      .returning();
+    
+    return result.length;
+  }
+  
+  async getResolvedSignals(startDate: Date, endDate: Date, ctx?: TenantContext): Promise<FollowUpSignal[]> {
+    const filter = this.getTenantFilter(followUpSignals, ctx);
+    const conditions = filter 
+      ? and(
+          eq(followUpSignals.status, 'resolved'),
+          gte(followUpSignals.resolvedAt, startDate),
+          lte(followUpSignals.resolvedAt, endDate),
+          filter
+        )
+      : and(
+          eq(followUpSignals.status, 'resolved'),
+          gte(followUpSignals.resolvedAt, startDate),
+          lte(followUpSignals.resolvedAt, endDate)
+        );
+    return await db.select().from(followUpSignals).where(conditions).orderBy(desc(followUpSignals.resolvedAt));
+  }
+  
+  async getSignalStats(startDate: Date, endDate: Date, ctx?: TenantContext): Promise<{ surfaced: number; resolved: number; expired: number; byResolutionType: Record<string, number> }> {
+    const filter = this.getTenantFilter(followUpSignals, ctx);
+    const dateFilter = and(gte(followUpSignals.createdAt, startDate), lte(followUpSignals.createdAt, endDate));
+    const conditions = filter ? and(dateFilter, filter) : dateFilter;
+    
+    const signals = await db.select().from(followUpSignals).where(conditions);
+    
+    const surfaced = signals.length;
+    const resolved = signals.filter(s => s.status === 'resolved').length;
+    const expired = signals.filter(s => s.status === 'expired').length;
+    
+    const byResolutionType: Record<string, number> = {};
+    signals.filter(s => s.resolutionType).forEach(s => {
+      byResolutionType[s.resolutionType!] = (byResolutionType[s.resolutionType!] || 0) + 1;
+    });
+    
+    return { surfaced, resolved, expired, byResolutionType };
+  }
+  
+  // Signal Outcomes
+  async createSignalOutcome(insertOutcome: InsertSignalOutcome, ctx?: TenantContext): Promise<SignalOutcome> {
+    const userId = getEffectiveUserId(ctx);
+    const [outcome] = await db
+      .insert(signalOutcomes)
+      .values({ ...insertOutcome, userId })
+      .returning();
+    return outcome;
+  }
+  
+  async getSignalOutcomes(ctx?: TenantContext): Promise<SignalOutcome[]> {
+    const filter = this.getTenantFilter(signalOutcomes, ctx);
+    const conditions = filter ? filter : undefined;
+    return conditions 
+      ? await db.select().from(signalOutcomes).where(conditions).orderBy(desc(signalOutcomes.createdAt))
+      : await db.select().from(signalOutcomes).orderBy(desc(signalOutcomes.createdAt));
   }
   
   // Sync Logs
