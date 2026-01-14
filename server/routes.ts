@@ -5666,9 +5666,34 @@ Return ONLY valid JSON, no explanations.`
         return res.status(400).json({ message: "Invalid resolution type. Must be: text, email, handwritten_note, or skip" });
       }
       
+      // Get signal first to have context for draft generation
+      const existingSignal = await storage.getFollowUpSignal(req.params.id, ctx);
+      if (!existingSignal) {
+        return res.status(404).json({ message: "Signal not found" });
+      }
+      
       const signal = await storage.resolveFollowUpSignal(req.params.id, resolutionType, ctx);
       if (!signal) {
         return res.status(404).json({ message: "Signal not found" });
+      }
+      
+      // If resolution is text, email, or handwritten_note, create a draft
+      if (resolutionType !== 'skip' && existingSignal.personId) {
+        try {
+          const person = await storage.getPerson(existingSignal.personId, ctx);
+          if (person) {
+            const { generateFollowUpDraftFromSignal } = await import("./signal-draft-generator");
+            await generateFollowUpDraftFromSignal(
+              existingSignal, 
+              person, 
+              resolutionType as 'text' | 'email' | 'handwritten_note',
+              ctx
+            );
+          }
+        } catch (draftError: any) {
+          console.error("Failed to generate draft from signal:", draftError.message);
+          // Don't fail the resolution, just log the error
+        }
       }
       
       res.json(signal);

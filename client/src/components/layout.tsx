@@ -115,9 +115,10 @@ interface NavContentProps {
   founderMode: boolean;
   showModeToggle: boolean;
   authUsername?: string;
+  signalsCount?: number;
 }
 
-function NavContent({ location, setOpen, userName, userInitials, brokerage, headshotUrl, collapsed, onToggleCollapse, pinned, onTogglePin, navItems, profileMenuItems, founderMode, showModeToggle, authUsername }: NavContentProps) {
+function NavContent({ location, setOpen, userName, userInitials, brokerage, headshotUrl, collapsed, onToggleCollapse, pinned, onTogglePin, navItems, profileMenuItems, founderMode, showModeToggle, authUsername, signalsCount }: NavContentProps) {
   return (
     <div className={cn("flex flex-col h-full bg-sidebar border-r border-sidebar-border text-sidebar-foreground transition-all duration-200", collapsed && "w-16")}>
       <div className={cn("p-6 border-b border-sidebar-border", collapsed && "p-3 flex justify-center")}>
@@ -161,6 +162,7 @@ function NavContent({ location, setOpen, userName, userInitials, brokerage, head
       <nav className={cn("flex-1 p-3 space-y-1 overflow-y-auto", collapsed && "p-2")}>
         {navItems.map((item) => {
           const isActive = location === item.href;
+          const showBadge = item.href === '/signals' && signalsCount && signalsCount > 0;
           return (
             <Link key={item.href} href={item.href}>
               <Button
@@ -174,7 +176,17 @@ function NavContent({ location, setOpen, userName, userInitials, brokerage, head
                 title={collapsed ? item.name : undefined}
               >
                 <item.icon className="h-5 w-5 flex-shrink-0" />
-                {!collapsed && <span className="truncate">{item.name}</span>}
+                {!collapsed && (
+                  <span className="truncate flex-1 text-left">{item.name}</span>
+                )}
+                {showBadge && !collapsed && (
+                  <Badge variant="secondary" className="ml-auto text-xs h-5 min-w-5 px-1.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                    {signalsCount > 99 ? '99+' : signalsCount}
+                  </Badge>
+                )}
+                {showBadge && collapsed && (
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-amber-500 rounded-full" />
+                )}
               </Button>
             </Link>
           );
@@ -397,6 +409,12 @@ export default function LayoutComponent({ children }: { children: React.ReactNod
     staleTime: 5 * 60 * 1000,
   });
   
+  const { data: pendingSignals = [] } = useQuery<{ id: string }[]>({
+    queryKey: ["/api/signals"],
+    staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,
+  });
+  
   const heartbeatSent = useRef(false);
   useEffect(() => {
     if (!heartbeatSent.current) {
@@ -431,7 +449,8 @@ export default function LayoutComponent({ children }: { children: React.ReactNod
     profileMenuItems,
     founderMode,
     showModeToggle,
-    authUsername
+    authUsername,
+    signalsCount: pendingSignals.length
   };
 
   const sidebarWidth = collapsed ? 'w-16' : 'w-64';

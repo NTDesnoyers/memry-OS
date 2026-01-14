@@ -55,7 +55,7 @@ type GeneratedDraft = {
   id: string;
   personId: string | null;
   interactionId: string | null;
-  type: "email" | "handwritten_note" | "task";
+  type: "email" | "handwritten_note" | "task" | "text";
   content: string;
   subject: string | null;
   status: string;
@@ -67,6 +67,7 @@ type GeneratedDraft = {
 
 const draftTypes = [
   { value: "all", label: "All", icon: Sparkles },
+  { value: "text", label: "Texts", icon: Send },
   { value: "email", label: "Emails", icon: Mail },
   { value: "handwritten_note", label: "Notes", icon: FileText },
   { value: "task", label: "Tasks", icon: CheckSquare },

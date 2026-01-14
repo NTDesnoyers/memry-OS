@@ -1,6 +1,6 @@
 import { db } from './db';
-import { systemEvents, agentActions } from '@shared/schema';
-import { lt, sql } from 'drizzle-orm';
+import { systemEvents, agentActions, followUpSignals } from '@shared/schema';
+import { lt, sql, and, eq, lte } from 'drizzle-orm';
 import { createLogger } from './logger';
 
 const logger = createLogger('Maintenance');
@@ -83,11 +83,35 @@ export async function vacuumTables(): Promise<void> {
   logger.info('VACUUM complete');
 }
 
+export async function expireSignals(): Promise<number> {
+  const now = new Date();
+  
+  const result = await db
+    .update(followUpSignals)
+    .set({ status: 'expired', updatedAt: new Date() })
+    .where(
+      and(
+        eq(followUpSignals.status, 'pending'),
+        lte(followUpSignals.expiresAt, now)
+      )
+    )
+    .returning();
+  
+  if (result.length > 0) {
+    logger.info(`Expired ${result.length} follow-up signals`);
+  }
+  
+  return result.length;
+}
+
 let cleanupInterval: NodeJS.Timeout | null = null;
+
+let signalExpirationInterval: NodeJS.Timeout | null = null;
 
 export function startMaintenanceScheduler(retentionDays: number = 7): void {
   logger.info(`Starting maintenance scheduler (retention: ${retentionDays} days)`);
   
+  // Daily event cleanup
   cleanupInterval = setInterval(async () => {
     try {
       await cleanupOldEvents(retentionDays);
@@ -96,9 +120,20 @@ export function startMaintenanceScheduler(retentionDays: number = 7): void {
     }
   }, 24 * 60 * 60 * 1000);
   
+  // Hourly signal expiration check
+  signalExpirationInterval = setInterval(async () => {
+    try {
+      await expireSignals();
+    } catch (error) {
+      logger.error('Signal expiration failed', error);
+    }
+  }, 60 * 60 * 1000); // Every hour
+  
+  // Initial runs after a delay
   setTimeout(async () => {
     try {
       await cleanupOldEvents(retentionDays);
+      await expireSignals();
     } catch (error) {
       logger.error('Initial maintenance cleanup failed', error);
     }
@@ -109,6 +144,10 @@ export function stopMaintenanceScheduler(): void {
   if (cleanupInterval) {
     clearInterval(cleanupInterval);
     cleanupInterval = null;
-    logger.info('Maintenance scheduler stopped');
   }
+  if (signalExpirationInterval) {
+    clearInterval(signalExpirationInterval);
+    signalExpirationInterval = null;
+  }
+  logger.info('Maintenance scheduler stopped');
 }
