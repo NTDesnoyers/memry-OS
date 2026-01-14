@@ -98,7 +98,7 @@ export async function expireSignals(): Promise<number> {
     .returning();
   
   if (result.length > 0) {
-    logger.info(`Expired ${result.length} follow-up signals`);
+    logger.info(`Expired ${result.length} follow-up signals across all tenants`);
   }
   
   return result.length;

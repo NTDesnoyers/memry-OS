@@ -15,7 +15,10 @@ import {
   TrendingUp,
   Target,
   Loader2,
-  Heart
+  Heart,
+  Zap,
+  CheckCircle,
+  Clock
 } from "lucide-react";
 import { startOfWeek, endOfWeek, format, isWithinInterval, parseISO, addDays, addWeeks, isSameDay } from "date-fns";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -94,6 +97,23 @@ export default function WeeklyReview() {
   });
 
   const { weekStart, weekEnd } = getWeekBounds(weekOffset);
+  
+  type SignalStats = {
+    surfaced: number;
+    resolved: number;
+    expired: number;
+    byResolutionType: Record<string, number>;
+  };
+  
+  const { data: signalStats } = useQuery<SignalStats>({
+    queryKey: ["/api/signals/stats", weekStart.toISOString(), weekEnd.toISOString()],
+    queryFn: async () => {
+      const res = await fetch(`/api/signals/stats?startDate=${weekStart.toISOString()}&endDate=${weekEnd.toISOString()}`);
+      if (!res.ok) throw new Error("Failed to fetch signal stats");
+      return res.json();
+    },
+    staleTime: 60 * 1000,
+  });
 
   // All interactions this week (for display purposes)
   const weeklyInteractions = useMemo(() => {
@@ -269,7 +289,55 @@ export default function WeeklyReview() {
                 </div>
               </CardContent>
             </Card>
-
+            
+            <Card className="border-none shadow-lg bg-gradient-to-br from-amber-50 to-orange-50">
+              <CardHeader className="pb-2">
+                <CardTitle className="font-serif flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-amber-600" />
+                  Follow-Up Signals
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {signalStats ? (
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                        <Zap className="h-3.5 w-3.5" /> Surfaced
+                      </span>
+                      <span className="font-semibold text-amber-700">{signalStats.surfaced}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                        <CheckCircle className="h-3.5 w-3.5" /> Resolved
+                      </span>
+                      <span className="font-semibold text-emerald-600">{signalStats.resolved}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5" /> Expired
+                      </span>
+                      <span className="font-semibold text-gray-500">{signalStats.expired}</span>
+                    </div>
+                    {signalStats.resolved > 0 && Object.keys(signalStats.byResolutionType).length > 0 && (
+                      <div className="pt-2 border-t">
+                        <p className="text-xs text-muted-foreground mb-2">Actions Taken</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {Object.entries(signalStats.byResolutionType).map(([type, count]) => (
+                            <Badge key={type} variant="secondary" className="text-xs">
+                              {type === 'text' ? 'Text' : type === 'email' ? 'Email' : type === 'handwritten_note' ? 'Note' : type}: {count}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-20 text-muted-foreground text-sm">
+                    No signals yet
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           <Card className="border-none shadow-md mb-8">
