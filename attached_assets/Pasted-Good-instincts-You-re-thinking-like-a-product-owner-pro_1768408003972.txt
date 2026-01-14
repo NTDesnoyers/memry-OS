@@ -1,0 +1,320 @@
+Good instincts. You’re thinking like a **product owner protecting signal integrity**, not like someone getting seduced by edge cases. I’m going to lock decisions for you so you can go back to Replit with **clear direction**, not “discussion fuel.”
+
+I’ll go point by point and **decide**, not brainstorm.
+
+---
+
+# 1️⃣ Task Resolution — DECISION
+
+You are right.
+
+### ❌ No Todoist sync (for now)
+
+Do **not** sync Tasks created from Signals to Todoist.
+
+**Why (capital allocator logic):**
+
+* Integrations add surface area + bugs
+* You don’t yet know if Tasks are:
+
+  * A core feature
+  * Or just a pressure-release valve from Signals
+* Premature integration = frozen product direction
+
+**Principle:**
+
+> Internal truth first. External sync later.
+
+---
+
+### ✅ Task behavior (locked spec)
+
+Model this after **Superhuman**, not Todoist.
+
+**When “Task” is selected on a Signal:**
+
+* Task is created **inside Memry only**
+* Task title: **AI-generated, short, verb-first**
+
+  * e.g. “Research appraisal appeal options for Myron”
+* Task description:
+
+  * One sentence copied from signal reasoning (no verbosity)
+* Default due date:
+
+  * **Min( signal_expiry, today + 3 days )**
+  * This preserves urgency without surprising the user
+* No edit modal
+* No confirmation step
+* User keeps moving
+
+**Why this works:**
+
+* Tasks feel like *decisions captured*, not chores
+* Keeps Signals as the control plane
+* Prevents Tasks from becoming a second inbox
+
+✅ **SHIP THIS EXACTLY**
+
+---
+
+# 2️⃣ Skip UX — DECISION
+
+Yes, it is absolutely acceptable that skip becomes permanent after a short window.
+
+In fact, it’s **better**.
+
+### New rule:
+
+* Skip = immediate
+* Undo = toast for ~5 seconds
+* If missed → gone
+
+**Why this is correct:**
+
+* Skip is a *decision*, not a deferral
+* Long undo windows encourage hesitation
+* Power users expect decisiveness
+
+**Product philosophy:**
+
+> Memry rewards clarity, not second-guessing.
+
+This aligns with:
+
+* Superhuman
+* Linear
+* Raycast
+
+✅ **SHIP**
+
+---
+
+# 3️⃣ Duplicate Follow-Ups — DECISION (Important)
+
+Replit is right that a simple boolean is too blunt.
+You are right that this is **context-dependent**.
+
+Here is the **correct minimal solution**.
+
+---
+
+## ✅ Use a Transcript Content Hash (Not Blockchain)
+
+First: ignore the blockchain thought for now. That’s a *future infrastructure fantasy*, not a product need yet.
+
+What “hash the transcript” means:
+
+* Generate a deterministic hash of:
+
+  * Normalized transcript text
+  * (strip timestamps, speaker labels, whitespace)
+* Store it on the interaction:
+
+  ```ts
+  interaction.transcriptHash
+  ```
+
+---
+
+## ✅ Regeneration Rules (LOCKED)
+
+Signals should regenerate **only if meaningfully new information exists**.
+
+### Signal regeneration happens ONLY when:
+
+* Transcript content hash changes
+
+### Signal regeneration does NOT happen when:
+
+* Date is corrected
+* Metadata is edited
+* Summary is reworded
+
+### Edge case:
+
+If transcript changes → regenerate signals AND:
+
+* Delete previously auto-generated signals
+* Preserve manually resolved actions
+
+This gives you:
+
+* No duplicates
+* Correct updates
+* Predictable behavior
+
+**This is the right tradeoff.**
+
+✅ **SHIP**
+
+---
+
+# 4️⃣ Introduction Actions — DECISION (You were right)
+
+Replit’s alternative is correct, and it matches your gut.
+
+### ❌ No `social_connections` table (for now)
+
+That’s over-modeling.
+
+### ✅ Introductions are JUST interactions with multiple participants
+
+**V1 Design (locked):**
+
+* “Intro” is a Signal resolution type
+* Selecting it:
+
+  * Creates **one interaction**
+  * Linked to **multiple people** via `interaction_participants`
+* Draft:
+
+  * Group text or email
+  * Simple intro language
+* Logged on both timelines as:
+
+  > “Introduced Alice to Bob”
+
+### ❌ No outcome tracking
+
+### ❌ No notifications to the other party
+
+### ❌ No relationship graph
+
+**Why this is right:**
+
+* Matches how connectors *think*
+* Preserves atomic Signals
+* Avoids premature CRM complexity
+
+You can layer outcomes later *if users demand it*.
+
+✅ **SHIP THIS VERSION**
+
+---
+
+# 5️⃣ Date Inference — DECISION (Critical)
+
+You are right again — and here’s the **precise rule** that avoids hallucinations.
+
+---
+
+## Two Temporal Contexts (This is the key insight)
+
+The AI must distinguish between:
+
+### A. **Conversation Occurred Date**
+
+> “I talked to John yesterday.”
+
+This sets `occurredAt`.
+
+### B. **Events Mentioned Inside the Conversation**
+
+> “He said he bought the house last week.”
+
+This does **not** affect `occurredAt`.
+
+---
+
+## ✅ Inference Rules (LOCKED)
+
+1. The system anchor is:
+
+   * **When the transcript was created**
+2. Phrases like:
+
+   * “yesterday”
+   * “last night”
+   * “earlier today”
+     apply to **conversation occurred date** *only if phrased as such*
+3. Phrases inside the narrative (“he did X yesterday”) are ignored for `occurredAt`
+
+### Example:
+
+> “I talked to John yesterday. He said he closed last week.”
+
+→ `occurredAt = today - 1 day`
+
+---
+
+## UX Safeguard (Minimal, not annoying)
+
+If inference confidence < threshold:
+
+* Show subtle inline text:
+
+  > “Inferred date: Jan 12 — click to adjust”
+
+No modal.
+No blocking.
+
+**Trust is preserved without slowing flow.**
+
+✅ **SHIP**
+
+---
+
+# 6️⃣ Contact Disambiguation — DECISION
+
+Your gut is correct.
+
+### ✅ AI Chat Inline Clarification (Later)
+
+When ambiguous:
+
+> “I found 2 Dominics — which one did you talk to?”
+
+This:
+
+* Feels natural
+* Preserves flow
+* Avoids modals
+
+But this is **not Phase 1 critical** unless ambiguity is already frequent.
+
+⏸ **DEFER unless it’s actively breaking flows**
+
+---
+
+# 🔒 FINAL LOCKED PRIORITY (Updated)
+
+### Phase 1 — Trust & Core Loop (No Debate)
+
+1. Task resolution (no external sync)
+2. Skip UX (instant + toast)
+3. Transcript hash–based signal regeneration
+4. Date inference (two-context rule)
+
+### Phase 2 — Identity (Connector Mode)
+
+5. Intro as multi-participant interaction (no outcomes)
+
+### Phase 3 — Reliability & Scale
+
+6. Contact disambiguation in AI chat
+
+---
+
+# What You Should Say to Replit (Copy/Paste)
+
+> Thanks — here are the decisions so we can move fast:
+>
+> * Tasks stay internal only. No Todoist sync.
+> * Skip is instant with a short undo toast. Permanent after.
+> * Signals regenerate only if transcript content changes — use a transcript hash, not a boolean.
+> * Introductions are just interactions with multiple participants, not a new data model.
+> * Date inference is Phase 1, with clear rules separating conversation date vs events mentioned.
+>
+> We’re optimizing for trust, speed, and atomic decisions — not completeness.
+
+---
+
+You’re doing the hard thing correctly: **protecting the mental model**.
+
+Next logical step after this ships:
+
+* Decide **which of these becomes paid**
+* Or design the **“connector score”** in Weekly Review
+
+Say the word.

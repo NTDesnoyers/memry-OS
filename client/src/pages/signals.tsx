@@ -14,9 +14,11 @@ import {
   Clock,
   Undo2,
   Check,
-  Zap
+  Zap,
+  CheckSquare
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import type { Person, FollowUpSignal } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -25,12 +27,13 @@ import { Link } from "wouter";
 
 type SignalWithPerson = FollowUpSignal & { person?: Person };
 
-type ResolutionType = 'text' | 'email' | 'handwritten_note' | 'skip';
+type ResolutionType = 'text' | 'email' | 'handwritten_note' | 'task' | 'skip';
 
 const resolutionOptions = [
   { type: 'text' as const, label: 'Text', icon: MessageSquare, color: 'bg-green-50 text-green-700 hover:bg-green-100' },
   { type: 'email' as const, label: 'Email', icon: Mail, color: 'bg-blue-50 text-blue-700 hover:bg-blue-100' },
   { type: 'handwritten_note' as const, label: 'Note', icon: FileText, color: 'bg-amber-50 text-amber-700 hover:bg-amber-100' },
+  { type: 'task' as const, label: 'Task', icon: CheckSquare, color: 'bg-purple-50 text-purple-700 hover:bg-purple-100' },
   { type: 'skip' as const, label: 'Skip', icon: X, color: 'bg-gray-50 text-gray-500 hover:bg-gray-100' },
 ];
 
@@ -151,11 +154,33 @@ export default function SignalsPage() {
       return res.json();
     },
     onSuccess: (_, { signalId, resolutionType }) => {
-      setRecentlyResolved({ signalId, resolutionType, timestamp: Date.now() });
-      toast({
-        title: "Signal resolved",
-        description: `Marked as ${resolutionType}. Undo available for 10 seconds.`,
-      });
+      if (resolutionType === 'skip') {
+        // Skip: instant removal with 5-second undo toast
+        queryClient.invalidateQueries({ queryKey: ["/api/signals"] });
+        sonnerToast("Signal skipped", {
+          duration: 5000,
+          action: {
+            label: "Undo",
+            onClick: () => undoMutation.mutate(signalId),
+          },
+        });
+      } else if (resolutionType === 'task') {
+        // Task: instant removal, invalidate tasks so Actions page shows the new task
+        queryClient.invalidateQueries({ queryKey: ["/api/signals"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+        sonnerToast.success("Task created", {
+          description: "View it in your Actions page",
+        });
+      } else {
+        // Other resolutions: show brief confirmation, then refresh
+        setRecentlyResolved({ signalId, resolutionType, timestamp: Date.now() });
+        queryClient.invalidateQueries({ queryKey: ["/api/drafts"] });
+        const actionLabel = `${resolutionType} draft created`;
+        toast({
+          title: "Signal resolved",
+          description: actionLabel,
+        });
+      }
     },
     onError: (error: any) => {
       toast({
@@ -174,8 +199,7 @@ export default function SignalsPage() {
     onSuccess: () => {
       setRecentlyResolved(null);
       queryClient.invalidateQueries({ queryKey: ["/api/signals"] });
-      toast({
-        title: "Undo successful",
+      sonnerToast.success("Undo successful", {
         description: "Signal restored to pending.",
       });
     },
@@ -190,10 +214,11 @@ export default function SignalsPage() {
   
   useEffect(() => {
     if (recentlyResolved) {
+      // For non-skip resolutions, refresh after 3 seconds (faster than before)
       const timeout = setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ["/api/signals"] });
         setRecentlyResolved(null);
-      }, 10000);
+      }, 3000);
       
       return () => clearTimeout(timeout);
     }

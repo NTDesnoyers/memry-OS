@@ -725,6 +725,7 @@ export const interactions = pgTable("interactions", {
   title: text("title"),
   summary: text("summary"),
   transcript: text("transcript"),
+  transcriptHash: text("transcript_hash"), // Hash of normalized transcript for duplicate detection
   externalLink: text("external_link"), // Fathom link, etc.
   externalId: text("external_id"), // ID from external system for deduplication
   duration: integer("duration"), // minutes

@@ -5656,17 +5656,17 @@ Return ONLY valid JSON, no explanations.`
     }
   });
   
-  // Resolve a signal (text, email, handwritten_note, skip)
+  // Resolve a signal (text, email, handwritten_note, task, skip)
   app.post("/api/signals/:id/resolve", async (req, res) => {
     try {
       const ctx = getTenantContext(req);
       const { resolutionType } = req.body;
       
-      if (!resolutionType || !['text', 'email', 'handwritten_note', 'skip'].includes(resolutionType)) {
-        return res.status(400).json({ message: "Invalid resolution type. Must be: text, email, handwritten_note, or skip" });
+      if (!resolutionType || !['text', 'email', 'handwritten_note', 'task', 'skip'].includes(resolutionType)) {
+        return res.status(400).json({ message: "Invalid resolution type. Must be: text, email, handwritten_note, task, or skip" });
       }
       
-      // Get signal first to have context for draft generation
+      // Get signal first to have context for draft/task generation
       const existingSignal = await storage.getFollowUpSignal(req.params.id, ctx);
       if (!existingSignal) {
         return res.status(404).json({ message: "Signal not found" });
@@ -5688,8 +5688,21 @@ Return ONLY valid JSON, no explanations.`
         }
       }
       
+      // Handle task resolution - create task instead of draft
+      if (resolutionType === 'task' && existingSignal.personId) {
+        try {
+          const person = await storage.getPerson(existingSignal.personId, ctx);
+          if (person) {
+            const { generateTaskFromSignal } = await import("./signal-task-generator");
+            await generateTaskFromSignal(existingSignal, person, ctx);
+          }
+        } catch (taskError: any) {
+          console.error("Failed to generate task from signal:", taskError.message);
+          // Don't fail the resolution, just log the error
+        }
+      }
       // If resolution is text, email, or handwritten_note, create a draft
-      if (resolutionType !== 'skip' && existingSignal.personId) {
+      else if (resolutionType !== 'skip' && resolutionType !== 'task' && existingSignal.personId) {
         try {
           const person = await storage.getPerson(existingSignal.personId, ctx);
           if (person) {

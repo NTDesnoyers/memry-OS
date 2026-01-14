@@ -2,7 +2,9 @@ import OpenAI from "openai";
 import { storage, type TenantContext } from "./storage";
 import type { Interaction, Person, AIExtractedData, InsertGeneratedDraft, VoiceProfile, ContentTopic, InsertFollowUpSignal, InsertExperience, Experience } from "@shared/schema";
 import { buildDraftGenerationPrompt } from "./prompts";
-import { addDays } from "date-fns";
+import { addDays, differenceInHours } from "date-fns";
+import { hashTranscript } from "./transcript-hash";
+import { inferConversationDate } from "./date-inference";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -1484,12 +1486,49 @@ export async function processInteraction(interactionId: string, ctx?: TenantCont
   experiencesExtracted?: number;
   voicePatternsExtracted?: boolean;
   contentTopicsFound?: number;
+  skippedDueToHash?: boolean;
+  dateInferred?: { date: string; confidence: string; reasoning: string };
   error?: string;
 }> {
   try {
     const interaction = await storage.getInteraction(interactionId, ctx);
     if (!interaction) {
       return { success: false, error: "Interaction not found" };
+    }
+
+    // Compute transcript hash for duplicate detection
+    const currentHash = hashTranscript(interaction.transcript);
+    const previousHash = interaction.transcriptHash;
+    const hashChanged = currentHash !== previousHash;
+    
+    // If hash hasn't changed and we've processed before, skip signal generation
+    const skipSignalGeneration = !hashChanged && previousHash !== null;
+    if (skipSignalGeneration) {
+      console.log(`[ProcessInteraction] Skipping signal generation - transcript unchanged (hash: ${currentHash})`);
+    }
+    
+    // Date inference: if interaction was created recently and has transcript, try to infer actual date
+    // Only do this for new/recently created interactions to avoid re-inferring old data
+    const hoursSinceCreation = differenceInHours(new Date(), new Date(interaction.createdAt));
+    let inferredDateInfo: { inferredDate: Date | null; confidence: string; reasoning: string } | null = null;
+    
+    if (hoursSinceCreation <= 24 && interaction.transcript && interaction.transcript.length >= 100) {
+      try {
+        const dateResult = await inferConversationDate(interaction.transcript, new Date(interaction.createdAt));
+        if (dateResult.inferredDate && (dateResult.confidence === 'high' || dateResult.confidence === 'medium')) {
+          const currentOccurredAt = new Date(interaction.occurredAt);
+          const daysDiff = Math.abs(dateResult.inferredDate.getTime() - currentOccurredAt.getTime()) / (1000 * 60 * 60 * 24);
+          
+          // Only update if inferred date is significantly different (more than 0.5 days)
+          if (daysDiff > 0.5) {
+            console.log(`[DateInference] Updating occurredAt from ${currentOccurredAt.toISOString()} to ${dateResult.inferredDate.toISOString()} (${dateResult.reasoning})`);
+            await storage.updateInteraction(interaction.id, { occurredAt: dateResult.inferredDate }, ctx);
+            inferredDateInfo = dateResult;
+          }
+        }
+      } catch (e) {
+        console.warn('[DateInference] Failed to infer date (non-blocking):', e);
+      }
     }
 
     const person = interaction.personId 
@@ -1620,16 +1659,22 @@ export async function processInteraction(interactionId: string, ctx?: TenantCont
 
       // Create Follow-Up Signal instead of auto-generating drafts
       // Only one active signal per person - check if one already exists
+      // Skip signal generation if transcript hash unchanged (duplicate prevention)
       const existingSignal = await storage.getFollowUpSignalByPerson(person.id, ctx);
       let signalCreated = false;
       
-      if (!existingSignal) {
+      if (!existingSignal && !skipSignalGeneration) {
         // Pass experiences to signal creation for meaning-based ranking
         const signal = await createFollowUpSignal(interaction, person, extractedData, ctx, savedExperiences);
         if (signal) {
           await storage.createFollowUpSignal(signal, ctx);
           signalCreated = true;
         }
+      }
+      
+      // Update interaction with transcript hash to prevent future duplicate processing
+      if (currentHash && currentHash !== previousHash) {
+        await storage.updateInteraction(interaction.id, { transcriptHash: currentHash }, ctx);
       }
 
       return {
@@ -1640,15 +1685,36 @@ export async function processInteraction(interactionId: string, ctx?: TenantCont
         experiencesExtracted: savedExperiences.length,
         voicePatternsExtracted,
         contentTopicsFound,
+        skippedDueToHash: skipSignalGeneration,
+        ...(inferredDateInfo && inferredDateInfo.inferredDate && {
+          dateInferred: { 
+            date: inferredDateInfo.inferredDate.toISOString(), 
+            confidence: inferredDateInfo.confidence, 
+            reasoning: inferredDateInfo.reasoning 
+          }
+        }),
       };
     }
 
+    // Update interaction with transcript hash even when no person linked
+    if (currentHash && currentHash !== previousHash) {
+      await storage.updateInteraction(interaction.id, { transcriptHash: currentHash }, ctx);
+    }
+    
     return {
       success: true,
       extractedData,
       draftsCreated: 0,
       voicePatternsExtracted,
       contentTopicsFound,
+      skippedDueToHash: skipSignalGeneration,
+      ...(inferredDateInfo && inferredDateInfo.inferredDate && {
+        dateInferred: { 
+          date: inferredDateInfo.inferredDate.toISOString(), 
+          confidence: inferredDateInfo.confidence, 
+          reasoning: inferredDateInfo.reasoning 
+        }
+      }),
     };
   } catch (error) {
     console.error("Error processing interaction:", error);
