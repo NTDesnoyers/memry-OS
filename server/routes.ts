@@ -5677,6 +5677,17 @@ Return ONLY valid JSON, no explanations.`
         return res.status(404).json({ message: "Signal not found" });
       }
       
+      // If signal has a linked experience, mark it as acknowledged
+      // This is critical for closing the meaning loop and stopping repeat nagging
+      if (existingSignal.experienceId) {
+        try {
+          await storage.acknowledgeExperience(existingSignal.experienceId, ctx);
+        } catch (e) {
+          console.warn("Failed to acknowledge experience:", e);
+          // Non-blocking - don't fail resolution
+        }
+      }
+      
       // If resolution is text, email, or handwritten_note, create a draft
       if (resolutionType !== 'skip' && existingSignal.personId) {
         try {

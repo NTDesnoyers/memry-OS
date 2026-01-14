@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { storage, type TenantContext } from "./storage";
-import type { Interaction, Person, AIExtractedData, InsertGeneratedDraft, VoiceProfile, ContentTopic, InsertFollowUpSignal } from "@shared/schema";
+import type { Interaction, Person, AIExtractedData, InsertGeneratedDraft, VoiceProfile, ContentTopic, InsertFollowUpSignal, InsertExperience, Experience } from "@shared/schema";
 import { buildDraftGenerationPrompt } from "./prompts";
 import { addDays } from "date-fns";
 
@@ -824,10 +824,163 @@ function detectLifeEvents(transcript: string): string[] {
   return detectedEvents;
 }
 
+// Experience extraction prompt - AI extracts meaningful experiences from conversations
+const EXPERIENCE_EXTRACTION_PROMPT = `You are an intelligent relationship assistant. Analyze this conversation to extract meaningful EXPERIENCES - significant life events, achievements, struggles, or transitions that deserve acknowledgment.
+
+EXPERIENCE TYPES:
+- life_event: Major life changes (birth, death, divorce, marriage, moving, health issues)
+- achievement: Wins and milestones (promotion, graduation, business success, personal goals met)
+- struggle: Challenges and difficulties (job loss, health problems, family issues, financial stress)
+- transition: Life phase changes (retirement, kids leaving home, career change, relocating)
+
+MAGNITUDE SCALE (be conservative, default to 2-3):
+- 5: Life-altering (death of loved one, divorce, major health crisis, birth of child)
+- 4: Major milestone (promotion, home purchase, engagement, big move)
+- 3: Notable transition (new job, kid starting school, career pivot)
+- 2: Everyday life (vacation, minor wins, routine updates, hobbies)
+- 1: Ambient context (weather chat, casual small talk)
+
+EMOTIONAL VALENCE:
+- positive: Good news, wins, celebrations
+- negative: Loss, struggle, challenge
+- mixed: Bittersweet or complex situations
+
+RULES:
+- Only extract experiences explicitly mentioned in the conversation
+- One conversation may yield 0-5 experiences (don't force it)
+- Be conservative on magnitude - only assign 4-5 when language is explicit
+- Include a brief, specific summary (1-2 sentences max)
+- If confidence is low (<60%), skip it - better to miss than fabricate
+
+Return JSON:
+{
+  "experiences": [
+    {
+      "type": "life_event",
+      "summary": "Just had their first baby last month",
+      "emotionalValence": "positive",
+      "magnitudeScore": 5,
+      "confidenceScore": 95
+    }
+  ]
+}
+
+If no meaningful experiences found, return: {"experiences": []}`;
+
+interface ExtractedExperience {
+  type: 'life_event' | 'achievement' | 'struggle' | 'transition';
+  summary: string;
+  emotionalValence?: 'positive' | 'negative' | 'mixed';
+  magnitudeScore: number;
+  confidenceScore: number;
+}
+
+export async function extractExperiences(
+  transcript: string,
+  personName: string
+): Promise<ExtractedExperience[]> {
+  // Skip if transcript is too short
+  if (!transcript || transcript.length < 100) {
+    return [];
+  }
+  
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini", // Use cheaper model for extraction
+      messages: [
+        { role: "system", content: EXPERIENCE_EXTRACTION_PROMPT },
+        { 
+          role: "user", 
+          content: `Analyze this conversation with ${personName} and extract any meaningful experiences:\n\n${transcript.slice(0, 6000)}`
+        }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.3, // Low temperature for consistent extraction
+    });
+    
+    const content = response.choices[0]?.message?.content;
+    if (!content) return [];
+    
+    const parsed = JSON.parse(content);
+    const experiences: ExtractedExperience[] = (parsed.experiences || [])
+      .filter((e: any) => {
+        // Filter out low-confidence extractions
+        if (e.confidenceScore && e.confidenceScore < 60) return false;
+        // Must have required fields
+        if (!e.type || !e.summary) return false;
+        // Must be valid type
+        if (!['life_event', 'achievement', 'struggle', 'transition'].includes(e.type)) return false;
+        return true;
+      })
+      .map((e: any) => ({
+        type: e.type,
+        summary: e.summary,
+        emotionalValence: ['positive', 'negative', 'mixed'].includes(e.emotionalValence) ? e.emotionalValence : undefined,
+        magnitudeScore: Math.min(5, Math.max(1, e.magnitudeScore || 2)), // Clamp to 1-5
+        confidenceScore: e.confidenceScore || 70
+      }));
+    
+    return experiences;
+  } catch (error) {
+    console.warn('Experience extraction failed (non-blocking):', error);
+    return []; // Don't block pipeline on extraction failures
+  }
+}
+
+export async function createAndSaveExperiences(
+  interaction: Interaction,
+  person: Person,
+  ctx?: TenantContext
+): Promise<Experience[]> {
+  const transcript = interaction.transcript || interaction.summary || '';
+  
+  // Extract experiences using AI
+  const extractedExperiences = await extractExperiences(transcript, person.name);
+  
+  if (extractedExperiences.length === 0) {
+    return [];
+  }
+  
+  const savedExperiences: Experience[] = [];
+  
+  for (const exp of extractedExperiences) {
+    // Light deduplication: check for same person + type + interaction
+    const existing = await storage.findDuplicateExperience(
+      person.id,
+      exp.type,
+      interaction.id,
+      ctx
+    );
+    
+    if (existing) {
+      continue; // Skip duplicate
+    }
+    
+    // Create the experience
+    const insertExp: InsertExperience = {
+      personId: person.id,
+      interactionId: interaction.id,
+      type: exp.type,
+      summary: exp.summary,
+      emotionalValence: exp.emotionalValence,
+      magnitudeScore: exp.magnitudeScore,
+      confidenceScore: exp.confidenceScore,
+      acknowledged: false,
+      occurredAt: interaction.occurredAt
+    };
+    
+    const saved = await storage.createExperience(insertExp, ctx);
+    savedExperiences.push(saved);
+  }
+  
+  return savedExperiences;
+}
+
 function calculateSignalPriority(
   person: Person, 
   interaction: Interaction, 
-  lifeEvents: string[]
+  lifeEvents: string[],
+  experiences?: Experience[]
 ): number {
   let score = 50; // Base score
   
@@ -835,8 +988,22 @@ function calculateSignalPriority(
   const segmentScores: Record<string, number> = { 'A': 30, 'B': 20, 'C': 10, 'D': 0 };
   score += segmentScores[person.segment || 'D'] || 0;
   
-  // Life event detection: +15 per event (max 30)
-  score += Math.min(lifeEvents.length * 15, 30);
+  // Experience-based priority (NEW - meaning-based ranking)
+  // Higher magnitude experiences increase priority significantly
+  if (experiences && experiences.length > 0) {
+    const maxMagnitude = Math.max(...experiences.map(e => e.magnitudeScore));
+    // Magnitude 5: +25, Magnitude 4: +20, Magnitude 3: +15, Magnitude 2: +10, Magnitude 1: +5
+    score += maxMagnitude * 5;
+    
+    // Unacknowledged high-magnitude experiences get extra priority
+    const unacknowledgedHigh = experiences.filter(e => !e.acknowledged && e.magnitudeScore >= 4);
+    if (unacknowledgedHigh.length > 0) {
+      score += 10; // Bonus for unacknowledged high-importance experiences
+    }
+  } else {
+    // Fallback to keyword-based life event detection if no experiences extracted
+    score += Math.min(lifeEvents.length * 15, 30);
+  }
   
   // Interaction type priority
   const typeScores: Record<string, number> = {
@@ -857,7 +1024,8 @@ function buildSignalReasoning(
   interaction: Interaction,
   person: Person,
   lifeEvents: string[],
-  extractedData: AIExtractedData
+  extractedData: AIExtractedData,
+  experiences?: Experience[]
 ): string {
   const parts: string[] = [];
   
@@ -869,13 +1037,27 @@ function buildSignalReasoning(
     parts.push(`${person.segment}-contact`);
   }
   
-  // Life events detected
-  if (lifeEvents.length > 0) {
+  // Experience-based reasoning (higher priority than keyword detection)
+  if (experiences && experiences.length > 0) {
+    // Sort by magnitude descending
+    const sortedExp = [...experiences].sort((a, b) => b.magnitudeScore - a.magnitudeScore);
+    const topExperience = sortedExp[0];
+    
+    // Add experience type and summary
+    const typeLabel = topExperience.type.replace('_', ' ');
+    parts.push(`${typeLabel}: ${topExperience.summary}`);
+    
+    // Add magnitude indicator for high-importance experiences
+    if (topExperience.magnitudeScore >= 4) {
+      parts.push(`(magnitude ${topExperience.magnitudeScore})`);
+    }
+  } else if (lifeEvents.length > 0) {
+    // Fallback to keyword-detected life events
     parts.push(lifeEvents.map(e => e.replace('_', ' ')).join(', '));
   }
   
-  // Key topics if available
-  if (extractedData.keyTopics && extractedData.keyTopics.length > 0) {
+  // Key topics if available (only if no experiences for brevity)
+  if ((!experiences || experiences.length === 0) && extractedData.keyTopics && extractedData.keyTopics.length > 0) {
     parts.push(extractedData.keyTopics.slice(0, 2).join(', '));
   }
   
@@ -891,7 +1073,8 @@ export async function createFollowUpSignal(
   interaction: Interaction,
   person: Person,
   extractedData: AIExtractedData,
-  ctx?: TenantContext
+  ctx?: TenantContext,
+  experiences?: Experience[]
 ): Promise<InsertFollowUpSignal | null> {
   const transcript = interaction.transcript || interaction.summary || '';
   
@@ -900,14 +1083,27 @@ export async function createFollowUpSignal(
     return null;
   }
   
-  // Detect life events from transcript
+  // Detect life events from transcript (fallback if no experiences)
   const lifeEvents = detectLifeEvents(transcript);
   
-  // Calculate priority score
-  const priorityScore = calculateSignalPriority(person, interaction, lifeEvents);
+  // Calculate priority score (now experience-aware)
+  const priorityScore = calculateSignalPriority(person, interaction, lifeEvents, experiences);
   
-  // Build reasoning string
-  const reasoning = buildSignalReasoning(interaction, person, lifeEvents, extractedData);
+  // Build reasoning string (include experience context if available)
+  const reasoning = buildSignalReasoning(interaction, person, lifeEvents, extractedData, experiences);
+  
+  // Link to the highest-magnitude unacknowledged experience if available
+  let experienceId: string | undefined;
+  if (experiences && experiences.length > 0) {
+    // Sort by magnitude descending, then by unacknowledged first
+    const sortedExperiences = [...experiences].sort((a, b) => {
+      if (a.magnitudeScore !== b.magnitudeScore) {
+        return b.magnitudeScore - a.magnitudeScore;
+      }
+      return (a.acknowledged ? 1 : 0) - (b.acknowledged ? 1 : 0);
+    });
+    experienceId = sortedExperiences[0]?.id;
+  }
   
   // Signal expires in 7 days
   const expiresAt = addDays(new Date(), 7);
@@ -915,6 +1111,7 @@ export async function createFollowUpSignal(
   return {
     personId: person.id,
     interactionId: interaction.id,
+    experienceId,
     reasoning,
     priorityScore,
     status: 'pending',
@@ -1284,6 +1481,7 @@ export async function processInteraction(interactionId: string, ctx?: TenantCont
   extractedData?: AIExtractedData;
   draftsCreated?: number;
   signalCreated?: boolean;
+  experiencesExtracted?: number;
   voicePatternsExtracted?: boolean;
   contentTopicsFound?: number;
   error?: string;
@@ -1408,13 +1606,26 @@ export async function processInteraction(interactionId: string, ctx?: TenantCont
         await storage.updatePerson(person.id, personUpdates, ctx);
       }
 
+      // Extract and save meaningful experiences from the conversation
+      // This is append-only meaning capture, non-blocking on failures
+      let savedExperiences: Experience[] = [];
+      try {
+        savedExperiences = await createAndSaveExperiences(interaction, person, ctx);
+        if (savedExperiences.length > 0) {
+          console.log(`[Experience] Extracted ${savedExperiences.length} experience(s) for ${person.name}`);
+        }
+      } catch (e) {
+        console.warn('[Experience] Experience extraction failed (non-blocking):', e);
+      }
+
       // Create Follow-Up Signal instead of auto-generating drafts
       // Only one active signal per person - check if one already exists
       const existingSignal = await storage.getFollowUpSignalByPerson(person.id, ctx);
       let signalCreated = false;
       
       if (!existingSignal) {
-        const signal = await createFollowUpSignal(interaction, person, extractedData, ctx);
+        // Pass experiences to signal creation for meaning-based ranking
+        const signal = await createFollowUpSignal(interaction, person, extractedData, ctx, savedExperiences);
         if (signal) {
           await storage.createFollowUpSignal(signal, ctx);
           signalCreated = true;
@@ -1426,6 +1637,7 @@ export async function processInteraction(interactionId: string, ctx?: TenantCont
         extractedData,
         draftsCreated: 0, // No longer auto-generating drafts
         signalCreated,
+        experiencesExtracted: savedExperiences.length,
         voicePatternsExtracted,
         contentTopicsFound,
       };

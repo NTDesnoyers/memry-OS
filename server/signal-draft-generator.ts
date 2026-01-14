@@ -1,8 +1,34 @@
 import { storage, TenantContext } from "./storage";
-import { FollowUpSignal, Person, InsertGeneratedDraft } from "@shared/schema";
+import { FollowUpSignal, Person, InsertGeneratedDraft, Experience } from "@shared/schema";
 import { openai } from "./ai/trackedOpenAI";
 
 type DraftType = 'text' | 'email' | 'handwritten_note';
+
+// Build enhanced context that includes experience summary for grounded, non-generic drafts
+async function buildExperienceContext(signal: FollowUpSignal, ctx?: TenantContext): Promise<string | null> {
+  if (!signal.experienceId) return null;
+  
+  try {
+    const experience = await storage.getExperience(signal.experienceId, ctx);
+    if (!experience) return null;
+    
+    // Build rich context from experience
+    const typeLabels: Record<string, string> = {
+      'life_event': 'life event',
+      'achievement': 'achievement',
+      'struggle': 'challenge',
+      'transition': 'life transition'
+    };
+    
+    const typeLabel = typeLabels[experience.type] || experience.type;
+    const valence = experience.emotionalValence || 'significant';
+    
+    return `This person recently shared a ${valence} ${typeLabel}: ${experience.summary}. This deserves thoughtful acknowledgment.`;
+  } catch (e) {
+    console.warn('Failed to fetch experience context:', e);
+    return null;
+  }
+}
 
 export async function generateFollowUpDraftFromSignal(
   signal: FollowUpSignal,
@@ -19,7 +45,11 @@ export async function generateFollowUpDraftFromSignal(
   const recentInteractions = await storage.getInteractionsByPerson(person.id, ctx);
   const lastInteraction = recentInteractions[0];
   
-  const contextSummary = interactionContext?.summary || lastInteraction?.summary || signal.reasoning;
+  // Fetch experience context for more grounded, specific drafts
+  const experienceContext = await buildExperienceContext(signal, ctx);
+  
+  // Prioritize experience context over generic interaction summary
+  const contextSummary = experienceContext || interactionContext?.summary || lastInteraction?.summary || signal.reasoning;
   
   try {
     if (draftType === 'text') {

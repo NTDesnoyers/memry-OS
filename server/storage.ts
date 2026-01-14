@@ -75,7 +75,8 @@ import {
   type AiUsageLog, type InsertAiUsageLog,
   type FollowUpSignal, type InsertFollowUpSignal,
   type SignalOutcome, type InsertSignalOutcome,
-  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, interactionParticipants, aiConversations, households, generatedDrafts, voiceProfile, draftFeedback, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions, leads, observerSuggestions, observerPatterns, aiActions, savedContent, dailyDigests, userCoreProfile, dormantOpportunities, socialConnections, socialPosts, contextNodes, contextEdges, decisionTraces, issueReports, aiUsageLogs, followUpSignals, signalOutcomes
+  type Experience, type InsertExperience,
+  users, people, deals, tasks, meetings, calls, weeklyReviews, notes, listings, emailCampaigns, eightByEightCampaigns, pricingReviews, businessSettings, pieEntries, agentProfile, realEstateReviews, interactions, interactionParticipants, aiConversations, households, generatedDrafts, voiceProfile, draftFeedback, syncLogs, handwrittenNoteUploads, contentTopics, contentIdeas, contentCalendar, listeningAnalysis, coachingInsights, listeningPatterns, dashboardWidgets, lifeEventAlerts, systemEvents, agentActions, agentSubscriptions, leads, observerSuggestions, observerPatterns, aiActions, savedContent, dailyDigests, userCoreProfile, dormantOpportunities, socialConnections, socialPosts, contextNodes, contextEdges, decisionTraces, issueReports, aiUsageLogs, followUpSignals, signalOutcomes, experiences
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, isNull, isNotNull, or, sql, gte, lte, lt, inArray } from "drizzle-orm";
@@ -321,6 +322,20 @@ export interface IStorage {
   createSignalOutcome(outcome: InsertSignalOutcome, ctx?: TenantContext): Promise<SignalOutcome>;
   /** Get outcomes for learning analysis. */
   getSignalOutcomes(ctx?: TenantContext): Promise<SignalOutcome[]>;
+  
+  // Experiences - Meaningful life events, achievements, struggles, transitions
+  /** Get all experiences for a person. */
+  getExperiencesByPerson(personId: string, ctx?: TenantContext): Promise<Experience[]>;
+  /** Get unacknowledged experiences (high-magnitude first). */
+  getUnacknowledgedExperiences(ctx?: TenantContext): Promise<Experience[]>;
+  /** Get experience by ID. */
+  getExperience(id: string, ctx?: TenantContext): Promise<Experience | undefined>;
+  /** Create a new experience from conversation extraction. */
+  createExperience(experience: InsertExperience, ctx?: TenantContext): Promise<Experience>;
+  /** Mark experience as acknowledged (after signal resolution). */
+  acknowledgeExperience(id: string, ctx?: TenantContext): Promise<Experience | undefined>;
+  /** Check for duplicate experience (same person, type, interaction). */
+  findDuplicateExperience(personId: string, type: string, interactionId: string, ctx?: TenantContext): Promise<Experience | undefined>;
   
   // Sync Logs
   getAllSyncLogs(): Promise<SyncLog[]>;
@@ -1876,6 +1891,68 @@ export class DatabaseStorage implements IStorage {
     return conditions 
       ? await db.select().from(signalOutcomes).where(conditions).orderBy(desc(signalOutcomes.createdAt))
       : await db.select().from(signalOutcomes).orderBy(desc(signalOutcomes.createdAt));
+  }
+  
+  // Experiences
+  async getExperiencesByPerson(personId: string, ctx?: TenantContext): Promise<Experience[]> {
+    const filter = this.getTenantFilter(experiences, ctx);
+    const conditions = filter 
+      ? and(eq(experiences.personId, personId), filter)
+      : eq(experiences.personId, personId);
+    return await db.select().from(experiences).where(conditions).orderBy(desc(experiences.magnitudeScore), desc(experiences.loggedAt));
+  }
+  
+  async getUnacknowledgedExperiences(ctx?: TenantContext): Promise<Experience[]> {
+    const filter = this.getTenantFilter(experiences, ctx);
+    const conditions = filter 
+      ? and(eq(experiences.acknowledged, false), filter)
+      : eq(experiences.acknowledged, false);
+    return await db.select().from(experiences).where(conditions).orderBy(desc(experiences.magnitudeScore), desc(experiences.loggedAt));
+  }
+  
+  async getExperience(id: string, ctx?: TenantContext): Promise<Experience | undefined> {
+    const filter = this.getTenantFilter(experiences, ctx);
+    const conditions = filter ? and(eq(experiences.id, id), filter) : eq(experiences.id, id);
+    const [experience] = await db.select().from(experiences).where(conditions);
+    return experience || undefined;
+  }
+  
+  async createExperience(insertExperience: InsertExperience, ctx?: TenantContext): Promise<Experience> {
+    const userId = getEffectiveUserId(ctx);
+    const [experience] = await db
+      .insert(experiences)
+      .values({ ...insertExperience, userId })
+      .returning();
+    return experience;
+  }
+  
+  async acknowledgeExperience(id: string, ctx?: TenantContext): Promise<Experience | undefined> {
+    const filter = this.getTenantFilter(experiences, ctx);
+    const conditions = filter ? and(eq(experiences.id, id), filter) : eq(experiences.id, id);
+    const [updated] = await db
+      .update(experiences)
+      .set({ acknowledged: true, updatedAt: new Date() })
+      .where(conditions)
+      .returning();
+    return updated || undefined;
+  }
+  
+  async findDuplicateExperience(personId: string, type: string, interactionId: string, ctx?: TenantContext): Promise<Experience | undefined> {
+    const filter = this.getTenantFilter(experiences, ctx);
+    const conditions = filter 
+      ? and(
+          eq(experiences.personId, personId),
+          eq(experiences.type, type),
+          eq(experiences.interactionId, interactionId),
+          filter
+        )
+      : and(
+          eq(experiences.personId, personId),
+          eq(experiences.type, type),
+          eq(experiences.interactionId, interactionId)
+        );
+    const [existing] = await db.select().from(experiences).where(conditions);
+    return existing || undefined;
   }
   
   // Sync Logs

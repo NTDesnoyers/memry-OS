@@ -864,6 +864,7 @@ export const followUpSignals = pgTable("follow_up_signals", {
   userId: varchar("user_id"),
   personId: varchar("person_id").references(() => people.id),
   interactionId: varchar("interaction_id").references(() => interactions.id),
+  experienceId: varchar("experience_id"), // References experiences table (nullable - signals can exist without experiences)
   reasoning: text("reasoning").notNull(), // e.g. "Phone call + A-contact + new job mentioned"
   priorityScore: integer("priority_score").default(50), // 0-100, for ranking
   status: text("status").notNull().default("pending"), // pending, resolved, expired
@@ -875,6 +876,7 @@ export const followUpSignals = pgTable("follow_up_signals", {
 }, (table) => [
   index("follow_up_signals_user_status_idx").on(table.userId, table.status),
   index("follow_up_signals_expires_at_idx").on(table.expiresAt),
+  index("follow_up_signals_experience_id_idx").on(table.experienceId),
 ]);
 
 export const insertFollowUpSignalSchema = createInsertSchema(followUpSignals).omit({
@@ -929,6 +931,52 @@ export const signalOutcomesRelations = relations(signalOutcomes, ({ one }) => ({
   }),
   nextInteraction: one(interactions, {
     fields: [signalOutcomes.nextInteractionId],
+    references: [interactions.id],
+  }),
+}));
+
+/** Experiences - Meaningful life events, achievements, struggles, transitions extracted from conversations. */
+export const experiences = pgTable("experiences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
+  personId: varchar("person_id").references(() => people.id),
+  interactionId: varchar("interaction_id").references(() => interactions.id),
+  type: text("type").notNull(), // life_event, achievement, struggle, transition
+  summary: text("summary").notNull(), // Brief description of the experience
+  emotionalValence: text("emotional_valence"), // positive, negative, mixed (optional)
+  magnitudeScore: integer("magnitude_score").notNull().default(2), // 1-5 scale (1=ambient, 5=life-altering)
+  acknowledged: boolean("acknowledged").default(false), // Has user acknowledged this with an action?
+  confidenceScore: integer("confidence_score"), // AI extraction confidence 0-100
+  loggedAt: timestamp("logged_at").defaultNow().notNull(), // When the experience was logged
+  occurredAt: timestamp("occurred_at"), // When the experience actually happened (if known)
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("experiences_person_id_idx").on(table.personId),
+  index("experiences_acknowledged_idx").on(table.acknowledged),
+  index("experiences_magnitude_idx").on(table.magnitudeScore),
+  index("experiences_user_id_idx").on(table.userId),
+]);
+
+export const insertExperienceSchema = createInsertSchema(experiences).omit({
+  id: true,
+  userId: true,
+  loggedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertExperience = z.infer<typeof insertExperienceSchema>;
+export type Experience = typeof experiences.$inferSelect;
+
+// Relations for Experiences
+export const experiencesRelations = relations(experiences, ({ one }) => ({
+  person: one(people, {
+    fields: [experiences.personId],
+    references: [people.id],
+  }),
+  interaction: one(interactions, {
+    fields: [experiences.interactionId],
     references: [interactions.id],
   }),
 }));
