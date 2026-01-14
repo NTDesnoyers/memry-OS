@@ -1,0 +1,166 @@
+A usable “context graph” for your AI CRM is basically: per-account agents + typed events + decision objects, all connected in a graph keyed on the account and evolving over time.[1]
+
+Below is a concrete, implementation-ready framework you can drop into Replit (conceptually and as schema/objects) and adapt to real estate GTM.
+
+***
+
+## Core mental model
+
+For each **Account** (buyer, seller, landlord, etc.), you maintain:
+
+- A long-lived **AccountAgent** that owns state and goals for that account.[1]
+- A stream of **Events** (calls, emails, showings, price changes, objections, offer changes, etc.).[1]
+- A set of **Decisions** that link: inputs → chosen action → outcome, with “why” captured.[1]
+
+The context graph is the graph of `Account ↔ People ↔ Artifacts ↔ Events ↔ Decisions ↔ Outcomes` over time.[1]
+
+***
+
+## Data model skeleton (for your DB / ORM)
+
+Think of this as the backbone tables / collections.
+
+### 1. Atomic entities
+
+- **Account**
+  - `id`
+  - `type` (buyer, seller, landlord, investor, team, referral-partner)
+  - `stage` (lead, prospect, active-buy, active-list, under-contract, closed, nurture)
+  - `objective` (buy primary, sell upgrade, acquire 3–4 unit, etc.)
+  - `created_at`, `updated_at`
+
+- **Person**
+  - `id`
+  - `role` (primary-contact, spouse, co-borrower, listing-agent, lender, title, etc.)
+  - `linked_crm_contact_id` (if you interop with existing CRM)
+  - `email`, `phone`, etc.
+
+- **Artifact**
+  - `id`
+  - `type` (call_transcript, email_thread, sms_thread, showing_note, CMA_pdf, listing_agreement, offer_doc, inspection_report, appraisal, slack_thread, doc_link)
+  - `source_system` (iMessage, Gmail, Fathom, Plaud, BrightMLS, DocuSign)
+  - `external_id/uri`
+  - `summary` (LLM-generated)
+  - `created_at`
+
+### 2. Context graph primitives
+
+- **Event**
+  - `id`
+  - `account_id`
+  - `timestamp`
+  - `event_type` (incoming_call, outbound_call, email_sent, email_received, sms, showing, open_house, offer_submitted, price_change, inspection_issued, appraisal_back, lender_update, status_change, internal_note)
+  - `people_involved` (array of `person_id`)
+  - `artifacts` (array of `artifact_id`)
+  - `raw_context` (freeform JSON: e.g., transcript text, email body, MLS change payload)
+  - `llm_context_summary`
+  - `linked_decision_id` (optional; the decision that this event reflects or triggered)
+
+- **Hypothesis**
+  - `id`
+  - `account_id`
+  - `created_at`
+  - `status` (active, invalidated, superseded)
+  - `hypothesis_text`  
+    - Example: “Buyer is highly payment-sensitive; rate buydown will unlock higher price ceiling.”
+  - `evidence_event_ids` (array)
+  - `confidence_score` (0–1)
+
+- **Decision**
+  - `id`
+  - `account_id`
+  - `timestamp`
+  - `decision_type` (pricing_move, offer_strategy, concession, lender_choice, showing_strategy, followup_cadence, qualification_change, negotiation_move, listing_timing, marketing_channel)
+  - `inputs` (JSON)
+    - references to event_ids, hypothesis_ids, metrics (e.g., days_on_market, showings_count, list_to_sale_spread)
+  - `options_considered` (JSON)
+    - list of `{ option_id, description, pros, cons }`
+  - `chosen_option_id`
+  - `rationale` (LLM-generated narrative of “why this vs that”)
+  - `human_actor_id` (you or team member) **and/or** `agent_actor_id` (AccountAgent)
+  - `expected_outcome` (forecasted effect, e.g., “+10% showings in next 7 days”)
+
+- **Outcome**
+  - `id`
+  - `account_id`
+  - `decision_id` (which decision this is evaluating)
+  - `measurement_window` (e.g., 7 days after price change)
+  - `metrics` (JSON; e.g., showings, offers, reply rate, days_to_offer, final_price_to_list_ratio)
+  - `label` (positive, neutral, negative)
+  - `notes` (freeform / LLM short explanation)
+
+- **AccountAgentState**
+  - `id`
+  - `account_id`
+  - `snapshot_ts`
+  - `serialized_state` (the agent’s current belief state, key hypotheses, risk flags, active tasks)
+  - `embedding` (optional; for retrieval)
+
+***
+
+## Graph relationships (edges you care about)
+
+In your code, represent these as foreign keys + an actual graph index (e.g., Neo4j / pgvector + adjacency) later if needed.
+
+Key edges:
+
+- `ACCOUNT -[HAS_PERSON]-> PERSON`
+- `ACCOUNT -[HAS_ARTIFACT]-> ARTIFACT`
+- `ACCOUNT -[HAS_EVENT]-> EVENT`
+- `ACCOUNT -[HAS_DECISION]-> DECISION`
+- `ACCOUNT -[HAS_HYPOTHESIS]-> HYPOTHESIS`
+- `ACCOUNT -[HAS_OUTCOME]-> OUTCOME`  
+
+And causal edges:
+
+- `EVENT -[SUPPORTS/REFUTES]-> HYPOTHESIS`
+- `HYPOTHESIS -[CONSIDERED_IN]-> DECISION`
+- `EVENT -[TRIGGERS]-> DECISION`
+- `DECISION -[RESULTED_IN]-> OUTCOME`
+
+This is where the **context graph** becomes more than logging; you can now answer “what changed, why, and what happened next.”[1]
+
+***
+
+## Per-account agent loop (how your AI CRM actually uses this)
+
+You can wire a simple loop like this around your existing Replit stack:
+
+1. **Ingestion layer**
+   - Every new interaction (call, email, showing, MLS action, doc) becomes an `Event` + `Artifact` with an LLM-generated `llm_context_summary` and candidate `Hypothesis` updates.
+2. **Agent tick / handler**
+   - On each new event, the AccountAgent:
+     - Updates or creates `Hypothesis` objects.
+     - Decides whether a **Decision** should be created (e.g., “suggest price reduction” or “recommend follow-up with lender”).
+3. **Human-in-the-loop**
+   - When a suggested Decision is surfaced:
+     - Human accepts / edits / rejects.
+     - Log that as the `Decision` with `options_considered` including “do nothing.”
+4. **Outcome capture**
+   - After a time window, the agent evaluates the metrics and writes an `Outcome` pointing back to that Decision.
+5. **Global learning**
+   - Periodically aggregate `Decisions + Outcomes` across accounts to mine “what works for accounts like this when stalled in this way.”[1]
+
+This is exactly the “decision trace” the article is pointing to: not just stages, but what you tried when, based on what context, and how it went.[1]
+
+***
+
+## How to adapt to your AI CRM in practice
+
+For Sidecar/Relio-style real estate CRM, prioritize these first:
+
+- Implement the **Event** and **Decision** tables, with:
+  - event types focused on: new lead, first contact, showing scheduled, showing completed, offer made, counter, inspection, appraisal, financing-issue, price-change, listing-launched, contract-signed.
+- Wrap your **account-level agent** around:
+  - “progress this account to transaction” with an internal state that references:
+    - most recent events,
+    - active hypotheses (budget constraints, move-timing, must-haves),
+    - risk flags (unresponsive, pre-approval expiring, competing offers).
+- Make your UI read the context graph:
+  - Timeline view: ordered `Events` + attached `Decisions`.
+  - “Why are we here?” panel: latest Hypotheses + last 3 key Decisions + Outcomes.
+  - “What works in situations like this?” panel: query similar accounts by stage + pain + last-stall-reason and surface their successful Decisions.
+
+If you want, next step can be to generate actual TypeScript or Python models for your current stack and an example handler that writes Decisions/Outcomes when your agent suggests next actions.
+
+[1](https://x.com/agupta_108/status/2008254546888577391)

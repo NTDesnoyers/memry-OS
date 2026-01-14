@@ -1,0 +1,202 @@
+This is solid. You’re at the point where **adding more now risks slowing learning**, so the job is to **separate “must-lock now” from “explicitly defer.”**
+
+I’ll answer each, then give you a **clear GO / NO-GO**.
+
+---
+
+## Quick verdict first
+
+👉 **Yes, you’re ready to build. Proceed.**
+
+But only after locking **exactly two more MVP clarifications** and explicitly deferring the rest.
+
+---
+
+## Item-by-item judgment
+
+### 1️⃣ Third-party mentions
+
+**Already covered. No extra work needed.**
+
+Your current rule:
+
+> one signal per person mentioned
+
+✔ Correct
+✔ Elegant
+✔ Scales
+
+Do **not** add special casing like “primary vs secondary person.”
+Let ranking handle importance.
+
+**Status:** ✅ MVP-ready, no changes.
+
+---
+
+### 2️⃣ Outcome tracking (skipped → missed opportunity)
+
+This is **insightful**, but **NOT MVP-critical**.
+
+Why:
+
+* It requires retroactive attribution logic
+* It risks false positives (“they texted me” ≠ missed opportunity)
+* It doesn’t change *immediate behavior*
+
+What *is* MVP-worthy:
+
+* Track this passively in data
+* Do NOT surface it yet
+
+**V2 concept (park it explicitly):**
+
+> “Signals skipped that later resulted in inbound contact within X days”
+
+That’s gold later for:
+
+* Trust-building
+* Coaching insights
+* “Your instincts are improving” feedback
+
+**Status:** 🚫 Defer to V2 (but log the data quietly).
+
+---
+
+### 3️⃣ Life events in reasoning
+
+**This absolutely matters — and it’s already aligned.**
+
+This is not a new feature.
+This is **copy discipline**.
+
+The reasoning text is doing critical work:
+
+* Explains *why* the signal exists
+* Trains sales judgment
+* Builds trust in the AI
+
+**MVP requirement (lock this in):**
+When a life event is detected, it MUST appear in the reasoning line.
+
+Example:
+
+> “New job mentioned → high-priority follow-up”
+
+No UI complexity.
+Just deterministic explanation.
+
+**Status:** ✅ MVP-required.
+
+---
+
+### 4️⃣ Text draft formatting
+
+Good to define now, but keep it **rule-based and simple**.
+
+You don’t need personalization sophistication yet — just **mode correctness**.
+
+**MVP text rules (lock):**
+
+* 1–3 sentences
+* Casual tone
+* No subject
+* No signature
+* First name greeting optional
+* Ends with a soft CTA (“wanted to check in”, “thought I’d reach out”)
+
+Emails can be looser later.
+Texts must feel human immediately.
+
+**Status:** ✅ MVP-required (simple heuristic, not AI magic).
+
+---
+
+### 5️⃣ Playbooks (user-editable rules)
+
+This is the **most dangerous thing to add early**.
+
+Why:
+
+* Adds config overhead
+* Encourages tinkering over usage
+* Masks whether defaults are good
+
+Playbooks are **power-user leverage**, not MVP learning.
+
+Correct sequencing:
+
+* You define defaults
+* Observe behavior
+* THEN expose customization
+
+**Status:** 🚫 Explicitly V2. Do NOT sneak this in.
+
+---
+
+## The only two things to explicitly add before building
+
+If you do **nothing else**, lock these:
+
+### 🔒 Lock #1: Reasoning copy standard
+
+Every signal reasoning must include:
+
+* Trigger (call / meeting / mention)
+* Contact segment
+* Life event if present
+
+This is not cosmetic — it’s *training the user*.
+
+---
+
+### 🔒 Lock #2: Outcome tracking definition (internal only)
+
+Even if not surfaced, define:
+
+* Success = next interaction within 14 days
+* Neutral = no interaction
+* Missed opportunity = inbound after skip (logged, hidden)
+
+This ensures:
+
+* Clean analytics later
+* No schema changes midstream
+
+---
+
+## Everything else is correctly deferred
+
+You’ve done the hard part:
+You resisted turning this into a feature buffet.
+
+Right now this is:
+
+* Focused
+* Behavior-shaping
+* Fast to test
+* Easy to explain
+
+Which is exactly what you want.
+
+---
+
+## Final instruction
+
+**Yes — proceed with build.**
+Do not add:
+
+* Playbooks
+* Skip reasons
+* Push notifications
+* Retroactive guilt metrics
+
+Ship this. Watch real users.
+Then we’ll sharpen based on **observed behavior**, not hypotheticals.
+
+When it’s built, bring me:
+
+* First user confusion
+* First friction point
+* First “oh shit that felt good” moment
+
+That’s where V2 earns its place.

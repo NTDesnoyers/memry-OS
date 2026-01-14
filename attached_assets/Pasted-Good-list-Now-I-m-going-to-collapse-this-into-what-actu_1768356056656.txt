@@ -1,0 +1,281 @@
+Good list. Now I’m going to **collapse this into what actually matters for behavior + learning** and kill the rest (for now).
+
+I’ll go item by item, then give you a **clear MVP decision set** and a **V1 → V2 roadmap**.
+
+---
+
+## The core question (frame everything through this)
+
+> Does this increase:
+>
+> 1. Correct follow-up decisions
+> 2. Speed to decision
+> 3. Learning signal quality
+
+If it doesn’t improve at least **one** of those, it’s noise.
+
+---
+
+## 1️⃣ Signal expiration
+
+**This matters. A lot.**
+
+### Decision: ✅ YES, signals should expire
+
+But **silently**, not punitively.
+
+**Why:**
+
+* Signals stacking forever = cognitive debt
+* You’re training avoidance, not habits
+* Real sales reality: follow-up windows decay
+
+### MVP behavior:
+
+* Signal auto-expires after **7 days**
+* Status becomes: **Expired**
+* Counts as:
+
+  * Neutral for streaks
+  * Negative for “missed opportunity” stats (weekly review only)
+
+### UI copy:
+
+> “Signal expired — follow-up window likely passed”
+
+No guilt. Just reality.
+
+**Do NOT surface expired signals in the main flow.**
+Only surface them in weekly review.
+
+✅ Keep.
+
+---
+
+## 2️⃣ Multiple signals per interaction
+
+**This matters, but bundling is dangerous.**
+
+### Decision: ❌ Do NOT bundle
+
+### Decision: ✅ One signal per person
+
+**Why:**
+
+* The *decision unit* is the person
+* Bundles increase friction and hesitation
+* You want fast taps, not deliberation
+
+If a conversation mentions:
+
+* Sarah (new job)
+* Mike (needs intro)
+* Jen (birthday next week)
+
+That’s **3 signals**.
+
+Each resolved independently.
+Each trains judgment.
+
+✅ Keep separate.
+
+---
+
+## 3️⃣ Skip reasons
+
+This is a **trap if done wrong**.
+
+### Decision: ❌ NO skip reasons in MVP
+
+### Decision: ✅ Add later *only if* optional + fast
+
+**Why:**
+
+* Forced justification kills speed
+* Early users will lie or tap random options
+* You don’t yet know which reasons matter
+
+### MVP:
+
+* Skip = logged as “Consciously skipped”
+* Zero friction
+
+### V2 (optional):
+
+* After tapping Skip, show:
+
+  > “Want to say why?”
+  > (optional, dismissible)
+
+Reasons (only 3):
+
+* Already handled
+* Not important
+* Will do later
+
+But this is **not MVP-critical**.
+
+---
+
+## 4️⃣ Undo capability
+
+This is about **trust**, not gamification.
+
+### Decision: ✅ YES, but minimal
+
+**Why:**
+
+* People mis-tap
+* Fear of irreversible actions slows decisions
+* Undo increases confidence → faster taps
+
+### MVP behavior:
+
+* After resolving a signal, show a **5–10 second undo toast**
+* After that, it’s final
+
+Do NOT allow undo days later.
+That encourages second-guessing.
+
+---
+
+## 5️⃣ Signal priority
+
+This is **critical**, but mostly invisible.
+
+### Decision: ✅ YES, rank signals
+
+### Decision: ❌ Do NOT show numeric priority yet
+
+**Why:**
+
+* Users don’t need to see the math
+* They *do* need the ordering to feel right
+
+### MVP priority logic (simple, deterministic):
+
+Rank by:
+
+1. A/B/C/D contact segment
+2. Life event detected
+3. Days since last contact
+4. Interaction type (call > meeting > text)
+
+Then surface:
+
+* Top 1–3 signals
+* Everything else behind “More”
+
+Later you can expose labels like:
+
+* “High signal”
+* “Low signal”
+
+But not now.
+
+---
+
+## 6️⃣ Notification strategy
+
+This is where most apps screw themselves.
+
+### Decision: ❌ NO push notifications in MVP
+
+### Decision: ❌ NO interruptive reminders
+
+### Decision: ✅ Passive visibility only
+
+**Why:**
+
+* Push notifications before habit = churn
+* You haven’t earned interruption rights yet
+* Signals should feel like *support*, not nagging
+
+### MVP:
+
+* Badge count in nav (small, subtle)
+* Signals visible when app opens
+* That’s it
+
+### V2+:
+
+* Optional daily digest
+* Never real-time pings
+
+---
+
+## 7️⃣ Existing drafts page
+
+This is mostly a naming + mental model issue.
+
+### Decision: ✅ KEEP drafts
+
+### Decision: ❌ Do NOT merge with signals
+
+### Decision: ✅ Rename for clarity
+
+**Why:**
+
+* Signals = decisions
+* Drafts = artifacts
+* Mixing them confuses cause vs effect
+
+### Recommended rename:
+
+* “Drafts” → **Prepared Follow-Ups**
+  or
+* “Queued Messages”
+
+Signals create drafts.
+Drafts are downstream.
+
+Keep that separation clean.
+
+---
+
+## 🔥 What matters MOST (priority order)
+
+If you had to ship only 4 things correctly, it’s these:
+
+### 1️⃣ Signal expiration
+
+Prevents cognitive rot.
+
+### 2️⃣ One signal per person
+
+Preserves clean decision units.
+
+### 3️⃣ Priority ordering (even if hidden)
+
+Makes the system feel “smart.”
+
+### 4️⃣ Undo (short window)
+
+Builds trust and speed.
+
+Everything else is secondary.
+
+---
+
+## Final MVP signal contract (copy this)
+
+**A Follow-Up Signal:**
+
+* Is created per person
+* Surfaces immediately after interaction
+* Is ranked automatically
+* Expires after 7 days
+* Requires a single tap to resolve
+* Produces a draft *only after approval*
+* Can be undone briefly
+* Never nags
+
+That’s a **behavior-shaping system**, not a feature pile.
+
+If you want next:
+
+* I can write the **exact data model**
+* Or the **in-app copy for every state**
+* Or help you decide what metrics to expose vs hide
+
+Pick one.

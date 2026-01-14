@@ -1,0 +1,215 @@
+Good instinct. This is the **right behavioral choke point** to gamify.
+
+Right now you’re fixing a *UX tax* (delete junk drafts).
+What you want instead is to **reward correct follow-through decisions**, not draft generation.
+
+I’ll break this into 4 parts:
+
+1. **What behavior you are actually trying to gamify**
+2. **The correct mental model (don’t call it prompts)**
+3. **Concrete gamification mechanics**
+4. **What to name it (and what NOT to name it)**
+
+---
+
+## 1️⃣ What behavior are you *actually* trying to gamify
+
+Not:
+
+* Logging conversations ❌
+* Generating drafts ❌
+
+Those are **means**, not ends.
+
+You are trying to gamify:
+
+> **Timely, appropriate follow-up decisions based on relationship strength and signal quality**
+
+The “win” is:
+
+* User *recognizes* a follow-up is needed
+* Chooses the *right* modality
+* Does it *quickly*
+
+So your unit of progress is **decisions**, not drafts.
+
+That’s the key insight.
+
+---
+
+## 2️⃣ The correct mental model (important)
+
+This is NOT:
+
+* A prompt
+* A notification
+* A reminder
+
+Those imply *passive AI telling you what to do*.
+
+This IS:
+
+> A **judgment checkpoint**
+
+The AI is acting like a good sales manager saying:
+
+> “Hey — based on what just happened, do you want to act on this?”
+
+That framing matters for trust and agency.
+
+---
+
+## 3️⃣ How to gamify this properly (concrete mechanics)
+
+### 🎯 Core mechanic: **Decision Streaks**
+
+Every suggestion is a **micro-decision**.
+
+Outcomes:
+
+* Text / Email / Note → ✅ *Action Taken*
+* Skip → 🚫 *Consciously Skipped*
+
+Both are valid — but they score differently.
+
+#### Example scoring:
+
+* **Action taken**: +1
+* **Skipped but justified** (later add optional “why”): +0.5
+* **Ignored** (no tap): 0
+
+This reinforces *intentionality*, not blind compliance.
+
+---
+
+### 🔥 “Signal Accuracy” Score (this is powerful)
+
+Later, once you have data:
+
+* If a follow-up leads to:
+
+  * A reply
+  * A meeting
+  * A deal stage change
+
+Then retroactively:
+
+* AI gets smarter
+* User sees:
+
+  > “Your follow-ups after A-contact phone calls convert 2.3× higher than average”
+
+That’s dopamine **and** learning.
+
+---
+
+### 🧠 Cognitive Load Reduction Bonus
+
+Speed matters.
+
+Reward:
+
+* Decisions made within X seconds/minutes
+* Fewer skipped suggestions over time
+
+Why?
+Fast decisions = habit formation.
+
+---
+
+### 🏁 Weekly Review Tie-In (critical)
+
+In Weekly Review show:
+
+* Suggestions surfaced: 18
+* Decisions made: 15
+* Actions taken: 11
+* Follow-ups completed: 9
+* Missed opportunities: 2
+
+Now this feels like a **game you can win**, not a CRM report.
+
+---
+
+## 4️⃣ What to call it (and what NOT to)
+
+### ❌ Do NOT call it:
+
+* Prompts (LLM-y, generic)
+* Nudges (soft, therapy-brain)
+* Checks (boring)
+* Suggestions (passive, low authority)
+
+---
+
+### ✅ Strong naming options (ranked)
+
+#### 🥇 **Follow-Up Signals**
+
+Best overall.
+
+Why it works:
+
+* Sounds intelligent
+* Implies judgment, not instruction
+* Fits Ninja Selling language
+* Scales well (“high-signal week”, “missed signals”)
+
+UI copy:
+
+> **Follow-Up Signal**
+> Phone call + A-contact + new job mentioned
+> How do you want to follow up?
+
+---
+
+#### 🥈 **Action Signals**
+
+More general, future-proof.
+
+Good if you later expand beyond follow-ups.
+
+---
+
+#### 🥉 **Conversation Signals**
+
+Good, but slightly wordier.
+
+---
+
+### My recommendation (clear):
+
+**Call it: *Follow-Up Signals***
+
+And the action is:
+
+> “Resolve signal”
+
+That single verb is doing a LOT of work.
+
+---
+
+## Final ruthless takeaway
+
+You’re not building:
+
+* An AI that writes messages
+
+You’re building:
+
+* A **decision engine that trains sales instincts**
+
+Gamify:
+
+* Decisions
+* Speed
+* Accuracy over time
+
+Do that, and this stops being “a smarter CRM”
+and becomes **a performance system people don’t want to break**.
+
+If you want, next we can:
+
+* Design the exact scoring formula
+* Decide what *not* to score (important)
+* Or write the in-app microcopy for this flow word-for-word
