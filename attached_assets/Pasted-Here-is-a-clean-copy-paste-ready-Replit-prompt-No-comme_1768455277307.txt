@@ -1,0 +1,113 @@
+Here is a clean, copy-paste-ready Replit prompt.
+No commentary. No ambiguity. This is an execution spec.
+
+⸻
+
+Replit Prompt: Implement Beta Users Admin Table (v0)
+
+Goal:
+Add a Beta Users table to the /admin/beta page so the founder can see who beta users are and what they’ve done. This is required to debug activation and usage. Do not add charts or complex UI.
+
+⸻
+
+Scope
+
+Add a new “Beta Users” section at the top of /admin/beta, above all existing metrics.
+
+This is an admin-only, read-only table.
+
+⸻
+
+Data Sources
+
+Use existing tables only:
+	•	auth_users
+	•	beta_events
+	•	conversations
+	•	followups
+	•	beta_whitelist (optional for later)
+
+No new tables.
+
+⸻
+
+Table Columns (exact)
+
+Render a table with these columns, in this order:
+	1.	Email
+	•	From auth_users.email
+	2.	Status
+	•	Derived value:
+	•	signed_up → has user_signup event, no activated
+	•	activated → has activated event
+	3.	Last Seen
+	•	Most recent beta_events.created_at for that user
+	•	Display as relative time (e.g. “2 days ago”)
+	4.	Conversations
+	•	Count of conversations for that user
+	5.	Follow-ups
+	•	Count of followups for that user
+	6.	Signed Up
+	•	Date of user_signup event (fallback: auth_users.created_at)
+
+Example row (visual reference only):
+
+jane@exprealty.com | activated | 2 days ago | 7 | 3 | Jan 12
+
+
+⸻
+
+Status Logic (must match exactly)
+	•	A user is activated if they have an activated event
+	•	A user is signed_up if they have user_signup but no activated
+	•	Do not infer status any other way
+
+⸻
+
+Backend
+	•	Add or extend an admin API endpoint (e.g. /api/admin/beta-users)
+	•	Endpoint must:
+	•	Require authenticated user
+	•	Restrict access to founder email only (hardcode for now)
+	•	Return a list of users with all derived fields above
+
+⸻
+
+Frontend
+	•	Fetch the admin endpoint on /admin/beta
+	•	Render a simple table
+	•	Plain styling is fine
+	•	No pagination, filters, or sorting required
+
+⸻
+
+Explicit Non-Goals (do NOT build)
+	•	No charts
+	•	No graphs
+	•	No cohorts
+	•	No retention curves
+	•	No role system
+	•	No edit actions
+
+This is identity-first beta debugging, not analytics polish.
+
+⸻
+
+Acceptance Criteria
+
+This task is complete when:
+	•	I can see all beta user emails in production
+	•	I can tell who is activated vs not
+	•	I can see who was last active and who never returned
+	•	I can identify exactly who to contact to debug activation
+
+⸻
+
+Notes
+	•	Keep all existing aggregate metrics below this table
+	•	This table is the primary admin surface until PMF
+	•	Optimize for clarity, not beauty
+
+⸻
+
+End of prompt
