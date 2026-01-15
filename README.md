@@ -175,7 +175,7 @@ Sign in to create an account, then use the AI assistant (bottom-right button) to
 
 ## Why I Built This
 
-I spent 10+ years in real estate and saw the same pattern repeatedly: agents who were great at building relationships but terrible at systematizing follow-up. They'd have amazing conversations at open houses, networking events, and coffee meetings—then never follow up because "logging it" felt like homework.
+I spent 5+ years in real estate and saw the same pattern repeatedly: agents who were great at building relationships but terrible at systematizing follow-up. They'd have amazing conversations at open houses, networking events, and coffee meetings—then never follow up because "logging it" felt like homework.
 
 Memry is the tool I wished I had. Talk to it like a colleague, and it handles the rest.
 
