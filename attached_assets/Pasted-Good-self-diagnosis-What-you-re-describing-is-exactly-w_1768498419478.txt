@@ -1,0 +1,283 @@
+Good self-diagnosis. What you’re describing is **exactly** what happens to first-time builders with AI tools: idea velocity > execution reality. That’s normal. What matters is how you correct.
+
+I’m going to be very direct and give you a **decision framework**, not vibes.
+
+---
+
+# The Core Truth (Read This Twice)
+
+You did **not** build the wrong things.
+
+You built them **at the wrong time**, without validated pressure.
+
+That means:
+
+* The ideas are not garbage
+* The implementation *is* premature
+* The risk is **cognitive + technical drag**, not lost opportunity
+
+So the question is **not**:
+
+> “Were these features a mistake?”
+
+The real question is:
+
+> “What is the cheapest way to preserve optionality without slowing learning or revenue?”
+
+---
+
+# First: Name the Two Products You Accidentally Built
+
+You currently have **two different products** living in one codebase.
+
+### Product A — *Memry v1 (Sellable)*
+
+This is what Beta Mode already is:
+
+* Flow
+* Signals
+* Actions
+* Weekly Review
+* Contacts
+
+This is a **closed loop**:
+
+> Conversation → Decision → Action → Review
+
+This is the *only thing* users are paying for right now (or will).
+
+---
+
+### Product B — *Founder Brain OS (Speculative)*
+
+Everything else:
+
+* Life Events
+* Event Log
+* Coaching
+* Revival
+* Business Tracker
+* Visual Pricing
+* Content
+* Referrals
+* Haves & Wants
+* Automation
+* Brand Center
+* etc.
+
+This is **not a product** yet.
+It is a **library of hypotheses**.
+
+Treating Product B as “features” is what creates the house of cards feeling.
+
+---
+
+# Second: Do NOT Delete Everything (That’s an Amateur Move)
+
+Here’s the hard-earned rule:
+
+> **Deletion destroys learning. Isolation preserves leverage.**
+
+If you delete aggressively:
+
+* You lose context on *why* you built things
+* You risk re-building the same ideas later
+* You introduce regressions and wasted time
+
+If you leave everything visible:
+
+* You confuse users
+* You slow iteration
+* You dilute activation
+
+So the correct move is **neither deletion nor indulgence**.
+
+---
+
+# The Correct Strategy: “Feature Quarantine”
+
+You already accidentally did the right thing by creating **Founder Mode vs Beta Mode**.
+
+Now we formalize it.
+
+## Rule #1 — Beta Mode Is the Product
+
+Beta Mode is not a “limited view.”
+It is **the product**.
+
+Anything not in Beta Mode must meet this bar to graduate:
+
+> “Does this measurably increase conversation logging frequency or follow-up completion?”
+
+If no → it stays quarantined.
+
+---
+
+## Rule #2 — Founder Mode Becomes an Internal Lab
+
+Founder Mode is no longer “features.”
+It becomes:
+
+> **A hypothesis warehouse + partial implementations**
+
+That means:
+
+* No UX polish
+* No onboarding
+* No expectation of completeness
+* No beta users touching it
+
+Founder Mode exists **only** to:
+
+* Validate data models
+* Test backend feasibility
+* Preserve thinking
+* Support future experiments
+
+---
+
+## Rule #3 — No Feature Graduates Without an Experiment Brief
+
+Every Founder feature gets tagged with:
+
+**EXPERIMENT BRIEF**
+
+* Hypothesis:
+* Assumption type (Value / Monetization / Growth):
+* User behavior it should change:
+* Kill metric:
+* What existing Beta metric it improves:
+
+If you cannot fill this out → feature is frozen indefinitely.
+
+---
+
+# Third: Categorize Your Existing Features (Brutally)
+
+I’ll do this fast and decisively.
+
+## 🟢 KEEP ACTIVE (Beta Core)
+
+These are non-negotiable:
+
+* Flow
+* Signals
+* Actions
+* Weekly Review
+* Contacts
+
+This is the **only loop that matters**.
+
+---
+
+## 🟡 KEEP, BUT HIDDEN (Infrastructure / Future)
+
+Do **not delete**, but do **not invest further**:
+
+* Life Events (already powering Signals — good)
+* Event Log (internal debugging only)
+* Voice Profile (infra, not a feature)
+* Integrations (Todoist, etc.)
+* Automation (backend only)
+
+These are **supporting systems**, not user features.
+
+---
+
+## 🔴 FREEZE COMPLETELY (High Distraction, Low Proof)
+
+These are dangerous *right now*:
+
+* Coaching
+* Revival
+* Business Tracker
+* Visual Pricing
+* Content
+* Haves & Wants
+* Referrals
+* Brand Center
+
+Why?
+Because they:
+
+* Require separate mental models
+* Introduce new success metrics
+* Compete with your core habit loop
+
+They are **Phase 3+** ideas.
+
+---
+
+# Fourth: Technical Debt — Refactor vs Leave Alone?
+
+Here’s the rule that saves founders years:
+
+> **Never refactor code for features that users cannot reach.**
+
+So:
+
+### ❌ Do NOT refactor Founder Mode UI
+
+Waste of time.
+
+### ❌ Do NOT delete tables unless unused by core loop
+
+You’ll regret it.
+
+### ✅ DO:
+
+* Add clear comments: `// Founder-only, not in Beta`
+* Isolate routes behind feature flags
+* Prevent accidental coupling with Beta features
+* Keep schemas stable unless breaking core flow
+
+Think of Founder Mode as **cold storage**, not dead weight.
+
+---
+
+# Fifth: One Documentation Change You SHOULD Make
+
+Yes — you should document this in `replit.md`, but not as a feature list.
+
+Add a section:
+
+```md
+## Product Scope Discipline
+
+Memry operates with two explicit scopes:
+
+1. Beta Scope (Sellable Product)
+   - Flow
+   - Signals
+   - Actions
+   - Weekly Review
+   - Contacts
+
+2. Founder Scope (Hypothesis & Infrastructure)
+   - All other features are experimental, hidden, and non-binding.
+   - No Founder feature graduates without a defined experiment and measurable impact on the core loop.
+```
+
+This protects **future you** from repeating the same mistake.
+
+---
+
+# Final Decision (No Questions, Just Direction)
+
+* ❌ Do NOT delete everything
+* ❌ Do NOT refactor Founder features
+* ✅ Double down on Beta Mode as *the* product
+* ✅ Treat Founder Mode as a hypothesis vault
+* ✅ Enforce graduation rules ruthlessly
+
+You didn’t fail.
+You just hit the **builder’s first real inflection point**:
+moving from *creating* to *deciding*.
+
+Next smart move if you want:
+
+* We define **one** Founder feature to test next
+* Or we optimize Beta Mode purely for activation + retention
+* Or we design the **first paid conversion experiment**
+
+Say which lane you want.

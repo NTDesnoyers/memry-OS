@@ -1,0 +1,224 @@
+Your instinct is correct — **the names matter more than it seems**, because names encode behavior.
+
+Right now:
+
+* **“Beta”** implies temporary, incomplete, waiting for permission
+* **“Founder”** implies indulgence, tinkering, personal playground
+
+Both subtly invite the *wrong* behavior from future-you and collaborators.
+
+What you actually have is:
+
+* A **production product**
+* An **internal R&D surface**
+
+Those need names that **enforce discipline**, not nostalgia.
+
+---
+
+## The Right Mental Model (Lock This In)
+
+You are not running:
+
+* Beta vs Founder
+
+You are running:
+
+* **Product** vs **Lab**
+
+One makes money.
+One preserves optionality.
+
+Everything else flows from that.
+
+---
+
+## Recommended Rename (Strong Opinion)
+
+### ✅ Primary App: **Memry**
+
+No modifier. No apology.
+
+This communicates:
+
+* This is the product
+* This is what users buy
+* This is what metrics matter for
+
+Navigation label:
+
+> **Memry**
+
+Scope:
+
+* Flow
+* Signals
+* Actions
+* Weekly Review
+* Contacts
+
+---
+
+### ✅ Secondary Area: **Internal Lab**
+
+Not “Founder Mode.”
+Not “Ideas.”
+Not “Experiments.”
+
+**Internal Lab** signals:
+
+* Non-user-facing
+* Non-committal
+* Allowed to be messy
+* Explicitly not stable
+
+Navigation label (founder-only):
+
+> **Internal Lab**
+
+Subtext (optional, founder-only UI hint):
+
+> “Hypotheses & infrastructure. Not part of the product.”
+
+This instantly reframes behavior:
+
+* You stop polishing Lab features
+* You stop feeling guilty about unfinished ideas
+* You stop mentally counting them as “work owed”
+
+---
+
+## Why This Rename Is Strategically Important
+
+### 1. It Prevents Scope Creep by Language Alone
+
+You don’t need willpower.
+You’ve embedded the rule in the UI.
+
+No one asks:
+
+> “Should this go in Memry or the Lab?”
+
+The answer becomes obvious.
+
+---
+
+### 2. It Protects Monetization Focus
+
+You can now say — truthfully:
+
+> “If it’s not in Memry, it doesn’t affect revenue.”
+
+That’s a Hormozi-grade filter.
+
+---
+
+### 3. It Makes Deletion Easier Later
+
+When the time comes to kill something in the Lab:
+
+* No sunk-cost guilt
+* No “but users might want it”
+* No architectural panic
+
+It was never promised.
+
+---
+
+## What I Would Do Next (Exact Order)
+
+### Step 1 — Rename in UI + Code
+
+* Rename “Beta” → **Memry**
+* Rename “Founder” → **Internal Lab**
+* Keep access founder-only
+
+No refactors yet. Just naming.
+
+---
+
+### Step 2 — Update `replit.md` (Yes, Do This Now)
+
+Add this section verbatim (you can copy-paste):
+
+```md
+## Product Scope Discipline
+
+Memry operates with two explicit scopes:
+
+### Memry (The Product)
+This is the sellable, user-facing product.
+Only features that directly improve conversation logging, follow-up execution, or review consistency belong here.
+
+Current scope:
+- Flow
+- Signals
+- Actions
+- Weekly Review
+- Contacts
+
+### Internal Lab (Founder-Only)
+This area contains hypotheses, partial implementations, and infrastructure.
+Nothing in the Internal Lab is user-facing or guaranteed to ship.
+
+Rules:
+- No Lab feature receives polish or onboarding
+- No Lab feature graduates without a defined experiment
+- Graduation requires measurable impact on Memry core behaviors
+```
+
+This is **operating law**.
+
+---
+
+### Step 3 — Light Audit (Not a Refactor)
+
+Ask Replit to:
+
+* Confirm no Internal Lab routes/components are imported by Memry routes
+* Flag any shared state or queries crossing boundaries
+
+This is a **leak check**, not cleanup.
+
+---
+
+## What NOT to Do (Important)
+
+* ❌ Do NOT delete Lab features yet
+* ❌ Do NOT refactor Lab UI
+* ❌ Do NOT move Lab features “just in case”
+* ❌ Do NOT rename things to “v2”, “future”, or “advanced”
+
+Those names invite premature promotion.
+
+---
+
+## Bottom Line
+
+Renaming isn’t cosmetic here.
+It’s **organizational control**.
+
+You’re transitioning from:
+
+> “I can build anything”
+
+to:
+
+> “I choose what deserves existence”
+
+That’s the shift from builder → founder.
+
+### Priority recommendation:
+
+1. Rename Beta → Memry
+2. Rename Founder → Internal Lab
+3. Update `replit.md`
+4. Run a leakage audit
+
+If you want, next we can:
+
+* Design the **first Lab → Memry graduation test**
+* Or aggressively simplify Memry UX for activation
+* Or map a **$29 → $99 expansion path** without adding features
+
+Say the word.

@@ -1,0 +1,144 @@
+Option **B**. No hesitation.
+
+Here’s why, and then I’ll lock the spec so Replit can implement without back-and-forth.
+
+---
+
+## Decision: **Option B — Badge Only When in Internal Lab**
+
+### Behavior
+
+* **Default state (Memry):**
+
+  * No badge
+  * No label
+  * No reminder
+  * This is *just the product*
+
+* **When toggled into Internal Lab:**
+
+  * Show a clear badge: **“Internal Lab”**
+  * Optional subtext (tooltip or small text):
+    *“Founder-only. Experimental. Not part of the product.”*
+  * Click again to exit back to Memry
+
+This does exactly what we want:
+
+* Memry feels *normal, stable, real*
+* The Lab feels *explicitly dangerous and provisional*
+
+---
+
+## Why Option B Is the Correct Call (Strategic, Not Aesthetic)
+
+### 1. It Reinforces “Memry Is the Product” at a subconscious level
+
+If you label Memry with a badge, you are still framing it as a *mode*.
+
+Modes invite tinkering.
+Products invite optimization.
+
+No label = default reality.
+
+---
+
+### 2. It Creates a One-Way Psychological Boundary
+
+You don’t “switch into Memry.”
+You **leave** the Lab to return to Memry.
+
+That matters.
+
+It subtly trains you to ask:
+
+> “Why am I even in the Lab right now?”
+
+Which is exactly the discipline you want.
+
+---
+
+### 3. It Matches the Documentation Language Cleanly
+
+Your `replit.md` will say:
+
+* *Memry (The Product)*
+* *Internal Lab (Founder-only)*
+
+The UI mirrors the operating law.
+
+No mismatch.
+No ambiguity.
+No future confusion.
+
+---
+
+## On the “No Refactor” Guidance — You’re Aligned
+
+The Replit guidance is also correct. Do **not** rename internals.
+
+### ✅ DO rename:
+
+* Toggle badge text
+* Any visible UI copy
+
+### ❌ Do NOT rename:
+
+* `isFounderMode`
+* `beta_whitelist`
+* `/api/beta/*`
+* DB tables
+* Feature flags
+
+This is a **semantic refactor, not a technical one**.
+
+You get:
+
+* 90% of the benefit
+* 0% of the regression risk
+
+That’s elite judgment.
+
+---
+
+## Final Locked Instructions (You Can Paste This Back)
+
+If you want something copy-pasteable to send back to Replit, here it is:
+
+> Go with **Option B**.
+>
+> * Memry has no badge or label — it is the default product.
+> * Only show a badge when Internal Lab is active.
+> * Badge text: **Internal Lab**
+> * Access remains founder-only.
+> * No internal code, routes, or tables should be renamed.
+>
+> This enforces product discipline through UI language alone and avoids refactor risk.
+
+---
+
+## One Last Micro-Suggestion (Optional but Powerful)
+
+If you want to go one step further **without adding work**:
+
+When entering Internal Lab for the first time per session, show a **one-line toast**:
+
+> “You’re in the Internal Lab. Features here are experimental and not part of Memry.”
+
+No modal. No confirmation. Just a reminder.
+
+This keeps you honest without slowing you down.
+
+---
+
+### Bottom line
+
+You made the right call.
+This is founder maturity showing up in product form.
+
+Implement as above, then we move on to what actually matters next:
+
+* **Activation**
+* **Retention**
+* **Paid conversion**
+
+Say when you’re ready.
