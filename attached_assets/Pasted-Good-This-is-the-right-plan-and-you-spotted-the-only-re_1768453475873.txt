@@ -1,0 +1,197 @@
+Good. This is the right plan, and you spotted the only real architectural wrinkle before it could bite you.
+
+I’ll do three things:
+	1.	Confirm your plan is correct
+	2.	Resolve the server-vs-client tracking issue cleanly
+	3.	Lock the final implementation rules so this doesn’t regress
+
+No fluff.
+
+⸻
+
+1️⃣ Plan Review — Verdict
+
+Your plan is correct and complete.
+
+Core fixes
+
+All four are mandatory and you’re implementing them correctly. No changes.
+
+Critical additions
+
+All three are exactly right, especially this one:
+
+Server-side tracking for auth events
+
+That’s the correct instinct. Trying to “hack” auth events through the client would be fragile and wrong.
+
+⸻
+
+2️⃣ Server vs Client Tracking — Clean Resolution
+
+You’ve correctly identified the problem:
+
+trackBetaEvent is a client helper, but auth happens server-side
+
+The fix is not to reuse the client function.
+
+✅ Correct architecture (do this)
+
+You need two layers, not one:
+
+⸻
+
+🔹 A. Single source of truth: beta_events table
+
+This stays unchanged.
+All events—client or server—end up here.
+
+⸻
+
+🔹 B. Split the tracking implementation (important)
+
+1. Server-side tracker (new)
+Create a server-only function, e.g.:
+
+recordBetaEvent({
+  userId?: string;
+  sessionId?: string;
+  eventType: BetaEventType;
+  metadata?: Record<string, any>;
+})
+
+This:
+	•	Writes directly to beta_events
+	•	Is callable from:
+	•	auth callback
+	•	server actions
+	•	background jobs later
+
+This is what auth uses.
+
+⸻
+
+2. Client-side trackBetaEvent becomes a thin wrapper
+Client function should:
+	•	Collect sessionId
+	•	Attach client-only metadata
+	•	Call an API route or server action that invokes recordBetaEvent
+
+Client never writes to DB directly.
+It requests an event.
+
+This keeps:
+	•	One schema
+	•	One write path
+	•	No duplication
+
+⸻
+
+🔹 C. Auth callback logic (final form)
+
+In replitAuth.ts:
+
+try {
+  const { user, isNewUser } = await upsertAuthUser(...);
+
+  recordBetaEvent({
+    userId: user.id,
+    sessionId,
+    eventType: isNewUser ? 'user_signup' : 'user_login',
+    metadata: { provider: 'replit' }
+  });
+
+} catch (error) {
+  recordBetaEvent({
+    sessionId,
+    eventType: 'login_failed',
+    metadata: {
+      reason: error.message,
+      stage: 'auth_callback'
+    }
+  });
+
+  throw error;
+}
+
+This is clean, debuggable, and future-proof.
+
+⸻
+
+3️⃣ Activation Event — Lock the Rules Now
+
+You said:
+
+Activation event (activated) on first conversation_logged or followup_created
+
+Correct — but lock this rule explicitly so it doesn’t drift.
+
+✅ Activation definition (final)
+
+A user is activated when:
+	•	They perform their first:
+	•	conversation_logged OR
+	•	followup_created
+
+And:
+	•	activated fires once per user, ever
+	•	It is derived server-side (not client guesswork)
+
+Implementation rule:
+	•	On write of either event:
+	•	Check users.activatedAt
+	•	If null → set it + record activated event
+
+This makes activation:
+	•	Idempotent
+	•	Queryable
+	•	Trustworthy
+
+⸻
+
+4️⃣ Session ID — One Rule, No Exceptions
+
+You already understand why this matters. Here’s the non-negotiable rule:
+
+Every beta event must have either userId, sessionId, or both.
+
+Especially:
+	•	login_failed → session only
+	•	user_signup → both
+	•	app_opened → both
+	•	Pre-auth events → session only
+
+If an event has neither → it’s invalid.
+
+Enforce this now, or debugging later will be hell.
+
+⸻
+
+5️⃣ Final Acceptance Checklist (Ship Gate)
+
+Before you move on to anything else, confirm:
+	•	Auth callback writes server-side events
+	•	user_signup, user_login, login_failed all appear in beta_events
+	•	Session IDs are consistent across a login flow
+	•	activated fires once and only once per user
+	•	You can manually reconstruct a user journey end-to-end
+
+If all five are true → green light.
+
+⸻
+
+Final Call
+
+This is foundational instrumentation.
+You’re doing it at the exact right time.
+
+Once this lands, the next step is obvious and unavoidable:
+
+👉 Activation rate + retention curve
+Not features. Not polish. Not pricing yet.
+
+When you’re ready, bring me:
+	•	A sample of real event rows
+	•	Or your first funnel query
+
+We’ll decide what to kill or double down on next.

@@ -1,0 +1,207 @@
+Good catch. This is a real analytics blind spot, not a cosmetic issue. You’re flying partially blind on the most important funnel step: who is actually logging in vs bouncing or failing auth.
+
+I’ll do three things:
+	1.	Confirm your fixes are correct
+	2.	Tighten the implementation so it’s unambiguous
+	3.	Add 3 critical additions you didn’t list (but should not skip)
+
+No fluff.
+
+⸻
+
+1️⃣ Your Identified Fixes — Verdict
+
+Everything you listed is correct and necessary.
+
+✅ Missing login events
+
+This is critical. Right now your data answers:
+
+“What do users do after they’re inside?”
+
+But it cannot answer:
+	•	Who tried to log in?
+	•	Who succeeded?
+	•	Who failed?
+	•	Who is new vs returning?
+
+That makes conversion, retention, and beta health unknowable.
+
+✅ Auth upsert error handling
+
+You already fixed this — good. Silent auth failures are deadly in beta.
+If a user thinks they’re logged in but you didn’t persist them, you lose:
+	•	Trust
+	•	Analytics
+	•	Ability to follow up
+
+✅ app_opened firing too late
+
+Correct diagnosis.
+Right now it only fires post-success, which means:
+	•	Failed auth attempts = invisible
+	•	Drop-offs = invisible
+
+This biases your data toward “happy path only”.
+
+⸻
+
+2️⃣ Exact Fixes — Locked Spec (Do This, No Variants)
+
+🔹 1. Extend BetaEventType
+
+In client/src/lib/beta-analytics.ts:
+
+export type BetaEventType =
+  | 'app_opened'
+  | 'user_login'
+  | 'user_signup'
+  | 'login_failed'
+  | 'conversation_logged'
+  | 'followup_created'
+  | 'weekly_review_viewed'
+  | 'draft_created';
+
+No optionality. These are foundational events.
+
+⸻
+
+🔹 2. Track login vs signup correctly
+
+In replitAuth.ts, after auth callback + successful DB upsert:
+
+Logic must branch explicitly:
+
+if (isNewUser) {
+  trackBetaEvent('user_signup', { authProvider: 'replit' });
+} else {
+  trackBetaEvent('user_login', { authProvider: 'replit' });
+}
+
+If you don’t distinguish these two, you destroy:
+	•	Activation metrics
+	•	Beta cohort analysis
+	•	Pricing readiness later
+
+⸻
+
+🔹 3. Track failed auth attempts (non-negotiable)
+
+In the catch block:
+
+trackBetaEvent('login_failed', {
+  reason: error.message,
+  stage: 'auth_callback',
+});
+
+Even if you don’t surface this in UI yet, log it.
+
+This will tell you:
+	•	Is Replit auth flaky?
+	•	Are users misconfigured?
+	•	Are whitelist rules blocking people?
+
+⸻
+
+🔹 4. Leave app_opened where it is (for now)
+
+Do not move it yet.
+
+Right now it correctly represents:
+
+“User successfully entered the app shell”
+
+That’s useful as a post-auth activation signal.
+
+Instead, you’ll now have:
+
+Event	Meaning
+user_login	Auth success
+user_signup	First-time auth
+login_failed	Funnel leak
+app_opened	App usable
+
+This gives you a clean funnel.
+
+⸻
+
+3️⃣ Three Critical Additions You Didn’t List (But Need)
+
+These are small, high-leverage additions.
+
+⸻
+
+🔥 A. Add user_id + session_id to every beta event
+
+If this isn’t already enforced in trackBetaEvent, do it now.
+
+Minimum required fields:
+	•	userId (nullable for failures)
+	•	sessionId
+	•	eventType
+	•	timestamp
+
+Without session IDs, you cannot:
+	•	Reconstruct journeys
+	•	Diagnose partial failures
+	•	Understand retries
+
+⸻
+
+🔥 B. Track first meaningful action (activation event)
+
+Right now you have usage events, but no activation marker.
+
+Add one derived event (not user-facing):
+
+'activated'
+
+Triggered when any one of these occurs:
+	•	first conversation_logged
+	•	first followup_created
+
+This becomes your north-star beta metric:
+
+“What % of signups actually get value?”
+
+⸻
+
+🔥 C. Add a basic funnel query now (even if manual)
+
+Before shipping, you should be able to answer:
+
+signups → logins → app_opened → activated
+
+If you can’t run that query today, your beta is leaking and you won’t know where.
+
+⸻
+
+4️⃣ Acceptance Criteria (This Is How You Know It’s Done)
+
+You are not done until:
+	•	beta_events shows non-zero user_login, user_signup, login_failed
+	•	You can count unique signups per day
+	•	You can identify users who logged in but never activated
+	•	A failed auth attempt produces some record
+	•	No silent auth failures remain
+
+If all of that is true → ship.
+
+If not → do not add features yet.
+
+⸻
+
+Final Call
+
+This is high-leverage, correct work.
+Fixing this before adding more product surface area is the right move.
+
+Once this is live, next step is obvious:
+👉 Activation + retention instrumentation, not new features.
+
+If you want, next I can:
+	•	Design the beta dashboard schema
+	•	Define the activation metric formally
+	•	Or pressure-test whether your current MVP even deserves pricing yet
+
+Your move.

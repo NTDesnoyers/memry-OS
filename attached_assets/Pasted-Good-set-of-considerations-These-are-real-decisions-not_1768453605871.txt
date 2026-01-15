@@ -1,0 +1,147 @@
+Good set of considerations. These are real decisions, not bikeshedding. I’ll lock each one so you can build without ambiguity.
+
+⸻
+
+1️⃣ Session ID Source — Decision
+
+✅ Use the existing Express session ID
+
+Decision:
+👉 Use req.sessionID as the analytics session ID.
+
+Why this is correct:
+	•	Already exists
+	•	Stable across the auth flow
+	•	Available server-side (auth callback) and client-side
+	•	No extra abstraction to debug
+	•	Good enough for beta-stage journey reconstruction
+
+When you’d revisit this:
+Only if you later need:
+	•	Cross-device stitching
+	•	Long-lived anonymous journeys
+	•	Product analytics at Mixpanel-level sophistication
+
+You’re not there. Don’t overbuild.
+
+Rule (lock this):
+
+sessionId === Express session ID
+No second analytics session concept.
+
+⸻
+
+2️⃣ Backfilling Existing Users — Decision
+
+✅ Do NOT backfill
+
+Decision:
+👉 Clean slate going forward. No retroactive user_signup or activated.
+
+Why:
+	•	You’re pre-product-market-fit
+	•	Historical accuracy is fake accuracy here
+	•	You’ll contaminate funnel metrics with assumptions
+	•	Current user count = ~1 (you). Zero downside.
+
+Explicit rule:
+
+Analytics truth begins after instrumentation, not before.
+
+If later you want “founder exception” logic, you can manually ignore your userId in queries.
+
+⸻
+
+3️⃣ Event Validation — Decision (Important)
+
+✅ Reject invalid events at write time
+
+Decision:
+👉 If an event has neither userId nor sessionId → reject it
+
+Do not silently accept or “warn only”.
+
+Why this matters:
+	•	Silent failures rot analytics
+	•	You want bugs to surface early
+	•	This is core infra — strictness now saves pain later
+
+Implementation rule:
+
+if (!userId && !sessionId) {
+  throw new Error('Invalid beta event: missing userId and sessionId');
+}
+
+You can still log the rejection for debugging, but the write should not succeed.
+
+⸻
+
+4️⃣ Republish Required — Acknowledged
+
+Correct.
+These are server-side behavioral changes, so:
+	•	New auth logic
+	•	New event writes
+	•	Validation rules
+
+👉 Republish is mandatory
+
+Nothing else to decide here.
+
+⸻
+
+5️⃣ Existing /api/beta/track Endpoint — Decision
+
+✅ Reuse it. Do not create a second endpoint
+
+Decision:
+👉 Keep /api/beta/track as the single ingestion point for client events.
+
+Required change:
+	•	Pass sessionId explicitly from client
+	•	Server enriches / validates
+	•	Server writes via recordBetaEvent
+
+Client responsibility:
+	•	Send eventType
+	•	Send metadata
+	•	Send sessionId (read from cookie / injected prop)
+
+Server responsibility:
+	•	Validate (userId || sessionId)
+	•	Enforce schema
+	•	Persist
+
+This keeps:
+	•	One ingestion surface
+	•	One schema
+	•	One mental model
+
+⸻
+
+6️⃣ Final Locked Decisions (Summary)
+
+You can paste this into your build notes:
+	•	Session ID: Use existing Express req.sessionID
+	•	Backfill: No backfill; analytics start forward-only
+	•	Validation: Reject events missing both userId and sessionId
+	•	Auth events: Recorded server-side only
+	•	Client events: Go through existing /api/beta/track
+	•	Republish: Required after implementation
+
+No unresolved decisions remain.
+
+⸻
+
+Final Instruction
+
+Build this exactly once, then stop touching analytics for a bit.
+
+Next conversation after this ships should be one of:
+	•	“Here’s the first funnel data”
+	•	“Activation rate is X — now what?”
+	•	“Users are logging in but not activating”
+
+Anything else before that is distraction.
+
+Proceed.
