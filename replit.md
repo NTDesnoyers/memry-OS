@@ -5,6 +5,7 @@ Memry (formerly Flow OS, domain: memryos.io) is a multi-tenant SaaS platform des
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
+**Documentation requirement**: Always update replit.md with new features, architectural changes, and important decisions before marking tasks complete. User should not need to prompt for documentation updates.
 The AI assistant is fully agentic and can take actions using 9 tools via OpenAI function calling. It can execute up to 5 sequential tool calls per request for complex operations.
 The system learns the user's unique communication style (greetings, sign-offs, expressions, tone notes, compliment patterns, question styles) from conversation transcripts to generate authentic-sounding content.
 The system generates drafts of thank-you emails, handwritten notes, and follow-up tasks from conversations, stored for review and editing.
