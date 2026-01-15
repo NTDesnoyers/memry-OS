@@ -51,6 +51,7 @@ import { useQuery } from "@tanstack/react-query";
 import { isFounderMode, toggleMode, BETA_NAV_HREFS, BETA_PROFILE_MENU_HREFS, isFounderToggleEnabled } from "@/lib/feature-mode";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
+import { toast } from "sonner";
 
 const allNavItems = [
   { name: "Flow", href: "/", icon: Repeat },
@@ -241,6 +242,20 @@ function NavContent({ location, setOpen, userName, userInitials, brokerage, head
                   );
                 })}
                 {profileMenuItems.length > 0 && <DropdownMenuSeparator />}
+                {showModeToggle && !founderMode && (
+                  <DropdownMenuItem 
+                    className="cursor-pointer gap-2 text-muted-foreground"
+                    onClick={async () => {
+                      sessionStorage.setItem('showLabToast', 'true');
+                      await toggleMode();
+                      window.location.reload();
+                    }}
+                    data-testid="button-enter-lab-collapsed"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Enter Internal Lab
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem 
                   className="cursor-pointer gap-2"
                   onClick={() => {
@@ -311,6 +326,20 @@ function NavContent({ location, setOpen, userName, userInitials, brokerage, head
                   );
                 })}
                 {profileMenuItems.length > 0 && <DropdownMenuSeparator />}
+                {showModeToggle && !founderMode && (
+                  <DropdownMenuItem 
+                    className="cursor-pointer gap-2 text-muted-foreground"
+                    onClick={async () => {
+                      sessionStorage.setItem('showLabToast', 'true');
+                      await toggleMode();
+                      window.location.reload();
+                    }}
+                    data-testid="button-enter-lab"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Enter Internal Lab
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem 
                   className="cursor-pointer gap-2"
                   onClick={() => {
@@ -348,17 +377,17 @@ function NavContent({ location, setOpen, userName, userInitials, brokerage, head
               </div>
             </div>
             
-            {showModeToggle && (
+            {showModeToggle && founderMode && (
               <Badge 
-                variant={founderMode ? "default" : "secondary"}
-                className="cursor-pointer hover:opacity-80 transition-opacity w-full justify-center py-1"
+                variant="default"
+                className="cursor-pointer hover:opacity-80 transition-opacity w-full justify-center py-1 bg-amber-600 hover:bg-amber-700"
                 onClick={async () => {
                   await toggleMode();
                   window.location.reload();
                 }}
                 data-testid="mode-toggle-badge"
               >
-                {founderMode ? "Founder Mode" : "Beta Mode"} (click to switch)
+                Internal Lab (click to exit)
               </Badge>
             )}
           </>
@@ -423,6 +452,16 @@ export default function LayoutComponent({ children }: { children: React.ReactNod
       trackBetaEvent('app_opened', { page: location });
     }
   }, []);
+  
+  useEffect(() => {
+    const shouldShowLabToast = sessionStorage.getItem('showLabToast');
+    if (shouldShowLabToast && founderMode) {
+      sessionStorage.removeItem('showLabToast');
+      toast("You're in the Internal Lab", {
+        description: "Features here are experimental and not part of Memry."
+      });
+    }
+  }, [founderMode]);
   
   const showModeToggle = isFounderToggleEnabled(userEmail);
 

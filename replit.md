@@ -10,6 +10,35 @@ The AI assistant is fully agentic and can take actions using 9 tools via OpenAI 
 The system learns the user's unique communication style (greetings, sign-offs, expressions, tone notes, compliment patterns, question styles) from conversation transcripts to generate authentic-sounding content.
 The system generates drafts of thank-you emails, handwritten notes, and follow-up tasks from conversations, stored for review and editing.
 
+## Product Scope Discipline
+
+Memry operates with two explicit scopes:
+
+### Memry (The Product)
+This is the sellable, user-facing product.
+Only features that directly improve conversation logging, follow-up execution, or review consistency belong here.
+
+Current scope:
+- Flow
+- Signals
+- Actions
+- Weekly Review
+- Contacts
+
+### Internal Lab (Founder-Only)
+This area contains hypotheses, partial implementations, and infrastructure.
+Nothing in the Internal Lab is user-facing or guaranteed to ship.
+
+Features in Internal Lab:
+- Life Events, Event Log (infrastructure)
+- Voice Profile, Integrations, Automation (supporting systems)
+- Today, Coaching, Revival, Business Tracker, Visual Pricing, Content, Haves & Wants, Referrals, Calendar, Brand Center (frozen - Phase 3+)
+
+Rules:
+- No Lab feature receives polish or onboarding
+- No Lab feature graduates without a defined experiment
+- Graduation requires measurable impact on Memry core behaviors (conversation logging frequency or follow-up completion)
+
 ## System Architecture
 Memry uses an event-driven, multi-agent architecture specifically tailored for real estate orchestration.
 
