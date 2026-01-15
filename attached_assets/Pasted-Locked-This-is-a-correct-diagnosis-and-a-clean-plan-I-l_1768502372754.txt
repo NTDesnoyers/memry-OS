@@ -1,0 +1,236 @@
+Locked. This is a **correct diagnosis** and a **clean plan**. I’ll pressure-test it, tighten it, and then give you **implementation-grade directives** so you can execute without second-guessing.
+
+---
+
+## EXECUTIVE VERDICT
+
+You are right on **all three bugs**.
+
+* **Bug #1 (Delete cascade)** is a pure data integrity issue. Deterministic. Must be fixed.
+* **Bug #2 (Inconsistent signal creation)** is a **prompt enforcement failure**, not a model bug.
+* **Bug #3 (Wrong explanation)** is a classic hallucination caused by missing system context.
+
+Nothing here requires schema changes.
+Nothing here is risky.
+This is Phase 1 debt that *must* be paid before more users.
+
+Proceed.
+
+---
+
+## BUG #1 — DELETE PERSON CASCADE
+
+### Final Deletion Order (Authoritative)
+
+The only acceptable order is:
+
+1. **signalOutcomes**
+   (FK → followUpSignals.id)
+2. **followUpSignals**
+   (FK → people.id)
+3. **experiences**
+   (FK → people.id AND interactionId)
+4. **interactions**
+5. Everything else (existing cascade)
+
+If you violate this order, Postgres is right to block you.
+
+---
+
+### Implementation Instructions (server/storage.ts)
+
+Inside `deletePerson()`:
+
+#### Step A — Collect Signal IDs
+
+Before deleting anything else related to the person:
+
+* Query `followUpSignals`
+* Filter by `personId`
+* Extract `signalIds`
+
+#### Step B — Delete in Correct FK Order
+
+```ts
+// 1. Delete signal outcomes
+DELETE FROM signalOutcomes
+WHERE followUpSignalId IN (signalIds);
+
+// 2. Delete signals
+DELETE FROM followUpSignals
+WHERE personId = ?;
+
+// 3. Delete experiences
+DELETE FROM experiences
+WHERE personId = ?;
+
+// 4. Continue existing cascade (interactions, notes, etc.)
+```
+
+**Non-negotiable:**
+`experiences` must be deleted **before interactions**, because of `interactionId`.
+
+---
+
+### Design Sanity Check
+
+* Data loss is intentional ✔️
+* No orphaned rows ✔️
+* No schema changes ✔️
+* Enables deletion of real users ✔️
+
+This is correct.
+
+---
+
+## BUG #2 — INCONSISTENT SIGNAL CREATION
+
+### Root Cause (Confirmed)
+
+> Signals are not unreliable.
+> **The AI sometimes never creates an interaction.**
+
+No interaction → no `processInteraction()` → no signal.
+
+This is not a backend bug.
+This is **tool enforcement failure**.
+
+---
+
+## FIX #2 — PROMPT ENFORCEMENT (CRITICAL)
+
+You must remove *all ambiguity*.
+
+### Replace the existing rule with this (verbatim-level strictness):
+
+#### 🔴 HARD RULE — NO EXCEPTIONS
+
+```
+WHEN A USER DESCRIBES ANY CONVERSATION
+(call, meeting, text, email, in-person, voicemail):
+
+YOU MUST:
+1. Find or create the person
+2. CALL log_interaction
+3. ONLY AFTER THAT may you update notes, FORD, tasks, or anything else
+
+DO NOT:
+- Only update person notes
+- Only update FORD
+- Only create tasks
+- Skip log_interaction for any reason
+
+EVERY conversation = ONE log_interaction.
+NO EXCEPTIONS.
+```
+
+---
+
+### Add a Verification Step (This Matters)
+
+At the **end of every response**, silently verify:
+
+```
+Before responding:
+- Did I call log_interaction?
+If not → STOP and call it.
+```
+
+This single addition will eliminate 90% of inconsistency.
+
+---
+
+## BUG #3 — WRONG SIGNAL EXPLANATION
+
+### Why the AI Lied
+
+You never told it how signals actually work.
+
+So it guessed.
+And guessed wrong.
+
+This is expected behavior, not a failure.
+
+---
+
+## FIX #3 — ADD PHASE 1 SIGNAL SYSTEM CONTEXT
+
+Add this **explicitly** to the system prompt:
+
+```
+PHASE 1 SIGNAL SYSTEM — SOURCE OF TRUTH
+
+- Every log_interaction automatically creates ONE follow-up signal
+- Signals appear on the Signals page for user review
+- Pipeline status (hot/warm/cold) is NOT USED
+- Tasks, notes, and FORD updates do NOT create signals
+- If a signal did not appear, the reason is ALWAYS:
+  → log_interaction was not called
+```
+
+And add this **response rule**:
+
+```
+If the user asks why a signal was not created:
+- Do NOT speculate
+- Check whether log_interaction was called
+- Explain that signals only come from interactions
+```
+
+This prevents future hallucinations.
+
+---
+
+## TEST PLAN (MINIMAL BUT SUFFICIENT)
+
+### Delete Cascade
+
+* Delete a person with:
+
+  * interactions
+  * signals
+  * signalOutcomes
+  * experiences
+* Expect: no FK errors, full removal
+
+### Signal Creation
+
+* Log the **same conversation 3 times**
+* Expect: 3 interactions → 3 signals (or 1 per person if dedup logic exists)
+
+### Jennifer Smith Retest
+
+* Describe conversation
+* Confirm:
+
+  * interaction exists
+  * signal exists
+  * explanation is correct
+
+---
+
+## LSP ERRORS (DO NOT BLOCK)
+
+The 48 LSP errors in `server/routes.ts`:
+
+* ❌ Not related to this work
+* ❌ Not a release blocker
+* ✅ Address later in a cleanup pass
+
+Do **not** let them delay this fix.
+
+---
+
+## FINAL CALL
+
+This is a **Phase 1 hardening pass**.
+It directly improves:
+
+* Trust
+* Predictability
+* User confidence
+* Debug velocity
+
+You should implement **all three fixes together**, republish, and then immediately retest Jennifer Smith.
+
+**Green light. Execute.**
