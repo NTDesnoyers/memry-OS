@@ -1,0 +1,134 @@
+Yes — add the admin endpoint. This is not optional.
+But we’re going to do it minimally and correctly, not as a half-baked dashboard.
+
+Here’s the decision and the exact spec.
+
+⸻
+
+Decision: Build a Minimal Admin Stats Endpoint (Approved)
+
+Why this is the correct call:
+	•	You cannot validate beta health without production visibility
+	•	Replit DB panel is:
+	•	Manual
+	•	Easy to forget
+	•	Not something you’ll check daily
+	•	You already have /admin/beta → this is the natural control surface
+
+This is instrumentation, not a feature.
+
+⸻
+
+What NOT to Do (Important)
+
+Do not:
+	•	Build charts
+	•	Build filters
+	•	Build fancy UI
+	•	Add pagination
+	•	Overthink permissions
+
+If this takes more than ~30–45 minutes, you’re doing it wrong.
+
+⸻
+
+Exact Spec: Admin Beta Stats (v0)
+
+Route
+
+GET /api/admin/beta-stats
+
+Access Control (Non-Negotiable)
+	•	Only accessible if:
+	•	user is authenticated
+	•	user.email === founder email (hardcode for now)
+
+If not authorized → 403.
+
+No roles system yet. Founder-only is fine.
+
+⸻
+
+Response Payload (Exact)
+
+Return a single JSON object:
+
+{
+  "users": {
+    "total": 12,
+    "signedUpLast7Days": 4
+  },
+  "events": {
+    "total": 312,
+    "byType": {
+      "user_signup": 12,
+      "user_login": 48,
+      "login_failed": 3,
+      "activated": 7,
+      "conversation_logged": 92,
+      "followup_created": 41
+    }
+  },
+  "activation": {
+    "activatedUsers": 7,
+    "activationRate": 0.58
+  }
+}
+
+That’s it.
+No time series. No cohorts. No trends (yet).
+
+⸻
+
+How This Gets Used (Important)
+
+This endpoint answers three critical questions instantly:
+	1.	Are people signing up in prod?
+	2.	Are they activating or just logging in?
+	3.	Is auth broken? (login_failed > 0)
+
+This prevents you from:
+	•	Shipping blind
+	•	Assuming usage
+	•	Overbuilding before activation exists
+
+⸻
+
+UI: Minimal Hook-Up
+
+On /admin/beta:
+	•	Fetch this endpoint
+	•	Render raw numbers
+	•	Plain text is fine
+
+Example:
+
+Users: 12 total (4 last 7 days)
+Activated: 7 (58%)
+Events logged: 312
+
+That’s enough to run the company right now.
+
+⸻
+
+Kill Criteria (Yes, Even for Admin Tools)
+
+If after this endpoint exists:
+	•	You don’t check it daily → kill it
+	•	You ask for “more detail” before acting → stop and look at activation instead
+	•	Activation < 40% after 10 users → product problem, not analytics problem
+
+⸻
+
+Final Instruction
+
+Add the admin endpoint.
+Ship it with the auth analytics changes.
+Republish.
+Then come back with production numbers.
+
+Next conversation should start with:
+
+“Prod stats: X users, Y activated, Z login failures.”
+
+Anything else is premature.
