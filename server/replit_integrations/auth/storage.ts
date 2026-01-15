@@ -1,6 +1,7 @@
 import { authUsers, betaEvents, betaWhitelist, type AuthUser, type UpsertAuthUser, type SubscriptionStatus, type InsertBetaEvent, type BetaEvent, type BetaWhitelistEntry, type InsertBetaWhitelistEntry } from "@shared/models/auth";
+import { interactions, followUpSignals } from "@shared/schema";
 import { db } from "../../db";
-import { eq, desc, ne, sql, gte, and, count, ilike } from "drizzle-orm";
+import { eq, desc, ne, sql, gte, and, count, ilike, isNull } from "drizzle-orm";
 import { createLogger } from "../../logger";
 
 const logger = createLogger("AuthStorage");
@@ -292,36 +293,42 @@ class AuthStorage implements IAuthStorage {
     const fourteenDaysAgo = new Date();
     fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
 
-    const [totalUsersResult] = await db.select({ count: count() }).from(authUsers).where(eq(authUsers.status, 'approved'));
+    // Count total users (all auth users, not just approved since we're in beta)
+    const [totalUsersResult] = await db.select({ count: count() }).from(authUsers);
     const totalUsers = totalUsersResult?.count || 0;
 
-    const conversationsThisWeekResult = await db.selectDistinct({ userId: betaEvents.userId })
-      .from(betaEvents)
+    // Active users = distinct users with interactions in last 7 days (from actual interactions table)
+    const conversationsThisWeekResult = await db.selectDistinct({ userId: interactions.userId })
+      .from(interactions)
       .where(and(
-        eq(betaEvents.eventType, 'conversation_logged'),
-        gte(betaEvents.createdAt, sevenDaysAgo)
+        gte(interactions.createdAt, sevenDaysAgo),
+        isNull(interactions.deletedAt)
       ));
     const activeUsersLast7Days = conversationsThisWeekResult.length;
 
-    const followupsResult = await db.selectDistinct({ userId: betaEvents.userId })
-      .from(betaEvents)
-      .where(and(
-        eq(betaEvents.eventType, 'followup_created'),
-        gte(betaEvents.createdAt, sevenDaysAgo)
-      ));
+    // Users with follow-ups in last 7 days (from actual follow_up_signals table)
+    const followupsResult = await db.selectDistinct({ userId: followUpSignals.userId })
+      .from(followUpSignals)
+      .where(gte(followUpSignals.createdAt, sevenDaysAgo));
     const usersWithFollowupsLast7Days = followupsResult.length;
 
-    const [convCountResult] = await db.select({ count: count() }).from(betaEvents)
-      .where(and(eq(betaEvents.eventType, 'conversation_logged'), gte(betaEvents.createdAt, sevenDaysAgo)));
+    // Total conversations this week (from actual interactions table)
+    const [convCountResult] = await db.select({ count: count() })
+      .from(interactions)
+      .where(and(
+        gte(interactions.createdAt, sevenDaysAgo),
+        isNull(interactions.deletedAt)
+      ));
     const totalConversations = convCountResult?.count || 0;
     const avgConversationsPerUser = activeUsersLast7Days > 0 ? totalConversations / activeUsersLast7Days : 0;
 
-    const conversationsPriorWeekResult = await db.selectDistinct({ userId: betaEvents.userId })
-      .from(betaEvents)
+    // Retention: users active in prior week who are also active this week
+    const conversationsPriorWeekResult = await db.selectDistinct({ userId: interactions.userId })
+      .from(interactions)
       .where(and(
-        eq(betaEvents.eventType, 'conversation_logged'),
-        gte(betaEvents.createdAt, fourteenDaysAgo),
-        sql`${betaEvents.createdAt} < ${sevenDaysAgo}`
+        gte(interactions.createdAt, fourteenDaysAgo),
+        sql`${interactions.createdAt} < ${sevenDaysAgo}`,
+        isNull(interactions.deletedAt)
       ));
     const activeLastWeekUserIds = new Set(conversationsPriorWeekResult.map(r => r.userId));
     
@@ -383,37 +390,59 @@ class AuthStorage implements IAuthStorage {
     followupCount: number;
     signedUpAt: Date | null;
   }>> {
-    // Get all auth users (excluding test accounts)
+    // Get all auth users
     const allUsers = await db.select().from(authUsers);
     
     const result = [];
     for (const user of allUsers) {
       if (!user.id) continue;
       
-      // Get user's beta events
-      const userEvents = await db.select()
+      // Count conversations from actual interactions table (exclude soft-deleted)
+      const [convResult] = await db.select({ count: count() })
+        .from(interactions)
+        .where(and(
+          eq(interactions.userId, user.id),
+          isNull(interactions.deletedAt)
+        ));
+      const conversationCount = convResult?.count || 0;
+      
+      // Count follow-ups from actual follow_up_signals table
+      const [signalResult] = await db.select({ count: count() })
+        .from(followUpSignals)
+        .where(eq(followUpSignals.userId, user.id));
+      const followupCount = signalResult?.count || 0;
+      
+      // Derive status: activated if they have any interactions, otherwise signed_up
+      const status: 'activated' | 'signed_up' = conversationCount > 0 ? 'activated' : 'signed_up';
+      
+      // Get last seen from most recent interaction or beta_event
+      const [lastInteraction] = await db.select({ createdAt: interactions.createdAt })
+        .from(interactions)
+        .where(and(
+          eq(interactions.userId, user.id),
+          isNull(interactions.deletedAt)
+        ))
+        .orderBy(desc(interactions.createdAt))
+        .limit(1);
+      
+      const [lastEvent] = await db.select({ createdAt: betaEvents.createdAt })
         .from(betaEvents)
-        .where(eq(betaEvents.userId, user.id));
+        .where(eq(betaEvents.userId, user.id))
+        .orderBy(desc(betaEvents.createdAt))
+        .limit(1);
       
-      // Derive status from events
-      const hasActivated = userEvents.some(e => e.eventType === 'activated');
-      const status: 'activated' | 'signed_up' = hasActivated ? 'activated' : 'signed_up';
+      // Use the most recent of interaction or event
+      let lastSeen: Date | null = null;
+      if (lastInteraction?.createdAt && lastEvent?.createdAt) {
+        lastSeen = lastInteraction.createdAt > lastEvent.createdAt 
+          ? lastInteraction.createdAt 
+          : lastEvent.createdAt;
+      } else {
+        lastSeen = lastInteraction?.createdAt || lastEvent?.createdAt || null;
+      }
       
-      // Get last seen (most recent event)
-      const lastSeenEvent = userEvents.sort((a, b) => 
-        (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0)
-      )[0];
-      const lastSeen = lastSeenEvent?.createdAt || null;
-      
-      // Get signup date from user_signup event or fallback to createdAt
-      const signupEvent = userEvents.find(e => e.eventType === 'user_signup');
-      const signedUpAt = signupEvent?.createdAt || user.createdAt || null;
-      
-      // Count conversations (from beta_events conversation_logged)
-      const conversationCount = userEvents.filter(e => e.eventType === 'conversation_logged').length;
-      
-      // Count follow-ups (from beta_events followup_created)
-      const followupCount = userEvents.filter(e => e.eventType === 'followup_created').length;
+      // Signed up date from auth_users.createdAt
+      const signedUpAt = user.createdAt || null;
       
       result.push({
         email: user.email || 'unknown',
@@ -467,11 +496,11 @@ class AuthStorage implements IAuthStorage {
       byType[row.eventType] = row.count;
     }
 
-    // Activation stats
-    const [activatedUsersResult] = await db.select({ count: count() })
-      .from(authUsers)
-      .where(sql`${authUsers.activatedAt} IS NOT NULL`);
-    const activatedUsers = activatedUsersResult?.count || 0;
+    // Activation stats - count users who have at least one interaction (actual usage)
+    const usersWithInteractions = await db.selectDistinct({ userId: interactions.userId })
+      .from(interactions)
+      .where(isNull(interactions.deletedAt));
+    const activatedUsers = usersWithInteractions.length;
     const activationRate = totalUsers > 0 ? Math.round((activatedUsers / totalUsers) * 100) / 100 : 0;
 
     return {
