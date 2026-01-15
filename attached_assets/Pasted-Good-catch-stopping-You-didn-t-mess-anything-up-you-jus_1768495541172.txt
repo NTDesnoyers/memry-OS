@@ -1,0 +1,196 @@
+Good catch stopping. You didn’t mess anything up — you just paused at exactly the right moment.
+
+Now I’m going to **lock direction** so you (or Replit) can proceed without ambiguity.
+
+---
+
+## FIRST: STATUS CHECK (YOU DID FINE)
+
+### ✅ What’s GOOD and should **stay**
+
+**1. Skip optimistic update**
+
+* Correct implementation pattern
+* onMutate + rollback is exactly right
+* 3s undo toast is better than 5s
+* ✅ Keep this. Just test it.
+
+**2. First-run detection logic**
+
+```ts
+!isLoading && interactions.length === 0 && !isFounder
+```
+
+* Correct
+* Clean
+* Reusable
+* ✅ Keep this. Do NOT roll it back.
+
+Nothing you’ve done needs undoing.
+
+---
+
+## NOW THE DECISION YOU’RE ACTUALLY ASKING FOR
+
+You asked (implicitly):
+
+> “Should we keep going, or stop and align more?”
+
+**Answer: Continue — but ONLY with a very constrained scope.**
+
+Do **not** jump to admin metrics yet.
+Do **not** refactor flow.tsx deeply yet.
+
+We finish **activation gate UI only**, then stop.
+
+---
+
+## LOCKED DECISION: WHAT TO DO NEXT
+
+### ❌ Do NOT rollback anything
+
+That would be wasted motion.
+
+### ✅ Do NOT touch Admin Dashboard yet
+
+That’s downstream of activation.
+
+### ✅ DO implement the activation gate UI — but minimal v1
+
+---
+
+## ACTIVATION GATE — FINAL V1 SPEC (NO DEBATE)
+
+This is intentionally **simple**. No arrows, no fancy overlays yet.
+
+### WHERE
+
+* `Flow` page only
+* Inside existing Flow card container
+
+---
+
+### WHEN
+
+```ts
+isNewUser === true
+```
+
+---
+
+### WHAT IT LOOKS LIKE (V1)
+
+Replace the **Flow card content only** with:
+
+#### Headline
+
+> **Log your last conversation**
+
+#### Subtext
+
+> This is how Memry works. Takes about 30 seconds.
+
+#### Instruction (plain text, not UI chrome)
+
+> Tap the AI button in the bottom-right corner to start.
+
+That’s it.
+
+No arrows yet.
+No animations yet.
+No glow yet.
+
+We earn complexity later.
+
+---
+
+### WHAT IS HIDDEN (IMPORTANT)
+
+When `isNewUser === true`:
+
+* ❌ Hide “+ Log a Conversation” button
+* ❌ Hide search bar
+* ❌ Hide empty-state “No interactions found”
+* ❌ Do NOT show manual alternatives
+
+Sidebar stays.
+
+---
+
+## WHY THIS IS THE RIGHT MOVE (VERY IMPORTANT)
+
+You are currently in **behavior validation**, not polish.
+
+At this stage, the only question that matters is:
+
+> “When explicitly told what to do, do users do it?”
+
+This V1 gate tests that cleanly.
+
+If users still don’t click AI:
+
+* That’s a **product problem**
+* Not a UI problem
+
+And that’s invaluable signal.
+
+---
+
+## WHAT WE ARE DELIBERATELY NOT DOING YET
+
+We are **not**:
+
+* Adding arrows
+* Adding pulse animation
+* Adding event tracking
+* Adding admin funnel views
+* Making it “beautiful”
+
+Those are **amplifiers**, not foundations.
+
+---
+
+## ORDER OF OPERATIONS (UPDATED)
+
+1. ✅ Skip optimistic update → test
+2. 🔜 Activation gate UI (minimal spec above)
+3. ⏸️ STOP
+4. Observe real user behavior
+5. Then:
+
+   * Add AI button pulse **if needed**
+   * Add admin AI metrics **once activation is real**
+
+---
+
+## DIRECT ANSWERS TO YOUR QUESTIONS
+
+> Rollback the partial activation gate?
+
+**No. Keep it. Finish it.**
+
+> Continue discussing activation gate design?
+
+**No. Design is locked for V1. Implement now.**
+
+> Something else?
+
+Yes:
+👉 After implementing the minimal gate, **do not add more features** until at least 3 real users hit it.
+
+---
+
+## FINAL FOUNDER CHECK
+
+You’re doing the *hard* thing:
+
+* Slowing down to protect learning
+* Forcing one behavior
+* Resisting “just ship more”
+
+That’s exactly right.
+
+Implement the minimal gate as specified.
+Ping me **after** it’s live or tested — not before.
+
+Execution > perfection.

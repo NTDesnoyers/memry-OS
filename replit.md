@@ -143,3 +143,24 @@ Memry is a multi-agent, event-driven system orchestrating actions while CRMs rem
 - **Fix**: Implemented `passReqToCallback: true` with `VerifyFunctionWithRequest` type signature
 - **Result**: All auth events now capture Express `req.sessionID`
 - **Files**: server/replit_integrations/auth/replitAuth.ts
+
+### Signal Skip Optimistic Update (Jan 15, 2026)
+- **Issue**: Skip action felt slow - user had to wait for API roundtrip before card disappeared
+- **Fix**: Added optimistic update pattern to `resolveMutation`:
+  - `onMutate`: Immediately removes signal from cache before API call
+  - `onError`: Rollback restores signal if API fails
+  - Shortened undo toast from 5s to 3s
+- **Files**: client/src/pages/signals.tsx
+
+### First-Run Activation Gate (Jan 15, 2026)
+- **Purpose**: Force new users to discover and use AI assistant for first conversation log
+- **Detection**: `isNewUser = !isLoading && interactions.length === 0 && !isFounder`
+- **Activation Definition**: Any interaction exists (not AI-specific) - intentional for Phase 1
+- **Gate UI** (minimal V1):
+  - Headline: "Log your last conversation"
+  - Subtext: "This is how Memry works. Takes about 30 seconds."
+  - Instruction: "Tap the AI button in the bottom-right corner to start."
+- **Hidden when gate active**: Manual log button, search bar, interaction list
+- **Visible**: Sidebar navigation, AI assistant button (part of Layout)
+- **Bypass**: Founder (nathan@desnoyersproperties.com) sees normal Flow page
+- **Files**: client/src/pages/flow.tsx

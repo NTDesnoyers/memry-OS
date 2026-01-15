@@ -958,28 +958,45 @@ export default function Flow() {
       <FordTrackerCompact />
       <div className="min-h-screen bg-secondary/30">
         <div className="container mx-auto px-4 py-8 max-w-5xl">
-          <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-background rounded-3xl p-8 mb-8 border border-primary/10">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div>
-                <h1 className="text-3xl font-serif font-bold text-primary mb-2">Flow</h1>
-                <p className="text-muted-foreground text-lg">Just finished a conversation? Capture it now.</p>
-                <p className="text-muted-foreground text-sm mt-1">Log what you learned and let AI draft your follow-up.</p>
+          {isNewUser ? (
+            /* First-run activation gate - minimal V1 */
+            <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-background rounded-3xl p-8 mb-8 border border-primary/10" data-testid="activation-gate">
+              <div className="text-center py-12">
+                <Sparkles className="h-12 w-12 mx-auto text-primary mb-6" />
+                <h1 className="text-3xl font-serif font-bold text-primary mb-4">Log your last conversation</h1>
+                <p className="text-muted-foreground text-lg mb-2">This is how Memry works. Takes about 30 seconds.</p>
+                <p className="text-muted-foreground text-base mt-8">
+                  Tap the <span className="font-semibold text-primary">AI button</span> in the bottom-right corner to start.
+                </p>
               </div>
-              <Button 
-                size="lg"
-                className="gap-3 rounded-2xl h-14 px-8 shadow-xl shadow-primary/30 font-bold text-lg bg-primary hover:bg-primary/90" 
-                onClick={() => setShowLogDialog(true)}
-                data-testid="button-log-interaction"
-              >
-                <Plus className="h-6 w-6" />
-                Log a Conversation
-              </Button>
             </div>
-          </div>
-          
-          <header className="flex justify-between items-center mb-6">
-            <p className="text-sm text-muted-foreground">Your conversation history</p>
-          </header>
+          ) : (
+            /* Normal Flow page for activated users */
+            <>
+              <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-background rounded-3xl p-8 mb-8 border border-primary/10">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div>
+                    <h1 className="text-3xl font-serif font-bold text-primary mb-2">Flow</h1>
+                    <p className="text-muted-foreground text-lg">Just finished a conversation? Capture it now.</p>
+                    <p className="text-muted-foreground text-sm mt-1">Log what you learned and let AI draft your follow-up.</p>
+                  </div>
+                  <Button 
+                    size="lg"
+                    className="gap-3 rounded-2xl h-14 px-8 shadow-xl shadow-primary/30 font-bold text-lg bg-primary hover:bg-primary/90" 
+                    onClick={() => setShowLogDialog(true)}
+                    data-testid="button-log-interaction"
+                  >
+                    <Plus className="h-6 w-6" />
+                    Log a Conversation
+                  </Button>
+                </div>
+              </div>
+              
+              <header className="flex justify-between items-center mb-6">
+                <p className="text-sm text-muted-foreground">Your conversation history</p>
+              </header>
+            </>
+          )}
 
           <Dialog open={showLogDialog} onOpenChange={(open) => {
             if (!open) {
@@ -1177,16 +1194,18 @@ export default function Flow() {
             </DialogContent>
           </Dialog>
 
-          {isLoading ? (
-            <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div>
-          ) : (
-            <InteractionList 
-              interactions={interactions} 
-              people={people}
-              filterTypes={liveFlowTypeValues}
-              onEdit={handleEdit}
-              onDelete={(id) => deleteInteraction.mutate(id)}
-            />
+          {!isNewUser && (
+            isLoading ? (
+              <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div>
+            ) : (
+              <InteractionList 
+                interactions={interactions} 
+                people={people}
+                filterTypes={liveFlowTypeValues}
+                onEdit={handleEdit}
+                onDelete={(id) => deleteInteraction.mutate(id)}
+              />
+            )
           )}
         </div>
       </div>
