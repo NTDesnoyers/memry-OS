@@ -1,0 +1,115 @@
+Good response. Tight. Nothing fluffy. I’ll add **only what actually matters before you implement** — no extra process.
+
+You’re basically ready, but there are **3 additional considerations** that are worth locking *now* so you don’t accidentally weaken the loop.
+
+---
+
+## Final Pre-Implementation Considerations (Worth Addressing)
+
+### 1. Progress UI Must Be **Append-Only**
+
+This is subtle but important.
+
+**Do not**:
+
+* Replace a single status line
+* Animate spinners endlessly
+* Collapse steps
+
+**Do**:
+
+* Append each completed step as a new line
+* Never remove earlier steps
+* Let the list visually “stack”
+
+Why:
+
+> Humans trust accumulation more than replacement.
+
+Append-only = “work has already been done”
+Replacement = “still waiting”
+
+This dramatically reduces abandonment during the 20 seconds.
+
+---
+
+### 2. Guard Against Partial Completion Exit
+
+You already hinted at this with the “success moment,” but be explicit.
+
+If the user:
+
+* Closes the AI panel
+* Navigates away mid-process
+* Switches tabs
+
+The system **must still finish** and commit.
+
+Minimum acceptable behavior:
+
+* AI continues server-side
+* Signals/tasks still created
+* On next load, state reflects completion
+
+Otherwise you create a **Schrödinger’s interaction**:
+
+> “Did it log or didn’t it?”
+
+That destroys trust fast.
+
+---
+
+### 3. The “Success Moment” Must Be Visually Distinct
+
+Not just another line of text.
+
+You need **one unmistakable terminal state**, e.g.:
+
+* Checkmark
+* Subtle green highlight
+* “Conversation logged successfully” with a concrete artifact count:
+
+  * “1 signal created”
+  * “1 follow-up queued”
+
+Why:
+
+> Users anchor on endings, not processes.
+
+If the ending doesn’t *feel* final, they won’t wait for it next time.
+
+---
+
+## What You Should **Not** Worry About Right Now
+
+Kill these thoughts if they come up:
+
+* “Should this be streaming or batching?” → irrelevant if UI feedback exists
+* “Is global invalidation hacky?” → yes, and correct
+* “Should we optimize speed first?” → no, optimize *confidence*
+* “Should we explain what signals are?” → no, show results
+
+---
+
+## Execution Readiness Verdict
+
+You’re clear on:
+
+* The problem
+* The outcome
+* The constraints
+* The implementation path
+
+Nothing here blocks implementation.
+
+**Proceed.**
+
+Once this ships, the *next* evaluation will be:
+
+* Do users wait patiently?
+* Do they navigate immediately to Signals?
+* Do they log a second conversation?
+
+That’s when we decide what to optimize next.
+
+Ship it.

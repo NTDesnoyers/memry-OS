@@ -319,7 +319,7 @@ export function VoiceLogger() {
                   setStreamingState(prev => ({ 
                     content: prev?.content || '',
                     actions: prev?.actions || [],
-                    status: `Running ${formatToolName(data.tool)}...`,
+                    status: formatToolName(data.tool, false),
                     currentTool: data.tool 
                   }));
                   break;
@@ -357,6 +357,13 @@ export function VoiceLogger() {
                   if (data.model) {
                     finalModel = data.model;
                   }
+                  // Show completion status briefly
+                  setStreamingState(prev => ({
+                    content: prev?.content || '',
+                    actions: accumulatedActions,
+                    status: 'complete',
+                    currentTool: null
+                  }));
                   break;
                   
                 case 'error':
@@ -387,6 +394,7 @@ export function VoiceLogger() {
       queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/weekly-review"] });
       queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/signals"] });
       
     } catch (error) {
       console.error("AI error:", error);
@@ -395,8 +403,13 @@ export function VoiceLogger() {
         content: "I'm having trouble connecting right now. Please make sure the OpenAI API key is configured in your settings." 
       };
       setMessages(prev => [...prev, errorMessage]);
+      setStreamingState(null);
+      setIsProcessing(false);
+      return;
     }
     
+    // Brief delay to show success moment before clearing streaming state
+    await new Promise(resolve => setTimeout(resolve, 800));
     setStreamingState(null);
     setIsProcessing(false);
     
@@ -500,19 +513,23 @@ export function VoiceLogger() {
     }
   }, [isOpen]);
 
-  const formatToolName = (toolName: string): string => {
-    const toolLabels: Record<string, string> = {
-      search_people: "Searched contacts",
-      get_person_details: "Retrieved person details",
-      update_person: "Updated contact",
-      create_person: "Created new contact",
-      log_interaction: "Logged interaction",
-      create_task: "Created task",
-      update_deal_stage: "Updated deal stage",
-      get_hot_warm_lists: "Retrieved Hot/Warm lists",
-      get_todays_tasks: "Retrieved today's tasks"
+  const formatToolName = (toolName: string, isComplete: boolean = true): string => {
+    const toolLabels: Record<string, { active: string; complete: string }> = {
+      search_people: { active: "Scanning your contacts...", complete: "Found contact in your database" },
+      get_person_details: { active: "Looking up details...", complete: "Retrieved contact details" },
+      update_person: { active: "Updating contact notes...", complete: "Saved contact updates" },
+      create_person: { active: "Adding new contact...", complete: "Created new contact" },
+      log_interaction: { active: "Saving conversation...", complete: "Conversation saved" },
+      create_task: { active: "Creating follow-up...", complete: "Follow-up action queued" },
+      update_deal_stage: { active: "Updating deal...", complete: "Deal status updated" },
+      get_hot_warm_lists: { active: "Checking hot leads...", complete: "Retrieved active leads" },
+      get_todays_tasks: { active: "Loading tasks...", complete: "Retrieved today's tasks" },
+      link_household: { active: "Linking household...", complete: "Household linked" },
+      mark_person_hot: { active: "Marking as hot...", complete: "Marked as hot lead" }
     };
-    return toolLabels[toolName] || toolName;
+    const label = toolLabels[toolName];
+    if (!label) return toolName;
+    return isComplete ? label.complete : label.active;
   };
 
   // Clear completion badge when opening the chat
@@ -857,7 +874,7 @@ export function VoiceLogger() {
                         {streamingState.currentTool && (
                           <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
                             <Loader2 className="h-3 w-3 mt-0.5 text-violet-500 flex-shrink-0 animate-spin" />
-                            <span>{formatToolName(streamingState.currentTool)}</span>
+                            <span>{formatToolName(streamingState.currentTool, false)}</span>
                           </div>
                         )}
                       </div>
@@ -866,6 +883,11 @@ export function VoiceLogger() {
                     {/* Show streaming content or status */}
                     {streamingState.content ? (
                       <p className="whitespace-pre-wrap">{streamingState.content}<span className="inline-block w-1.5 h-4 bg-violet-500 ml-0.5 animate-pulse" /></p>
+                    ) : streamingState.status === 'complete' ? (
+                      <div className="flex items-center gap-2 text-green-600 font-medium">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>Done{streamingState.actions.length > 0 ? ` - ${streamingState.actions.length} action${streamingState.actions.length > 1 ? 's' : ''} completed` : ''}</span>
+                      </div>
                     ) : streamingState.status ? (
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Loader2 className="h-4 w-4 animate-spin text-violet-500" />
