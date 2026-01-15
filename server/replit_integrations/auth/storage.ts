@@ -375,6 +375,67 @@ class AuthStorage implements IAuthStorage {
     return result;
   }
 
+  async getBetaUsers(): Promise<Array<{
+    email: string;
+    status: 'activated' | 'signed_up';
+    lastSeen: Date | null;
+    conversationCount: number;
+    followupCount: number;
+    signedUpAt: Date | null;
+  }>> {
+    // Get all auth users (excluding test accounts)
+    const allUsers = await db.select().from(authUsers);
+    
+    const result = [];
+    for (const user of allUsers) {
+      if (!user.id) continue;
+      
+      // Get user's beta events
+      const userEvents = await db.select()
+        .from(betaEvents)
+        .where(eq(betaEvents.userId, user.id));
+      
+      // Derive status from events
+      const hasActivated = userEvents.some(e => e.eventType === 'activated');
+      const status: 'activated' | 'signed_up' = hasActivated ? 'activated' : 'signed_up';
+      
+      // Get last seen (most recent event)
+      const lastSeenEvent = userEvents.sort((a, b) => 
+        (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0)
+      )[0];
+      const lastSeen = lastSeenEvent?.createdAt || null;
+      
+      // Get signup date from user_signup event or fallback to createdAt
+      const signupEvent = userEvents.find(e => e.eventType === 'user_signup');
+      const signedUpAt = signupEvent?.createdAt || user.createdAt || null;
+      
+      // Count conversations (from beta_events conversation_logged)
+      const conversationCount = userEvents.filter(e => e.eventType === 'conversation_logged').length;
+      
+      // Count follow-ups (from beta_events followup_created)
+      const followupCount = userEvents.filter(e => e.eventType === 'followup_created').length;
+      
+      result.push({
+        email: user.email || 'unknown',
+        status,
+        lastSeen,
+        conversationCount,
+        followupCount,
+        signedUpAt,
+      });
+    }
+    
+    // Sort by lastSeen (most recent first), nulls last
+    result.sort((a, b) => {
+      if (!a.lastSeen && !b.lastSeen) return 0;
+      if (!a.lastSeen) return 1;
+      if (!b.lastSeen) return -1;
+      return b.lastSeen.getTime() - a.lastSeen.getTime();
+    });
+    
+    return result;
+  }
+
   async getAdminBetaStats(): Promise<{
     users: { total: number; signedUpLast7Days: number };
     events: { total: number; byType: Record<string, number> };

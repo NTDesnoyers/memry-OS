@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Users, Activity, MessageSquare, ClipboardCheck, Plus, Trash2, UserCheck, Loader2, Mail } from "lucide-react";
 import LayoutComponent from "@/components/layout";
 import { useState } from "react";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 
 interface BetaStats {
   totalUsers: number;
@@ -19,6 +19,15 @@ interface AdminBetaStats {
   users: { total: number; signedUpLast7Days: number };
   events: { total: number; byType: Record<string, number> };
   activation: { activatedUsers: number; activationRate: number };
+}
+
+interface BetaUser {
+  email: string;
+  status: 'activated' | 'signed_up';
+  lastSeen: string | null;
+  conversationCount: number;
+  followupCount: number;
+  signedUpAt: string | null;
 }
 
 interface WhitelistEntry {
@@ -65,6 +74,16 @@ export default function BetaDashboard() {
     queryFn: async () => {
       const res = await fetch("/api/admin/beta-stats");
       if (!res.ok) throw new Error("Failed to fetch admin stats");
+      return res.json();
+    },
+    refetchInterval: 60000,
+  });
+
+  const { data: betaUsers = [], isLoading: betaUsersLoading } = useQuery<BetaUser[]>({
+    queryKey: ["/api/admin/beta-users"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/beta-users");
+      if (!res.ok) throw new Error("Failed to fetch beta users");
       return res.json();
     },
     refetchInterval: 60000,
@@ -157,6 +176,66 @@ export default function BetaDashboard() {
             </CardContent>
           </Card>
         )}
+
+        {/* Beta Users Table */}
+        <Card className="mb-8" data-testid="beta-users-table">
+          <CardHeader>
+            <CardTitle>Beta Users</CardTitle>
+            <CardDescription>All users with their activity status</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {betaUsersLoading ? (
+              <div className="text-sm text-muted-foreground">Loading users...</div>
+            ) : betaUsers.length === 0 ? (
+              <div className="text-sm text-muted-foreground">No users yet</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm" data-testid="users-table">
+                  <thead>
+                    <tr className="border-b text-left">
+                      <th className="pb-2 font-medium">Email</th>
+                      <th className="pb-2 font-medium">Status</th>
+                      <th className="pb-2 font-medium">Last Seen</th>
+                      <th className="pb-2 font-medium text-right">Conversations</th>
+                      <th className="pb-2 font-medium text-right">Follow-ups</th>
+                      <th className="pb-2 font-medium">Signed Up</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {betaUsers.map((user, idx) => (
+                      <tr key={user.email} className="border-b last:border-0" data-testid={`user-row-${idx}`}>
+                        <td className="py-2">{user.email}</td>
+                        <td className="py-2">
+                          <span className={`px-2 py-0.5 rounded-full text-xs ${
+                            user.status === 'activated' 
+                              ? 'bg-green-100 text-green-700' 
+                              : 'bg-yellow-100 text-yellow-700'
+                          }`}>
+                            {user.status}
+                          </span>
+                        </td>
+                        <td className="py-2 text-muted-foreground">
+                          {user.lastSeen 
+                            ? formatDistanceToNow(new Date(user.lastSeen), { addSuffix: true })
+                            : 'Never'
+                          }
+                        </td>
+                        <td className="py-2 text-right">{user.conversationCount}</td>
+                        <td className="py-2 text-right">{user.followupCount}</td>
+                        <td className="py-2 text-muted-foreground">
+                          {user.signedUpAt 
+                            ? format(new Date(user.signedUpAt), 'MMM d')
+                            : '-'
+                          }
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {isLoading ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

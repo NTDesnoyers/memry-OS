@@ -9417,6 +9417,21 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
       res.status(500).json({ message: error.message });
     }
   });
+
+  // Admin beta users endpoint (founder only) - identity-first debugging
+  app.get("/api/admin/beta-users", async (req: any, res) => {
+    try {
+      const userEmail = req.user?.claims?.email;
+      if (userEmail?.toLowerCase() !== 'nathan@desnoyersproperties.com') {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const users = await authStorage.getBetaUsers();
+      res.json(users);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
   
   // Update user's last active (called on app mount)
   app.post("/api/beta/heartbeat", async (req: any, res) => {
