@@ -7,6 +7,9 @@ import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { authStorage } from "./storage";
+import { createLogger } from "../../logger";
+
+const logger = createLogger("Auth");
 
 const getOidcConfig = memoize(
   async () => {
@@ -52,13 +55,24 @@ function updateUserSession(
 }
 
 async function upsertUser(claims: any) {
-  await authStorage.upsertUser({
-    id: claims["sub"],
-    email: claims["email"],
-    firstName: claims["first_name"],
-    lastName: claims["last_name"],
-    profileImageUrl: claims["profile_image_url"],
-  });
+  try {
+    logger.info(`Auth callback: upserting user id=${claims["sub"]} email=${claims["email"]}`);
+    
+    const user = await authStorage.upsertUser({
+      id: claims["sub"],
+      email: claims["email"],
+      firstName: claims["first_name"],
+      lastName: claims["last_name"],
+      profileImageUrl: claims["profile_image_url"],
+    });
+    
+    logger.info(`Auth callback: user upserted successfully id=${user.id} email=${user.email} status=${user.status}`);
+    return user;
+  } catch (error: any) {
+    logger.error(`Auth callback: FAILED to upsert user id=${claims["sub"]} email=${claims["email"]} error=${error.message}`);
+    logger.error(`Auth callback: Stack trace: ${error.stack}`);
+    throw error;
+  }
 }
 
 export async function setupAuth(app: Express) {
@@ -73,10 +87,22 @@ export async function setupAuth(app: Express) {
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
     verified: passport.AuthenticateCallback
   ) => {
-    const user = {};
-    updateUserSession(user, tokens);
-    await upsertUser(tokens.claims());
-    verified(null, user);
+    try {
+      const user = {};
+      const claims = tokens.claims() as Record<string, any> || {};
+      const sub = claims["sub"] || "unknown";
+      const email = claims["email"] || "unknown";
+      logger.info(`Auth verify: processing login for sub=${sub} email=${email}`);
+      
+      updateUserSession(user, tokens);
+      await upsertUser(claims);
+      
+      logger.info(`Auth verify: login successful for email=${email}`);
+      verified(null, user);
+    } catch (error: any) {
+      logger.error(`Auth verify: login FAILED error=${error.message}`);
+      verified(error, undefined);
+    }
   };
 
   // Keep track of registered strategies

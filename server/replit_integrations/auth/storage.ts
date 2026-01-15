@@ -1,6 +1,9 @@
 import { authUsers, betaEvents, betaWhitelist, type AuthUser, type UpsertAuthUser, type SubscriptionStatus, type InsertBetaEvent, type BetaEvent, type BetaWhitelistEntry, type InsertBetaWhitelistEntry } from "@shared/models/auth";
 import { db } from "../../db";
 import { eq, desc, ne, sql, gte, and, count, ilike } from "drizzle-orm";
+import { createLogger } from "../../logger";
+
+const logger = createLogger("AuthStorage");
 
 // Founder email - auto-approved and admin
 const FOUNDER_EMAIL = "nathan@desnoyersproperties.com";
@@ -36,6 +39,8 @@ class AuthStorage implements IAuthStorage {
   }
 
   async upsertUser(userData: UpsertAuthUser): Promise<AuthUser> {
+    logger.info(`upsertUser called: id=${userData.id} email=${userData.email}`);
+    
     // Check if user already exists by ID first
     let existingUser = await this.getUser(userData.id!);
     
@@ -43,6 +48,8 @@ class AuthStorage implements IAuthStorage {
     if (!existingUser && userData.email) {
       existingUser = await this.getUserByEmail(userData.email);
     }
+    
+    logger.info(`upsertUser: existingUser=${existingUser ? existingUser.id : 'none'}`);
     
     // Auto-approve founder
     const isFounder = userData.email?.toLowerCase() === FOUNDER_EMAIL.toLowerCase();
@@ -77,34 +84,48 @@ class AuthStorage implements IAuthStorage {
         }
       }
       
-      const [user] = await db
-        .update(authUsers)
-        .set(updateData)
-        .where(eq(authUsers.id, existingUser.id))
-        .returning();
-      return user;
+      try {
+        const [user] = await db
+          .update(authUsers)
+          .set(updateData)
+          .where(eq(authUsers.id, existingUser.id))
+          .returning();
+        logger.info(`upsertUser: updated existing user id=${user.id} email=${user.email}`);
+        return user;
+      } catch (dbError: any) {
+        logger.error(`upsertUser: DB UPDATE failed for id=${existingUser.id} error=${dbError.message}`);
+        throw dbError;
+      }
     } else {
       // New user - set initial status
       // BETA MODE: Auto-approve all new users for frictionless onboarding
       // To restore approval gate later, change this to: isFounder || isWhitelisted
       const shouldAutoApprove = true;
       
-      const [user] = await db
-        .insert(authUsers)
-        .values({
-          ...userData,
-          status: shouldAutoApprove ? 'approved' : 'pending',
-          isAdmin: isFounder,
-          signupSource: isWhitelisted ? 'invited' : 'organic',
-        })
-        .returning();
-      
-      // Mark whitelist entry as used
-      if (isWhitelisted && userData.email) {
-        await this.markWhitelistUsed(userData.email);
+      try {
+        const [user] = await db
+          .insert(authUsers)
+          .values({
+            ...userData,
+            status: shouldAutoApprove ? 'approved' : 'pending',
+            isAdmin: isFounder,
+            signupSource: isWhitelisted ? 'invited' : 'organic',
+          })
+          .returning();
+        
+        logger.info(`upsertUser: created new user id=${user.id} email=${user.email} status=${user.status}`);
+        
+        // Mark whitelist entry as used
+        if (isWhitelisted && userData.email) {
+          await this.markWhitelistUsed(userData.email);
+        }
+        
+        return user;
+      } catch (dbError: any) {
+        logger.error(`upsertUser: DB INSERT failed for email=${userData.email} error=${dbError.message}`);
+        logger.error(`upsertUser: Stack trace: ${dbError.stack}`);
+        throw dbError;
       }
-      
-      return user;
     }
   }
   
