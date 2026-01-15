@@ -1,0 +1,281 @@
+Good — this screenshot is **exactly** what we needed.
+Now we’re no longer guessing. We’re diagnosing.
+
+I’m going to do this in two clean parts, as you asked:
+
+1. **Changes necessary to the Home / Flow screen** (to force the single behavior)
+2. **Changes necessary to the Admin Dashboard** (to measure that behavior in Lean terms)
+
+No fluff. This is execution guidance.
+
+---
+
+# PART 1 — HOME / FLOW SCREEN (THIS IS THE REAL BOTTLENECK)
+
+## What the Screen Is Doing Today (Honest Read)
+
+From a first-time, non-founder perspective, this screen says:
+
+> “Here is your history. You can maybe log something if you want.”
+
+That is the opposite of what you need.
+
+You told me the **single behavior** you want is:
+
+> Log a recent conversation using the AI assistant button in the bottom corner.
+
+Right now:
+
+* The AI button is **visually secondary**
+* The **primary CTA is a standard button** (“Log a Conversation”)
+* The user is immediately shown **past conversations** (empty or not)
+* There is **no urgency, no forcing function, no instruction**
+
+This explains your beta results perfectly.
+
+---
+
+## CORE PROBLEM (CRYSTAL CLEAR)
+
+You are asking users to **choose** the right action.
+
+Lean Startup rule:
+
+> Users will not choose the critical path — you must remove choice.
+
+---
+
+## REQUIRED CHANGES TO HOME / FLOW (NON-NEGOTIABLE)
+
+### 🔥 Change #1: First-Run Gate (This Is Mandatory)
+
+If a user has **0 conversations logged**, they should **not** see this screen.
+
+Instead, they should see a **blocking empty state**.
+
+#### Replace the current Flow screen with:
+
+**Headline**
+
+> Log your last conversation (takes ~30 seconds)
+
+**Subtext**
+
+> Tap the AI assistant below and describe the most recent call, meeting, or text you had.
+> Memry will organize it and draft your follow-up.
+
+**Primary action**
+
+* A **visual pointer / pulse / arrow** pointing to the purple AI button
+* Copy explicitly referencing the AI button:
+
+  > “Use the AI assistant in the bottom corner to start”
+
+**Rules**
+
+* No dismiss
+* No navigation
+* No history
+* No sidebar clicks
+
+They cannot proceed until **1 conversation exists**.
+
+This is not a tooltip.
+This is an **activation gate**.
+
+---
+
+### 🔥 Change #2: Demote the “Log a Conversation” Button
+
+That green **“+ Log a Conversation”** button is competing with your AI assistant.
+
+Right now it is **hurting activation**.
+
+You have two options — choose one:
+
+#### Option A (Recommended for beta)
+
+* Remove the button entirely until after first activation
+* Force **AI-only** logging initially
+
+#### Option B
+
+* Keep it, but:
+
+  * Rename it to “Manual Log (Advanced)”
+  * Make it visually secondary (outline / link style)
+
+Lean reasoning:
+
+> Every alternative path reduces completion of the critical path.
+
+---
+
+### 🔥 Change #3: Rewrite the Flow Copy (Small but High Impact)
+
+Current copy:
+
+> “Just finished a conversation? Capture it now.”
+
+This is passive and optional.
+
+Replace with:
+
+> **Your job right now:** log the last conversation you had.
+
+You want directive language, not marketing language.
+
+---
+
+### 🔥 Change #4: Hide History Until After Activation
+
+The conversation list is **distraction before value**.
+
+For users with 0 conversations:
+
+* Do not render history
+* Do not render filters
+* Do not render search
+
+After activation:
+
+* History becomes reinforcing (“Oh, it’s working”)
+
+---
+
+### 🔥 Change #5: Make the AI Button the Hero
+
+Visually:
+
+* Increase size slightly
+* Add a subtle pulse or glow **only for unactivated users**
+* First-run copy should explicitly say:
+
+  > “Tap the purple AI button to begin”
+
+Right now users have to **infer** what it does.
+Inference kills activation.
+
+---
+
+# PART 2 — ADMIN DASHBOARD (LEAN REFOCUS)
+
+Once the product forces the behavior, the admin dashboard must **only measure that behavior**.
+
+Right now, it’s still doing too much.
+
+---
+
+## ADMIN DASHBOARD: WHAT TO CHANGE
+
+### 🔥 Change #1: Promote AI-Specific Activation to the Top
+
+At the very top, replace the current summary with:
+
+> **Activation Hypothesis**
+> A new user logs 1 conversation using the AI assistant within 24 hours.
+
+Show ONLY:
+
+* New users (last 7 days)
+* Users who logged ≥1 AI-assisted conversation
+* Activation rate (AI-based)
+
+This aligns analytics with the product gate.
+
+---
+
+### 🔥 Change #2: Upgrade the Beta Users Table (One Surgical Addition)
+
+Add **two columns** to the existing table:
+
+1. **AI Used?**
+
+   * Yes / No
+
+2. **Time to First AI Log**
+
+   * e.g. “4 min”, “2 hrs”, “—”
+
+This lets you answer, immediately:
+
+* Are users finding the AI button?
+* Are they hesitating?
+* Is activation a discovery or trust problem?
+
+Nothing else matters yet.
+
+---
+
+### 🔥 Change #3: Add a Lean Funnel (Text Only)
+
+Add a simple funnel block:
+
+```
+Signed up:              5
+Opened AI assistant:    X
+Started AI input:       Y
+AI conversation logged: Z
+```
+
+This tells you **where learning breaks**.
+
+If:
+
+* Opened AI is low → UI problem
+* Started but didn’t log → prompt / trust problem
+* Logged but didn’t return → value clarity problem
+
+That’s Lean diagnostics.
+
+---
+
+### 🔥 Change #4: De-emphasize or Collapse These (For Now)
+
+These are **out of phase** and should be visually secondary:
+
+* Avg conversations
+* WAU
+* Retention
+* Weekly goal progress
+
+They matter **after** activation is repeatable.
+
+Lean rule:
+
+> Measure habits only after you can create behavior once.
+
+---
+
+# FINAL SYNTHESIS (THIS IS THE TRUTH)
+
+Right now:
+
+* Your **analytics are ahead of your activation**
+* Your **UI is too polite**
+* Your **critical behavior is optional**
+
+The fix is not more metrics.
+The fix is **pressure**.
+
+Force the AI button.
+Block everything else.
+Measure only AI-based activation.
+
+---
+
+## NEXT STEP (NO DEBATE)
+
+1. Implement the **first-run activation gate**
+2. Demote or remove manual logging
+3. Update admin dashboard to be **AI-activation-centric**
+4. Test with **one non-founder user live**
+
+After that test, we will know:
+
+* Exactly where it breaks
+* Exactly what to fix
+* Whether this is a UI problem or a trust problem
+
+You’re in the right phase.
+Now you just need to **stop being nice to the user**.
