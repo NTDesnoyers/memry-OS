@@ -706,6 +706,22 @@ export class DatabaseStorage implements IStorage {
       .where(eq(interactions.personId, id));
     const interactionIds = personInteractions.map(i => i.id);
     
+    // Get all signal IDs for this person (needed for signalOutcomes cascade)
+    // Include signals by personId AND signals by interactionId (covers all FK paths)
+    const personSignals = await db.select({ id: followUpSignals.id })
+      .from(followUpSignals)
+      .where(eq(followUpSignals.personId, id));
+    let signalIds = personSignals.map(s => s.id);
+    
+    // Also get signals linked to this person's interactions
+    if (interactionIds.length > 0) {
+      const interactionSignals = await db.select({ id: followUpSignals.id })
+        .from(followUpSignals)
+        .where(inArray(followUpSignals.interactionId, interactionIds));
+      const allSignalIds = [...signalIds, ...interactionSignals.map(s => s.id)];
+      signalIds = Array.from(new Set(allSignalIds));
+    }
+    
     // Get all draft IDs for this person (needed for draftFeedback cascade)
     const personDrafts = await db.select({ id: generatedDrafts.id })
       .from(generatedDrafts)
@@ -722,6 +738,21 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Delete all related data in proper order to avoid foreign key constraints
+    
+    // 1. Delete signalOutcomes BEFORE signals (has FK to followUpSignals)
+    if (signalIds.length > 0) {
+      await db.delete(signalOutcomes).where(inArray(signalOutcomes.signalId, signalIds));
+      // 2. Delete all collected signals (by personId and interactionId)
+      await db.delete(followUpSignals).where(inArray(followUpSignals.id, signalIds));
+    }
+    
+    // 3. Delete experiences BEFORE interactions (has FK to people AND interactions)
+    await db.delete(experiences).where(eq(experiences.personId, id));
+    // Also delete experiences linked to this person's interactions
+    if (interactionIds.length > 0) {
+      await db.delete(experiences).where(inArray(experiences.interactionId, interactionIds));
+    }
+    
     await db.delete(agentActions).where(eq(agentActions.personId, id));
     
     // Delete draftFeedback BEFORE drafts (has FK to generatedDrafts)
