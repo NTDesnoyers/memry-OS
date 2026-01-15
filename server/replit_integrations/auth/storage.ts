@@ -10,10 +10,15 @@ const FOUNDER_EMAIL = "nathan@desnoyersproperties.com";
 
 // Interface for auth storage operations
 // (IMPORTANT) These user operations are mandatory for Replit Auth.
+export interface UpsertResult {
+  user: AuthUser;
+  isNewUser: boolean;
+}
+
 export interface IAuthStorage {
   getUser(id: string): Promise<AuthUser | undefined>;
   getUserByEmail(email: string): Promise<AuthUser | undefined>;
-  upsertUser(user: UpsertAuthUser): Promise<AuthUser>;
+  upsertUser(user: UpsertAuthUser): Promise<UpsertResult>;
   getAllUsers(): Promise<AuthUser[]>;
   getPendingUsers(): Promise<AuthUser[]>;
   updateUserStatus(id: string, status: 'pending' | 'approved' | 'denied'): Promise<AuthUser | undefined>;
@@ -38,7 +43,7 @@ class AuthStorage implements IAuthStorage {
     return user;
   }
 
-  async upsertUser(userData: UpsertAuthUser): Promise<AuthUser> {
+  async upsertUser(userData: UpsertAuthUser): Promise<UpsertResult> {
     logger.info(`upsertUser called: id=${userData.id} email=${userData.email}`);
     
     // Check if user already exists by ID first
@@ -91,7 +96,7 @@ class AuthStorage implements IAuthStorage {
           .where(eq(authUsers.id, existingUser.id))
           .returning();
         logger.info(`upsertUser: updated existing user id=${user.id} email=${user.email}`);
-        return user;
+        return { user, isNewUser: false };
       } catch (dbError: any) {
         logger.error(`upsertUser: DB UPDATE failed for id=${existingUser.id} error=${dbError.message}`);
         throw dbError;
@@ -120,7 +125,7 @@ class AuthStorage implements IAuthStorage {
           await this.markWhitelistUsed(userData.email);
         }
         
-        return user;
+        return { user, isNewUser: true };
       } catch (dbError: any) {
         logger.error(`upsertUser: DB INSERT failed for email=${userData.email} error=${dbError.message}`);
         logger.error(`upsertUser: Stack trace: ${dbError.stack}`);
@@ -198,8 +203,81 @@ class AuthStorage implements IAuthStorage {
   }
 
   async trackBetaEvent(event: InsertBetaEvent): Promise<BetaEvent> {
-    const [created] = await db.insert(betaEvents).values(event).returning();
-    return created;
+    // Legacy method - use recordBetaEvent for new code
+    return this.recordBetaEvent({
+      userId: event.userId,
+      sessionId: event.sessionId,
+      eventType: event.eventType,
+      properties: event.properties ?? undefined,
+    });
+  }
+
+  /**
+   * Record a beta analytics event with strict validation.
+   * Every event must have either userId, sessionId, or both.
+   * Rejects events missing both (per analytics spec).
+   */
+  async recordBetaEvent(event: {
+    userId?: string | null;
+    sessionId?: string | null;
+    eventType: string;
+    properties?: Record<string, unknown>;
+  }): Promise<BetaEvent> {
+    // Validation: reject if no userId AND no sessionId
+    if (!event.userId && !event.sessionId) {
+      const errorMsg = `Invalid beta event: missing userId and sessionId for eventType=${event.eventType}`;
+      logger.error(errorMsg);
+      throw new Error(errorMsg);
+    }
+
+    try {
+      const [created] = await db.insert(betaEvents).values({
+        userId: event.userId || undefined,
+        sessionId: event.sessionId || undefined,
+        eventType: event.eventType,
+        properties: event.properties,
+      }).returning();
+      
+      logger.info(`Beta event recorded: type=${event.eventType} userId=${event.userId || 'none'} sessionId=${event.sessionId || 'none'}`);
+      return created;
+    } catch (error: any) {
+      logger.error(`Failed to record beta event: type=${event.eventType} error=${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Mark user as activated (first meaningful action).
+   * Idempotent - only fires once per user.
+   */
+  async markUserActivated(userId: string, sessionId?: string): Promise<boolean> {
+    // Check if already activated
+    const user = await this.getUser(userId);
+    if (!user) {
+      logger.warn(`markUserActivated: user not found userId=${userId}`);
+      return false;
+    }
+    
+    if (user.activatedAt) {
+      // Already activated, skip
+      return false;
+    }
+
+    // Mark activated
+    await db.update(authUsers)
+      .set({ activatedAt: new Date() })
+      .where(eq(authUsers.id, userId));
+
+    // Record activation event
+    await this.recordBetaEvent({
+      userId,
+      sessionId,
+      eventType: 'activated',
+      properties: { trigger: 'first_meaningful_action' },
+    });
+
+    logger.info(`User activated: userId=${userId}`);
+    return true;
   }
 
   async getBetaStats(): Promise<{

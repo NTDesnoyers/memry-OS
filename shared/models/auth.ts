@@ -41,19 +41,23 @@ export const authUsers = pgTable("auth_users", {
   canceledAt: timestamp("canceled_at"),
   signupSource: varchar("signup_source", { length: 20 }).default("organic"), // invited, organic
   lastActiveAt: timestamp("last_active_at"),
+  activatedAt: timestamp("activated_at"), // First meaningful action (conversation_logged or followup_created)
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Beta analytics events table
+// Event types: app_opened, user_login, user_signup, login_failed, conversation_logged, followup_created, weekly_review_viewed, draft_created, activated
 export const betaEvents = pgTable("beta_events", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull(),
-  eventType: varchar("event_type", { length: 50 }).notNull(), // app_opened, feature_opened, conversation_logged, followup_created, weekly_review_viewed
-  properties: jsonb("properties").$type<Record<string, unknown>>(), // Additional event properties
+  userId: varchar("user_id"), // Nullable for login_failed events
+  sessionId: varchar("session_id"), // Express session ID for journey reconstruction
+  eventType: varchar("event_type", { length: 50 }).notNull(),
+  properties: jsonb("properties").$type<Record<string, unknown>>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
   index("idx_beta_events_user").on(table.userId),
+  index("idx_beta_events_session").on(table.sessionId),
   index("idx_beta_events_type").on(table.eventType),
   index("idx_beta_events_created").on(table.createdAt),
 ]);

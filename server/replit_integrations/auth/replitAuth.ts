@@ -1,5 +1,5 @@
 import * as client from "openid-client";
-import { Strategy, type VerifyFunction } from "openid-client/passport";
+import { Strategy, type VerifyFunction, type VerifyFunctionWithRequest } from "openid-client/passport";
 
 import passport from "passport";
 import session from "express-session";
@@ -54,11 +54,11 @@ function updateUserSession(
   user.expires_at = user.claims?.exp;
 }
 
-async function upsertUser(claims: any) {
+async function upsertUserWithTracking(claims: any, sessionId?: string) {
   try {
     logger.info(`Auth callback: upserting user id=${claims["sub"]} email=${claims["email"]}`);
     
-    const user = await authStorage.upsertUser({
+    const { user, isNewUser } = await authStorage.upsertUser({
       id: claims["sub"],
       email: claims["email"],
       firstName: claims["first_name"],
@@ -66,11 +66,42 @@ async function upsertUser(claims: any) {
       profileImageUrl: claims["profile_image_url"],
     });
     
-    logger.info(`Auth callback: user upserted successfully id=${user.id} email=${user.email} status=${user.status}`);
-    return user;
+    logger.info(`Auth callback: user upserted successfully id=${user.id} email=${user.email} status=${user.status} isNewUser=${isNewUser}`);
+    
+    // Track login vs signup event
+    try {
+      await authStorage.recordBetaEvent({
+        userId: user.id,
+        sessionId,
+        eventType: isNewUser ? 'user_signup' : 'user_login',
+        properties: { provider: 'replit' },
+      });
+      logger.info(`Auth event recorded: ${isNewUser ? 'user_signup' : 'user_login'} for userId=${user.id}`);
+    } catch (trackError: any) {
+      // Don't fail auth if tracking fails, but log it
+      logger.warn(`Failed to track auth event: ${trackError.message}`);
+    }
+    
+    return { user, isNewUser };
   } catch (error: any) {
     logger.error(`Auth callback: FAILED to upsert user id=${claims["sub"]} email=${claims["email"]} error=${error.message}`);
     logger.error(`Auth callback: Stack trace: ${error.stack}`);
+    
+    // Track failed login attempt
+    try {
+      await authStorage.recordBetaEvent({
+        sessionId,
+        eventType: 'login_failed',
+        properties: { 
+          reason: error.message,
+          stage: 'auth_callback',
+          attemptedEmail: claims["email"],
+        },
+      });
+    } catch (trackError: any) {
+      logger.warn(`Failed to track login_failed event: ${trackError.message}`);
+    }
+    
     throw error;
   }
 }
@@ -83,19 +114,24 @@ export async function setupAuth(app: Express) {
 
   const config = await getOidcConfig();
 
-  const verify: VerifyFunction = async (
-    tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
-    verified: passport.AuthenticateCallback
+  // Custom verify function that receives request for session access
+  const verifyWithRequest: VerifyFunctionWithRequest = async (
+    req,
+    tokens,
+    verified
   ) => {
+    // Get sessionId from the Express request
+    const sessionId = req?.sessionID;
+    
     try {
       const user = {};
       const claims = tokens.claims() as Record<string, any> || {};
       const sub = claims["sub"] || "unknown";
       const email = claims["email"] || "unknown";
-      logger.info(`Auth verify: processing login for sub=${sub} email=${email}`);
+      logger.info(`Auth verify: processing login for sub=${sub} email=${email} sessionId=${sessionId || 'none'}`);
       
       updateUserSession(user, tokens);
-      await upsertUser(claims);
+      await upsertUserWithTracking(claims, sessionId);
       
       logger.info(`Auth verify: login successful for email=${email}`);
       verified(null, user);
@@ -118,8 +154,9 @@ export async function setupAuth(app: Express) {
           config,
           scope: "openid email profile offline_access",
           callbackURL: `https://${domain}/api/callback`,
+          passReqToCallback: true, // Enable access to Express request for sessionId
         },
-        verify
+        verifyWithRequest
       );
       passport.use(strategy);
       registeredStrategies.add(strategyName);

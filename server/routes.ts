@@ -9363,15 +9363,24 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
         return res.status(400).json({ message: "eventType is required" });
       }
       
+      // Get sessionId from Express session
+      const sessionId = req.sessionID;
+      
       // Update last active timestamp
       await authStorage.updateLastActive(userId);
       
       // Track the event
-      const event = await authStorage.trackBetaEvent({
+      const event = await authStorage.recordBetaEvent({
         userId,
+        sessionId,
         eventType,
         properties: properties || {},
       });
+      
+      // Check for activation trigger events (first meaningful action)
+      if (eventType === 'conversation_logged' || eventType === 'followup_created') {
+        await authStorage.markUserActivated(userId, sessionId);
+      }
       
       res.json(event);
     } catch (error: any) {
