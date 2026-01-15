@@ -15,6 +15,12 @@ interface BetaStats {
   retentionWeekOverWeek: number;
 }
 
+interface AdminBetaStats {
+  users: { total: number; signedUpLast7Days: number };
+  events: { total: number; byType: Record<string, number> };
+  activation: { activatedUsers: number; activationRate: number };
+}
+
 interface WhitelistEntry {
   id: string;
   email: string;
@@ -53,6 +59,16 @@ export default function BetaDashboard() {
   const queryClient = useQueryClient();
   const [newEmail, setNewEmail] = useState("");
   const [note, setNote] = useState("");
+
+  const { data: adminStats, isLoading: adminStatsLoading } = useQuery<AdminBetaStats>({
+    queryKey: ["/api/admin/beta-stats"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/beta-stats");
+      if (!res.ok) throw new Error("Failed to fetch admin stats");
+      return res.json();
+    },
+    refetchInterval: 60000,
+  });
 
   const { data: stats, isLoading, error } = useQuery<BetaStats>({
     queryKey: ["/api/beta/stats"],
@@ -125,6 +141,22 @@ export default function BetaDashboard() {
           <h1 className="text-3xl font-bold tracking-tight" data-testid="page-title">Beta Analytics</h1>
           <p className="text-muted-foreground mt-1">Track beta user engagement and key metrics</p>
         </div>
+
+        {/* Quick Stats - Plain Text */}
+        {adminStats && (
+          <Card className="mb-8 bg-muted/30" data-testid="quick-stats">
+            <CardContent className="pt-6">
+              <div className="font-mono text-sm space-y-1">
+                <p>Users: {adminStats.users.total} total ({adminStats.users.signedUpLast7Days} last 7 days)</p>
+                <p>Activated: {adminStats.activation.activatedUsers} ({Math.round(adminStats.activation.activationRate * 100)}%)</p>
+                <p>Events logged: {adminStats.events.total}</p>
+                {adminStats.events.byType.login_failed > 0 && (
+                  <p className="text-destructive">Login failures: {adminStats.events.byType.login_failed}</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {isLoading ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

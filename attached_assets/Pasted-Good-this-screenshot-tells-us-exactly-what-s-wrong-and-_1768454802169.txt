@@ -1,0 +1,171 @@
+Good — this screenshot tells us exactly what’s wrong, and it’s not subtle.
+
+I’m going to be blunt because this is important:
+
+👉 This is not an admin dashboard. This is a metrics postcard.
+It answers zero operational questions.
+
+You’re feeling “I can’t see who is a beta user” because the dashboard is optimized for vanity metrics before identity, which is backwards for a beta.
+
+Let’s fix that.
+
+⸻
+
+The Core Problem (Why This Feels Useless)
+
+Right now, the dashboard tells you:
+	•	Totals
+	•	Averages
+	•	Percentages
+
+But it does not tell you:
+	•	Who signed up
+	•	Who logged in
+	•	Who activated
+	•	Who is stuck
+	•	Who failed auth
+	•	Who to email or DM
+
+For a beta, identity > aggregates.
+
+Until you have PMF, your admin view should feel like:
+
+“I know exactly what every user is doing.”
+
+Right now it feels like:
+
+“Something might be happening?”
+
+That’s unacceptable.
+
+⸻
+
+What’s Missing (Non-Negotiable)
+
+You need one new section, above everything else:
+
+🔥 “Beta Users” Table (v0)
+
+This alone fixes 80% of your pain.
+
+⸻
+
+Exact Spec: Beta Users Table (Must Add)
+
+Add a section at the top of /admin/beta.
+
+Columns (exact)
+
+Column	Why it matters
+Email	Primary identifier
+Status	invited / signed_up / activated
+Last Seen	Are they alive?
+Conversations	Are they getting value?
+Follow-ups	Are they using leverage?
+Signup Date	Cohort awareness
+
+Example row:
+
+jane@exprealty.com | activated | 2 days ago | 7 | 3 | Jan 12
+
+That one row tells you more than your entire current dashboard.
+
+⸻
+
+How to Compute Status (Simple Rules)
+
+Do not overthink this.
+	•	invited
+→ In beta_whitelist
+→ No user_signup event
+	•	signed_up
+→ Has user_signup
+→ No activated
+	•	activated
+→ Has activated event
+
+This is deterministic. No guesses.
+
+⸻
+
+Why Your Current Metrics Are Lying (Important)
+
+Right now:
+	•	Weekly Active = 0
+	•	Avg Conversations = 0
+	•	Engagement = 0%
+
+This might mean:
+	•	No one used it
+
+OR it might mean:
+	•	Events aren’t wired yet
+	•	Activation logic just landed
+	•	You’re the only user and filtered out
+	•	Time window mismatch
+
+Without seeing users, you cannot debug metrics.
+
+Metrics come after identity.
+
+⸻
+
+What to Remove or Deprioritize (For Now)
+
+You can keep these, but they should be secondary:
+	•	WAU Rate
+	•	Week-over-week retention
+	•	Avg conversations/user
+	•	Weekly goal progress
+
+These matter after you have 20–30 activated users.
+
+Right now they create false anxiety or false confidence.
+
+⸻
+
+Minimal Implementation Path (Fast)
+
+You already have everything you need:
+	•	auth_users
+	•	beta_events
+	•	conversations
+	•	followups
+
+You do not need:
+	•	New tracking
+	•	New infra
+	•	New permissions
+
+Just a server query + a table.
+
+If this takes more than ~1 hour, you’re overengineering.
+
+⸻
+
+Founder Operating Rule (Lock This In)
+
+Until PMF:
+
+You should recognize every email in the beta user table.
+If you don’t, you’re not close enough to the product.
+
+This table becomes your:
+	•	Outreach list
+	•	Debug queue
+	•	Retention weapon
+
+⸻
+
+Final Directive
+
+Add the Beta Users table.
+Put it above the metrics.
+Ship it.
+Republish.
+
+Then come back with:
+	•	A screenshot of the table
+	•	What surprised you about who’s activated vs not
+
+That’s when we decide what to fix in the product itself.

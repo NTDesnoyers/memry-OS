@@ -374,6 +374,51 @@ class AuthStorage implements IAuthStorage {
     
     return result;
   }
+
+  async getAdminBetaStats(): Promise<{
+    users: { total: number; signedUpLast7Days: number };
+    events: { total: number; byType: Record<string, number> };
+    activation: { activatedUsers: number; activationRate: number };
+  }> {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    // Users stats
+    const [totalUsersResult] = await db.select({ count: count() }).from(authUsers);
+    const totalUsers = totalUsersResult?.count || 0;
+
+    const [signedUpLast7DaysResult] = await db.select({ count: count() })
+      .from(authUsers)
+      .where(gte(authUsers.createdAt, sevenDaysAgo));
+    const signedUpLast7Days = signedUpLast7DaysResult?.count || 0;
+
+    // Events stats
+    const [totalEventsResult] = await db.select({ count: count() }).from(betaEvents);
+    const totalEvents = totalEventsResult?.count || 0;
+
+    const eventsByType = await db
+      .select({ eventType: betaEvents.eventType, count: count() })
+      .from(betaEvents)
+      .groupBy(betaEvents.eventType);
+    
+    const byType: Record<string, number> = {};
+    for (const row of eventsByType) {
+      byType[row.eventType] = row.count;
+    }
+
+    // Activation stats
+    const [activatedUsersResult] = await db.select({ count: count() })
+      .from(authUsers)
+      .where(sql`${authUsers.activatedAt} IS NOT NULL`);
+    const activatedUsers = activatedUsersResult?.count || 0;
+    const activationRate = totalUsers > 0 ? Math.round((activatedUsers / totalUsers) * 100) / 100 : 0;
+
+    return {
+      users: { total: totalUsers, signedUpLast7Days },
+      events: { total: totalEvents, byType },
+      activation: { activatedUsers, activationRate },
+    };
+  }
 }
 
 export const authStorage = new AuthStorage();
