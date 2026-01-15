@@ -126,3 +126,20 @@ Memry is a multi-agent, event-driven system orchestrating actions while CRMs rem
 - **React Error #310 Prevention**: ProtectedRoute does NOT call useAuth() directly; receives userEmail via props to maintain consistent hook counts during navigation
 - **Loading State Gate**: Router only renders after auth state is fully resolved (isLoading === false)
 - **Key Files**: client/src/App.tsx, client/src/components/protected-route.tsx
+
+## Recent Changes (Jan 2026)
+
+### Beta Dashboard Data Accuracy (Jan 15, 2026)
+- **Issue**: Dashboard showed 0 conversations/follow-ups for all users
+- **Root Cause**: Analytics queried `beta_events` tracking table instead of actual data tables
+- **Fix**: Updated `getBetaUsers()`, `getBetaStats()`, `getAdminBetaStats()` to query:
+  - `interactions` table for conversation counts (excluding soft-deleted)
+  - `follow_up_signals` table for follow-up counts
+  - Status derived from having any interactions (activated) vs none (signed_up)
+- **Files**: server/replit_integrations/auth/storage.ts
+
+### Auth SessionId Tracking (Jan 15, 2026)
+- **Issue**: SessionId not captured for login/signup events
+- **Fix**: Implemented `passReqToCallback: true` with `VerifyFunctionWithRequest` type signature
+- **Result**: All auth events now capture Express `req.sessionID`
+- **Files**: server/replit_integrations/auth/replitAuth.ts

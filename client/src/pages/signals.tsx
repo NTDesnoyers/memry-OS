@@ -122,14 +122,28 @@ export default function SignalsPage() {
       const res = await apiRequest("POST", `/api/signals/${signalId}/resolve`, { resolutionType });
       return res.json();
     },
+    onMutate: async ({ signalId }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["/api/signals"] });
+      
+      // Snapshot previous value
+      const previousSignals = queryClient.getQueryData<SignalWithPerson[]>(["/api/signals"]);
+      
+      // Optimistically remove the signal from the list
+      queryClient.setQueryData<SignalWithPerson[]>(["/api/signals"], (old) => 
+        old?.filter(s => s.id !== signalId) ?? []
+      );
+      
+      return { previousSignals };
+    },
     onSuccess: (_, { signalId, resolutionType }) => {
-      // Always immediately refresh signals list
+      // Refresh to ensure consistency
       queryClient.invalidateQueries({ queryKey: ["/api/signals"] });
       
       if (resolutionType === 'skip') {
-        // Skip: 5-second undo toast
+        // Skip: 3-second undo toast (shortened from 5s)
         sonnerToast("Signal skipped", {
-          duration: 5000,
+          duration: 3000,
           action: {
             label: "Undo",
             onClick: () => undoMutation.mutate(signalId),
@@ -150,7 +164,11 @@ export default function SignalsPage() {
         });
       }
     },
-    onError: (error: any) => {
+    onError: (error: any, _, context) => {
+      // Rollback on error
+      if (context?.previousSignals) {
+        queryClient.setQueryData(["/api/signals"], context.previousSignals);
+      }
       sonnerToast.error("Error resolving signal", {
         description: error.message,
       });

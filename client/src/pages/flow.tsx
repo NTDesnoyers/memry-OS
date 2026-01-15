@@ -1,8 +1,10 @@
 import Layout from "@/components/layout";
 import { FordTrackerCompact } from "@/components/ford-tracker";
-import { Phone, Mail, Video, MessageCircle, Send, Users } from "lucide-react";
+import { Phone, Mail, Video, MessageCircle, Send, Users, Sparkles, ArrowDown } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
+import { isFounderMode } from "@/lib/feature-mode";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -705,6 +707,9 @@ function InteractionList({
 export default function Flow() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const isFounder = isFounderMode(user?.email);
+  
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [addFlowType, setAddFlowType] = useState<"live" | "auto">("live");
   
@@ -737,6 +742,9 @@ export default function Flow() {
   const { data: interactions = [], isLoading } = useQuery<Interaction[]>({
     queryKey: ["/api/interactions"],
   });
+  
+  // First-run activation gate: show for users with 0 conversations (founder bypasses)
+  const isNewUser = !isLoading && interactions.length === 0 && !isFounder;
 
   const createInteraction = useMutation({
     mutationFn: async (data: any) => {
