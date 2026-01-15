@@ -1,401 +1,184 @@
-# Ninja OS
+# Memry
 
-A personal business operating system for real estate professionals following the Ninja Selling methodology. Combines relationship management, conversation intelligence, and task automation into a unified platform.
+**Relationship Intelligence for Real Estate Professionals**
 
-## Table of Contents
-- [Overview](#overview)
-- [Architecture](#architecture)
-- [Tech Stack](#tech-stack)
-- [Main Flows](#main-flows)
-- [Getting Started](#getting-started)
-- [Development](#development)
-- [Testing](#testing)
-- [Deployment](#deployment)
-- [Local Sync Agent](#local-sync-agent)
+Memry is a multi-tenant SaaS platform that transforms how real estate professionals manage relationships. Instead of treating a CRM as a data graveyard, Memry captures conversations naturally and generates actionable follow-ups automatically.
 
----
+[Live Demo](https://memryos.io)
 
-## Overview
+## The Problem
 
-### Purpose
-Ninja OS serves as the source of truth for Ninja Selling workflows, prioritizing speed and efficiency:
-- Weekly Meeting Agenda completion in under 10 minutes
-- FORD interaction logging in under 60 seconds
-- Automatic relationship intelligence extraction from conversations
+Real estate is a relationship business, but most CRMs fail relationship-focused professionals:
 
-### Design Philosophy
-Following GTD (Getting Things Done) principles, Ninja OS is **intelligent reference material**, not a task manager:
-- Stores relationship data, FORD notes, transaction history
-- Calculates when contacts are due based on segment frequency rules
-- Generates follow-up tasks and exports to Todoist
-- Keeps execution in Todoist, intelligence in Ninja OS
+- **Logging friction**: Agents skip logging conversations because it's tedious
+- **Follow-up gaps**: Great conversations happen, but follow-ups fall through the cracks
+- **Generic outreach**: Without context, agents send templated messages that feel impersonal
+- **Data decay**: Contact notes become stale because updating them is a chore
 
-### Key Concepts
-| Term | Description |
-|------|-------------|
-| **FORD** | Family, Occupation, Recreation, Dreams - core relationship fields |
-| **Segments** | A (monthly), B (every 2 months), C (quarterly), D (develop/delete) |
-| **Hot List** | Likely to transact in ~90 days |
-| **Warm List** | Likely to transact in ~12 months |
-| **Your 50** | Top 50 relationships for frequent contact |
+## The Solution
 
----
+Memry inverts the CRM paradigm. Instead of forms and fields, you simply tell the AI what happened:
 
-## Architecture
+> "Just grabbed coffee with Sarah Chen. She mentioned her daughter Emma is starting kindergarten next fall and they're thinking about downsizing once the kids are out of the house. She's also training for her first marathon."
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         Frontend (React)                         │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐           │
-│  │ Dashboard│ │  People  │ │  Deals   │ │   AI    │           │
-│  │          │ │  Manager │ │ Pipeline │ │Assistant│           │
-│  └──────────┘ └──────────┘ └──────────┘ └──────────┘           │
-│                              ↓                                   │
-│                     TanStack Query (State)                       │
-└─────────────────────────────────────────────────────────────────┘
-                               ↓ HTTP
-┌─────────────────────────────────────────────────────────────────┐
-│                      Backend (Express)                           │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐           │
-│  │   API    │ │  Sync    │ │    AI    │ │External │           │
-│  │  Routes  │ │   API    │ │Processing│ │ Integs  │           │
-│  └──────────┘ └──────────┘ └──────────┘ └──────────┘           │
-│                              ↓                                   │
-│                     Storage Layer (Drizzle)                      │
-└─────────────────────────────────────────────────────────────────┘
-                               ↓ SQL
-┌─────────────────────────────────────────────────────────────────┐
-│                     PostgreSQL Database                          │
-│  people │ interactions │ deals │ tasks │ drafts │ sync_logs    │
-└─────────────────────────────────────────────────────────────────┘
+Memry automatically:
+1. Logs the interaction with timestamp
+2. Updates relationship notes (FORD: Family, Occupation, Recreation, Dreams)
+3. Creates a follow-up Signal for you to review
+4. Generates a contextual draft (email, text, or handwritten note)
 
-┌─────────────────────────────────────────────────────────────────┐
-│                  Local Sync Agent (Python)                       │
-│  Runs on Mac, pushes to cloud via /api/sync/*                   │
-│  ┌────────┐ ┌───────┐ ┌──────────┐ ┌──────────┐                │
-│  │Granola │ │ Plaud │ │ iMessage │ │ WhatsApp │                │
-│  └────────┘ └───────┘ └──────────┘ └──────────┘                │
-└─────────────────────────────────────────────────────────────────┘
-```
+## Core Features
 
-### Directory Structure
-```
-├── client/                 # React frontend
-│   ├── src/
-│   │   ├── components/     # UI components (shadcn/ui)
-│   │   ├── pages/          # Route pages
-│   │   ├── hooks/          # Custom React hooks
-│   │   └── lib/            # Utilities, API client
-├── server/                 # Express backend
-│   ├── index.ts            # Server entry point
-│   ├── routes.ts           # API route definitions
-│   ├── storage.ts          # Database access layer
-│   ├── db.ts               # Database connection
-│   ├── ai-tools.ts         # AI function calling tools
-│   ├── gmail-client.ts     # Gmail integration
-│   └── todoist-client.ts   # Todoist integration
-├── shared/                 # Shared code
-│   └── schema.ts           # Drizzle schema + Zod types
-├── local-sync-agent/       # Python sync scripts
-│   ├── sync_manager.py     # Unified sync manager
-│   ├── sync_granola.py     # Granola meetings
-│   ├── sync_plaud.py       # Plaud recordings
-│   ├── sync_imessage.py    # iMessage texts
-│   └── sync_whatsapp.py    # WhatsApp exports
-└── migrations/             # Database migrations
-```
+### Flow
+The conversation timeline. Every interaction is captured and searchable, giving you a complete history of each relationship.
 
----
+### Signals
+The decision inbox. Each conversation creates exactly one Signal—a prompt to take action. You choose: send an email, text, handwritten note, create a task, or skip. No autonomous AI actions; you stay in control.
+
+### Actions
+Task management integrated with the relationship context. Tasks know who they're about and why they exist.
+
+### Weekly Review
+GTD-inspired weekly planning. Review your sphere, identify who needs attention, and plan your week's relationship investments.
+
+### Contacts
+Your sphere organized by relationship depth (A/B/C/D segments) and transaction pipeline status. Due dates surface who you haven't connected with recently.
 
 ## Tech Stack
 
-### Frontend
-| Technology | Purpose |
-|------------|---------|
-| React 18 | UI framework |
-| TypeScript | Type safety |
-| Vite | Build tool + dev server |
-| Tailwind CSS v4 | Styling |
-| shadcn/ui | Component library (Radix primitives) |
-| TanStack Query | Server state management |
-| Wouter | Lightweight routing |
-| React Hook Form + Zod | Form handling + validation |
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 18, TypeScript, TanStack Query, Tailwind CSS v4, shadcn/ui |
+| Backend | Node.js, Express, TypeScript (ESM) |
+| Database | PostgreSQL with Drizzle ORM |
+| AI | OpenAI GPT-4o for conversation processing and draft generation |
+| Auth | Replit OpenID Connect |
+| Payments | Stripe (checkout, webhooks, customer portal) |
 
-### Backend
-| Technology | Purpose |
-|------------|---------|
-| Node.js | Runtime |
-| Express | HTTP server |
-| TypeScript (ESM) | Type safety |
-| Drizzle ORM | Database queries + migrations |
-| Zod | Request validation |
+## Architecture Decisions
 
-### Database
-| Technology | Purpose |
-|------------|---------|
-| PostgreSQL | Primary database |
-| Drizzle Kit | Schema migrations |
+### Event-Driven Signal System
+Rather than autonomous AI actions, every conversation produces a Signal that requires human decision. This keeps the user in control while still providing AI-powered suggestions.
 
-### AI & Integrations
-| Integration | Purpose |
-|-------------|---------|
-| OpenAI GPT-4o | AI processing, function calling |
-| OpenAI Whisper | Audio transcription |
-| Anthropic Claude | Alternative AI provider |
-| Gmail API | Send emails, create drafts |
-| Todoist API | Task sync (GTD system) |
-| Google Calendar | Scheduling |
-| Google Sheets | Data import/export |
+### FORD Framework
+Contacts are enriched with Family, Occupation, Recreation, and Dreams notes—the pillars of relationship-based selling. The AI extracts these automatically from conversations.
 
-### Local Sync Agent
-| Technology | Purpose |
-|------------|---------|
-| Python 3.9+ | Sync scripts runtime |
-| requests | HTTP client |
+### Experience Layer
+High-magnitude life events (promotions, new babies, moves) are detected and prioritized for follow-up. A friend mentioning their mom passed away gets surfaced differently than someone mentioning they tried a new restaurant.
 
----
+### Multi-Tenant by Design
+All data is scoped by `userId`. The system supports multiple users with complete data isolation.
 
-## Main Flows
+### Supervised AI
+The AI assistant can search, log, and update—but never sends messages without approval. Every draft is reviewed before sending.
 
-### 1. People Management
+## Project Structure
+
 ```
-Create Person → Set Segment (A/B/C/D) → Add FORD Notes → Track Contact Frequency
-                                                              ↓
-                              When overdue → Generate "Contact Due" task
+├── client/                 # React frontend
+│   ├── src/
+│   │   ├── components/     # Reusable UI components (shadcn/ui)
+│   │   ├── pages/          # Route pages (Flow, Signals, Contacts, etc.)
+│   │   ├── hooks/          # Custom React hooks
+│   │   └── lib/            # Utilities, API client
+├── server/                 # Express backend
+│   ├── prompts/            # AI system prompts
+│   ├── routes.ts           # API endpoints
+│   ├── storage.ts          # Database operations
+│   └── ai-tools.ts         # AI function calling tools
+├── shared/                 # Shared types and schema
+│   └── schema.ts           # Drizzle schema (single source of truth)
+└── replit.md               # Project documentation
 ```
 
-### 2. Interaction Logging
-```
-Log Call/Meeting/Text → Link to Person → Update lastContact → Store Transcript
-                                                                    ↓
-                                              AI Processing → Extract FORD → Update Person
-```
+## Key Technical Challenges
 
-### 3. Deal Pipeline
-```
-Create Deal (linked to Person) → Warm → Hot → In Contract → Closed
-                                   ↓      ↓
-                            (90-day focus) (daily focus)
-```
+### 1. Conversation-to-Action Pipeline
+The core challenge was building a reliable pipeline from unstructured conversation logs to actionable follow-ups:
+- Natural language processing to extract people, dates, and action items
+- FORD categorization (is this about their family or their job?)
+- Life event detection with magnitude scoring
+- Draft generation that sounds like the user, not a robot
 
-### 4. Task Flow
-```
-Create Task → Set Due Date/Priority → Execute → Mark Complete
-      ↓                                              ↓
-  Sync to Todoist                              Update in Both Systems
-```
+### 2. Signal Deduplication
+Preventing signal spam while ensuring nothing falls through the cracks:
+- One active signal per person rule
+- 7-day expiration with learning layer hooks
+- Resolution types that inform future AI behavior
 
-### 5. AI Assistant (Agentic)
-```
-User Query → AI Analyzes → Calls Tools (up to 5 sequential) → Returns Result
-                               ↓
-            Tools: search_people, log_interaction, create_task,
-                   update_deal_stage, get_hot_warm_lists, etc.
-```
+### 3. Multi-Tenant Data Isolation
+Every query scoped by userId with a TenantContext pattern:
+- `getTenantFilter()` for read operations
+- `getEffectiveUserId()` for create operations
+- Backward compatibility for founder/legacy data
 
-### 6. External Sync
-```
-Local Mac Agent → Read Source Data → Push to /api/sync/push → Match to Person
-                                                                    ↓
-                                              Create Interaction → Update lastContact
-```
+## What I'd Build Next
 
-### 7. Draft Generation
-```
-Interaction Processed → Extract Voice Profile → Generate Thank-You Email
-                                                       ↓
-                              Generate Handwritten Note → Queue for Review
-```
+**Phase 2: Learning Layer**
+- Train on which Signals get resolved vs skipped to improve suggestions
+- Learn the user's voice/tone from sent messages for better drafts
+- Predictive due dates based on relationship patterns
 
----
+**Integrations**
+- Gmail/Calendar sync for automatic interaction capture
+- Todoist/Things 3 export for task management
+- CRM sync (Cloze, Follow Up Boss) for teams already invested elsewhere
 
-## Getting Started
+**Team Features**
+- Shared contacts with visibility controls
+- Referral routing between team members
+- Activity feeds for accountability
+
+## Highlights
+
+- **Supervised AI**: Every AI suggestion requires human approval—no autonomous actions
+- **Signal System**: One decision point per conversation, preventing notification fatigue
+- **Multi-Tenant Isolation**: Full userId scoping with TenantContext pattern
+- **Experience Layer**: Life event detection with magnitude scoring (1-5 scale)
+- **Voice Profile Learning**: AI learns user's communication style from sent messages
+
+## Running Locally
 
 ### Prerequisites
 - Node.js 20+
-- PostgreSQL database (provided by Replit)
+- PostgreSQL database
 - OpenAI API key
 
 ### Environment Variables
 ```bash
-DATABASE_URL          # PostgreSQL connection string (auto-provided)
-OPENAI_API_KEY        # For AI processing and transcription
-ANTHROPIC_API_KEY     # Optional: Alternative AI provider
+DATABASE_URL=postgresql://...      # Required: PostgreSQL connection
+OPENAI_API_KEY=sk-...              # Required: AI processing
+ANTHROPIC_API_KEY=...              # Optional: Alternative AI
+STRIPE_SECRET_KEY=...              # Optional: Payments (disabled in beta)
 ```
 
-### Installation
+### Setup
 ```bash
+# Clone the repository
+git clone https://github.com/NTDesnoyers/memry.git
+cd memry
+
 # Install dependencies
 npm install
 
 # Push database schema
 npm run db:push
 
-# Start development server
+# Start development server (frontend + backend)
 npm run dev
 ```
 
-The app will be available at `http://localhost:5000`.
+The app runs on `http://localhost:5000`. A single `npm run dev` command starts both the Express backend and Vite frontend.
+
+### Exploring the App
+Sign in to create an account, then use the AI assistant (bottom-right button) to log your first conversation. The Signal system will generate a follow-up for review.
+
+## Why I Built This
+
+I spent 10+ years in real estate and saw the same pattern repeatedly: agents who were great at building relationships but terrible at systematizing follow-up. They'd have amazing conversations at open houses, networking events, and coffee meetings—then never follow up because "logging it" felt like homework.
+
+Memry is the tool I wished I had. Talk to it like a colleague, and it handles the rest.
 
 ---
 
-## Development
-
-### Commands
-```bash
-npm run dev          # Start development server (frontend + backend)
-npm run db:push      # Push schema changes to database
-npm run db:studio    # Open Drizzle Studio (database GUI)
-npm run build        # Build for production
-npm run start        # Start production server
-```
-
-### Adding a New Feature
-
-1. **Schema First**: Define types in `shared/schema.ts`
-2. **Storage Layer**: Add queries in `server/storage.ts`
-3. **API Routes**: Add endpoints in `server/routes.ts`
-4. **Frontend**: Create components in `client/src/`
-
-### Code Conventions
-- Use existing shadcn/ui components from `client/src/components/ui/`
-- Follow existing patterns for API calls (TanStack Query hooks)
-- Add `data-testid` attributes to interactive elements
-- Use Zod schemas for validation (shared between frontend/backend)
-
----
-
-## Testing
-
-### Running Tests
-```bash
-npm test             # Run all tests
-npm run test:watch   # Run tests in watch mode
-npm run test:coverage # Run with coverage report
-```
-
-### Test Structure
-```
-tests/
-├── api/             # API endpoint tests
-│   ├── people.test.ts
-│   ├── interactions.test.ts
-│   ├── deals.test.ts
-│   └── sync.test.ts
-├── storage/         # Database layer tests
-└── helpers/         # Test utilities
-```
-
-### Main Test Flows
-1. **People CRUD**: Create, read, update, search, segment filtering
-2. **Interaction Logging**: Create interaction, auto-update lastContact
-3. **Deal Pipeline**: Stage transitions, history tracking
-4. **Task Management**: Create, complete, query overdue
-5. **Sync API**: Push items, person matching, deduplication
-
----
-
-## Deployment
-
-### Replit Deployment
-1. Click **Deploy** in the Replit interface
-2. The app will be built and deployed to a `.replit.app` domain
-3. Database is automatically provisioned
-
-### Environment Setup
-- Development secrets are configured in Replit Secrets
-- Production uses the same database (Neon-backed PostgreSQL)
-
-### Health Check
-The deployment includes automatic health checks on the root endpoint.
-
----
-
-## Local Sync Agent
-
-The local sync agent runs on your Mac to bridge local apps into Ninja OS.
-
-### Supported Sources
-| Source | Data Type | Requirements |
-|--------|-----------|--------------|
-| Granola | Meeting notes | Granola app installed |
-| Plaud | Voice recordings | Audio files |
-| iMessage | Text messages | Full Disk Access permission |
-| WhatsApp | Chat exports | Manual export from phone |
-
-### Setup
-```bash
-cd local-sync-agent
-pip install -r requirements.txt
-
-# Edit config.py with your Ninja OS URL
-# NINJA_OS_URL = "https://your-app.replit.app"
-```
-
-### Usage
-```bash
-# Run all syncs once
-python sync_manager.py
-
-# Run continuously (every 15 minutes)
-python sync_manager.py --daemon
-
-# Sync specific sources
-python sync_manager.py --sources granola imessage
-```
-
-### Running as Background Service
-See `local-sync-agent/README.md` for Launch Agent setup instructions.
-
----
-
-## API Reference
-
-### Core Endpoints
-
-#### People
-- `GET /api/people` - List all people
-- `POST /api/people` - Create person
-- `GET /api/people/:id` - Get person
-- `PUT /api/people/:id` - Update person
-- `DELETE /api/people/:id` - Delete person
-- `GET /api/people/due-for-contact` - Get people needing contact
-
-#### Interactions
-- `GET /api/interactions` - List interactions
-- `POST /api/interactions` - Create interaction
-- `POST /api/interactions/:id/process` - AI process transcript
-
-#### Deals
-- `GET /api/deals` - List deals
-- `POST /api/deals` - Create deal
-- `PUT /api/deals/:id/stage` - Update deal stage
-
-#### Tasks
-- `GET /api/tasks` - List tasks
-- `POST /api/tasks` - Create task
-- `PUT /api/tasks/:id/complete` - Mark complete
-
-#### Sync API
-- `POST /api/sync/push` - Push items from external source
-- `POST /api/sync/transcribe` - Transcribe audio + create interaction
-- `GET /api/sync/search-person` - Find person by phone/email/name
-- `GET /api/sync/logs` - View sync history
-
-#### AI Assistant
-- `POST /api/ai/chat` - Send message to AI assistant
-
----
-
-## Contributing
-
-1. Check existing patterns before adding new code
-2. Use TypeScript strictly (no `any` unless necessary)
-3. Add tests for new features
-4. Update this README when adding major features
-
----
-
-## License
-
-Private - All rights reserved.
+Built by [Nathan Desnoyers](https://github.com/NTDesnoyers)
