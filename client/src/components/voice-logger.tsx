@@ -74,6 +74,11 @@ export function VoiceLogger() {
   const [inputMode, setInputMode] = useState<InputMode>('log_conversation');
   const [modeAutoSelected, setModeAutoSelected] = useState(false);
   
+  // Action Mode: Track logged conversations for thread reset
+  const [loggedConversations, setLoggedConversations] = useState<Array<{ personName: string; interactionId: string }>>([]);
+  const [expectedLogCount, setExpectedLogCount] = useState<number | null>(null);
+  const [pendingReset, setPendingReset] = useState<{ personNames: string[] } | null>(null);
+  
   const recognitionRef = useRef<any>(null);
   const completionBadgeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -311,6 +316,13 @@ export function VoiceLogger() {
     // Capture the current mode before sending
     const currentMode = inputMode;
     
+    // ACTION MODE: Clear logged conversations and expected count at start of new request
+    // This prevents stale entries from previous attempts from triggering false resets
+    if (currentMode === 'log_conversation') {
+      setLoggedConversations([]);
+      setExpectedLogCount(null);
+    }
+    
     try {
       const response = await fetch("/api/ai-assistant/stream", {
         method: "POST",
@@ -400,6 +412,19 @@ export function VoiceLogger() {
                   });
                   break;
                   
+                case 'conversation_logged':
+                  // Action Mode: Track successful log_interaction calls
+                  // Wait for all logs to complete before triggering reset
+                  // Track the expected total from the backend
+                  if (data.totalLogged) {
+                    setExpectedLogCount(data.totalLogged);
+                  }
+                  setLoggedConversations(prev => [...prev, { 
+                    personName: data.personName, 
+                    interactionId: data.interactionId 
+                  }]);
+                  break;
+                  
                 case 'complete':
                   if (data.actions) {
                     accumulatedActions = data.actions;
@@ -445,6 +470,32 @@ export function VoiceLogger() {
       queryClient.invalidateQueries({ queryKey: ["/api/weekly-review"] });
       queryClient.invalidateQueries({ queryKey: ["/api/deals"] });
       queryClient.invalidateQueries({ queryKey: ["/api/signals"] });
+      
+      // ACTION MODE: If conversations were logged, trigger thread reset
+      // This enforces the "one conversation per thread" rule
+      // Only trigger reset when ALL expected logs are received (prevents partial-failure resets)
+      // Use functional setState to access the latest values
+      setExpectedLogCount(expected => {
+        setLoggedConversations(prev => {
+          // Only trigger reset if:
+          // 1. Mode is log_conversation
+          // 2. We have logged conversations
+          // 3. Count matches expected (all logs received)
+          if (currentMode === 'log_conversation' && prev.length > 0) {
+            if (expected !== null && prev.length === expected) {
+              const personNames = prev.map(c => c.personName);
+              // Trigger the reset flow
+              setPendingReset({ personNames });
+              console.log(`[ACTION MODE] All ${expected} logs received, triggering reset`);
+            } else if (expected !== null && prev.length !== expected) {
+              // Partial logging - some failed. Don't reset, allow retry
+              console.warn(`[ACTION MODE] Partial logging: ${prev.length}/${expected} logs received. No reset.`);
+            }
+          }
+          return prev;
+        });
+        return expected;
+      });
       
     } catch (error) {
       console.error("AI error:", error);
@@ -564,14 +615,24 @@ export function VoiceLogger() {
     }
   };
   
-  // Auto-save on close
+  // Auto-save on close - only for Reflection Mode (ask_search)
+  // Action Mode (log_conversation) threads reset immediately, no history save
   useEffect(() => {
     if (!isOpen && messages.length > 0) {
-      if (currentConversationId) {
-        updateConversation.mutate({ id: currentConversationId, messages });
+      // Only save Reflection Mode conversations to history
+      // Action Mode (log_conversation) handles its own reset without saving
+      if (inputMode === 'ask_search') {
+        if (currentConversationId) {
+          updateConversation.mutate({ id: currentConversationId, messages });
+        } else {
+          const title = messages[0].content.slice(0, 50) + (messages[0].content.length > 50 ? "..." : "");
+          createConversation.mutate({ title, messages });
+        }
+        console.log('[REFLECTION MODE] Conversation saved to history on close');
       } else {
-        const title = messages[0].content.slice(0, 50) + (messages[0].content.length > 50 ? "..." : "");
-        createConversation.mutate({ title, messages });
+        // For Action Mode (log_conversation) or quick_update, don't save to history
+        // Thread will be available until reset or new session
+        console.log(`[${inputMode.toUpperCase()}] Thread not saved to history`);
       }
     }
   }, [isOpen]);
@@ -615,6 +676,35 @@ export function VoiceLogger() {
       }
     };
   }, []);
+  
+  // ACTION MODE: Handle thread reset after successful conversation logging
+  // This enforces the "one conversation per thread" rule
+  useEffect(() => {
+    if (pendingReset) {
+      const personNames = pendingReset.personNames;
+      const successMessage = personNames.length === 1
+        ? `Conversation with ${personNames[0]} logged successfully.`
+        : `Conversations logged for: ${personNames.join(', ')}.`;
+      
+      // Show success briefly, then reset thread
+      const timer = setTimeout(() => {
+        // Reset thread state (no history save for Action Mode)
+        setMessages([]);
+        setCurrentConversationId(null);
+        setInputText('');
+        setAttachedImages([]);
+        setLoggedConversations([]);
+        setExpectedLogCount(null);
+        setPendingReset(null);
+        setInputMode('log_conversation');
+        setModeAutoSelected(false);
+        
+        console.log(`[ACTION MODE] Thread reset after logging: ${successMessage}`);
+      }, 2000); // 2 second delay to show the AI's response before reset
+      
+      return () => clearTimeout(timer);
+    }
+  }, [pendingReset]);
 
   return (
     <>
@@ -914,6 +1004,30 @@ export function VoiceLogger() {
                 </div>
               ))}
 
+              {/* ACTION MODE: Success banner with pending reset indicator */}
+              {pendingReset && !streamingState && (
+                <div className="flex gap-3 justify-start animate-in fade-in">
+                  <div className="h-8 w-8 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="max-w-[85%] rounded-2xl px-4 py-3 text-sm bg-green-50 border border-green-200">
+                    <div className="flex items-center gap-2 text-green-700 font-medium mb-1">
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span>Conversation logged successfully</span>
+                    </div>
+                    <p className="text-green-600 text-xs">
+                      {pendingReset.personNames.length === 1
+                        ? `Logged with ${pendingReset.personNames[0]}`
+                        : `Logged for: ${pendingReset.personNames.join(', ')}`}
+                    </p>
+                    <p className="text-muted-foreground text-xs mt-1 flex items-center gap-1">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Starting fresh thread...
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Streaming message display */}
               {streamingState && (
                 <div className="flex gap-3 justify-start">
@@ -1057,7 +1171,7 @@ export function VoiceLogger() {
                   "flex-shrink-0",
                   isRecording && "bg-red-50 border-red-200 text-red-600 hover:bg-red-100"
                 )}
-                disabled={isProcessing}
+                disabled={isProcessing || !!pendingReset}
               >
                 {isRecording ? <Square className="h-4 w-4 fill-current" /> : <Mic className="h-4 w-4" />}
               </Button>
@@ -1075,7 +1189,7 @@ export function VoiceLogger() {
                 size="icon"
                 onClick={() => fileInputRef.current?.click()}
                 className="flex-shrink-0"
-                disabled={isProcessing || isRecording}
+                disabled={isProcessing || isRecording || !!pendingReset}
                 title="Attach image"
               >
                 <Paperclip className="h-4 w-4" />
@@ -1090,13 +1204,13 @@ export function VoiceLogger() {
                 placeholder="Ask me anything... (paste images with Ctrl+V)"
                 className="min-h-[44px] max-h-[200px] resize-none overflow-y-auto"
                 rows={1}
-                disabled={isRecording}
+                disabled={isRecording || !!pendingReset}
               />
               
               <Button
                 size="icon"
                 onClick={() => sendMessage(inputText)}
-                disabled={(!inputText.trim() && attachedImages.length === 0) || isProcessing || isRecording}
+                disabled={(!inputText.trim() && attachedImages.length === 0) || isProcessing || isRecording || !!pendingReset}
                 className="flex-shrink-0 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700"
               >
                 {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}

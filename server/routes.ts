@@ -1902,7 +1902,9 @@ Respond with valid JSON only, no other text.`;
           }
           
           const signalMsg = signalCreated ? ' A follow-up signal was created - check your Signals page.' : '';
-          return `Logged ${args.type} interaction for ${person.name}. Last contact date updated.${signalMsg}`;
+          // Include structured metadata for frontend event handling (conversation_logged event)
+          const loggedMeta = `<!--LOGGED:${JSON.stringify({ personName: person.name, interactionId: interaction.id })}-->`;
+          return `Logged ${args.type} interaction for ${person.name}. Last contact date updated.${signalMsg}${loggedMeta}`;
         }
         
         case "update_interaction": {
@@ -2730,6 +2732,9 @@ The user is asking a question or searching for information. Provide answers but 
       let iterations = 0;
       const maxIterations = 5;
       
+      // Track logged conversations for the conversation_logged event
+      const loggedConversations: Array<{ personName: string; interactionId: string }> = [];
+      
       // Process tool calls in a loop
       while (responseMessage?.tool_calls && responseMessage.tool_calls.length > 0 && iterations < maxIterations) {
         iterations++;
@@ -2747,8 +2752,22 @@ The user is asking a question or searching for information. Provide answers but 
           actionsExecuted.push({ tool: toolName, result });
           toolsUsed.push(toolName);
           
-          // Send tool completion
-          sendEvent('tool_complete', { tool: toolName, result: result.slice(0, 100) + (result.length > 100 ? '...' : '') });
+          // Track successful log_interaction calls for conversation_logged event
+          if (toolName === 'log_interaction') {
+            const loggedMatch = result.match(/<!--LOGGED:(.+?)-->/);
+            if (loggedMatch) {
+              try {
+                const loggedData = JSON.parse(loggedMatch[1]);
+                loggedConversations.push(loggedData);
+              } catch (e) {
+                logger.warn('Failed to parse LOGGED metadata:', e);
+              }
+            }
+          }
+          
+          // Send tool completion (strip metadata from display)
+          const displayResult = result.replace(/<!--LOGGED:.+?-->/g, '');
+          sendEvent('tool_complete', { tool: toolName, result: displayResult.slice(0, 100) + (displayResult.length > 100 ? '...' : '') });
           
           apiMessages.push({
             role: "tool",
@@ -2779,6 +2798,20 @@ The user is asking a question or searching for information. Provide answers but 
         
         // Send a warning to the user
         sendEvent('token', { content: '⚠️ **Warning**: This appeared to be a conversation log, but the interaction was not saved. Please try again or manually log this conversation in the Flow page.\n\n' });
+      }
+      
+      // Emit conversation_logged events for successful logs (Action Mode: triggers thread reset)
+      // Only emit when mode is log_conversation to enforce the one-conversation-per-thread rule
+      if (inputMode === 'log_conversation' && loggedConversations.length > 0) {
+        // Send all logged conversations - frontend will reset after receiving
+        for (const logged of loggedConversations) {
+          sendEvent('conversation_logged', { 
+            personName: logged.personName, 
+            interactionId: logged.interactionId,
+            totalLogged: loggedConversations.length
+          });
+          logger.info(`[ACTION MODE] Conversation logged for ${logged.personName}, emitting reset event`);
+        }
       }
 
       // Now stream the final response
