@@ -55,6 +55,8 @@ interface StreamingState {
   currentTool: string | null;
 }
 
+type InputMode = 'log_conversation' | 'quick_update' | 'ask_search';
+
 export function VoiceLogger() {
   const [isOpen, setIsOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -69,6 +71,8 @@ export function VoiceLogger() {
   const [streamingState, setStreamingState] = useState<StreamingState | null>(null);
   const [expandedActions, setExpandedActions] = useState<Set<number>>(new Set());
   const [showCompletionBadge, setShowCompletionBadge] = useState(false);
+  const [inputMode, setInputMode] = useState<InputMode>('log_conversation');
+  const [modeAutoSelected, setModeAutoSelected] = useState(false);
   
   const recognitionRef = useRef<any>(null);
   const completionBadgeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -246,6 +250,42 @@ export function VoiceLogger() {
     setAttachedImages(prev => prev.filter((_, i) => i !== index));
   };
 
+  const detectInputMode = useCallback((text: string): InputMode => {
+    const trimmed = text.trim();
+    const length = trimmed.length;
+    
+    // Question patterns → ask/search
+    const questionPatterns = /^(what|who|where|when|why|how|show|find|search|list|get|tell me|can you|could you)/i;
+    if (questionPatterns.test(trimmed) || trimmed.endsWith('?')) {
+      return 'ask_search';
+    }
+    
+    // Transcript patterns → log conversation
+    const transcriptPatterns = /speaker [a-z]:|^(had|spoke|talked|met|called|just got off|conversation with|chatted)/i;
+    if (transcriptPatterns.test(trimmed)) {
+      return 'log_conversation';
+    }
+    
+    // Long text (likely transcript) → log conversation
+    if (length > 500) {
+      return 'log_conversation';
+    }
+    
+    // Medium text (200-500) with past tense verbs → log conversation
+    const pastTensePatterns = /\b(discussed|mentioned|said|told|asked|agreed|decided|talked about)\b/i;
+    if (length > 200 && pastTensePatterns.test(trimmed)) {
+      return 'log_conversation';
+    }
+    
+    // Short text → quick update
+    if (length < 100) {
+      return 'quick_update';
+    }
+    
+    // Default to log_conversation for safety
+    return 'log_conversation';
+  }, []);
+
   const sendMessage = async (text: string) => {
     if ((!text.trim() && attachedImages.length === 0) || isProcessing) return;
     
@@ -262,6 +302,9 @@ export function VoiceLogger() {
     // Initialize streaming state
     setStreamingState({ content: '', actions: [], status: 'Thinking...', currentTool: null });
 
+    // Capture the current mode before sending
+    const currentMode = inputMode;
+    
     try {
       const response = await fetch("/api/ai-assistant/stream", {
         method: "POST",
@@ -269,6 +312,7 @@ export function VoiceLogger() {
         body: JSON.stringify({
           messages: [...messages, userMessage],
           images: userMessage.images,
+          inputMode: currentMode,
           context: {
             currentPage: currentPage,
             pageDescription: getPageContext(),
@@ -442,13 +486,21 @@ export function VoiceLogger() {
     }
   };
 
-  // Auto-resize textarea based on content
+  // Auto-resize textarea based on content and detect input mode
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInputText(e.target.value);
+    const newText = e.target.value;
+    setInputText(newText);
     // Reset height to auto to properly calculate scrollHeight
     e.target.style.height = 'auto';
     // Set height based on content, with max limit
     e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+    
+    // Auto-detect mode when text changes significantly
+    if (newText.length > 50 || newText.includes('\n')) {
+      const detectedMode = detectInputMode(newText);
+      setInputMode(detectedMode);
+      setModeAutoSelected(true);
+    }
   };
 
   const clearConversation = () => {
@@ -907,6 +959,49 @@ export function VoiceLogger() {
           </ScrollArea>
 
           <div className="p-4 border-t flex-shrink-0 space-y-3">
+            {/* Mode Selector - What is this input? */}
+            {(inputText.length > 30 || modeAutoSelected) && (
+              <div className="flex items-center gap-1 text-xs" data-testid="mode-selector">
+                <span className="text-muted-foreground mr-1">This is:</span>
+                <button
+                  onClick={() => { setInputMode('log_conversation'); setModeAutoSelected(false); }}
+                  className={cn(
+                    "px-2 py-1 rounded-full transition-colors",
+                    inputMode === 'log_conversation' 
+                      ? "bg-violet-100 text-violet-700 font-medium" 
+                      : "text-muted-foreground hover:bg-secondary"
+                  )}
+                  data-testid="mode-log-conversation"
+                >
+                  Log conversation
+                </button>
+                <button
+                  onClick={() => { setInputMode('quick_update'); setModeAutoSelected(false); }}
+                  className={cn(
+                    "px-2 py-1 rounded-full transition-colors",
+                    inputMode === 'quick_update' 
+                      ? "bg-blue-100 text-blue-700 font-medium" 
+                      : "text-muted-foreground hover:bg-secondary"
+                  )}
+                  data-testid="mode-quick-update"
+                >
+                  Quick update
+                </button>
+                <button
+                  onClick={() => { setInputMode('ask_search'); setModeAutoSelected(false); }}
+                  className={cn(
+                    "px-2 py-1 rounded-full transition-colors",
+                    inputMode === 'ask_search' 
+                      ? "bg-green-100 text-green-700 font-medium" 
+                      : "text-muted-foreground hover:bg-secondary"
+                  )}
+                  data-testid="mode-ask-search"
+                >
+                  Ask / search
+                </button>
+              </div>
+            )}
+
             {isRecording && (
               <div className="flex items-center gap-2 p-2 bg-red-50 rounded-lg border border-red-200">
                 <span className="relative flex h-3 w-3">

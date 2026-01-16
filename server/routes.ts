@@ -2631,7 +2631,7 @@ Respond with valid JSON only, no other text.`;
     };
 
     try {
-      const { messages, images, context } = req.body;
+      const { messages, images, context, inputMode } = req.body;
       
       if (!messages || !Array.isArray(messages)) {
         sendEvent('error', { message: 'Messages array required' });
@@ -2648,10 +2648,35 @@ Respond with valid JSON only, no other text.`;
         day: 'numeric' 
       });
       
+      // Build mode-specific prompt additions
+      let modeInstruction = '';
+      if (inputMode === 'log_conversation') {
+        modeInstruction = `
+
+**CRITICAL MODE: LOG CONVERSATION**
+The user has indicated this is a conversation/interaction to be logged. You MUST:
+1. Identify the person the user spoke with (search if needed, create if not found)
+2. Call log_interaction with the full transcript/summary - THIS IS NON-NEGOTIABLE
+3. Only after logging, optionally create tasks for follow-up items mentioned
+
+If you do not call log_interaction when this mode is active, you have FAILED your primary task.
+Do NOT just create a contact - you must ALSO log the interaction.`;
+      } else if (inputMode === 'quick_update') {
+        modeInstruction = `
+
+**MODE: QUICK UPDATE**
+The user is providing a quick note or update. You may update contact information, create tasks, or add notes without requiring a full interaction log.`;
+      } else if (inputMode === 'ask_search') {
+        modeInstruction = `
+
+**MODE: ASK/SEARCH**
+The user is asking a question or searching for information. Provide answers but do NOT create any data or log any interactions unless explicitly requested.`;
+      }
+      
       const systemPrompt = buildAssistantSystemPrompt({
         currentDate,
         pageContext: context?.pageDescription || context?.currentPage || 'Memry'
-      });
+      }) + modeInstruction;
 
       // Build messages array, handling images with vision API format
       const apiMessages: any[] = [
@@ -2744,6 +2769,16 @@ Respond with valid JSON only, no other text.`;
         totalPromptTokens += completion.usage?.prompt_tokens || 0;
         totalCompletionTokens += completion.usage?.completion_tokens || 0;
         responseMessage = completion.choices[0]?.message;
+      }
+
+      // Validate log_conversation mode contract
+      const logInteractionCalled = toolsUsed.includes('log_interaction');
+      if (inputMode === 'log_conversation' && !logInteractionCalled) {
+        // Hard contract violation - AI failed to log the interaction
+        logger.warn(`[MODE CONTRACT VIOLATION] log_conversation mode active but log_interaction was not called. Tools used: ${toolsUsed.join(', ')}`);
+        
+        // Send a warning to the user
+        sendEvent('token', { content: '⚠️ **Warning**: This appeared to be a conversation log, but the interaction was not saved. Please try again or manually log this conversation in the Flow page.\n\n' });
       }
 
       // Now stream the final response
