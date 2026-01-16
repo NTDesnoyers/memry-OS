@@ -1,0 +1,221 @@
+Perfect. Below is a **Replit Agent–ready instruction set** you can paste directly into the Agent prompt.
+
+This is written as **operating law**, not suggestions.
+It assumes the agent can read code, run queries, and make edits.
+
+---
+
+# 🤖 REPLIT AGENT INSTRUCTIONS — MEMRY P0 SIGNAL SYSTEM FIX
+
+## PRIME OBJECTIVE (NON-NEGOTIABLE)
+
+You are fixing a **P0 product integrity bug**.
+
+> **Every logged interaction MUST deterministically create a signal — or the operation must fail loudly.**
+
+Silent success is forbidden.
+
+If this contract is violated anywhere in the codebase, you must fix it before proceeding.
+
+---
+
+## SCOPE (STRICT)
+
+Work ONLY on:
+
+* Interaction logging
+* Signal creation
+* Signal → action resolution
+* Required UI confirmation
+
+Do NOT:
+
+* Add new features
+* Refactor unrelated code
+* Touch analytics, pricing, GTD, or UX polish
+* Improve performance unless required for correctness
+
+---
+
+## STEP 1 — TRACE THE EXECUTION PATH
+
+### Your First Task
+
+Locate the **exact execution path** for:
+
+```
+AI Assistant → log_interaction tool → interaction save → signal creation
+```
+
+### Actions
+
+1. Identify:
+
+   * Where `log_interaction` is handled
+   * Where the interaction is written to the database
+   * Where (and how) a signal is created
+
+2. Add **explicit structured logs** at each step:
+
+   * `log_interaction_called`
+   * `interaction_saved`
+   * `signal_creation_attempted`
+   * `signal_created_success`
+   * `signal_created_failed`
+
+Each log MUST include:
+
+* interactionId
+* personId (if any)
+* userId
+* timestamp
+
+Do not proceed until the full path is visible in logs.
+
+---
+
+## STEP 2 — FIND ORPHANED INTERACTIONS
+
+### Objective
+
+Prove whether interactions exist without signals.
+
+### Actions
+
+1. Query the database for:
+
+   * Interactions created in the last 7 days
+   * Left join signals
+2. Identify any interaction without a signal
+
+If ANY exist:
+
+* Trace back which step failed
+* Fix before proceeding
+
+---
+
+## STEP 3 — ENFORCE THE BACKEND CONTRACT
+
+### Mandatory Rule
+
+An interaction **cannot** succeed unless a signal exists.
+
+### Actions
+
+1. Modify interaction creation logic so that:
+
+   * Signal creation is awaited
+   * Failure throws an error
+2. Remove any “fire-and-forget” behavior
+3. Add an assertion:
+
+   * After interaction save, verify signal exists
+   * If not → throw 500
+
+There must be **no possible code path** where an interaction is returned without a signal.
+
+---
+
+## STEP 4 — FIX SIGNAL → ACTION RESOLUTION
+
+### Objective
+
+When a user resolves a signal (e.g., clicks “Text”):
+
+1. A draft/action MUST be created
+2. It MUST appear in the Actions list immediately
+
+### Actions
+
+1. Inspect the signal resolution handler
+2. Confirm it:
+
+   * Creates a draft/action record
+   * Uses correct status, type, personId, userId
+3. Fix any query filters that hide new drafts
+4. Ensure cache/query invalidation occurs
+
+---
+
+## STEP 5 — ADD UI TRUTH CONFIRMATION
+
+### Requirement
+
+After AI logging completes, the UI MUST show exactly one outcome:
+
+* “Follow-up created”
+  OR
+* “No action needed”
+
+### Rules
+
+* No ambiguous spinners
+* No silent completion
+* No hidden success
+
+This confirmation is part of the product contract.
+
+---
+
+## STEP 6 — MANUAL VERIFICATION (REQUIRED)
+
+### You must test:
+
+Log **5 conversations** covering:
+
+* With person match
+* Without person match
+* Multiple conversations for same person
+
+For each:
+
+* Interaction exists
+* Signal exists
+* Outcome visible in UI
+
+If ANY fail:
+
+* Stop
+* Fix
+* Re-test
+
+---
+
+## STOP CONDITIONS (HARD)
+
+❌ Do NOT proceed if:
+
+* Any interaction exists without a signal
+* Any signal resolution produces no visible action
+* Any step succeeds silently
+
+---
+
+## SUCCESS DEFINITION
+
+You are done ONLY when:
+
+✔ Every interaction → signal
+✔ Every signal → decision
+✔ Every decision → visible action
+✔ No silent failures exist
+
+---
+
+## FINAL RULE
+
+If you are unsure whether something should fail or succeed:
+
+> **Fail loudly.**
+
+Trust is more important than convenience.
+
+---
+
+If you want, next I can:
+
+* Convert this into **automated invariant tests**
+* Or write a **post-mortem checklist** to prevent regressions
+
+Just say the word.
