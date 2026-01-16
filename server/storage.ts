@@ -3851,6 +3851,219 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(aiUsageLogs.createdAt))
       .limit(limit);
   }
+  
+  // Unit Economics - Cost per logged interaction
+  // NOTE: Founder exclusion is email-based (V1).
+  // Intentional shortcut to avoid schema migration.
+  // Replace with user.role when roles are introduced.
+  async getUnitEconomics(options: {
+    includeFounder?: boolean;
+    founderEmail?: string;
+  } = {}): Promise<{
+    users: Array<{
+      userId: string | null;
+      userEmail: string | null;
+      isFounder: boolean;
+      interactions7d: number;
+      interactions30d: number;
+      aiCost7d: number;
+      aiCost30d: number;
+      costPerInteraction7d: number | null;
+      costPerInteraction30d: number | null;
+    }>;
+    medians: {
+      interactions7d: number;
+      interactions30d: number;
+      aiCost7d: number;
+      aiCost30d: number;
+      costPerInteraction7d: number | null;
+      costPerInteraction30d: number | null;
+    };
+  }> {
+    const founderEmail = options.founderEmail || 'nathan@desnoyersproperties.com';
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    
+    // Get all unique users from AI usage logs
+    const aiLogUsers = await db.selectDistinct({
+      userId: aiUsageLogs.userId,
+      userEmail: aiUsageLogs.userEmail,
+    }).from(aiUsageLogs);
+    
+    // Also get users from interactions (users who logged conversations but may have no AI usage)
+    // Join with users table to get username (which is the email)
+    const interactionUsers = await db.selectDistinct({
+      userId: interactions.userId,
+      userEmail: users.username,
+    })
+    .from(interactions)
+    .leftJoin(users, eq(interactions.userId, users.id))
+    .where(sql`${interactions.deletedAt} IS NULL`);
+    
+    // Get AI costs per user for 7d and 30d windows
+    const aiCosts7d = await db.select({
+      userId: aiUsageLogs.userId,
+      userEmail: aiUsageLogs.userEmail,
+      totalCost: sql<number>`SUM(${aiUsageLogs.estimatedCost})::int`,
+    })
+    .from(aiUsageLogs)
+    .where(gte(aiUsageLogs.createdAt, sevenDaysAgo))
+    .groupBy(aiUsageLogs.userId, aiUsageLogs.userEmail);
+    
+    const aiCosts30d = await db.select({
+      userId: aiUsageLogs.userId,
+      userEmail: aiUsageLogs.userEmail,
+      totalCost: sql<number>`SUM(${aiUsageLogs.estimatedCost})::int`,
+    })
+    .from(aiUsageLogs)
+    .where(gte(aiUsageLogs.createdAt, thirtyDaysAgo))
+    .groupBy(aiUsageLogs.userId, aiUsageLogs.userEmail);
+    
+    // Get interaction counts per user for 7d and 30d windows
+    const interactions7d = await db.select({
+      userId: interactions.userId,
+      count: sql<number>`COUNT(*)::int`,
+    })
+    .from(interactions)
+    .where(and(
+      gte(interactions.createdAt, sevenDaysAgo),
+      sql`${interactions.deletedAt} IS NULL`
+    ))
+    .groupBy(interactions.userId);
+    
+    const interactions30d = await db.select({
+      userId: interactions.userId,
+      count: sql<number>`COUNT(*)::int`,
+    })
+    .from(interactions)
+    .where(and(
+      gte(interactions.createdAt, thirtyDaysAgo),
+      sql`${interactions.deletedAt} IS NULL`
+    ))
+    .groupBy(interactions.userId);
+    
+    // Build user data map
+    const userDataMap = new Map<string, {
+      userId: string | null;
+      userEmail: string | null;
+      isFounder: boolean;
+      interactions7d: number;
+      interactions30d: number;
+      aiCost7d: number;
+      aiCost30d: number;
+    }>();
+    
+    // Initialize from AI log users
+    for (const user of aiLogUsers) {
+      const key = user.userId || user.userEmail || 'unknown';
+      userDataMap.set(key, {
+        userId: user.userId,
+        userEmail: user.userEmail,
+        isFounder: user.userEmail === founderEmail,
+        interactions7d: 0,
+        interactions30d: 0,
+        aiCost7d: 0,
+        aiCost30d: 0,
+      });
+    }
+    
+    // Also add users from interactions (may have $0 AI cost)
+    for (const user of interactionUsers) {
+      if (user.userId && !userDataMap.has(user.userId)) {
+        userDataMap.set(user.userId, {
+          userId: user.userId,
+          userEmail: user.userEmail || null,
+          isFounder: user.userEmail === founderEmail,
+          interactions7d: 0,
+          interactions30d: 0,
+          aiCost7d: 0,
+          aiCost30d: 0,
+        });
+      }
+    }
+    
+    // Add AI costs
+    for (const cost of aiCosts7d) {
+      const key = cost.userId || cost.userEmail || 'unknown';
+      const existing = userDataMap.get(key);
+      if (existing) {
+        existing.aiCost7d = cost.totalCost || 0;
+      }
+    }
+    
+    for (const cost of aiCosts30d) {
+      const key = cost.userId || cost.userEmail || 'unknown';
+      const existing = userDataMap.get(key);
+      if (existing) {
+        existing.aiCost30d = cost.totalCost || 0;
+      }
+    }
+    
+    // Add interaction counts
+    for (const int of interactions7d) {
+      if (int.userId) {
+        const existing = userDataMap.get(int.userId);
+        if (existing) {
+          existing.interactions7d = int.count || 0;
+        }
+      }
+    }
+    
+    for (const int of interactions30d) {
+      if (int.userId) {
+        const existing = userDataMap.get(int.userId);
+        if (existing) {
+          existing.interactions30d = int.count || 0;
+        }
+      }
+    }
+    
+    // Build final result with cost per interaction
+    const users = Array.from(userDataMap.values()).map(user => ({
+      ...user,
+      costPerInteraction7d: user.interactions7d > 0 
+        ? user.aiCost7d / user.interactions7d 
+        : null,
+      costPerInteraction30d: user.interactions30d > 0 
+        ? user.aiCost30d / user.interactions30d 
+        : null,
+    }));
+    
+    // Filter out founder if not included
+    const filteredUsers = options.includeFounder 
+      ? users 
+      : users.filter(u => !u.isFounder);
+    
+    // Calculate medians for beta users with >= 1 interaction
+    // Only include users with at least 1 interaction in the window
+    const betaUsersWithInteractions7d = filteredUsers.filter(u => !u.isFounder && u.interactions7d > 0);
+    const betaUsersWithInteractions30d = filteredUsers.filter(u => !u.isFounder && u.interactions30d > 0);
+    
+    const calculateMedian = (arr: number[]): number => {
+      if (arr.length === 0) return 0;
+      const sorted = [...arr].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 !== 0 
+        ? sorted[mid] 
+        : (sorted[mid - 1] + sorted[mid]) / 2;
+    };
+    
+    const medians = {
+      interactions7d: calculateMedian(betaUsersWithInteractions7d.map(u => u.interactions7d)),
+      interactions30d: calculateMedian(betaUsersWithInteractions30d.map(u => u.interactions30d)),
+      aiCost7d: calculateMedian(betaUsersWithInteractions7d.map(u => u.aiCost7d)),
+      aiCost30d: calculateMedian(betaUsersWithInteractions30d.map(u => u.aiCost30d)),
+      costPerInteraction7d: betaUsersWithInteractions7d.length > 0 
+        ? calculateMedian(betaUsersWithInteractions7d.map(u => u.costPerInteraction7d!))
+        : null,
+      costPerInteraction30d: betaUsersWithInteractions30d.length > 0 
+        ? calculateMedian(betaUsersWithInteractions30d.map(u => u.costPerInteraction30d!))
+        : null,
+    };
+    
+    return { users: filteredUsers, medians };
+  }
 }
 
 export const storage = new DatabaseStorage();

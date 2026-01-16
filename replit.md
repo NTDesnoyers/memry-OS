@@ -87,6 +87,12 @@ Memry is a multi-agent, event-driven system orchestrating actions while CRMs rem
 ### AI Cost Tracking
 - **Usage Logging**: All OpenAI calls tracked and aggregated daily.
 - **Weekly Export**: Data exported to Google Sheets.
+- **Unit Economics Dashboard** (at /admin/beta): Per-user breakdown of AI costs and logged interactions.
+  - Shows 7-day and 30-day windows for interactions, AI costs, and cost per interaction
+  - Calculates medians for beta users with ≥1 interaction (excludes zero-interaction accounts)
+  - Sources users from BOTH aiUsageLogs AND interactions tables (catches $0 AI spend users)
+  - Founder exclusion toggle with visual warning
+  - Email-based founder detection (nathan@desnoyersproperties.com)
 
 ### Authentication Flow Architecture
 - **Single `useAuth()` Call**: Auth state resolved once in AuthenticatedApp component.

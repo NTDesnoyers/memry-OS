@@ -42,6 +42,31 @@ interface WhitelistEntry {
   createdAt: string;
 }
 
+interface UnitEconomicsUser {
+  userId: string | null;
+  userEmail: string | null;
+  isFounder: boolean;
+  interactions7d: number;
+  interactions30d: number;
+  aiCost7d: number;
+  aiCost30d: number;
+  costPerInteraction7d: number | null;
+  costPerInteraction30d: number | null;
+}
+
+interface UnitEconomicsData {
+  users: UnitEconomicsUser[];
+  medians: {
+    interactions7d: number;
+    interactions30d: number;
+    aiCost7d: number;
+    aiCost30d: number;
+    costPerInteraction7d: number | null;
+    costPerInteraction30d: number | null;
+  };
+  includeFounder: boolean;
+}
+
 function StatCard({ 
   title, 
   value, 
@@ -114,6 +139,17 @@ export default function BetaDashboard() {
       if (!res.ok) throw new Error("Failed to fetch whitelist");
       return res.json();
     },
+  });
+
+  // Unit Economics - Cost per logged interaction
+  const { data: unitEconomics, isLoading: unitEconomicsLoading } = useQuery<UnitEconomicsData>({
+    queryKey: ["/api/analytics/unit-economics", { includeFounder: includeFounders }],
+    queryFn: async () => {
+      const res = await fetch(`/api/analytics/unit-economics?includeFounder=${includeFounders}`);
+      if (!res.ok) throw new Error("Failed to fetch unit economics");
+      return res.json();
+    },
+    refetchInterval: 60000,
   });
 
   const addMutation = useMutation({
@@ -209,6 +245,102 @@ export default function BetaDashboard() {
             </CardContent>
           </Card>
         )}
+
+        {/* Unit Economics - Cost per logged interaction */}
+        <Card className="mb-8" data-testid="unit-economics">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              Unit Economics
+              <span className="text-xs font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                {includeFounders ? 'All Users' : 'Beta Only'}
+              </span>
+            </CardTitle>
+            <CardDescription>
+              Cost per logged interaction — the metric that matters for pricing
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {unitEconomicsLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading unit economics...
+              </div>
+            ) : !unitEconomics || unitEconomics.users.length === 0 ? (
+              <div className="text-sm text-muted-foreground">No data yet</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm" data-testid="unit-economics-table">
+                  <thead>
+                    <tr className="border-b text-left">
+                      <th className="pb-2 font-medium">User</th>
+                      <th className="pb-2 font-medium text-right">Interactions (7d)</th>
+                      <th className="pb-2 font-medium text-right">AI $ (7d)</th>
+                      <th className="pb-2 font-medium text-right">$/Interaction (7d)</th>
+                      <th className="pb-2 font-medium text-right">Interactions (30d)</th>
+                      <th className="pb-2 font-medium text-right">AI $ (30d)</th>
+                      <th className="pb-2 font-medium text-right">$/Interaction (30d)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {unitEconomics.users.map((user, idx) => (
+                      <tr 
+                        key={user.userEmail || user.userId || idx} 
+                        className={`border-b last:border-0 ${user.isFounder ? 'bg-muted/10 opacity-60' : ''}`}
+                        data-testid={`unit-economics-row-${idx}`}
+                      >
+                        <td className="py-2">
+                          {user.userEmail || user.userId || 'Unknown'}
+                          {user.isFounder && (
+                            <span className="ml-2 text-xs text-muted-foreground">(founder)</span>
+                          )}
+                        </td>
+                        <td className="py-2 text-right font-mono">{user.interactions7d}</td>
+                        <td className="py-2 text-right font-mono">${user.aiCost7d.toFixed(2)}</td>
+                        <td className="py-2 text-right font-mono">
+                          {user.costPerInteraction7d !== null 
+                            ? `$${user.costPerInteraction7d.toFixed(3)}` 
+                            : <span className="text-muted-foreground">N/A</span>
+                          }
+                        </td>
+                        <td className="py-2 text-right font-mono">{user.interactions30d}</td>
+                        <td className="py-2 text-right font-mono">${user.aiCost30d.toFixed(2)}</td>
+                        <td className="py-2 text-right font-mono">
+                          {user.costPerInteraction30d !== null 
+                            ? `$${user.costPerInteraction30d.toFixed(3)}` 
+                            : <span className="text-muted-foreground">N/A</span>
+                          }
+                        </td>
+                      </tr>
+                    ))}
+                    {/* Median Summary Row */}
+                    <tr className="border-t-2 bg-muted/30 font-medium" data-testid="unit-economics-median">
+                      <td className="py-2">Median (Beta)</td>
+                      <td className="py-2 text-right font-mono">{unitEconomics.medians.interactions7d}</td>
+                      <td className="py-2 text-right font-mono">${unitEconomics.medians.aiCost7d.toFixed(2)}</td>
+                      <td className="py-2 text-right font-mono">
+                        {unitEconomics.medians.costPerInteraction7d !== null 
+                          ? `$${unitEconomics.medians.costPerInteraction7d.toFixed(3)}` 
+                          : <span className="text-muted-foreground">N/A</span>
+                        }
+                      </td>
+                      <td className="py-2 text-right font-mono">{unitEconomics.medians.interactions30d}</td>
+                      <td className="py-2 text-right font-mono">${unitEconomics.medians.aiCost30d.toFixed(2)}</td>
+                      <td className="py-2 text-right font-mono">
+                        {unitEconomics.medians.costPerInteraction30d !== null 
+                          ? `$${unitEconomics.medians.costPerInteraction30d.toFixed(3)}` 
+                          : <span className="text-muted-foreground">N/A</span>
+                        }
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p className="mt-4 text-xs text-muted-foreground">
+                  Counts real-world interactions logged (calls, meetings, in-person). AI assistant messages are not counted.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Beta Users Table */}
         <Card className="mb-8" data-testid="beta-users-table">

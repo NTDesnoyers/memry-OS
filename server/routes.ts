@@ -9416,6 +9416,61 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
     }
   });
 
+  // ==================== UNIT ECONOMICS ====================
+  // NOTE: Founder exclusion is email-based (V1).
+  // Intentional shortcut to avoid schema migration.
+  // Replace with user.role when roles are introduced.
+  
+  // Get unit economics data: cost per logged interaction (founder only)
+  app.get("/api/analytics/unit-economics", async (req: any, res) => {
+    try {
+      const userEmail = req.user?.claims?.email;
+      if (userEmail !== 'nathan@desnoyersproperties.com') {
+        return res.status(403).json({ message: "Only the founder can view unit economics" });
+      }
+      
+      const includeFounder = req.query.includeFounder === 'true';
+      const data = await storage.getUnitEconomics({ includeFounder });
+      
+      // Format costs from micro-cents to dollars for display
+      // estimatedCost is stored in micro-cents (1/10000 of a cent)
+      const formatCost = (microCents: number) => microCents / 1000000;
+      
+      const formattedUsers = data.users.map(user => ({
+        ...user,
+        aiCost7d: formatCost(user.aiCost7d),
+        aiCost30d: formatCost(user.aiCost30d),
+        costPerInteraction7d: user.costPerInteraction7d !== null 
+          ? formatCost(user.costPerInteraction7d) 
+          : null,
+        costPerInteraction30d: user.costPerInteraction30d !== null 
+          ? formatCost(user.costPerInteraction30d) 
+          : null,
+      }));
+      
+      const formattedMedians = {
+        ...data.medians,
+        aiCost7d: formatCost(data.medians.aiCost7d),
+        aiCost30d: formatCost(data.medians.aiCost30d),
+        costPerInteraction7d: data.medians.costPerInteraction7d !== null 
+          ? formatCost(data.medians.costPerInteraction7d) 
+          : null,
+        costPerInteraction30d: data.medians.costPerInteraction30d !== null 
+          ? formatCost(data.medians.costPerInteraction30d) 
+          : null,
+      };
+      
+      res.json({
+        users: formattedUsers,
+        medians: formattedMedians,
+        includeFounder,
+      });
+    } catch (error: any) {
+      logger.error('[UnitEconomics] Error:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ==================== BETA ANALYTICS ROUTES ====================
   
   // Track a beta event (authenticated users)
