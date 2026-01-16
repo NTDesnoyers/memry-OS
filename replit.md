@@ -48,6 +48,10 @@ The design prioritizes speed for daily reviews and interaction logging, emphasiz
 - **Context Graph**: Captures "event clock" and decision traces for actions and interactions.
 - **Experience Layer v1**: Semantic meaning extraction for signals and drafts, processing conversations into experiences (life_event, achievement, struggle, transition) with magnitude scores. High-magnitude unacknowledged experiences prioritize signals.
 - **Phase 1 Signal System (Supervised)**: A fully supervised signal-based follow-up system where conversations create signals, users resolve them, and then drafts are generated (no autonomous drafts). Only one active signal per person is allowed, and signals expire after 7 days.
+  - **P0 Signal Contract**: "Every logged interaction MUST deterministically create a signal. AI may infer meaning. AI may not infer intent."
+  - **Contract Enforcement**: All interaction routes (`/api/call-logs`, `/api/voice-memories`, `/api/voice-memories/quick-log`) enforce atomic signal creation - if signal fails, interaction is rolled back.
+  - **Fallback Signals**: Created for AI enrichment failures and unmatched persons (no-person interactions get orphaned signals with higher priority).
+  - **One Signal Per Person Rule**: New interactions update existing pending signals rather than blocking - ensures latest conversation is always represented.
 - **AI Assistant Mode-Based Input System**: Ensures explicit mode declaration (`log_conversation`, `quick_update`, `ask_search`) for AI assistant inputs, enforcing contracts to prevent critical data loss, especially for `log_conversation` actions.
 - **Action vs Reflection Mode Architecture**: 
   - **Action Mode (log_conversation)**: Ephemeral thread. After successful log_interaction, thread resets immediately (no history save). Enforces "one conversation per thread" rule to eliminate silent failure risk. Backend emits `conversation_logged` SSE event; frontend only resets when ALL expected logs are received (prevents partial-failure resets).

@@ -1080,10 +1080,9 @@ export async function createFollowUpSignal(
 ): Promise<InsertFollowUpSignal | null> {
   const transcript = interaction.transcript || interaction.summary || '';
   
-  // Skip if no meaningful content
-  if (transcript.length < 20) {
-    return null;
-  }
+  // P0 CONTRACT: Every interaction MUST create a signal
+  // The user decides relevance, not a character count
+  // Even a 5-word conversation deserves a decision point
   
   // Detect life events from transcript (fallback if no experiences)
   const lifeEvents = detectLifeEvents(transcript);
@@ -1644,10 +1643,16 @@ export async function processInteraction(interactionId: string, ctx?: TenantCont
       if (Object.keys(personUpdates).length > 0) {
         await storage.updatePerson(person.id, personUpdates, ctx);
       }
+    }
 
-      // Extract and save meaningful experiences from the conversation
-      // This is append-only meaning capture, non-blocking on failures
-      let savedExperiences: Experience[] = [];
+    // P0 CONTRACT: Every interaction MUST create or update a signal
+    // Signals are the ONLY decision point - no AI should infer intent
+    // This logic runs for ALL interactions, with or without person match
+    let signalCreated = false;
+    let savedExperiences: Experience[] = [];
+    
+    // Extract experiences if person is matched (non-blocking)
+    if (person) {
       try {
         savedExperiences = await createAndSaveExperiences(interaction, person, ctx);
         if (savedExperiences.length > 0) {
@@ -1656,55 +1661,86 @@ export async function processInteraction(interactionId: string, ctx?: TenantCont
       } catch (e) {
         console.warn('[Experience] Experience extraction failed (non-blocking):', e);
       }
-
-      // Create Follow-Up Signal instead of auto-generating drafts
-      // Only one active signal per person - check if one already exists
-      // Skip signal generation if transcript hash unchanged (duplicate prevention)
-      const existingSignal = await storage.getFollowUpSignalByPerson(person.id, ctx);
-      let signalCreated = false;
-      
-      if (!existingSignal && !skipSignalGeneration) {
-        // Pass experiences to signal creation for meaning-based ranking
-        const signal = await createFollowUpSignal(interaction, person, extractedData, ctx, savedExperiences);
-        if (signal) {
-          await storage.createFollowUpSignal(signal, ctx);
-          signalCreated = true;
-        }
-      }
-      
-      // Update interaction with transcript hash to prevent future duplicate processing
-      if (currentHash && currentHash !== previousHash) {
-        await storage.updateInteraction(interaction.id, { transcriptHash: currentHash }, ctx);
-      }
-
-      return {
-        success: true,
-        extractedData,
-        draftsCreated: 0, // No longer auto-generating drafts
-        signalCreated,
-        experiencesExtracted: savedExperiences.length,
-        voicePatternsExtracted,
-        contentTopicsFound,
-        skippedDueToHash: skipSignalGeneration,
-        ...(inferredDateInfo && inferredDateInfo.inferredDate && {
-          dateInferred: { 
-            date: inferredDateInfo.inferredDate.toISOString(), 
-            confidence: inferredDateInfo.confidence, 
-            reasoning: inferredDateInfo.reasoning 
+    }
+    
+    try {
+      if (person) {
+        // Check for existing pending signal for this person
+        const existingSignal = await storage.getFollowUpSignalByPerson(person.id, ctx);
+        
+        // Generate signal data with AI enrichment
+        const signalData = await createFollowUpSignal(interaction, person, extractedData, ctx, savedExperiences);
+        
+        if (signalData) {
+          if (existingSignal) {
+            // Update existing signal with new interaction data
+            await storage.updateFollowUpSignal(existingSignal.id, {
+              interactionId: interaction.id,
+              reasoning: signalData.reasoning,
+              priorityScore: signalData.priorityScore,
+              experienceId: signalData.experienceId,
+              expiresAt: signalData.expiresAt,
+            }, ctx);
+            signalCreated = true;
+            console.log(`[SIGNAL CONTRACT] Updated existing signal ${existingSignal.id} with new interaction ${interaction.id}`);
+          } else {
+            // Create new signal
+            await storage.createFollowUpSignal(signalData, ctx);
+            signalCreated = true;
+            console.log(`[SIGNAL CONTRACT] Created new signal for interaction ${interaction.id}`);
           }
-        }),
-      };
+        } else {
+          // FALLBACK: createFollowUpSignal returned null (AI failure) - create minimal signal
+          const fallbackSignal: InsertFollowUpSignal = {
+            personId: person.id,
+            interactionId: interaction.id,
+            reasoning: 'Conversation logged - AI enrichment unavailable. Manual review required.',
+            priorityScore: 50,
+            status: 'pending',
+            expiresAt: addDays(new Date(), 7),
+          };
+          
+          if (existingSignal) {
+            await storage.updateFollowUpSignal(existingSignal.id, fallbackSignal, ctx);
+          } else {
+            await storage.createFollowUpSignal(fallbackSignal, ctx);
+          }
+          signalCreated = true;
+          console.log(`[SIGNAL CONTRACT] Created fallback signal for interaction ${interaction.id} (AI enrichment failed)`);
+        }
+      } else {
+        // NO PERSON MATCH: Still create a signal (contract requires it)
+        // This signal will be orphaned until user manually links the interaction
+        const fallbackSignal: InsertFollowUpSignal = {
+          personId: undefined, // No person linked yet - will be set when user links interaction
+          interactionId: interaction.id,
+          reasoning: 'Conversation logged without contact match. Please link this interaction to a contact.',
+          priorityScore: 60, // Higher priority - needs manual attention
+          status: 'pending',
+          expiresAt: addDays(new Date(), 7),
+        };
+        await storage.createFollowUpSignal(fallbackSignal, ctx);
+        signalCreated = true;
+        console.log(`[SIGNAL CONTRACT] Created unmatched signal for interaction ${interaction.id} (no person linked)`);
+      }
+    } catch (signalError) {
+      // P0 CONTRACT: Signal creation is mandatory - if it fails, the entire operation fails
+      // Do not allow interactions to exist without signals
+      console.error(`[SIGNAL CONTRACT VIOLATION] Signal creation failed for interaction ${interaction.id}:`, signalError);
+      throw signalError; // Propagate to outer catch - interaction will fail
     }
 
-    // Update interaction with transcript hash even when no person linked
+    // Update interaction with transcript hash to prevent future duplicate processing
     if (currentHash && currentHash !== previousHash) {
       await storage.updateInteraction(interaction.id, { transcriptHash: currentHash }, ctx);
     }
-    
+
     return {
       success: true,
       extractedData,
-      draftsCreated: 0,
+      draftsCreated: 0, // No longer auto-generating drafts
+      signalCreated,
+      experiencesExtracted: savedExperiences.length,
       voicePatternsExtracted,
       contentTopicsFound,
       skippedDueToHash: skipSignalGeneration,

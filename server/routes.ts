@@ -700,18 +700,26 @@ export async function registerRoutes(
         await storage.updatePerson(personId, { lastContact: new Date(occurredAt || Date.now()) }, ctx);
       }
       
+      // P0 CONTRACT: Every interaction MUST create a signal
       // Process the interaction (FORD extraction, signal generation)
-      // Phase 1: Drafts are only created via signal resolution
       const { processInteraction } = await import("./conversation-processor");
       const processResult = await processInteraction(interaction.id, ctx);
+      const signalCreated = processResult.signalCreated || false;
       
-      logger.info(`Voice memory: AI processing for interaction ${interaction.id}, signal created: ${processResult.signalCreated || false}`);
+      // P0 CONTRACT: If signal creation failed, abort the entire operation
+      if (!signalCreated) {
+        await storage.deleteInteraction(interaction.id, ctx);
+        logger.error(`SIGNAL CONTRACT VIOLATION: Voice memory interaction ${interaction.id} created but signal creation failed. Interaction rolled back.`);
+        throw new Error(`Failed to create follow-up signal for interaction. Please try again.`);
+      }
+      
+      logger.info(`[SIGNAL CONTRACT] Voice memory: Interaction ${interaction.id} saved with signal. Contract satisfied.`);
       
       res.json({
         success: true,
         interactionId: interaction.id,
         processed: processResult.success,
-        signalCreated: processResult.signalCreated || false,
+        signalCreated,
       });
     } catch (error: any) {
       console.error("Voice memory creation error:", error);
@@ -845,18 +853,20 @@ IMPORTANT: Infer the interaction type from context clues. If they say "left a vo
         }, ctx);
       }
 
-      // Process interaction for signal generation (Phase 1: drafts only via signal resolution)
-      let signalCreated = false;
-      if (validatedPersonId && transcript.length >= 50) {
-        try {
-          const { processInteraction } = await import("./conversation-processor");
-          const result = await processInteraction(interaction.id, ctx);
-          signalCreated = result.signalCreated || false;
-          logger.info(`Quick log: AI processing completed for ${parsed.personName}, signal created: ${signalCreated}`);
-        } catch (err) {
-          logger.warn('Quick log: AI processing failed:', err);
-        }
+      // P0 CONTRACT: Every interaction MUST create a signal
+      // No length or person gating - processInteraction handles all cases with fallback signals
+      const { processInteraction } = await import("./conversation-processor");
+      const result = await processInteraction(interaction.id, ctx);
+      const signalCreated = result.signalCreated || false;
+      
+      // P0 CONTRACT: If signal creation failed, abort the entire operation
+      if (!signalCreated) {
+        await storage.deleteInteraction(interaction.id, ctx);
+        logger.error(`SIGNAL CONTRACT VIOLATION: Quick log interaction ${interaction.id} created but signal creation failed. Interaction rolled back.`);
+        throw new Error(`Failed to create follow-up signal for interaction. Please try again.`);
       }
+      
+      logger.info(`[SIGNAL CONTRACT] Quick log: Interaction ${interaction.id} saved with signal for ${parsed.personName || 'unknown contact'}`);
 
       res.json({
         success: true,
@@ -1884,27 +1894,26 @@ Respond with valid JSON only, no other text.`;
             }, ctx);
           }
           
-          // Phase 1: Use processInteraction for signal generation only
-          // Drafts are created via signal resolution, not auto-generated
-          const contentLength = transcriptLength || summaryLength;
-          let signalCreated = false;
+          // Phase 1: EVERY interaction MUST create a signal
+          // This is a correctness invariant, not an optimization target
+          // Signal creation is atomic with interaction - both succeed or both fail
           
-          if (contentLength >= 50) {
-            try {
-              const result = await processInteraction(interaction.id, ctx);
-              signalCreated = result.signalCreated || false;
-              logger.info(`AI processing completed for interaction ${interaction.id}, signal created: ${signalCreated}`);
-            } catch (processError) {
-              logger.warn('AI processing failed:', processError);
-            }
-          } else {
-            logger.info(`Skipping AI processing - content too short (${contentLength} chars, need 50+)`);
+          const result = await processInteraction(interaction.id, ctx);
+          const signalCreated = result.signalCreated || false;
+          
+          // P0 CONTRACT: If signal creation failed, abort the entire operation
+          if (!signalCreated) {
+            // Delete the orphaned interaction - we don't allow interactions without signals
+            await storage.deleteInteraction(interaction.id, ctx);
+            logger.error(`SIGNAL CONTRACT VIOLATION: Interaction ${interaction.id} created but signal creation failed. Interaction rolled back.`);
+            throw new Error(`Failed to create follow-up signal for interaction. Please try again.`);
           }
           
-          const signalMsg = signalCreated ? ' A follow-up signal was created - check your Signals page.' : '';
+          logger.info(`[SIGNAL CONTRACT] Interaction ${interaction.id} saved with signal. Contract satisfied.`);
+          
           // Include structured metadata for frontend event handling (conversation_logged event)
           const loggedMeta = `<!--LOGGED:${JSON.stringify({ personName: person.name, interactionId: interaction.id })}-->`;
-          return `Logged ${args.type} interaction for ${person.name}. Last contact date updated.${signalMsg}${loggedMeta}`;
+          return `Logged ${args.type} interaction for ${person.name}. Last contact date updated. A follow-up signal was created - check your Signals page.${loggedMeta}`;
         }
         
         case "update_interaction": {

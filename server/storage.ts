@@ -310,6 +310,8 @@ export interface IStorage {
   createFollowUpSignal(signal: InsertFollowUpSignal, ctx?: TenantContext): Promise<FollowUpSignal>;
   /** Resolve a signal (text, email, note, skip). */
   resolveFollowUpSignal(id: string, resolutionType: string, ctx?: TenantContext): Promise<FollowUpSignal | undefined>;
+  /** Update a signal with new interaction data (for "one signal per person" rule). */
+  updateFollowUpSignal(id: string, updates: Partial<InsertFollowUpSignal>, ctx?: TenantContext): Promise<FollowUpSignal | undefined>;
   /** Expire signals that have passed their expiresAt date. */
   expireOldSignals(ctx?: TenantContext): Promise<number>;
   /** Get signals resolved within a date range (for weekly review). */
@@ -1847,6 +1849,20 @@ export class DatabaseStorage implements IStorage {
         status: 'resolved', 
         resolutionType, 
         resolvedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(conditions)
+      .returning();
+    return updated || undefined;
+  }
+  
+  async updateFollowUpSignal(id: string, updates: Partial<InsertFollowUpSignal>, ctx?: TenantContext): Promise<FollowUpSignal | undefined> {
+    const filter = this.getTenantFilter(followUpSignals, ctx);
+    const conditions = filter ? and(eq(followUpSignals.id, id), filter) : eq(followUpSignals.id, id);
+    const [updated] = await db
+      .update(followUpSignals)
+      .set({ 
+        ...updates,
         updatedAt: new Date()
       })
       .where(conditions)
@@ -4020,7 +4036,7 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Build final result with cost per interaction
-    const users = Array.from(userDataMap.values()).map(user => ({
+    const allUserStats = Array.from(userDataMap.values()).map(user => ({
       ...user,
       costPerInteraction7d: user.interactions7d > 0 
         ? user.aiCost7d / user.interactions7d 
@@ -4032,8 +4048,8 @@ export class DatabaseStorage implements IStorage {
     
     // Filter out founder if not included
     const filteredUsers = options.includeFounder 
-      ? users 
-      : users.filter(u => !u.isFounder);
+      ? allUserStats 
+      : allUserStats.filter(u => !u.isFounder);
     
     // Calculate medians for beta users with >= 1 interaction
     // Only include users with at least 1 interaction in the window
