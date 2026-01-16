@@ -1,0 +1,183 @@
+Good questions. You’re thinking at the right abstraction level now. I’ll answer decisively and lock this so you can ship.
+
+Short version: your recommendations are 90% correct. I’d keep 3 as-is and slightly adjust #1 and #4 for trust + correctness.
+
+⸻
+
+1️⃣ What shows after reset
+
+Your proposal
+
+Empty chat + toast confirmation
+
+Final decision
+
+👉 Yes — but invert the emphasis.
+
+Primary confirmation = inline success message
+Secondary = clean slate
+
+Do not rely on a toast as the only confirmation. Toasts are ephemeral and missable.
+
+Correct sequence
+	1.	Inline success message in chat:
+
+✅ Conversation with Sam Bellet saved
+Ready for your next conversation
+
+
+	2.	Input disabled briefly
+	3.	Thread resets to fresh empty chat
+	4.	Optional toast:
+“Conversation saved”
+
+This preserves:
+	•	A clear success moment
+	•	A clean mental reset
+	•	Zero ambiguity
+
+🟢 Approved with that framing.
+
+⸻
+
+2️⃣ Save to conversation history before reset?
+
+Your proposal
+
+Skip saving to history — redundant with Flow
+
+Final decision
+
+👉 Correct. Skip saving.
+
+Why:
+	•	Flow is now the source of truth
+	•	AI chat threads are implementation detail, not user value
+	•	Storing them increases:
+	•	Cognitive clutter
+	•	Privacy surface
+	•	Maintenance cost
+
+If a user ever asks:
+
+“Can I see what I said?”
+
+Answer:
+
+“It’s summarized and actionable in Flow.”
+
+That’s stronger positioning.
+
+🟢 Approved.
+
+⸻
+
+3️⃣ Mode selector after reset
+
+Your proposal
+
+Reset to default log_conversation, selector hidden until typing
+
+Final decision
+
+👉 Perfect. Do not change this.
+
+This matches:
+	•	Your single core behavior
+	•	Your onboarding goal
+	•	The mental model you’re enforcing
+
+Advanced users can still override.
+New users are gently guided.
+
+🟢 Approved.
+
+⸻
+
+4️⃣ Multiple contacts in one transcript
+
+This is the only place I want a small correction.
+
+Your proposal
+
+First success → reset (rare edge case)
+
+Why this is slightly risky
+
+If a transcript mentions:
+
+“Talked to Sarah and Mike about an intro”
+
+And the AI:
+	•	Successfully logs Sarah
+	•	Then attempts Mike
+
+Resetting after the first success risks:
+	•	Cancelling the second log mid-flight
+	•	Reintroducing partial success ambiguity
+
+We do not want:
+
+“It saved Sarah but I think Mike is missing?”
+
+That’s silent failure’s cousin.
+
+⸻
+
+Correct rule (simple, safe)
+
+👉 Reset only after all log_interaction tool calls for that user input complete.
+
+Implementation-wise:
+	•	Track number of expected log calls
+	•	Or wait for the AI turn to fully resolve
+	•	Then fire reset once
+
+This preserves:
+	•	Trust
+	•	Atomicity
+	•	Deterministic behavior
+
+This is still rare, but worth doing right.
+
+🟡 Slight adjustment required.
+
+⸻
+
+FINAL LOCKED DECISIONS
+
+Item	Decision
+#1 Post-reset UI	Inline success → clean slate (+ optional toast)
+#2 Save thread	❌ No — Flow is the record
+#3 Mode after reset	✅ Default log_conversation, selector hidden
+#4 Multi-contact logs	🔧 Reset after all tool calls complete
+
+
+⸻
+
+WHY THIS MATTERS
+
+With these choices:
+	•	There is no possible path where the system says “done” and isn’t
+	•	Users always know when something is saved
+	•	The product teaches itself through behavior
+
+This is exactly how you build trust-first systems.
+
+⸻
+
+NEXT EXECUTION STEP
+
+Tell Replit:
+
+“These decisions are locked. Please implement as specified.”
+
+Then:
+	•	Ship
+	•	Push usage again
+	•	Watch second-conversation success rate
+
+No more design debate needed here.
+This is build-ready.
+
+When it’s live, we move back to distribution + learning, not architecture.
