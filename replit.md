@@ -49,6 +49,9 @@ The design prioritizes speed for daily reviews and interaction logging, emphasiz
 - **Experience Layer v1**: Semantic meaning extraction for signals and drafts, processing conversations into experiences (life_event, achievement, struggle, transition) with magnitude scores. High-magnitude unacknowledged experiences prioritize signals.
 - **Phase 1 Signal System (Supervised)**: A fully supervised signal-based follow-up system where conversations create signals, users resolve them, and then drafts are generated (no autonomous drafts). Only one active signal per person is allowed, and signals expire after 7 days.
 - **AI Assistant Mode-Based Input System**: Ensures explicit mode declaration (`log_conversation`, `quick_update`, `ask_search`) for AI assistant inputs, enforcing contracts to prevent critical data loss, especially for `log_conversation` actions.
+- **Action vs Reflection Mode Architecture**: 
+  - **Action Mode (log_conversation)**: Ephemeral thread. After successful log_interaction, thread resets immediately (no history save). Enforces "one conversation per thread" rule to eliminate silent failure risk. Backend emits `conversation_logged` SSE event; frontend only resets when ALL expected logs are received (prevents partial-failure resets).
+  - **Reflection Mode (ask_search)**: Persistent thread. Saved to conversation history on close/minimize. Resumable for ongoing research or multi-turn conversations.
 
 ### Orchestration Layer
 Memry is a multi-agent, event-driven system orchestrating actions while CRMs remain systems of record. It adheres to principles like Event-Driven, Agent-Based, Dossier Abstraction, Guardrails First, and Revenue Focus, utilizing named agents and various event types.
