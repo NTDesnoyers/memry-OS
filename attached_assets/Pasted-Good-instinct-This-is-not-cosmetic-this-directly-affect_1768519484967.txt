@@ -1,0 +1,150 @@
+Good instinct. This is not cosmetic — this directly affects whether your analytics are lying to you.
+
+Right now, your dashboard is polluted by founder behavior, which makes every metric suspect.
+
+I’ll be blunt, then give you a clean fix.
+
+⸻
+
+The Core Problem (Why This Matters)
+
+Your single most important question right now is:
+
+“Is this product delivering value to someone who is not me?”
+
+Founder usage destroys signal because:
+	•	You massively overuse the product
+	•	You know how it works
+	•	You forgive friction
+	•	You force behaviors that normal users won’t
+
+So metrics like:
+	•	Avg conversations/user
+	•	Follow-up adoption
+	•	WAU
+	•	Retention
+
+…are currently fiction.
+
+This is a classic early-stage analytics trap.
+
+⸻
+
+Rule #1 (Non-Negotiable)
+
+Founder data must never be mixed with customer data. Ever.
+
+Not hidden.
+Not mentally ignored.
+Structurally separated.
+
+⸻
+
+The Correct Fix (Simple + Scalable)
+
+1️⃣ Add a user_type field
+
+In your users table:
+
+user_type ENUM('founder', 'internal', 'beta', 'paid')
+
+Set:
+	•	nathan@desnoyersproperties.com → founder
+	•	desnoyers94@gmail.com → founder
+	•	Everyone else → beta
+
+This scales cleanly to:
+	•	Internal testers
+	•	Advisors
+	•	Paid users later
+
+⸻
+
+2️⃣ Default Analytics = NON-FOUNDER ONLY
+
+Every metric on /admin/beta should exclude user_type = founder by default.
+
+This is the version you trust.
+
+Founder data is opt-in, not opt-out.
+
+⸻
+
+3️⃣ Add a Toggle (But Hide It by Default)
+
+At the top of the dashboard:
+
+[ ] Include founder/internal users
+
+Unchecked by default.
+
+When checked:
+	•	Show an inline warning banner:
+
+⚠️ Founder data included. Metrics may be skewed.
+
+This prevents future self-deception.
+
+⸻
+
+4️⃣ Split the User Table Visually
+
+In Beta Users, group like this:
+
+Founders / Internal
+	•	nathan@desnoyersproperties.com
+	•	desnoyers94@gmail.com
+
+Beta Users
+	•	bridget.hillard@8z.com
+	•	etc.
+
+Even better: collapse the Founder section by default.
+
+⸻
+
+What This Unlocks (Very Important)
+
+Once founders are excluded, you can now answer real questions:
+	•	Do new users log a conversation without help?
+	•	Do non-you users trigger follow-ups?
+	•	Does anyone come back a second week?
+	•	Is 50 conversations/week realistic or fantasy?
+
+Without this fix, you cannot make pricing, onboarding, or positioning decisions safely.
+
+⸻
+
+Optional (High-Leverage Next Step)
+
+Add one metric that explicitly ignores you forever:
+
+🎯 “First Value Action Rate (Non-Founder)”
+
+Definition:
+
+% of non-founder users who log 1 conversation via AI within 24 hours of signup
+
+This becomes your north star for onboarding.
+
+If this is <40–50%, you do not have product clarity yet.
+
+⸻
+
+Summary (Do This Now)
+
+Minimum changes to ship this week:
+	•	Add user_type
+	•	Exclude founders from analytics
+	•	Visually separate them in the table
+
+This is not polish.
+This is epistemic hygiene.
+
+Fix the data → make real decisions → move faster to revenue.
+
+If you want, next we can:
+	•	Redesign this dashboard around one learning question
+	•	Or define the exact kill metrics for beta → paid conversion
+
+Your move.
