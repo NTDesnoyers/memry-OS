@@ -260,9 +260,15 @@ export function VoiceLogger() {
       return 'ask_search';
     }
     
-    // Transcript patterns → log conversation
-    const transcriptPatterns = /speaker [a-z]:|^(had|spoke|talked|met|called|just got off|conversation with|chatted)/i;
+    // Transcript patterns → log conversation (includes "I just had", "Just had", "I had", etc.)
+    const transcriptPatterns = /speaker [a-z]:|^(i\s+)?(just\s+)?(had|spoke|talked|met|called|chatted)/i;
     if (transcriptPatterns.test(trimmed)) {
+      return 'log_conversation';
+    }
+    
+    // Common conversation logging phrases anywhere in text
+    const conversationPhrases = /\b(had a call|had a meeting|talked to|spoke with|met with|called|just got off|conversation with)\b/i;
+    if (conversationPhrases.test(trimmed)) {
       return 'log_conversation';
     }
     
@@ -271,9 +277,9 @@ export function VoiceLogger() {
       return 'log_conversation';
     }
     
-    // Medium text (200-500) with past tense verbs → log conversation
-    const pastTensePatterns = /\b(discussed|mentioned|said|told|asked|agreed|decided|talked about)\b/i;
-    if (length > 200 && pastTensePatterns.test(trimmed)) {
+    // Medium text (100-500) with past tense verbs → log conversation
+    const pastTensePatterns = /\b(discussed|mentioned|said|told|asked|agreed|decided|talked about|went over)\b/i;
+    if (length > 100 && pastTensePatterns.test(trimmed)) {
       return 'log_conversation';
     }
     
@@ -495,11 +501,16 @@ export function VoiceLogger() {
     // Set height based on content, with max limit
     e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
     
-    // Auto-detect mode when text changes significantly
-    if (newText.length > 50 || newText.includes('\n')) {
+    // Always run auto-detection when there's meaningful input
+    // This ensures mode updates when text changes (typing or clearing)
+    if (newText.length > 15) {
       const detectedMode = detectInputMode(newText);
       setInputMode(detectedMode);
       setModeAutoSelected(true);
+    } else if (newText.length === 0) {
+      // Reset to default when input is cleared
+      setInputMode('log_conversation');
+      setModeAutoSelected(false);
     }
   };
 
