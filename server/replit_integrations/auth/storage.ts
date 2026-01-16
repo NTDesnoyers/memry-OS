@@ -281,7 +281,11 @@ class AuthStorage implements IAuthStorage {
     return true;
   }
 
-  async getBetaStats(): Promise<{
+  /**
+   * Get beta analytics stats.
+   * @param includeFounders - If false (default), excludes founder/internal users for accurate customer metrics
+   */
+  async getBetaStats(includeFounders: boolean = false): Promise<{
     totalUsers: number;
     activeUsersLast7Days: number;
     usersWithFollowupsLast7Days: number;
@@ -293,9 +297,19 @@ class AuthStorage implements IAuthStorage {
     const fourteenDaysAgo = new Date();
     fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
 
-    // Count total users (all auth users, not just approved since we're in beta)
-    const [totalUsersResult] = await db.select({ count: count() }).from(authUsers);
-    const totalUsers = totalUsersResult?.count || 0;
+    // Get user IDs to exclude (founders/internal) if not including them
+    let excludedUserIds: Set<string> = new Set();
+    if (!includeFounders) {
+      const foundersResult = await db.select({ id: authUsers.id })
+        .from(authUsers)
+        .where(sql`${authUsers.userType} IN ('founder', 'internal')`);
+      excludedUserIds = new Set(foundersResult.map(r => r.id));
+    }
+
+    // Count total users (excluding founders if needed)
+    const allUsersResult = await db.select({ id: authUsers.id }).from(authUsers);
+    const filteredUsers = allUsersResult.filter(u => !excludedUserIds.has(u.id));
+    const totalUsers = filteredUsers.length;
 
     // Active users = distinct users with interactions in last 7 days (from actual interactions table)
     const conversationsThisWeekResult = await db.selectDistinct({ userId: interactions.userId })
@@ -304,22 +318,25 @@ class AuthStorage implements IAuthStorage {
         gte(interactions.createdAt, sevenDaysAgo),
         isNull(interactions.deletedAt)
       ));
-    const activeUsersLast7Days = conversationsThisWeekResult.length;
+    const filteredActiveUsers = conversationsThisWeekResult.filter(r => r.userId && !excludedUserIds.has(r.userId));
+    const activeUsersLast7Days = filteredActiveUsers.length;
 
     // Users with follow-ups in last 7 days (from actual follow_up_signals table)
     const followupsResult = await db.selectDistinct({ userId: followUpSignals.userId })
       .from(followUpSignals)
       .where(gte(followUpSignals.createdAt, sevenDaysAgo));
-    const usersWithFollowupsLast7Days = followupsResult.length;
+    const filteredFollowupUsers = followupsResult.filter(r => r.userId && !excludedUserIds.has(r.userId));
+    const usersWithFollowupsLast7Days = filteredFollowupUsers.length;
 
-    // Total conversations this week (from actual interactions table)
-    const [convCountResult] = await db.select({ count: count() })
+    // Total conversations this week (excluding founders)
+    const convResult = await db.select({ userId: interactions.userId })
       .from(interactions)
       .where(and(
         gte(interactions.createdAt, sevenDaysAgo),
         isNull(interactions.deletedAt)
       ));
-    const totalConversations = convCountResult?.count || 0;
+    const filteredConversations = convResult.filter(r => r.userId && !excludedUserIds.has(r.userId));
+    const totalConversations = filteredConversations.length;
     const avgConversationsPerUser = activeUsersLast7Days > 0 ? totalConversations / activeUsersLast7Days : 0;
 
     // Retention: users active in prior week who are also active this week
@@ -330,9 +347,10 @@ class AuthStorage implements IAuthStorage {
         sql`${interactions.createdAt} < ${sevenDaysAgo}`,
         isNull(interactions.deletedAt)
       ));
-    const activeLastWeekUserIds = new Set(conversationsPriorWeekResult.map(r => r.userId));
+    const filteredPriorWeek = conversationsPriorWeekResult.filter(r => r.userId && !excludedUserIds.has(r.userId));
+    const activeLastWeekUserIds = new Set(filteredPriorWeek.map(r => r.userId));
     
-    const retainedUsers = conversationsThisWeekResult.filter(r => activeLastWeekUserIds.has(r.userId)).length;
+    const retainedUsers = filteredActiveUsers.filter(r => activeLastWeekUserIds.has(r.userId)).length;
     const retentionWeekOverWeek = activeLastWeekUserIds.size > 0 
       ? Math.round((retainedUsers / activeLastWeekUserIds.size) * 100) 
       : 0;
@@ -382,8 +400,13 @@ class AuthStorage implements IAuthStorage {
     return result;
   }
 
+  /**
+   * Get all beta users with their activity stats.
+   * Returns all users with userType field for frontend filtering/grouping.
+   */
   async getBetaUsers(): Promise<Array<{
     email: string;
+    userType: string;
     status: 'activated' | 'signed_up';
     lastSeen: Date | null;
     conversationCount: number;
@@ -446,6 +469,7 @@ class AuthStorage implements IAuthStorage {
       
       result.push({
         email: user.email || 'unknown',
+        userType: user.userType || 'beta',
         status,
         lastSeen,
         conversationCount,
@@ -465,7 +489,11 @@ class AuthStorage implements IAuthStorage {
     return result;
   }
 
-  async getAdminBetaStats(): Promise<{
+  /**
+   * Get admin beta stats.
+   * @param includeFounders - If false (default), excludes founder/internal users
+   */
+  async getAdminBetaStats(includeFounders: boolean = false): Promise<{
     users: { total: number; signedUpLast7Days: number };
     events: { total: number; byType: Record<string, number> };
     activation: { activatedUsers: number; activationRate: number };
@@ -473,16 +501,23 @@ class AuthStorage implements IAuthStorage {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    // Users stats
-    const [totalUsersResult] = await db.select({ count: count() }).from(authUsers);
-    const totalUsers = totalUsersResult?.count || 0;
+    // Get user IDs to exclude (founders/internal) if not including them
+    let excludedUserIds: Set<string> = new Set();
+    if (!includeFounders) {
+      const foundersResult = await db.select({ id: authUsers.id })
+        .from(authUsers)
+        .where(sql`${authUsers.userType} IN ('founder', 'internal')`);
+      excludedUserIds = new Set(foundersResult.map(r => r.id));
+    }
 
-    const [signedUpLast7DaysResult] = await db.select({ count: count() })
-      .from(authUsers)
-      .where(gte(authUsers.createdAt, sevenDaysAgo));
-    const signedUpLast7Days = signedUpLast7DaysResult?.count || 0;
+    // Users stats (excluding founders if needed)
+    const allUsersResult = await db.select({ id: authUsers.id, createdAt: authUsers.createdAt }).from(authUsers);
+    const filteredUsers = allUsersResult.filter(u => !excludedUserIds.has(u.id));
+    const totalUsers = filteredUsers.length;
 
-    // Events stats
+    const signedUpLast7Days = filteredUsers.filter(u => u.createdAt && u.createdAt >= sevenDaysAgo).length;
+
+    // Events stats (keep all events - they're for debugging, not customer metrics)
     const [totalEventsResult] = await db.select({ count: count() }).from(betaEvents);
     const totalEvents = totalEventsResult?.count || 0;
 
@@ -496,11 +531,12 @@ class AuthStorage implements IAuthStorage {
       byType[row.eventType] = row.count;
     }
 
-    // Activation stats - count users who have at least one interaction (actual usage)
+    // Activation stats - count users who have at least one interaction (excluding founders)
     const usersWithInteractions = await db.selectDistinct({ userId: interactions.userId })
       .from(interactions)
       .where(isNull(interactions.deletedAt));
-    const activatedUsers = usersWithInteractions.length;
+    const filteredActivated = usersWithInteractions.filter(r => r.userId && !excludedUserIds.has(r.userId));
+    const activatedUsers = filteredActivated.length;
     const activationRate = totalUsers > 0 ? Math.round((activatedUsers / totalUsers) * 100) / 100 : 0;
 
     return {

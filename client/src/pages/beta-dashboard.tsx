@@ -2,7 +2,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Users, Activity, MessageSquare, ClipboardCheck, Plus, Trash2, UserCheck, Loader2, Mail } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Users, Activity, MessageSquare, ClipboardCheck, Plus, Trash2, UserCheck, Loader2, Mail, AlertTriangle } from "lucide-react";
 import LayoutComponent from "@/components/layout";
 import { useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
@@ -23,6 +25,7 @@ interface AdminBetaStats {
 
 interface BetaUser {
   email: string;
+  userType: string;
   status: 'activated' | 'signed_up';
   lastSeen: string | null;
   conversationCount: number;
@@ -68,11 +71,12 @@ export default function BetaDashboard() {
   const queryClient = useQueryClient();
   const [newEmail, setNewEmail] = useState("");
   const [note, setNote] = useState("");
+  const [includeFounders, setIncludeFounders] = useState(false);
 
   const { data: adminStats, isLoading: adminStatsLoading } = useQuery<AdminBetaStats>({
-    queryKey: ["/api/admin/beta-stats"],
+    queryKey: ["/api/admin/beta-stats", { includeFounders }],
     queryFn: async () => {
-      const res = await fetch("/api/admin/beta-stats");
+      const res = await fetch(`/api/admin/beta-stats?includeFounders=${includeFounders}`);
       if (!res.ok) throw new Error("Failed to fetch admin stats");
       return res.json();
     },
@@ -90,9 +94,18 @@ export default function BetaDashboard() {
   });
 
   const { data: stats, isLoading, error } = useQuery<BetaStats>({
-    queryKey: ["/api/beta/stats"],
+    queryKey: ["/api/beta/stats", { includeFounders }],
+    queryFn: async () => {
+      const res = await fetch(`/api/beta/stats?includeFounders=${includeFounders}`);
+      if (!res.ok) throw new Error("Failed to fetch beta stats");
+      return res.json();
+    },
     refetchInterval: 60000,
   });
+  
+  // Filter users by type for visual separation
+  const founderUsers = betaUsers.filter(u => u.userType === 'founder' || u.userType === 'internal');
+  const regularUsers = betaUsers.filter(u => u.userType !== 'founder' && u.userType !== 'internal');
 
   const { data: whitelist = [], isLoading: whitelistLoading } = useQuery<WhitelistEntry[]>({
     queryKey: ["/api/beta/whitelist"],
@@ -156,10 +169,30 @@ export default function BetaDashboard() {
   return (
     <LayoutComponent>
       <div className="container mx-auto py-8 px-4 max-w-6xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight" data-testid="page-title">Beta Analytics</h1>
-          <p className="text-muted-foreground mt-1">Track beta user engagement and key metrics</p>
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight" data-testid="page-title">Beta Analytics</h1>
+            <p className="text-muted-foreground mt-1">Track beta user engagement and key metrics</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Switch 
+              id="include-founders" 
+              checked={includeFounders}
+              onCheckedChange={setIncludeFounders}
+              data-testid="toggle-include-founders"
+            />
+            <Label htmlFor="include-founders" className="text-sm cursor-pointer">
+              Include founder/internal
+            </Label>
+          </div>
         </div>
+        
+        {includeFounders && (
+          <div className="mb-4 flex items-center gap-2 px-4 py-3 bg-yellow-50 text-yellow-800 rounded-lg border border-yellow-200" data-testid="founder-warning">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span className="text-sm">Founder data included. Metrics may be skewed.</span>
+          </div>
+        )}
 
         {/* Quick Stats - Plain Text */}
         {adminStats && (
@@ -202,7 +235,54 @@ export default function BetaDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {betaUsers.map((user, idx) => (
+                    {/* Founders/Internal - collapsed section */}
+                    {founderUsers.length > 0 && (
+                      <>
+                        <tr className="bg-muted/30">
+                          <td colSpan={6} className="py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            Founders / Internal ({founderUsers.length})
+                          </td>
+                        </tr>
+                        {founderUsers.map((user, idx) => (
+                          <tr key={user.email} className="border-b last:border-0 bg-muted/10 opacity-60" data-testid={`founder-row-${idx}`}>
+                            <td className="py-2">{user.email}</td>
+                            <td className="py-2">
+                              <span className={`px-2 py-0.5 rounded-full text-xs ${
+                                user.status === 'activated' 
+                                  ? 'bg-green-100 text-green-700' 
+                                  : 'bg-yellow-100 text-yellow-700'
+                              }`}>
+                                {user.status}
+                              </span>
+                            </td>
+                            <td className="py-2 text-muted-foreground">
+                              {user.lastSeen 
+                                ? formatDistanceToNow(new Date(user.lastSeen), { addSuffix: true })
+                                : 'Never'
+                              }
+                            </td>
+                            <td className="py-2 text-right">{user.conversationCount}</td>
+                            <td className="py-2 text-right">{user.followupCount}</td>
+                            <td className="py-2 text-muted-foreground">
+                              {user.signedUpAt 
+                                ? format(new Date(user.signedUpAt), 'MMM d')
+                                : '-'
+                              }
+                            </td>
+                          </tr>
+                        ))}
+                      </>
+                    )}
+                    
+                    {/* Beta Users - main section */}
+                    {regularUsers.length > 0 && founderUsers.length > 0 && (
+                      <tr className="bg-muted/30">
+                        <td colSpan={6} className="py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          Beta Users ({regularUsers.length})
+                        </td>
+                      </tr>
+                    )}
+                    {regularUsers.map((user, idx) => (
                       <tr key={user.email} className="border-b last:border-0" data-testid={`user-row-${idx}`}>
                         <td className="py-2">{user.email}</td>
                         <td className="py-2">

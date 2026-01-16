@@ -1916,6 +1916,7 @@ export const betaUsers = pgTable("beta_users", {
   brokerage: text("brokerage"),
   isNinjaCertified: boolean("is_ninja_certified").default(false),
   status: text("status").default("pending"), // pending, active, churned
+  userType: text("user_type").default("beta"), // founder, internal, beta, paid - for analytics separation
   onboardedAt: timestamp("onboarded_at"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

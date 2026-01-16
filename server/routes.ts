@@ -9389,6 +9389,7 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
   });
   
   // Get beta stats (founder only)
+  // ?includeFounders=true to include founder/internal users in metrics
   app.get("/api/beta/stats", async (req: any, res) => {
     try {
       const userEmail = req.user?.claims?.email;
@@ -9396,7 +9397,8 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
         return res.status(403).json({ message: "Only the founder can view beta stats" });
       }
       
-      const stats = await authStorage.getBetaStats();
+      const includeFounders = req.query.includeFounders === 'true';
+      const stats = await authStorage.getBetaStats(includeFounders);
       res.json(stats);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -9404,6 +9406,7 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
   });
 
   // Admin beta stats endpoint (founder only) - minimal instrumentation
+  // ?includeFounders=true to include founder/internal users in metrics
   app.get("/api/admin/beta-stats", async (req: any, res) => {
     try {
       const userEmail = req.user?.claims?.email;
@@ -9411,7 +9414,8 @@ ${contentTypePrompts[idea.contentType] || 'Write appropriate content for this fo
         return res.status(403).json({ message: "Forbidden" });
       }
       
-      const stats = await authStorage.getAdminBetaStats();
+      const includeFounders = req.query.includeFounders === 'true';
+      const stats = await authStorage.getAdminBetaStats(includeFounders);
       res.json(stats);
     } catch (error: any) {
       res.status(500).json({ message: error.message });

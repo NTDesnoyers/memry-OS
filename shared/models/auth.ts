@@ -33,6 +33,7 @@ export const authUsers = pgTable("auth_users", {
   profileImageUrl: varchar("profile_image_url"),
   status: varchar("status", { length: 20 }).default("pending").notNull(), // pending, approved, denied
   isAdmin: boolean("is_admin").default(false).notNull(), // true for founder/admin
+  userType: varchar("user_type", { length: 20 }).default("beta").notNull(), // founder, internal, beta, paid - for analytics separation
   stripeCustomerId: varchar("stripe_customer_id"),
   subscriptionStatus: varchar("subscription_status", { length: 20 }).default("none").notNull(), // none, trialing, active, past_due, canceled
   subscriptionId: varchar("subscription_id"),
