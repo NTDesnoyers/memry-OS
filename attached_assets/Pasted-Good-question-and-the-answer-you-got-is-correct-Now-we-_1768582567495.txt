@@ -1,0 +1,180 @@
+Good question — and the answer you got is **correct**. Now we lock it into **execution-grade clarity**.
+
+I’ll do three things:
+
+1. Confirm the definition (so there’s no future drift)
+2. Explain *why* this matters economically
+3. Give you the **updated task list** you asked for (copy-paste ready)
+
+---
+
+## ✅ Canonical Definition (Lock This In)
+
+### What we count as a **conversation**
+
+> **One real-world interaction successfully logged into Memry**
+> (calls, meetings, in-person conversations, video calls, etc.)
+
+This is the **unit of value delivered**.
+
+### What we explicitly do **NOT** count
+
+* Number of AI assistant messages
+* Back-and-forth clarification prompts
+* Retries, corrections, or verbosity
+
+Those are **implementation details**, not value.
+
+---
+
+## Why This Is the Right Anchor (Non-Negotiable Logic)
+
+You are pricing **outcomes**, not tokens.
+
+A user does not wake up wanting:
+
+> “to exchange messages with an AI”
+
+They want:
+
+> “to never forget a meaningful conversation and never drop a follow-up”
+
+So the economic question is:
+
+> **“What does it cost me every time the user captures real relationship value?”**
+
+That is:
+👉 **cost per logged conversation**
+
+Everything else is noise.
+
+---
+
+## Pricing Math (This Is the Insight You’re Building Toward)
+
+Example (exactly as you said):
+
+* Cost per logged conversation: **$0.05**
+* Typical beta usage: **20 conversations / month**
+* AI cost per user: **$1.00 / month**
+
+That means:
+
+* $29 plan = **29× gross margin on AI**
+* Even $19 plan = **19× margin**
+* You have room for:
+
+  * Power users
+  * Abuse buffers
+  * Model cost spikes
+  * Profit
+
+This is why this metric is sacred.
+
+---
+
+## 🔧 UPDATED TASK LIST (Final, Precise)
+
+### 1️⃣ Define the Metric (Data Contract)
+
+**Conversation Logged =**
+
+* One persisted `interaction`
+* Created via AI assistant flow
+* Successfully saved (not drafts, not retries)
+
+This becomes the **only denominator** for unit economics.
+
+---
+
+### 2️⃣ Update Aggregations
+
+For each user (beta only by default):
+
+* Logged conversations (7d)
+* Logged conversations (30d)
+* AI cost attributed to those logs
+* Cost per logged conversation
+
+Explicitly ignore:
+
+* Assistant message count
+* Token count per request (keep internal only)
+
+---
+
+### 3️⃣ Update the Unit Economics Table
+
+**Columns:**
+
+* User
+* Role
+* Conversations logged (7d / 30d)
+* AI cost (7d / 30d)
+* Cost per logged conversation (7d / 30d)
+
+**Summary row (critical):**
+
+* Median conversations / beta user (30d)
+* Median AI cost / beta user (30d)
+* Median cost per conversation
+
+Founder hidden by default.
+
+---
+
+### 4️⃣ Add a Tooltip (UX Clarity)
+
+Next to “Conversations” column:
+
+> *“Counts real-world interactions logged (calls, meetings, in-person).
+> AI assistant messages are not counted.”*
+
+This prevents future confusion for:
+
+* You
+* Future teammates
+* Investors
+* Support
+
+---
+
+### 5️⃣ Explicitly Exclude This From V1
+
+Do **not** add:
+
+* Cost per AI message
+* Token charts
+* Message counts
+* “Efficiency scores”
+
+Those optimize the wrong thing.
+
+---
+
+## Final Alignment Check (If This Is True, You’re Good)
+
+You should be able to say, without hesitation:
+
+> “Every time a user logs a real conversation, it costs us about **$X**.”
+
+If that sentence is true and backed by the dashboard:
+
+* Pricing becomes obvious
+* Investor conversations get easy
+* You stop guessing
+
+---
+
+## Bottom Line
+
+You just did something most founders **never do**:
+You tied **pricing directly to value capture cost**.
+
+That’s not a feature decision.
+That’s a *company survival decision*.
+
+Once this ships, next step is simple:
+👉 **Design pricing tiers straight from observed usage bands**.
+
+Say when it’s live. We’ll do that next.

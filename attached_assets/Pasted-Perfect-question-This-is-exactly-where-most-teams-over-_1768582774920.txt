@@ -1,0 +1,201 @@
+Perfect question. This is exactly where most teams **over-engineer themselves into paralysis**. You’re right to stop and sanity-check it.
+
+Short answer first, then I’ll lock the rule and give you the **final dashboard contract**.
+
+---
+
+## The Correct Mental Model (Lock This)
+
+You are **not** pricing:
+
+* AI messages
+* AI modes
+* Token usage
+* “Reflection vs Action”
+
+You are pricing:
+
+> **Ongoing relationship memory and follow-through reliability**
+
+Everything the AI does serves **one outcome**.
+
+So the coach is right.
+
+---
+
+## ✅ The Canonical Rule (Non-Negotiable)
+
+> **All AI costs are amortized across logged conversations.**
+
+### Formula (always true):
+
+```
+Cost per logged conversation
+= Total AI cost (7d / 30d)
+÷ Total logged conversations (7d / 30d)
+```
+
+That’s it. No branches. No exceptions.
+
+---
+
+## Why Reflection Mode Does NOT Break This Model
+
+Let’s use your exact scenario.
+
+### Example:
+
+* Day 1: You log a call with John (Action Mode)
+* Day 2: You ask the AI:
+
+  * “What follow-ups did I miss?”
+  * “Summarize John’s timeline”
+  * “What should I say next?”
+
+**What’s the user buying?**
+
+Not “analysis tokens.”
+
+They’re buying:
+
+> “This conversation stays useful over time.”
+
+Reflection Mode **increases the value** of the original logged conversation. Therefore:
+
+👉 Its cost belongs to that conversation.
+
+This is **classic unit economics amortization**. Same logic as:
+
+* Customer support cost amortized across customers
+* Hosting cost amortized across active users
+* Onboarding cost amortized across revenue
+
+---
+
+## The Litmus Test (Use This Forever)
+
+Ask yourself:
+
+> “If the user never logged conversations, would they use Reflection Mode?”
+
+No.
+
+Therefore:
+
+* Logged conversations = **value unit**
+* Reflection = **value amplifier**
+* Cost belongs to the unit
+
+---
+
+## What This Unlocks (Important)
+
+This model does two powerful things:
+
+### 1️⃣ Keeps pricing simple and defensible
+
+You can say:
+
+> “Each conversation you capture costs us money to store, analyze, and support over time.”
+
+That makes pricing intuitive.
+
+### 2️⃣ Surfaces power users naturally
+
+If someone:
+
+* Logs 20 conversations
+* Asks 100 questions about them
+
+Their **cost per conversation goes up**.
+
+That’s not a bug.
+That’s your **tier boundary signal**.
+
+---
+
+## FINAL Dashboard Contract (Authoritative)
+
+### Metric Definitions (Freeze These)
+
+**Logged Conversation**
+
+* A persisted real-world interaction
+* Created via AI assistant
+* Saved successfully
+
+**Total AI Cost**
+
+* All AI usage by the user
+* Action + Reflection + Research
+* No exclusions
+
+**Cost per Conversation**
+
+```
+Total AI Cost ÷ Logged Conversations
+```
+
+---
+
+## What to Track (V1)
+
+Per user (beta only by default):
+
+* Logged conversations (7d / 30d)
+* Total AI cost (7d / 30d)
+* Cost per logged conversation (7d / 30d)
+
+Summary:
+
+* Median cost per conversation (beta)
+* Median cost per user (beta, 30d)
+
+---
+
+## What NOT to Track (Yet)
+
+Do **not** add:
+
+* Mode-specific cost breakdowns
+* Message counts
+* Reflection vs Action ratios
+* Token efficiency metrics
+
+Those are **engineering diagnostics**, not business metrics.
+
+If later you see:
+
+> “Power users have 3× reflection cost”
+
+That’s when you instrument deeper. Not now.
+
+---
+
+## The Only Optional Add (If You Want One)
+
+If you *really* want a safety valve without complexity:
+
+Internally (not surfaced in UI):
+
+* Tag AI calls with `mode = action | reflection`
+* Keep it for debugging only
+
+Do **not** expose it.
+Do **not** price off it.
+
+---
+
+## Final Truth (This Is the Line to Remember)
+
+> **Users pay for durable relationship memory, not AI interactions.**
+> **So you price the unit of memory, not the unit of computation.**
+
+You’ve landed on a clean, scalable mental model. Lock it and move forward.
+
+If you want, next we:
+
+* Derive **pricing tiers from observed cost bands**
+* Or define **hard beta kill metrics**
+
+Your call.

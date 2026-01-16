@@ -1,0 +1,241 @@
+Good instincts. You’re staring at **the right problem** now.
+
+I’m going to be blunt and structured.
+
+---
+
+## The Core Problem (What’s Actually Broken)
+
+Right now your **beta analytics are lying to you**.
+
+Not maliciously — but in a way that will absolutely screw pricing, onboarding, and confidence if you don’t fix it *now*.
+
+### The failure modes:
+
+1. **Founder activity is polluting every metric**
+2. **“Activation” is vague and not behavior-anchored**
+3. **No unit economics visibility (cost per user / per conversation)**
+4. **You’re measuring activity, not learning**
+
+This is normal at this stage — but it’s a **must-fix before pricing or scale**.
+
+---
+
+## PRIME DIRECTIVE FOR BETA ANALYTICS (Lean Rule)
+
+> Your beta dashboard should answer **one question only**:
+>
+> **“Is this product habit-forming and economically viable for a non-founder?”**
+
+Everything else is noise.
+
+---
+
+## 1️⃣ HARD SEPARATION: Founder vs Beta Users (Non-Negotiable)
+
+### What you did (toggle) is good UX
+
+### What’s missing is **data model truth**
+
+You need **explicit user roles**, not a UI filter hack.
+
+### Required fields (minimum):
+
+```ts
+user.role = 'founder' | 'internal' | 'beta' | 'paid'
+user.isTestAccount = boolean
+```
+
+### Then enforce these rules:
+
+* **Founder/Internal**
+
+  * ❌ excluded from ALL aggregate metrics by default
+  * ❌ excluded from averages, activation, WAU, retention
+* **Beta**
+
+  * ✅ included in cohort analytics
+  * ✅ tracked separately by signup week
+
+### Dashboard behavior:
+
+* Default view: **Beta users only**
+* Toggle: “Include founder/internal” (clearly marked *for debugging only*)
+
+If this isn’t fixed, **every metric below is meaningless**.
+
+Kill illusion early.
+
+---
+
+## 2️⃣ Fix “Activation” (Right Now It’s Too Soft)
+
+> “Activated: 3 (60%)”
+> This means nothing.
+
+### Activation must equal:
+
+> **The single behavior that proves value was experienced**
+
+You already said it 👇
+
+> *“The single behavior I want is logging a recent conversation using the AI assistant.”*
+
+Good. Lock it.
+
+### New Activation Definition (V1):
+
+A user is **activated** if they:
+
+* Log **≥1 conversation via AI assistant**
+* Within **24 hours of signup**
+
+No exceptions.
+
+### Display:
+
+* Activation Rate (24h)
+* Median time-to-first-log
+* % who log a 2nd conversation within 72h
+
+This tells you if the habit loop is starting.
+
+---
+
+## 3️⃣ Cost Per User (This Is the Money Lever)
+
+You’re 100% right: **this is critical for pricing**.
+
+But you need to track it *correctly*.
+
+### DO NOT just show “cost per user”
+
+That hides where the cost comes from.
+
+### You need a **unit economics stack**:
+
+#### Per User (Rolling 7 / 30 days):
+
+* AI tokens used
+* AI cost ($)
+* Conversations logged
+* Cost per conversation
+* Cost per follow-up created
+
+Example:
+
+```
+User: Bridget
+Conversations logged: 8
+AI cost: $0.42
+Cost per conversation: $0.052
+```
+
+This immediately tells you:
+
+* Who is expensive
+* What behavior drives cost
+* Where pricing tiers should gate usage
+
+---
+
+## 4️⃣ The Pricing Insight You’re Hunting (Explicitly)
+
+You are not pricing “users”.
+
+You are pricing **behavior volume**.
+
+This dashboard should let you answer:
+
+* What does a *light* user cost me?
+* What does a *power* user cost me?
+* Where does cost spike?
+
+That leads directly to tiers like:
+
+* Starter: X conversations / month
+* Pro: Y conversations + follow-ups
+* Power: unlimited (with margin buffer)
+
+Without this → pricing is guessing.
+
+---
+
+## 5️⃣ What to REMOVE From the Dashboard (For Now)
+
+Ruthless simplification.
+
+### Cut or de-emphasize:
+
+* Total events logged (vanity)
+* Week-over-week retention (too early, too small N)
+* 100% adoption metrics (founder skewed)
+
+### Keep only:
+
+1. **Activation**
+2. **Conversations per beta user**
+3. **Follow-up creation rate**
+4. **Cost per beta user**
+5. **Cost per conversation**
+
+Everything else is Phase 2.
+
+---
+
+## 6️⃣ The One Metric That Actually Matters Right Now
+
+If I forced you to keep **one** metric:
+
+> **Median conversations logged per beta user (excluding founder)**
+
+Why?
+
+* It’s behavior-based
+* It correlates with habit formation
+* It correlates with value
+* It correlates with cost
+
+This is your **North Star for pricing confidence**.
+
+---
+
+## 7️⃣ Immediate Implementation Checklist (No Excuses)
+
+### This week:
+
+* [ ] Add user roles in DB
+* [ ] Exclude founder/internal from metrics by default
+* [ ] Redefine activation = AI conversation logged
+* [ ] Add per-user AI cost aggregation
+* [ ] Display cost per conversation
+
+### Kill rule:
+
+If you can’t confidently say
+
+> “A typical beta user costs me ~$X/month”
+> you are **not allowed to price yet**.
+
+---
+
+## Final Truth
+
+You’re doing the *right work*.
+
+This is exactly the moment where most founders:
+
+* Add more features ❌
+* Chase more users ❌
+* Avoid looking at costs ❌
+
+You’re doing the opposite. Good.
+
+Fix analytics → pricing becomes obvious → confidence follows.
+
+If you want, next we can:
+
+* Design **pricing tiers directly from this dashboard**
+* Or define **kill metrics for the beta cohort**
+
+Your move.

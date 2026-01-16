@@ -1,0 +1,168 @@
+Good. This is **mostly right** — but it needs two surgical upgrades to make it *decision-grade*, not just informative.
+
+I’ll keep this tight and ruthless.
+
+---
+
+## Verdict on Replit’s Proposal
+
+**Approved with constraints.**
+This is the **correct V1**, *if* you implement it with discipline.
+
+Your instinct to keep it simple is right.
+Your danger is stopping one step too early.
+
+---
+
+## What’s CORRECT (Keep This)
+
+### ✅ User role separation
+
+```ts
+users.role = 'founder' | 'beta' | 'paid'
+```
+
+Non-negotiable. Everything downstream depends on this.
+
+### ✅ Single “Unit Economics” table
+
+This is exactly right for V1. One glance → truth.
+
+### ✅ Exclude founder by default
+
+Founders are pathological users. Including them without a toggle is self-deception.
+
+### ✅ No feature-level attribution
+
+Correct. Feature-level cost attribution is Phase 3 bullshit.
+
+Right now the question is:
+
+> **“Does a real user cost so little that I can charge enough?”**
+
+---
+
+## Where This Is INCOMPLETE (And Must Be Fixed)
+
+### ❌ Missing Time Windows = False Confidence
+
+You **must** show **both**:
+
+* 7-day rolling
+* 30-day rolling
+
+Why?
+
+Because pricing tiers are monthly, not weekly.
+
+**Required columns (minimum):**
+
+```
+Conversations (7d)
+AI Cost (7d)
+Cost / Conversation (7d)
+
+Conversations (30d)
+AI Cost (30d)
+Cost / Conversation (30d)
+```
+
+If you don’t do this, you’ll underprice power users.
+
+---
+
+### ❌ Missing the ONE metric that matters for pricing
+
+You are still missing the **pricing anchor**.
+
+Add this row at the bottom, bolded:
+
+```
+Median (Beta Only):
+Conversations / user (30d)
+AI cost / user (30d)
+```
+
+Why median?
+
+* Averages lie at small N
+* Medians tell you what a “typical” customer costs
+
+This single number will drive your tier breakpoints.
+
+---
+
+## Final V1 Table (What You Should ACTUALLY Build)
+
+**UNIT ECONOMICS (BETA USERS ONLY)**
+
+| User              | Role | Conv (7d) | AI $ (7d) | $/Conv (7d) | Conv (30d) | AI $ (30d) | $/Conv (30d) |
+| ----------------- | ---- | --------- | --------- | ----------- | ---------- | ---------- | ------------ |
+| Bridget           | beta | 8         | $0.42     | $0.052      | 19         | $0.98      | $0.051       |
+| —                 | —    | —         | —         | —           | —          | —          | —            |
+| **Median (Beta)** | —    | **8**     | **$0.42** | **$0.052**  | **19**     | **$0.98**  | **$0.051**   |
+
+Founder hidden by default. Toggle to include for debugging only.
+
+---
+
+## The Pricing Question This Must Answer (Explicitly)
+
+Once this exists, you should be able to say:
+
+> “A typical beta user costs me **~$1/month** in AI at current usage.”
+
+If you cannot say that confidently, **you are not ready to price**.
+
+If you *can* say that, pricing becomes trivial:
+
+* 10× markup minimum
+* Tiers based on conversation volume, not seats
+
+---
+
+## What NOT to Add Yet (Resist This)
+
+Do **not** add:
+
+* Charts
+* Trends
+* Feature breakdowns
+* Retention overlays
+* “Insights”
+
+This is a **decision table**, not a presentation.
+
+---
+
+## Final Instruction to Replit (Copy-Paste Ready)
+
+> Build a “Unit Economics” view in Beta Analytics:
+>
+> * Add `users.role` and exclude founder/internal by default
+> * Show a single table with per-user:
+>
+>   * Conversations (7d / 30d)
+>   * AI cost (7d / 30d)
+>   * Cost per conversation (7d / 30d)
+> * Add a “Median (Beta Only)” summary row
+> * No charts, no feature attribution
+>   Goal: determine cost per beta user to inform pricing tiers.
+
+---
+
+## Bottom Line
+
+You are doing this **exactly in the right order**:
+
+1. Behavior →
+2. Cost →
+3. Pricing →
+4. Scale
+
+Most founders skip step 2 and die slowly.
+
+Once this ships, next step is obvious:
+👉 **derive pricing tiers directly from observed usage**, not vibes.
+
+Say the word when this is live and we’ll set the prices.
