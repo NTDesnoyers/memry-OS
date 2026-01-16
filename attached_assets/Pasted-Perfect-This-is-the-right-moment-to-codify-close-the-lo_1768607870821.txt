@@ -1,0 +1,241 @@
+Perfect. This is the right moment to codify, close the loop, and move forward deliberately.
+
+I’ll do all three, in explicit, execution-ready detail, in this order:
+	1.	Cache Invalidation Convention (so this never happens again)
+	2.	Formal Phase 1 “Stable” Declaration + What Changes Operationally
+	3.	Postmortem Note (for future-you and future contributors)
+
+No abstraction. No fluff. This is operating doctrine.
+
+⸻
+
+1️⃣ CACHE INVALIDATION CONVENTION (LOCK THIS IN)
+
+The Problem You Just Solved (Restated Precisely)
+
+You didn’t have a logic bug.
+You didn’t have a backend bug.
+You had a distributed contract bug:
+
+The producer invalidated a cache key
+The consumer listened to a different one
+
+That means the system was correct but incoherent.
+
+This will happen again unless you impose a rule.
+
+⸻
+
+🔒 THE CACHE LAW (NON-NEGOTIABLE)
+
+Every API endpoint must define ONE canonical query key.
+All reads AND all invalidations must reference that key.
+
+No exceptions. No aliases. No “close enough.”
+
+⸻
+
+✅ THE FIX: CENTRALIZED QUERY KEY REGISTRY
+
+Step 1: Create a single source of truth
+
+Create a file:
+
+// client/src/lib/queryKeys.ts
+export const queryKeys = {
+  signals: () => ["/api/signals"],
+  generatedDrafts: () => ["/api/generated-drafts"],
+  actions: () => ["/api/actions"],
+  interactions: () => ["/api/interactions"],
+  people: (personId?: string) =>
+    personId
+      ? ["/api/people", personId]
+      : ["/api/people"],
+};
+
+Rules:
+	•	Keys are functions, not constants (future-proofing)
+	•	Strings match API routes exactly
+	•	No inline array literals anywhere else in the app
+
+⸻
+
+Step 2: Replace ALL queryKey usage
+
+Everywhere you currently have:
+
+queryKey: ["/api/generated-drafts"]
+
+Replace with:
+
+queryKey: queryKeys.generatedDrafts()
+
+Same for invalidation:
+
+queryClient.invalidateQueries({
+  queryKey: queryKeys.generatedDrafts(),
+});
+
+
+⸻
+
+Step 3: Enforce via code review rule (important)
+
+Rule you follow going forward:
+
+❌ No inline query keys in components
+✅ Only queryKeys.*() allowed
+
+This is how you prevent ghost bugs forever.
+
+⸻
+
+Step 4: Add a comment where this bug happened
+
+In signals.tsx, near the invalidation:
+
+// IMPORTANT: Must invalidate the exact query key used by Drafts page.
+// Mismatches here will cause actions to not appear.
+
+This is institutional memory.
+
+⸻
+
+2️⃣ PHASE 1 “STABLE” DECLARATION (THIS IS A REAL THING)
+
+You do not move on until you explicitly declare stability.
+
+Here is the formal definition.
+
+⸻
+
+✅ PHASE 1 IS NOW CONSIDERED STABLE IF AND ONLY IF:
+
+Core Invariants (Already Met)
+	•	✔ Every interaction creates a signal
+	•	✔ Signal creation is atomic
+	•	✔ No silent failures
+	•	✔ AI failure does not break correctness
+
+Execution Invariants (Just Fixed)
+	•	✔ Signal resolution creates an action
+	•	✔ Action appears immediately
+	•	✔ Action persists after refresh
+	•	✔ Action can be deleted
+	•	✔ Cache invalidation is coherent
+
+If all of the above are true → Phase 1 is stable.
+
+⸻
+
+🔁 WHAT CHANGES OPERATIONALLY AFTER THIS DECLARATION
+
+❌ What you stop doing
+	•	No more foundational refactors
+	•	No more “maybe this should be async”
+	•	No more touching signal semantics
+	•	No more cache experiments
+
+✅ What you start doing
+	•	Demoing
+	•	Dogfooding as a user, not a debugger
+	•	Writing docs and onboarding
+	•	Fixing only P2 confidence bugs
+	•	Talking to potential users
+
+🧠 Mental Shift
+
+You are no longer building the engine.
+You are now driving the car.
+
+This matters.
+
+⸻
+
+📌 Add a Git commit / note (recommended)
+
+Commit message:
+
+Phase 1 stabilized: signal contract enforced, actions reliability fixed
+
+This gives future-you a clean anchor point.
+
+⸻
+
+3️⃣ POSTMORTEM NOTE (FOR FUTURE-YOU — DO NOT SKIP)
+
+Put this somewhere permanent:
+	•	/docs/postmortems/2026-01-signal-actions.md
+	•	or a Notion page
+	•	or a comment block in the repo
+
+Here’s the exact text you should use (edit names if you want):
+
+⸻
+
+📄 POSTMORTEM: Signal → Action Visibility Failure
+
+Summary
+
+Users reported that resolving a signal (e.g., clicking “Text”) did not result in a visible action. Backend logic and database writes were correct, but the UI failed to update.
+
+Root Cause
+
+A React Query cache key mismatch:
+	•	Signal resolution invalidated ["/api/drafts"]
+	•	Drafts page queried ["/api/generated-drafts"]
+
+As a result, the cache was never invalidated and the UI did not re-render.
+
+Why This Was Dangerous
+	•	The system did the correct work
+	•	But appeared broken to the user
+	•	This mimicked earlier trust-destroying bugs where “nothing happened”
+
+This was not a logic bug — it was a contract violation between producer and consumer.
+
+Fix
+	•	Standardized on a single canonical query key
+	•	Fixed invalidation to match the consumer
+	•	Introduced a centralized queryKeys registry
+
+Preventive Measures
+	•	All query keys now live in queryKeys.ts
+	•	Inline query keys are forbidden
+	•	Every mutation must invalidate the exact consumer key
+
+Key Lesson
+
+Correctness is not enough.
+Visibility is part of the contract.
+
+If the user cannot see the result of their action immediately, the system is effectively lying — even if the data is correct.
+
+⸻
+
+This postmortem is gold. Most teams never write this down and re-learn the same lesson 6 months later.
+
+⸻
+
+🔚 FINAL STATE CHECK
+
+You have now:
+	•	Fixed correctness
+	•	Fixed execution
+	•	Fixed coherence
+	•	Codified lessons
+	•	Declared stability
+
+This is what it feels like when a product snaps into place.
+
+⸻
+
+NEXT OPTIONS (YOU’RE READY FOR THESE NOW)
+
+You can safely choose any of the following:
+	1.	Phase 2 confidence fixes (contact updates, weekly review dates)
+	2.	Onboarding + demo script
+	3.	First pricing + beta rollout
+	4.	Public build-in-public post (this story is compelling)
+
+Say the word.

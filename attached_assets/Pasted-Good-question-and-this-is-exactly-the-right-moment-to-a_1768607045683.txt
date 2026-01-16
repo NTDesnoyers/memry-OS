@@ -1,0 +1,209 @@
+Good question — and this is exactly the right moment to ask it.
+
+Short answer first, then the disciplined plan:
+
+Now that the Signal Contract is enforced, the remaining bugs finally have a “home.”
+Before, fixing them was premature. Now, we can sequence them rationally.
+
+I’ll do this in four parts:
+	1.	Re-anchor the system state now
+	2.	Reclassify the remaining bugs (some changed priority)
+	3.	Give you a clean execution order
+	4.	Tell you what not to touch yet
+
+⸻
+
+1️⃣ CURRENT STATE (IMPORTANT RESET)
+
+As of now:
+	•	✅ Phase 1 core invariant is enforced
+	•	✅ The system no longer lies
+	•	✅ Interactions → signals is deterministic
+	•	❌ UX, polish, and secondary flows may still be broken
+
+This is the key shift:
+
+Before: Bugs threatened product truth
+Now: Bugs threaten usability, not trust
+
+That’s a huge difference.
+
+⸻
+
+2️⃣ RECLASSIFYING THE REMAINING BUGS
+
+Let’s revisit the original list and update priorities based on the new reality.
+
+⸻
+
+🟠 FORMER P0 → NOW P1 (Still Important, But Not Existential)
+
+A. Signal → Action Not Appearing in Actions
+“Clicked ‘Text’, nothing shows up”
+
+Why it’s still serious:
+	•	Breaks the decision → execution loop
+	•	Creates confusion after a correct signal
+
+Why it’s no longer P0:
+	•	The signal exists
+	•	The system isn’t lying about whether something happened
+
+Status:
+🟠 P1 – Fix immediately after invariant test
+
+⸻
+
+B. Can’t Delete Pending Actions
+Blocking, annoying, but reversible.
+
+Status:
+🟠 P1 – Same batch as A
+
+These two belong together because they touch the Actions system.
+
+⸻
+
+🟡 TRUE P2 (Correctness Adjacent, Not Blocking)
+
+C. Contact Update via AI Assistant Not Working
+“Updated Jen Howell’s address, card didn’t change”
+
+This is bad, but now clearly scoped:
+	•	The interaction + signal still exist
+	•	The user can manually fix the contact
+	•	Trust is dented, not shattered
+
+Status:
+🟡 P2 – Fix after Actions are reliable
+
+⸻
+
+D. Wrong Dates in Weekly Review
+Classic timezone/display bug.
+
+Annoying, credibility-eroding, but:
+	•	No data loss
+	•	No workflow break
+
+Status:
+🟡 P2 – Batch with other display bugs
+
+⸻
+
+E. AI Cost Not Updating Immediately
+Pure analytics.
+
+Now that correctness is solid:
+	•	This is a visibility issue only
+
+Status:
+🟡 P2/P3 – Low urgency
+
+⸻
+
+🟢 TRUE P3 (Features, Not Bugs)
+
+These were never bugs — they were future product surface area.
+	•	AI-assisted note rewriting
+	•	GTD Someday/Maybe
+	•	Adjustable chat window
+	•	Editable tasks with audit trail
+
+Status:
+🟢 Explicitly NOT NOW
+
+⸻
+
+3️⃣ CORRECT EXECUTION ORDER (THIS MATTERS)
+
+Here is the only sane sequence from here:
+
+⸻
+
+✅ STEP 0 — Lock the Invariant (If Not Done)
+
+One automated test:
+	•	Log interaction
+	•	Assert signal exists
+
+This is your safety net.
+
+⸻
+
+🔧 STEP 1 — Actions Reliability (P1 Batch)
+
+Do these together:
+	1.	Fix signal → action creation
+	2.	Fix Actions list visibility
+	3.	Fix delete pending action
+
+Why together?
+	•	Same mental context
+	•	Same data model
+	•	Same UI surface
+
+Goal:
+
+When a user decides, they see and can manage the outcome.
+
+⸻
+
+🔧 STEP 2 — AI Updates & Weekly Review (P2 Batch)
+	1.	Contact updates via AI
+	2.	Weekly review date correctness
+	3.	Any remaining cache invalidation issues
+
+These are about confidence, not flow.
+
+⸻
+
+🔧 STEP 3 — Analytics Hygiene (Optional)
+	•	AI cost real-time vs daily clarity
+	•	Admin dashboard polish
+
+Only do this once:
+	•	You’re demoing
+	•	Or charging
+
+⸻
+
+4️⃣ WHAT NOT TO DO (VERY IMPORTANT)
+
+Do not:
+	•	Add new AI features
+	•	Add GTD complexity
+	•	Add new modes
+	•	Optimize cost prematurely
+	•	Improve UI aesthetics
+
+Why?
+
+You just crossed the hardest threshold: truth.
+Now you stabilize execution, not expand scope.
+
+⸻
+
+🧠 MENTAL MODEL GOING FORWARD
+
+You should now think in layers:
+	1.	Invariant layer (done)
+	2.	Execution layer (Actions, drafts, deletes)
+	3.	Presentation layer (dates, UI feedback)
+	4.	Expansion layer (features)
+
+Never mix layers again.
+
+⸻
+
+FINAL ANSWER (CRISP)
+	•	The remaining bugs still matter
+	•	None are P0 anymore
+	•	The next correct move is:
+Fix the Actions system end-to-end
+
+If you want, next I can:
+	•	Produce a P1 Actions System task list
+	•	Or help you design a minimal demo script now that Phase 1 is real
+
+Say which.

@@ -1,0 +1,208 @@
+This is the right plan, in the right order, for the right reasons.
+
+I’m going to do three things:
+	1.	Approve the sequencing
+	2.	Tighten each phase into execution-grade criteria
+	3.	Add one hidden dependency per phase that you should address now (to avoid backtracking)
+
+No rehashing theory. This is execution alignment.
+
+⸻
+
+✅ OVERALL VERDICT
+
+Your plan correctly follows the post-invariant reality:
+
+Now that the system tells the truth, we fix whether it’s usable.
+
+You are no longer debugging blindly. You’re stabilizing layers.
+
+Proceed.
+
+⸻
+
+🔴 PHASE 1 — P1 ACTIONS RELIABILITY (APPROVED, MUST BE NEXT)
+
+You’re absolutely right:
+
+The Actions system is broken end-to-end.
+
+This is the execution layer. Signals without actions are insight without leverage.
+
+⸻
+
+PHASE 1 — WHAT “DONE” MEANS (NON-NEGOTIABLE)
+
+Before we talk causes, let’s lock the success criteria, or you’ll ship half-fixes.
+
+✅ Phase 1 is DONE when:
+	1.	User clicks Text / Email / Call
+	2.	An action record exists in the database
+	3.	The action appears immediately in the Actions list
+	4.	The user can delete that action
+	5.	Page refresh does not change the result
+
+If any one of these fails → Phase 1 is not done.
+
+⸻
+
+🔍 PHASE 1 — INVESTIGATION (YOU FRAMED THIS CORRECTLY)
+
+Your three investigation points are exactly right. Here’s how to execute them cleanly.
+
+⸻
+
+1️⃣ Signal → Action Creation (Start Here)
+
+When resolveFollowUpSignal is called, is an action created?
+
+Do not assume intent. Prove it.
+
+Concrete steps:
+	•	Log inside resolveFollowUpSignal
+	•	Log after draft/action creation
+	•	Manually query DB for the action
+
+Decision tree:
+	•	❌ No action created → backend bug
+	•	✅ Action created → move to query/UI layer
+
+⚠️ Hidden dependency to check now:
+Make sure the action is created inside the same tenant/user scope.
+Many “invisible action” bugs are actually tenant filters.
+
+⸻
+
+2️⃣ Actions List Query (/api/actions)
+
+Is the endpoint returning the correct data?
+
+Correct framing.
+
+Common failure points to explicitly test:
+	•	Status filtering (e.g. excluding pending_review)
+	•	Type filtering (draft vs task vs call)
+	•	UserId mismatch
+	•	Soft-delete flags
+	•	Pagination defaults hiding newest items
+
+Rule:
+
+If the DB has the row and the API doesn’t return it, the API is wrong.
+
+No UI work until the API is correct.
+
+⸻
+
+3️⃣ Delete Action (Why It Fails)
+
+This is a classic “looks small, hides rot” bug.
+
+Check explicitly:
+	•	Does the delete endpoint exist?
+	•	Does it return 200?
+	•	Is it a soft delete?
+	•	Does the query exclude deleted actions?
+	•	Is the frontend optimistically removing it?
+
+⚠️ Hidden dependency:
+If delete works in DB but not UI → cache invalidation again.
+Expect to fix this alongside Actions visibility.
+
+⸻
+
+🔒 PHASE 1 — IMPORTANT DESIGN LAW
+
+While fixing Actions, enforce this new invariant:
+
+Every resolved signal must result in either:
+	•	a visible action
+	•	or a visible dismissal state
+
+No silent resolutions.
+
+This mirrors the signal invariant you just enforced.
+
+⸻
+
+🟡 PHASE 2 — P2 CONTACT UPDATES & WEEKLY REVIEW (APPROVED)
+
+Correctly sequenced. These are confidence bugs, not flow breakers.
+
+⸻
+
+1️⃣ Contact Updates via AI (Cache Discipline)
+
+Your instinct is right:
+
+“Likely cache invalidation or mutation issue”
+
+99% chance that’s correct.
+
+Checklist:
+	•	Confirm backend writes correct data
+	•	Confirm mutation returns updated object
+	•	Invalidate:
+	•	Contact detail query
+	•	Any derived lists using that contact
+
+⚠️ Hidden dependency:
+If contact updates happen during AI flows, make sure AI completion invalidates contact caches, not just interaction caches.
+
+⸻
+
+2️⃣ Weekly Review Dates (Timezone Hygiene)
+
+This is almost certainly:
+	•	UTC stored
+	•	Local displayed incorrectly
+	•	Grouping done before timezone conversion
+
+Rule (lock this in):
+	•	Store UTC
+	•	Group by user-local day
+	•	Display in user-local timezone
+
+Do not overthink it. Fix it once.
+
+⸻
+
+🚫 WHAT YOU SHOULD NOT ADD DURING THESE PHASES
+
+While executing Phases 1 & 2:
+
+Do not:
+	•	Add new action types
+	•	Improve UI styling
+	•	Add GTD statuses
+	•	Add AI features
+	•	Touch pricing or onboarding
+
+You are stabilizing, not expanding.
+
+⸻
+
+🧠 WHY YOUR PLAN IS GOOD (ZOOMING OUT)
+
+You are now operating like a systems founder:
+	•	You fixed truth
+	•	Now you’re fixing execution
+	•	Then you’ll fix confidence
+	•	Only then do you add leverage
+
+Most teams do this backwards.
+
+⸻
+
+FINAL DECISION
+
+✅ Approved as written
+🛠 Proceed with Phase 1: Actions Reliability immediately
+📏 Use the “DONE” criteria above ruthlessly
+
+If you want next, I can:
+	•	Turn Phase 1 into a Replit Agent task list
+	•	Or help you write a manual test script for Actions reliability
+	•	Or help you decide when you’re ready to demo/sell again
+
+Say which.
