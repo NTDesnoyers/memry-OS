@@ -1,0 +1,143 @@
+Great — you gave me enough to stop guessing and lock this down.
+
+Below is the exact, surgical diagnosis and fix, following your required structure.
+
+⸻
+
+1. Plain-English diagnosis
+
+What’s actually going wrong
+
+The Unit Economics API is returning an empty users array, so the frontend correctly renders “No data yet”, even though AI usage and interactions clearly exist.
+
+The true root cause
+
+You have a key mismatch inside getUnitEconomics() when building and reading userDataMap:
+	•	ai_usage_logs.userId is treated as a string in one place
+	•	interactions.userId is treated as a number in another
+	•	JavaScript Map keys are strictly typed
+
+So this fails silently:
+
+userDataMap.set("48941425", {...})
+userDataMap.get(48941425) // undefined
+
+Because of this:
+	•	Costs are recorded
+	•	Interactions are counted
+	•	But no user ever resolves
+	•	filteredUsers becomes []
+	•	Frontend shows “No data yet”
+
+Where the bug originates
+
+getUnitEconomics() in server/storage.ts
+
+Specifically:
+	•	When setting map keys from ai_usage_logs
+	•	When reading map keys from interactions
+
+This is not caused by:
+	•	Empty users table (that’s a separate issue but not the blocker)
+	•	Frontend rendering
+	•	Missing data
+
+⸻
+
+2. Minimal code fix (smallest possible change)
+
+✅ Fix: normalize userId to String() everywhere
+
+Only modify the map key usage. Nothing else.
+
+// server/storage.ts — inside getUnitEconomics()
+
+// WHEN BUILDING THE MAP (from ai_usage_logs)
+const userIdKey = String(log.userId)
+
+userDataMap.set(userIdKey, {
+  userId: userIdKey,
+  email: log.userEmail,
+  totalCost: log.totalCost,
+  interactionCount: 0,
+})
+
+// WHEN READING FROM THE MAP (from interactions)
+const userIdKey = String(interaction.userId)
+
+const user = userDataMap.get(userIdKey)
+if (user) {
+  user.interactionCount += interaction.count
+}
+
+That’s it.
+
+No refactors.
+No joins changed.
+No schema changes.
+Safe for production.
+
+⸻
+
+3. Design considerations (1 only)
+
+What this bug reveals
+
+Your analytics logic implicitly assumes identifier type consistency across tables, but your system actually mixes:
+	•	Numeric Replit IDs
+	•	String IDs
+	•	Legacy auth tables
+
+One realistic refactor (later)
+
+Create a single “analytics identity” rule:
+
+All analytics-layer user IDs must be normalized to string at ingestion boundaries.
+
+That prevents this entire class of bugs without touching auth or schema.
+
+⸻
+
+4. Verification steps
+
+Backend
+	1.	Apply the fix
+	2.	Restart API
+	3.	Hit:
+
+GET /api/analytics/unit-economics
+
+
+	4.	Confirm response:
+	•	users.length > 0
+	•	Each user has:
+	•	email
+	•	interactionCount > 0
+	•	totalCost > 0
+
+Frontend
+	1.	Reload Analytics page
+	2.	Confirm:
+	•	“No data yet” disappears
+	•	Cost per interaction renders
+	•	Numbers match expectations
+
+Quick sanity test (manual)
+	•	Log 1 new conversation
+	•	Confirm interaction count increments
+	•	Confirm cost increments after AI run
+
+⸻
+
+5. One micro-lesson (rule of thumb)
+
+Map keys must be normalized at the boundary — not “assumed consistent” internally.
+
+⸻
+
+If you want, next we can:
+	•	Remove the users table join entirely (clean)
+	•	Add a guard assertion that throws if users.length === 0 while data exists
+	•	Add a one-line debug metric for “unmatched analytics users”
+
+But the above fix will unblock prod immediately.

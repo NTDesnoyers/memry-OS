@@ -3972,7 +3972,7 @@ export class DatabaseStorage implements IStorage {
     
     // Initialize from AI log users
     for (const user of aiLogUsers) {
-      const key = user.userId || user.userEmail || 'unknown';
+      const key = String(user.userId || user.userEmail || 'unknown');
       userDataMap.set(key, {
         userId: user.userId,
         userEmail: user.userEmail,
@@ -3986,8 +3986,9 @@ export class DatabaseStorage implements IStorage {
     
     // Also add users from interactions (may have $0 AI cost)
     for (const user of interactionUsers) {
-      if (user.userId && !userDataMap.has(user.userId)) {
-        userDataMap.set(user.userId, {
+      const userIdKey = String(user.userId);
+      if (user.userId && !userDataMap.has(userIdKey)) {
+        userDataMap.set(userIdKey, {
           userId: user.userId,
           userEmail: user.userEmail || null,
           isFounder: user.userEmail === founderEmail,
@@ -4001,7 +4002,7 @@ export class DatabaseStorage implements IStorage {
     
     // Add AI costs
     for (const cost of aiCosts7d) {
-      const key = cost.userId || cost.userEmail || 'unknown';
+      const key = String(cost.userId || cost.userEmail || 'unknown');
       const existing = userDataMap.get(key);
       if (existing) {
         existing.aiCost7d = cost.totalCost || 0;
@@ -4009,7 +4010,7 @@ export class DatabaseStorage implements IStorage {
     }
     
     for (const cost of aiCosts30d) {
-      const key = cost.userId || cost.userEmail || 'unknown';
+      const key = String(cost.userId || cost.userEmail || 'unknown');
       const existing = userDataMap.get(key);
       if (existing) {
         existing.aiCost30d = cost.totalCost || 0;
@@ -4019,7 +4020,7 @@ export class DatabaseStorage implements IStorage {
     // Add interaction counts
     for (const int of interactions7d) {
       if (int.userId) {
-        const existing = userDataMap.get(int.userId);
+        const existing = userDataMap.get(String(int.userId));
         if (existing) {
           existing.interactions7d = int.count || 0;
         }
@@ -4028,7 +4029,7 @@ export class DatabaseStorage implements IStorage {
     
     for (const int of interactions30d) {
       if (int.userId) {
-        const existing = userDataMap.get(int.userId);
+        const existing = userDataMap.get(String(int.userId));
         if (existing) {
           existing.interactions30d = int.count || 0;
         }

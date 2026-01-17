@@ -1,0 +1,94 @@
+I need to stop before proposing a fix — critical information is missing.
+
+You asked me to not guess, and right now I would be guessing.
+
+⸻
+
+What’s missing (required to proceed)
+
+Please paste exactly these, nothing more:
+
+1️⃣ The backend function that powers “Unit Economics”
+
+Likely one of:
+	•	getUnitEconomics()
+	•	/api/analytics/unit-economics
+	•	Whatever function builds the response that drives “No data yet”
+
+👉 I need:
+	•	The full function body
+	•	Including all queries and joins
+	•	Especially anything touching:
+	•	ai_usage_logs
+	•	interactions
+	•	users or auth_users
+
+⸻
+
+2️⃣ The frontend render condition for “No data yet”
+
+Paste the exact React code that decides:
+
+if (!data || data.length === 0) {
+  return "No data yet"
+}
+
+👉 I need:
+	•	The conditional
+	•	The expected response shape
+	•	The field it checks (array length? null? undefined?)
+
+⸻
+
+3️⃣ The exact API response (JSON)
+
+From:
+
+GET /api/analytics/unit-economics
+
+Paste:
+	•	The raw JSON response
+	•	Or confirm it returns [], {}, or null
+
+⸻
+
+Why I’m stopping here (important)
+
+You already did excellent investigation and surfaced the likely issue:
+
+userId mismatch between:
+
+	•	ai_usage_logs.userId (Replit numeric)
+	•	auth_users.id (alphanumeric)
+	•	legacy users table (empty)
+
+But there are 3 different failure modes that all produce “No data yet”:
+	1.	Backend returns empty array
+	2.	Backend returns data but frontend expects different shape
+	3.	Backend returns data but a join nulls a required field
+
+Each has a different minimal fix.
+
+If I guess wrong:
+	•	You’ll ship a fix that “looks right”
+	•	The metric will still be blank
+	•	You’ll lose trust in your analytics (dangerous)
+
+⸻
+
+Next step (do this now)
+
+Reply with only:
+
+1. Backend unit economics function
+2. Frontend render logic for "No data yet"
+3. Sample API JSON response
+
+Once I have those, I will respond exactly in your required format:
+	1.	Plain-English diagnosis
+	2.	Minimal code fix (surgical, no refactors)
+	3.	Design consideration (max 1)
+	4.	Verification steps
+	5.	One micro-lesson
+
+No fluff. No refactors. Safe production fix.
