@@ -1,0 +1,214 @@
+Good. This is the right move — and your file mapping is **accurate enough to execute**. Now I’m going to harden this into a **Replit-ready implementation checklist** with **clear invariants**, **exact intent**, and **no ambiguity**.
+
+Below is the **final checklist** you should paste directly into Replit (or GitHub Issues).
+Nothing extra. Nothing soft.
+
+---
+
+# ✅ IMPLEMENTATION CHECKLIST — DATA INTEGRITY HARDENING
+
+## 🔴 P0 — DATA TRUTH (SHIP FIRST)
+
+### **P0-1: Kill Silent Success**
+
+**Goal:** UI must never claim success unless the database confirms it.
+
+**Files**
+
+* `client/src/components/voice-logger.tsx`
+  Lines ~504–510 (SSE / tool completion handling)
+
+**Changes**
+
+* Remove any success UI triggered by:
+
+  * optimistic state
+  * tool start
+  * assumed completion
+* Only show **“Conversation saved”** after:
+
+  * backend tool returns success
+  * AND interaction ID exists in response
+
+**Acceptance Criteria**
+
+* No toast unless DB write succeeded
+* Backend failure → explicit error UI
+* No “it said it saved but…” scenarios possible
+
+**Invariant**
+
+> If it’s not in the DB, the UI must not acknowledge it.
+
+---
+
+### **P0-2: Cache Truth Enforcement**
+
+**Goal:** Cache must never outlive reality.
+
+**Files**
+
+* `client/src/components/voice-logger.tsx`
+
+**Changes**
+
+* After **every** AI write tool completion:
+
+  * `invalidateQueries(['interactions'])`
+  * `invalidateQueries(['signals'])`
+* Remove any local optimistic inserts for interactions
+
+**Acceptance Criteria**
+
+* Refresh always reflects DB
+* Phantom interactions cannot appear
+* Signals never render without a DB-backed interaction
+
+---
+
+## 🟠 P1 — TOOL CONTRACT COMPLETENESS
+
+### **P1-3: Add `occurredAt` to `update_interaction`**
+
+**Goal:** AI must be able to fix dates without destructive workarounds.
+
+**Files**
+
+* `server/routes.ts`
+
+  * Tool schema: lines ~1316–1327
+  * Handler: lines ~1919–1934
+
+**Changes**
+
+* Add optional `occurredAt` field to tool schema
+* Update handler to perform **UPDATE only**
+
+**Acceptance Criteria**
+
+* Date correction updates existing interaction
+* No new interaction IDs created
+* No new signals generated
+
+---
+
+### **P1-4: Enforce UPDATE ≠ CREATE**
+
+**Goal:** Fixes must never create new records.
+
+**Files**
+
+* `server/routes.ts` (same handler)
+
+**Changes**
+
+* Add guard:
+
+  * `update_interaction` **cannot** call `create_interaction`
+* If attempted → throw explicit error + log
+
+**Acceptance Criteria**
+
+* Any fix operation is a single UPDATE
+* Duplication is impossible by design
+
+**Invariant**
+
+> Fixing ≠ re-logging. Ever.
+
+---
+
+## 🟡 P2 — SIGNAL HYGIENE & ATOMICITY
+
+### **P2-5: Cascade Delete Signals**
+
+**Goal:** No orphaned signals. Ever.
+
+**Files**
+
+* `server/storage.ts`
+
+  * `deleteInteraction()` ~1396–1400
+
+**Changes**
+
+* When deleting interaction:
+
+  * delete associated signals
+  * delete signal outcomes
+* Perform in correct dependency order
+
+**Acceptance Criteria**
+
+* Deleting interaction removes all related signals
+* No signal exists without a parent interaction
+
+---
+
+### **P2-6: Atomic AI Fix Operations**
+
+**Goal:** All-or-nothing state changes.
+
+**Files**
+
+* `server/routes.ts` (update_interaction handler)
+
+**Changes**
+
+* Wrap AI “fix” operations in a transaction:
+
+  * update interaction
+  * update signal metadata if applicable
+  * commit or rollback
+
+**Acceptance Criteria**
+
+* Partial updates impossible
+* Either everything changes or nothing does
+
+---
+
+## 🧪 FINAL STEP — VERIFICATION PASS
+
+### **Review & Test**
+
+**Checklist**
+
+* Fix date on existing interaction
+* Confirm:
+
+  * no duplicate signals
+  * occurredAt updated correctly
+  * cache reflects DB after refresh
+* Delete interaction
+
+  * verify zero leftover signals
+* Force backend failure
+
+  * confirm UI shows failure, not success
+
+**Kill Metric**
+
+> If the UI ever says “saved” without a DB row → STOP FEATURE WORK.
+
+---
+
+## 🔒 LOCKED DESIGN DECISION (DO NOT REVISIT)
+
+* Interactions are **non-optimistic**
+* Certainty > speed
+* Trust > delight
+
+This is the correct posture for a relationship memory system.
+
+---
+
+### ✅ Next Action
+
+Send this checklist to Replit and say:
+
+> “Implement in this order. Do not parallelize P0. Report back after each section.”
+
+Once P0 is done, **only then** do you move forward.
+
+You’re doing this right. This is how real systems get built.

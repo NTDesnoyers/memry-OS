@@ -1,0 +1,151 @@
+Good write-up. This is a real P0 incident, not a cosmetic bug. You correctly identified that the failure wasn’t “wrong date” — it was false success + broken contracts.
+
+Short answer: Yes — create the task list. But we’re going to tighten it and sequence it ruthlessly.
+
+Below is the execution-grade task list, ordered by risk reduction first, not convenience.
+
+⸻
+
+🔴 P0: DATA INTEGRITY (DO FIRST, NO EXCUSES)
+
+1️⃣ Kill Silent Success (Non-Negotiable)
+
+Problem: UI lies. This is fatal for a CRM.
+
+Task
+	•	Remove optimistic “Conversation saved” UI for interactions
+	•	Show success only after backend confirms write
+	•	If tool returns error or partial → show explicit failure state
+
+Acceptance Criteria
+	•	No success toast unless DB write confirmed
+	•	If backend fails → user sees failure, not silence
+
+Why first:
+If this isn’t fixed, every other fix is theater.
+
+⸻
+
+2️⃣ Cache Truth Enforcement
+
+Problem: React Query cache ≠ database reality.
+
+Task
+	•	After any AI write tool completes:
+	•	invalidateQueries(['interactions'])
+	•	invalidateQueries(['signals'])
+	•	Remove any local optimistic inserts for interactions
+
+Acceptance Criteria
+	•	Reload always reflects DB state
+	•	No interaction appears unless it exists in DB
+
+Why:
+False memory is worse than no memory.
+
+⸻
+
+🟠 P1: TOOL CONTRACT COMPLETENESS
+
+3️⃣ Add occurredAt to update_interaction
+
+Problem: AI literally cannot fix dates.
+
+Task
+	•	Extend update_interaction tool schema:
+	•	occurredAt?: Date
+	•	Ensure backend UPDATE, not re-log
+
+Acceptance Criteria
+	•	AI can fix dates without creating new interactions
+	•	No new signals created during date correction
+
+Why:
+Missing fields force AI into destructive workarounds.
+
+⸻
+
+4️⃣ Enforce UPDATE ≠ CREATE
+
+Problem: “Fix” actions cause duplication.
+
+Task
+	•	Add backend guard:
+	•	update_interaction must never call create_interaction
+	•	Log and error if attempted
+
+Acceptance Criteria
+	•	Date fix → single UPDATE query
+	•	Zero new interaction IDs created
+
+⸻
+
+🟡 P2: SIGNAL HYGIENE (CONTRACT SYMMETRY)
+
+5️⃣ Cascade Delete: Interactions → Signals
+
+Problem: Orphaned signals violate core contract.
+
+Task
+	•	On interaction delete:
+	•	Delete associated signals + outcomes in same transaction
+
+Acceptance Criteria
+	•	No signal exists without a parent interaction
+	•	Deleting interaction leaves zero residue
+
+Why:
+Your contract was one-way. This makes it bidirectional.
+
+⸻
+
+6️⃣ Atomic AI Fix Operations
+
+Problem: Partial failure creates chaos.
+
+Task
+	•	Wrap AI “fix” operations in transactions:
+	•	Update interaction
+	•	Update signal
+	•	Commit or rollback fully
+
+Acceptance Criteria
+	•	Either everything updates or nothing does
+	•	No mid-state corruption possible
+
+⸻
+
+🧠 DESIGN DECISION (LOCK THIS IN)
+
+Decision:
+👉 Interactions are NOT optimistic UI entities.
+They are source-of-truth records.
+
+This means:
+	•	Slower UI is acceptable
+	•	Certainty > speed
+	•	Trust > delight
+
+That’s the correct call for a relationship memory system.
+
+⸻
+
+🚦KILL METRIC (YES, EVEN FOR BUGS)
+
+If after these fixes:
+	•	You ever see “saved” without a DB row
+→ Stop feature work immediately
+
+This is existential, not cosmetic.
+
+⸻
+
+NEXT MOVE
+
+Say one of these and we proceed immediately:
+
+1️⃣ “Create GitHub issues with this exact priority order.”
+2️⃣ “Turn this into a single implementation checklist for Replit.”
+3️⃣ “Audit the current codebase and map each fix to exact files/functions.”
+
+No more discussion until this is locked.
