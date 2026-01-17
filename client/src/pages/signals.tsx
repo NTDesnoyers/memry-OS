@@ -20,6 +20,7 @@ import type { Person, FollowUpSignal } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { getInitials } from "@/lib/utils";
 import { Link } from "wouter";
+import { queryKeys } from "@/lib/queryKeys";
 
 type SignalWithPerson = FollowUpSignal & { person?: Person };
 
@@ -113,7 +114,7 @@ export default function SignalsPage() {
   const queryClient = useQueryClient();
   
   const { data: signals = [], isLoading } = useQuery<SignalWithPerson[]>({
-    queryKey: ["/api/signals"],
+    queryKey: queryKeys.signals(),
     refetchInterval: 30000,
   });
   
@@ -124,13 +125,13 @@ export default function SignalsPage() {
     },
     onMutate: async ({ signalId }) => {
       // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ["/api/signals"] });
+      await queryClient.cancelQueries({ queryKey: queryKeys.signals() });
       
       // Snapshot previous value
-      const previousSignals = queryClient.getQueryData<SignalWithPerson[]>(["/api/signals"]);
+      const previousSignals = queryClient.getQueryData<SignalWithPerson[]>(queryKeys.signals());
       
       // Optimistically remove the signal from the list
-      queryClient.setQueryData<SignalWithPerson[]>(["/api/signals"], (old) => 
+      queryClient.setQueryData<SignalWithPerson[]>(queryKeys.signals(), (old) => 
         old?.filter(s => s.id !== signalId) ?? []
       );
       
@@ -138,7 +139,7 @@ export default function SignalsPage() {
     },
     onSuccess: (_, { signalId, resolutionType }) => {
       // Refresh to ensure consistency
-      queryClient.invalidateQueries({ queryKey: ["/api/signals"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.signals() });
       
       if (resolutionType === 'skip') {
         // Skip: 3-second undo toast (shortened from 5s)
@@ -151,7 +152,7 @@ export default function SignalsPage() {
         });
       } else if (resolutionType === 'task') {
         // Task: invalidate tasks so Actions page shows the new task
-        queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.tasks() });
         sonnerToast.success("Task created", {
           description: "View it in your Actions page",
         });
@@ -159,7 +160,7 @@ export default function SignalsPage() {
         // Draft resolutions (email, text, handwritten_note): refresh drafts list
         // IMPORTANT: Must invalidate the exact query key used by Drafts page.
         // Mismatches here cause actions to not appear (see postmortem 2026-01-signal-actions).
-        queryClient.invalidateQueries({ queryKey: ["/api/generated-drafts"] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.generatedDrafts() });
         const draftTypeLabel = resolutionType === 'handwritten_note' ? 'handwritten note' : resolutionType;
         sonnerToast.success(`${draftTypeLabel.charAt(0).toUpperCase() + draftTypeLabel.slice(1)} draft created`, {
           description: "View it in your Drafts page",
@@ -169,7 +170,7 @@ export default function SignalsPage() {
     onError: (error: any, _, context) => {
       // Rollback on error
       if (context?.previousSignals) {
-        queryClient.setQueryData(["/api/signals"], context.previousSignals);
+        queryClient.setQueryData(queryKeys.signals(), context.previousSignals);
       }
       sonnerToast.error("Error resolving signal", {
         description: error.message,
@@ -183,7 +184,7 @@ export default function SignalsPage() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/signals"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.signals() });
       sonnerToast.success("Undo successful", {
         description: "Signal restored to pending.",
       });

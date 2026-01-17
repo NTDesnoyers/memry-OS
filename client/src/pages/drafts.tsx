@@ -48,6 +48,7 @@ import type { Person, Task } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { getInitials } from "@/lib/utils";
 import { Link } from "wouter";
+import { queryKeys } from "@/lib/queryKeys";
 import { isFounderMode } from "@/lib/feature-mode";
 import { useAuth } from "@/hooks/use-auth";
 
