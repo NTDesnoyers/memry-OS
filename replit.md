@@ -33,6 +33,7 @@ Memry uses an event-driven, multi-agent architecture tailored for real estate or
 - **Multi-Tenancy**: Data isolation using `userId` with `TenantContext` pattern.
 - **Structured Logging**: Centralized logging via `server/logger.ts`.
 - **Maintenance Scheduler**: Automatic cleanup of old system events and agent actions.
+- **Cache Invalidation Law**: Every API endpoint has ONE canonical query key defined in `client/src/lib/queryKeys.ts`. All reads AND invalidations must reference that key. No inline query keys allowed. See `docs/postmortems/2026-01-signal-actions.md` for context.
 
 ### UI/UX Decisions
 The design prioritizes speed for daily reviews and interaction logging, emphasizing GTD principles. It integrates relationship selling methodologies, including relationship segments (A/B/C/D), transaction stages, FORD notes, and key habits. Workflows support weekly planning, daily start-up, and 8x8 campaigns.
@@ -47,11 +48,13 @@ The design prioritizes speed for daily reviews and interaction logging, emphasiz
 - **DIA-Style Skill Packs**: Command Palette shortcuts for relationship-compounding actions.
 - **Context Graph**: Captures "event clock" and decision traces for actions and interactions.
 - **Experience Layer v1**: Semantic meaning extraction for signals and drafts, processing conversations into experiences (life_event, achievement, struggle, transition) with magnitude scores. High-magnitude unacknowledged experiences prioritize signals.
-- **Phase 1 Signal System (Supervised)**: A fully supervised signal-based follow-up system where conversations create signals, users resolve them, and then drafts are generated (no autonomous drafts). Only one active signal per person is allowed, and signals expire after 7 days.
+- **Phase 1 Signal System (Supervised) - STABLE (January 2026)**: A fully supervised signal-based follow-up system where conversations create signals, users resolve them, and then drafts are generated (no autonomous drafts). Only one active signal per person is allowed, and signals expire after 7 days.
   - **P0 Signal Contract**: "Every logged interaction MUST deterministically create a signal. AI may infer meaning. AI may not infer intent."
   - **Contract Enforcement**: All interaction routes (`/api/call-logs`, `/api/voice-memories`, `/api/voice-memories/quick-log`) enforce atomic signal creation - if signal fails, interaction is rolled back.
   - **Fallback Signals**: Created for AI enrichment failures and unmatched persons (no-person interactions get orphaned signals with higher priority).
   - **One Signal Per Person Rule**: New interactions update existing pending signals rather than blocking - ensures latest conversation is always represented.
+  - **P1 Actions Reliability (Fixed)**: Signal resolution creates visible drafts/tasks immediately. Cache invalidation uses correct query keys.
+  - **Stable Invariants**: Every interaction creates signal ✓ | Signal resolution creates action ✓ | Action appears immediately ✓ | Action persists after refresh ✓ | Action deletable ✓
 - **AI Assistant Mode-Based Input System**: Ensures explicit mode declaration (`log_conversation`, `quick_update`, `ask_search`) for AI assistant inputs, enforcing contracts to prevent critical data loss, especially for `log_conversation` actions.
 - **Action vs Reflection Mode Architecture**: 
   - **Action Mode (log_conversation)**: Ephemeral thread. After successful log_interaction, thread resets immediately (no history save). Enforces "one conversation per thread" rule to eliminate silent failure risk. Backend emits `conversation_logged` SSE event; frontend only resets when ALL expected logs are received (prevents partial-failure resets).

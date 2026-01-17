@@ -157,7 +157,9 @@ export default function SignalsPage() {
         });
       } else {
         // Draft resolutions (email, text, handwritten_note): refresh drafts list
-        queryClient.invalidateQueries({ queryKey: ["/api/drafts"] });
+        // IMPORTANT: Must invalidate the exact query key used by Drafts page.
+        // Mismatches here cause actions to not appear (see postmortem 2026-01-signal-actions).
+        queryClient.invalidateQueries({ queryKey: ["/api/generated-drafts"] });
         const draftTypeLabel = resolutionType === 'handwritten_note' ? 'handwritten note' : resolutionType;
         sonnerToast.success(`${draftTypeLabel.charAt(0).toUpperCase() + draftTypeLabel.slice(1)} draft created`, {
           description: "View it in your Drafts page",

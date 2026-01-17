@@ -5718,9 +5718,21 @@ Return ONLY valid JSON, no explanations.`
               resolutionType as 'text' | 'email' | 'handwritten_note',
               ctx
             );
+            logger.info("Draft created from signal resolution", {
+              signalId: existingSignal.id,
+              personId: existingSignal.personId,
+              userId: ctx.userId,
+              resolutionType,
+            });
           }
         } catch (draftError: any) {
-          console.error("Failed to generate draft from signal:", draftError.message);
+          logger.error("Failed to generate draft from signal", {
+            signalId: existingSignal.id,
+            personId: existingSignal.personId,
+            userId: ctx.userId,
+            resolutionType,
+            error: draftError.message,
+          });
           // Don't fail the resolution, just log the error
         }
       }
