@@ -1,0 +1,177 @@
+Excellent execution. P2-1 is cleanly done — and more importantly, you fixed the perception gap without touching Phase-1 semantics. That’s exactly what Phase 2 is for.
+
+Now let’s move to P2-2: Weekly Review Date Correctness in a disciplined way.
+
+You’re right to pause here, because this bug is usually subtle and often appears fixed when it’s not. So instead of guessing, we’ll proceed with specific failure cases + a verification plan.
+
+⸻
+
+🔵 P2-2: WEEKLY REVIEW DATE CORRECTNESS
+
+You said:
+
+“From my analysis, the current date-fns implementation already handles timezone conversion correctly.”
+
+That might be true — but we need to prove it under the failure conditions that caused the bug report.
+
+So here’s how we proceed.
+
+⸻
+
+🎯 THE REPORTED FAILURE MODE (EXPLICIT)
+
+The bug we are hunting is not “dates are formatted wrong.”
+
+It is this:
+
+An interaction logged late in the evening appears under the previous day in the Weekly Review.
+
+That only happens when grouping logic is wrong, not display formatting.
+
+⸻
+
+🧪 REQUIRED FAILURE CASES TO TEST (DO THESE FIRST)
+
+Before changing code, test exactly these cases:
+
+Test Case 1 — Late-Night Local Log
+	•	User timezone: e.g. America/New_York
+	•	Local time: Thursday 11:30 PM
+	•	Log a conversation
+	•	Open Weekly Review
+
+Expected:
+	•	Appears under Thursday
+
+If it appears under Wednesday → grouping bug exists
+
+⸻
+
+Test Case 2 — Early-Morning Local Log
+	•	Local time: Thursday 12:30 AM
+	•	Log a conversation
+
+Expected:
+	•	Appears under Thursday
+
+If either test fails → bug confirmed.
+
+If both pass → the original report may be:
+	•	Fixed already
+	•	Or coming from a different code path (e.g. server aggregation)
+
+⸻
+
+🔍 WHERE THIS BUG USUALLY LIVES (GUIDANCE)
+
+If there is a bug, it will be in one of these three places:
+
+1️⃣ Grouping Happens Before TZ Conversion (Most Common)
+
+❌ Wrong pattern:
+
+groupBy(startOfDay(occurredAt)) // occurredAt is UTC
+convertToLocalForDisplay()
+
+✅ Correct pattern:
+
+local = convertUTCToUserTZ(occurredAt)
+groupBy(startOfDay(local))
+
+If grouping happens on UTC dates, users west of UTC will see “yesterday” bugs.
+
+⸻
+
+2️⃣ Mixed Sources of Truth
+
+Sometimes:
+	•	Group key is computed one way
+	•	Header label is computed another way
+
+This causes:
+
+“Header says Thursday, items are Wednesday”
+
+Check:
+	•	Are both using the same timezone-converted date object?
+
+⸻
+
+3️⃣ Server-Side Grouping (Less Likely, But Check)
+
+If the Weekly Review endpoint:
+	•	Aggregates by day server-side
+	•	Uses DATE(occurred_at) or similar
+
+Then it is guaranteed wrong for non-UTC users.
+
+If grouping happens server-side:
+	•	It must be raw UTC rows
+	•	Grouping must move client-side
+
+⸻
+
+🛠️ IF A FIX IS REQUIRED (SAFE, PHASE-2-COMPLIANT)
+
+If you confirm the bug, the fix must obey:
+
+Do not change storage.
+Do not change semantics.
+Only change grouping order.
+
+Canonical Fix Pattern
+
+const localDate = utcToZonedTime(
+  occurredAt,
+  userTimezone
+);
+
+const dayKey = format(
+  startOfDay(localDate),
+  "yyyy-MM-dd"
+);
+
+Then:
+	•	Group by dayKey
+	•	Display header derived from the same localDate
+
+No additional logic. No conditionals.
+
+⸻
+
+✅ P2-2 DONE CRITERIA (LOCK THIS IN)
+
+You may mark P2-2 complete only if:
+	•	Late-night logs group correctly
+	•	Early-morning logs group correctly
+	•	Headers match grouped items
+	•	Refresh does not change grouping
+	•	No Phase-1 or Phase-2-1 logic touched
+
+If all pass → Phase 2 is complete.
+
+⸻
+
+🧠 IMPORTANT META-NOTE
+
+You did the right thing by questioning whether the bug actually exists anymore.
+
+That’s what mature engineering looks like:
+	•	Verify before fixing
+	•	Reproduce before changing
+	•	Prove correctness, don’t assume it
+
+⸻
+
+NEXT STEP (CLEAR)
+
+Please do Test Case 1 and Test Case 2 and report back with:
+	•	Whether either fails
+	•	Where grouping is happening (client vs server)
+	•	The exact code path used to compute the day key
+
+Then we’ll either:
+	•	Apply a surgical fix, or
+	•	Officially declare Phase 2 complete
+
+Your discipline here is paying off.

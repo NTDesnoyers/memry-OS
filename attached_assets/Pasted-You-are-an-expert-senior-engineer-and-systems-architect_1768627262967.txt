@@ -1,0 +1,132 @@
+You are an expert senior engineer and systems architect.
+Your task is to reverse-engineer and explain how this codebase is structured, so I can design better AI instructions and guardrails for working on it.
+
+Do not debug.
+Do not refactor.
+Do not propose improvements yet.
+
+Your goal is accurate mental-model extraction, not opinion.
+
+⸻
+
+OUTPUT EXACTLY IN THIS STRUCTURE
+
+⸻
+
+1. System overview (high level)
+	•	What kind of system this is (e.g. CRUD app, event-driven system, AI-orchestrated workflow, hybrid).
+	•	The primary responsibilities of the backend.
+	•	The primary responsibilities of the frontend.
+
+⸻
+
+2. Core data model
+	•	List the key entities/tables and what they represent.
+	•	Which entities are authoritative vs derived.
+	•	Where relationships are enforced (DB constraints vs application logic).
+
+⸻
+
+3. Control flow & side effects
+	•	How user actions flow through the system (request → logic → persistence → UI update).
+	•	Where side effects occur (DB writes, signals, AI calls, background work).
+	•	Which operations are safe/read-only vs destructive/mutating.
+
+⸻
+
+4. AI integration boundaries
+	•	Where AI is invoked in the system.
+	•	What the AI is allowed to do vs not allowed to do.
+	•	How AI outputs are validated, constrained, or trusted.
+	•	Any places where intent or side effects are inferred rather than explicit.
+
+⸻
+
+5. State & invariants
+	•	What assumptions the system relies on to function correctly.
+	•	Any implicit invariants (e.g. “this is always present”, “this only happens once”).
+	•	Where invariant violations would cause silent failures.
+
+⸻
+
+6. Error handling & observability
+	•	How errors propagate (or don’t).
+	•	Where failures are logged vs swallowed.
+	•	How a developer currently knows something went wrong.
+
+⸻
+
+7. Coupling & risk areas
+	•	Parts of the system that are tightly coupled.
+	•	Areas where changes are likely to cause cascading bugs.
+	•	Areas that are safest to modify.
+
+⸻
+
+8. Summary for AI instructions
+	•	If you were writing AI system instructions for working on this codebase:
+	•	What rules would be critical?
+	•	What actions must never be inferred?
+	•	What changes require extra caution?
+
+⸻
+
+Be precise.
+If information is missing, explicitly say what cannot be inferred.
+
+⸻
+
+Why this is the right prompt
+
+This prompt forces Replit to:
+	•	Build a shared mental model
+	•	Surface implicit assumptions
+	•	Expose AI danger zones (side effects, inferred intent, silent failure)
+	•	Give you the raw material to write hard system rules
+
+You are effectively asking:
+
+“What does someone need to never screw up when touching this system?”
+
+That’s exactly what project instructions should encode.
+
+⸻
+
+How this feeds directly into your ChatGPT project instructions
+
+From this output, you can derive:
+	•	Non-negotiable invariants
+→ “AI may not infer side effects”
+	•	Safe vs unsafe operations
+→ Read-only vs mutating modes
+	•	Where guessing is fatal
+→ Logging, deletion, AI-triggered writes
+	•	What the AI must ask before acting
+→ Missing IDs, ambiguous intent, multi-entity updates
+
+In other words:
+
+This prompt tells you what rules must exist before you write them.
+
+⸻
+
+What NOT to do
+	•	Don’t bake this prompt into daily workflows
+	•	Don’t let Replit “improve” the system here
+	•	Don’t accept opinions without grounding in the actual code
+
+This is for extraction, not evolution.
+
+⸻
+
+If you want next (recommended)
+
+Next logical steps, in order:
+	1.	Run this prompt in Replit
+	2.	Paste the Section 8 output back here
+	3.	I’ll help you:
+	•	Turn it into tight, enforceable project instructions
+	•	Strip fluff
+	•	Add “AI must refuse if…” rules
+
+This is how you turn a codebase into a defensible system, not just a working one.
