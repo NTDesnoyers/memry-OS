@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 interface AiConversation {
   id: string;
@@ -86,6 +87,7 @@ export function VoiceLogger() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   // Fetch all conversations
   const { data: conversations = [] } = useQuery<AiConversation[]>({
@@ -394,6 +396,42 @@ export function VoiceLogger() {
                     currentTool: null,
                     status: 'Thinking...'
                   }));
+                  
+                  // P2-1 FIX: Show confirmation toast and invalidate cache immediately for contact tools
+                  // This ensures user sees clear feedback when AI updates/creates contact info
+                  if (data.tool === 'update_person' && data.result && !data.result.startsWith('Error') && !data.result.startsWith('Failed')) {
+                    // Parse the success message: "Successfully updated {name}: {fields}"
+                    const match = data.result.match(/Successfully updated ([^:]+): (.+)/);
+                    if (match) {
+                      const personName = match[1].trim();
+                      const fieldsUpdated = match[2].trim();
+                      toast({
+                        title: `Updated ${personName}`,
+                        description: `Changed: ${fieldsUpdated}`,
+                      });
+                    } else {
+                      // Fallback toast if format doesn't match
+                      toast({
+                        title: "Contact updated",
+                        description: data.result,
+                      });
+                    }
+                    // Invalidate people cache immediately after confirmed success
+                    queryClient.invalidateQueries({ queryKey: ["/api/people"] });
+                  }
+                  
+                  // Also handle create_person success for user feedback
+                  if (data.tool === 'create_person' && data.result && !data.result.startsWith('Error') && !data.result.startsWith('Failed') && !data.result.startsWith('BLOCKED')) {
+                    // Parse: "Created new contact: {name} (ID: ...)"
+                    const match = data.result.match(/Created new contact: ([^(]+)/);
+                    if (match) {
+                      toast({
+                        title: "Contact created",
+                        description: match[1].trim(),
+                      });
+                    }
+                    queryClient.invalidateQueries({ queryKey: ["/api/people"] });
+                  }
                   break;
                   
                 case 'token':
