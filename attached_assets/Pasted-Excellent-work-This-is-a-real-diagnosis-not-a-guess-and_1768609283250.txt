@@ -1,0 +1,162 @@
+Excellent work. This is a real diagnosis, not a guess — and you surfaced the actual Phase-2 issue correctly.
+
+I’m going to do four things:
+	1.	Confirm your analysis (what is and is not the bug)
+	2.	Clarify the real failure mode
+	3.	Give you the exact fix to implement (no ambiguity)
+	4.	Define done criteria so you don’t over-fix
+
+We stay inside the Prime Directive.
+
+⸻
+
+1️⃣ ANALYSIS REVIEW — YOU’RE RIGHT
+
+Let’s be explicit about what you proved.
+
+✅ What is NOT broken
+	•	Backend update_person does write correctly
+	•	Query keys are correctly defined
+	•	Cache invalidation does exist in:
+	•	voice-logger.tsx
+	•	quick-voice-log.tsx
+	•	React Query prefix matching is correct
+	•	staleTime: Infinity is not inherently wrong
+
+So this is not:
+	•	A missing invalidation
+	•	A bad query key
+	•	A broken storage layer
+	•	A Phase-1 regression
+
+Good discipline eliminating these.
+
+⸻
+
+2️⃣ THE REAL FAILURE MODE (THIS IS THE KEY)
+
+This is not a data bug.
+
+This is a perception + timing bug caused by streaming AI flows.
+
+What’s actually happening
+	1.	AI tool update_person runs server-side
+	2.	Backend writes complete
+	3.	Streaming response continues
+	4.	Frontend receives a “completed” message
+	5.	Cache invalidation fires without a strong user-visible confirmation
+	6.	UI may or may not visibly change immediately
+	7.	User concludes:
+“AI didn’t update anything”
+
+Even if React Query does refetch, the user has no confidence signal.
+
+That’s why this belongs in Phase 2 (Confidence), not Phase 1.
+
+⸻
+
+3️⃣ THE CORRECT FIX (DO THIS — NOTHING MORE)
+
+You already found the right approach. We just lock it into execution.
+
+✅ FIX 1 — ADD EXPLICIT USER CONFIRMATION (MANDATORY)
+
+This is the primary fix.
+
+When the update_person tool completes successfully, emit a clear, explicit UI message.
+
+Example (voice-logger.tsx)
+When tool result indicates success:
+
+toast.success(`Updated ${fieldName} for ${personName}`);
+
+Rules:
+	•	Must name the person
+	•	Must name what changed (address, phone, email, etc.)
+	•	Must fire after backend confirms success
+
+This alone will eliminate ~80% of perceived failure.
+
+⸻
+
+✅ FIX 2 — GUARANTEE ORDERING (SMALL BUT IMPORTANT)
+
+You identified the subtle risk correctly: streaming timing.
+
+Make sure this order is enforced:
+	1.	Backend confirms write
+	2.	Tool result returned
+	3.	Frontend handles tool result
+	4.	Cache invalidation fires
+	5.	Toast fires
+
+If invalidation fires before tool success is handled, the UI can update silently.
+
+Action:
+	•	Move cache invalidation into the same success handler that triggers the toast
+	•	Do not fire it on generic “AI complete” events
+
+This keeps causality aligned.
+
+⸻
+
+✅ FIX 3 — OPTIONAL: USE refetchQueries (ONLY IF NEEDED)
+
+You are right to be cautious here.
+
+Default recommendation:
+	•	Stick with invalidateQueries
+
+Escalate to refetchQueries only if:
+	•	You verify invalidation does not refetch mounted queries
+	•	Or you see inconsistent refresh in production
+
+If you do switch, do it narrowly:
+
+queryClient.refetchQueries({
+  queryKey: queryKeys.people(personId),
+});
+
+Do not globally refetch everything.
+
+⸻
+
+4️⃣ WHAT YOU SHOULD NOT DO (IMPORTANT)
+
+Do not:
+	•	Change staleTime
+	•	Add polling
+	•	Add optimistic updates
+	•	Touch backend semantics
+	•	Add extra invalidations “just in case”
+
+Those would violate Phase-2 discipline.
+
+⸻
+
+✅ FINAL P2-1 DONE CRITERIA (LOCK THIS IN)
+
+You may mark P2-1 complete when:
+	•	AI updates a contact
+	•	User sees a clear confirmation toast
+	•	Contact UI reflects change shortly after
+	•	Refresh shows correct data
+	•	No Phase-1 logic touched
+
+If all true → P2-1 done.
+
+⸻
+
+NEXT STEP (CLEAR AND SAFE)
+
+Proceed to Build Mode and implement:
+	1.	User confirmation toast on update_person success
+	2.	Ensure cache invalidation fires after tool success handling
+
+Once that’s in, report back with:
+	•	Where you placed the toast
+	•	Whether you had to adjust invalidation timing
+
+Then we’ll close P2-1 and move to P2-2 (Weekly Review timezone) cleanly.
+
+You’re doing this exactly right.

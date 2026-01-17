@@ -1,0 +1,232 @@
+Good. We move forward without destabilizing Phase 1.
+
+We are now in Phase 2: Confidence & Trust Fixes.
+
+These are not existential bugs, but they do affect whether users believe the system—so we fix them with the same discipline you just used.
+
+I’ll give you:
+	1.	Exact scope (what is allowed vs forbidden)
+	2.	Phase 2 execution order
+	3.	Replit-ready task list for Phase 2
+	4.	Clear “done” criteria so this doesn’t sprawl
+
+⸻
+
+🔵 PHASE 2: CONFIDENCE & TRUST FIXES
+
+PRIME DIRECTIVE (DO NOT VIOLATE)
+
+Phase 2 may NOT change signal semantics, action semantics, or cache architecture.
+
+You are fixing presentation, refresh, and correctness perception, not behavior.
+
+If a change risks touching Phase 1 invariants → stop.
+
+⸻
+
+✅ PHASE 2 SCOPE (APPROVED)
+
+We will fix only:
+	1.	Contact updates via AI not reflecting in UI
+	2.	Weekly Review showing wrong dates (timezone bug)
+
+Nothing else.
+
+⸻
+
+🧭 PHASE 2 EXECUTION ORDER (IMPORTANT)
+
+Step 1 — Contact Updates via AI
+
+(Fix first: affects daily trust)
+
+Step 2 — Weekly Review Date Correctness
+
+(Fix second: affects reporting confidence)
+
+Do not reverse this order.
+
+⸻
+
+🔵 PHASE 2 — TASK LIST (REPLIT-READY)
+
+⸻
+
+🔧 P2-1: CONTACT UPDATES VIA AI (CACHE + MUTATION DISCIPLINE)
+
+Problem
+
+AI updates a contact (e.g. address), backend succeeds, UI card does not refresh.
+
+This creates the perception:
+
+“AI didn’t actually update anything.”
+
+Even if the DB is correct, this is unacceptable.
+
+⸻
+
+TASK P2-1.1 — Verify Backend Write (Baseline)
+
+Steps:
+	1.	Trigger AI contact update
+	2.	Log inside update_person (or equivalent)
+	3.	Confirm DB row changes
+
+Acceptance:
+	•	Backend write is correct
+	•	This is not a data bug
+
+⸻
+
+TASK P2-1.2 — Identify Consuming Queries
+
+Find every query that depends on contact data:
+
+Likely:
+	•	Person detail view
+	•	Person cards
+	•	Weekly review
+	•	Signals/actions referencing person
+
+List the query keys (using queryKeys.ts).
+
+⸻
+
+TASK P2-1.3 — Fix Cache Invalidation on Contact Mutation
+
+When AI updates a contact, invalidate all relevant keys, for example:
+
+queryClient.invalidateQueries({
+  queryKey: queryKeys.people(personId),
+});
+
+If lists depend on it:
+
+queryClient.invalidateQueries({
+  queryKey: queryKeys.people(),
+});
+
+Rules:
+	•	No optimistic UI unless rollback-safe
+	•	Always prefer invalidation over manual cache writes
+
+⸻
+
+TASK P2-1.4 — Add User Feedback (IMPORTANT)
+
+On successful AI contact update, show explicit confirmation:
+
+✅ “Updated address for Jen Howell”
+
+If it fails:
+
+❌ “Could not update contact. Please try again.”
+
+No silent success.
+
+⸻
+
+P2-1 DONE CRITERIA
+	•	AI updates contact
+	•	UI updates immediately
+	•	Refresh shows same data
+	•	User receives confirmation
+
+⸻
+
+🔧 P2-2: WEEKLY REVIEW DATE CORRECTNESS (TIMEZONE HYGIENE)
+
+Problem
+
+Conversations logged on Thursday show up as Wednesday.
+
+This is a classic UTC vs local grouping bug.
+
+⸻
+
+TASK P2-2.1 — Audit Date Fields
+
+Confirm:
+	•	occurredAt stored in UTC
+	•	No accidental conversion on write
+
+Do not change storage format.
+
+⸻
+
+TASK P2-2.2 — Fix Grouping Logic
+
+Correct rule:
+
+Group by user-local day, not UTC day.
+
+Implementation approach:
+	1.	Convert UTC → user timezone
+	2.	Then group by date boundary
+
+Example logic (conceptual):
+
+localDate = convertToUserTZ(occurredAt)
+groupBy(startOfDay(localDate))
+
+
+⸻
+
+TASK P2-2.3 — Fix Display Formatting
+
+Ensure:
+	•	Display uses user-local timezone
+	•	Headers match grouped data
+
+⸻
+
+P2-2 DONE CRITERIA
+	•	Log a conversation late at night
+	•	Weekly review shows correct day
+	•	Refresh does not change grouping
+
+⸻
+
+🚫 WHAT YOU MUST NOT TOUCH IN PHASE 2
+
+Do not:
+	•	Add GTD features
+	•	Add new AI modes
+	•	Add new action types
+	•	Refactor cache architecture
+	•	Change signal/action semantics
+
+If you feel tempted → stop.
+
+⸻
+
+🧪 FINAL PHASE 2 TEST CHECKLIST
+
+Before declaring Phase 2 done:
+	•	AI updates contact → UI updates
+	•	Page refresh → data persists
+	•	Weekly review dates correct
+	•	No Phase 1 invariant regressed
+	•	No new cache keys introduced inline
+
+⸻
+
+🔓 WHAT COMES AFTER PHASE 2
+
+Once Phase 2 is done, you’ll be in the best position to:
+	•	Polish onboarding
+	•	Ship first external beta
+	•	Start charging early users
+	•	Build leverage features (GTD, rewriting, etc.)
+
+But not before.
+
+⸻
+
+NEXT STEP (DO THIS NOW)
+
+Say “Start P2-1”
+and I’ll walk you through the contact update fix step-by-step, starting with identifying the exact query keys that need invalidation.
+
+Execution continues.
